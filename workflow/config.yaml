@@ -27,11 +27,13 @@ years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 
 
 # Below tags are after JetID Fix and b-tag changes
-run_tag: "FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2"
+# run_tag: "FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2"
 # run_tag: "FilterJetsHorn25GeV_HE30GeV_Apr09_tightPassLepVeto_NoJER"
-# run_tag: "FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
+run_tag: "FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
+# run_tag: "FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER_CheckDevBr"
 
-# run_tag: "FilterJetsHorn25GeV_Apr14_tightPassLepVeto_NoJER_pySRTraining"
+# run_tag: "FilterJets_May06_pySRTraining"
+# run_tag: "FilterJets_May08_tightPassLepVeto_NoJER"
 # run_tag: "test_14apr"
 
 # dask gateway

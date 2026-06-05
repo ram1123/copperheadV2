@@ -25,7 +25,8 @@ if __name__ == "__main__":
     save_path = f"{args.save_path}/{args.label}"
     os.makedirs(save_path, exist_ok=True)
     
-    for iter_idx in range(1, 6):
+    n_iterations = 5
+    for iter_idx in range(1, n_iterations + 1):
         load_path = f"{save_path}/iter{iter_idx}_significances.csv"
         sig_df = pd.read_csv(load_path)
         plt.scatter(sig_df["sig_eff"], sig_df["Significance"], color='blue', s=50, alpha=0.7)  # s=50 sets dot size, alpha=0.7 makes them slightly transparent
@@ -71,7 +72,8 @@ if __name__ == "__main__":
         # UPDATE IT: such that it will save key as the label name and in further steps it 
         # should extract target yeilds using the label name instead of "target_yeild". So, 
         # that we keep target yields for each labels.
-        if iter_idx != 5: continue
+        if iter_idx != n_iterations:
+            continue
 
         boundaries = sorted(not_common_effs)
 

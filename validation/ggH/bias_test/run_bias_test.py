@@ -21,6 +21,8 @@ from modules.fit_functions import MakeFEWZxBernDof3, plot_6_23, plot_6_26, getSi
 from modules.fit_functions import getBWZ_gamma, getBWZxBern, getLandxBern, getFEWZxBern, getPowerLaw
 from modules.GoF_utils import getGOF_KS
 
+FUNC_ORDER = ['BWZRedux', 'BwzGamma', 'BWZxBern', 'sumExp', 'PowerLaw', 'FEWZxBern', 'LandauxBern', 'Polynomial']
+
 
 def create_core_pdf(pdf_type, subcat_index, x, init_vals):
     """
@@ -67,7 +69,7 @@ def create_core_pdf(pdf_type, subcat_index, x, init_vals):
         return pdf, param_l
         
     elif pdf_type == "FEWZxBern":
-        pdf, param_l = getFEWZxBern(x, init_vals, fewz_workspace_path="../../../modules/ucsd_workspace/")
+        pdf, param_l = getFEWZxBern(x, init_vals, fewz_workspace_path="./modules/ucsd_workspace/")
         return pdf, param_l
         
     elif pdf_type == "LandauxBern":
@@ -151,6 +153,21 @@ if __name__ == "__main__":
     action="store",
     help="MVA model name to load",
     )
+    parser.add_argument(
+    "-save",
+    "--save_path",
+    dest="save_path",
+    default=".",
+    action="store",
+    help="root output path for stage3-style products",
+    )
+    parser.add_argument(
+    "--max-chi2ndf",
+    dest="max_chi2ndf",
+    default=2.0,
+    type=float,
+    help="maximum allowed sideband chi2/ndf for a truth-function candidate",
+    )
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -179,11 +196,12 @@ if __name__ == "__main__":
     print(f"processed_eventsData length: {ak.num(processed_eventsData.dimuon_mass, axis=0)}")
     print("events loaded!")
 
-    # make plot directory
-    base_path = f"./validation/stage3/{args.year}/{args.label}"
+    # Keep bias-study outputs inside the same stage3 tree as the rest of the workflow,
+    # but isolate them in a dedicated subdirectory so they do not collide with stage3 workspaces.
+    stage3_base_path = f"{args.save_path}/stage3/{args.year}/{args.label}"
+    base_path = f"{stage3_base_path}/bias_test"
     plot_save_path = base_path
-    if not os.path.exists(plot_save_path):
-        os.makedirs(plot_save_path)
+    os.makedirs(plot_save_path, exist_ok=True)
 
     # Define your list of column names
     column_list = ["year", "category", "dataset", "yield"]
@@ -475,7 +493,36 @@ if __name__ == "__main__":
             fitResult.Print("v")
 
     df = pd.DataFrame(df_rows, columns=["BDT cat", "fit function", "chi2ndf"])
-    df.to_csv(f"{base_path}/test_chi2ndf.csv")
+    df.to_csv(f"{base_path}/test_chi2ndf.csv", index=False)
+    summary_df = (
+        df.groupby("fit function", as_index=False)
+        .agg(
+            mean_chi2ndf=("chi2ndf", "mean"),
+            max_chi2ndf=("chi2ndf", "max"),
+            min_chi2ndf=("chi2ndf", "min"),
+        )
+    )
+    summary_df["func_index"] = summary_df["fit function"].map({name: idx for idx, name in enumerate(FUNC_ORDER)})
+    summary_df = summary_df.sort_values("func_index").reset_index(drop=True)
+    summary_df.to_csv(f"{base_path}/truth_function_summary.csv", index=False)
+
+    selected_summary = summary_df[summary_df["max_chi2ndf"] <= args.max_chi2ndf].copy()
+    if selected_summary.empty:
+        selected_summary = summary_df.nsmallest(3, "mean_chi2ndf").copy()
+        print(
+            f"[bias_test] No truth functions passed max chi2/ndf <= {args.max_chi2ndf:.3f}. "
+            "Falling back to the three best average sideband fits."
+        )
+
+    selected_indices = selected_summary["func_index"].astype(int).tolist()
+    selected_names = selected_summary["fit function"].tolist()
+    with open(f"{base_path}/selected_truth_function_indices.txt", "w") as handle:
+        handle.write(" ".join(str(idx) for idx in selected_indices))
+        handle.write("\n")
+    with open(f"{base_path}/selected_truth_function_names.txt", "w") as handle:
+        handle.write("\n".join(selected_names))
+        handle.write("\n")
+    print(f"[bias_test] Selected truth-function candidates: {selected_names}")
     # raise ValueError
     # print(f"all_params after fitting: {[param.Print() for param in all_params]}")
     print(f"coreFunction_dict: {coreFunction_dict}")
@@ -501,7 +548,7 @@ if __name__ == "__main__":
     
     # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
     # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
-    func_order = ['BWZRedux', 'BwzGamma', 'BWZxBern', 'sumExp', 'PowerLaw', 'FEWZxBern', 'LandauxBern', 'Polynomial']
+    func_order = FUNC_ORDER
     env_pdfs = []
     norm_l = []
     # cat_index = ROOT.RooCategory(f"pdf_index_ggh_cat{cat_ix}","Index of Pdf which is active");
@@ -1645,8 +1692,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------
     # workspace_path = "./workspaces"
     workspace_path = f"{base_path}/workspaces"
-    if not os.path.exists(workspace_path):
-        os.makedirs(workspace_path)
+    os.makedirs(workspace_path, exist_ok=True)
 
 
     # unfreeze the hmm sigma and peak b4 saving

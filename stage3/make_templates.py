@@ -36,10 +36,12 @@ shape_only = [
     "wgt_LHERen_down",
     "wgt_LHEFac_up",
     "wgt_LHEFac_down",
-    "wgt_qgl_up",
-    "wgt_qgl_down",
+    "wgt_qgl_wgt_up",
+    "wgt_qgl_wgt_down",
     "wgt_pdf_2rms_up",
     "wgt_pdf_2rms_down",
+    "wgt_zpt_wgt_up",
+    "wgt_zpt_wgt_down",
 ]
 
 def load_stage2_output_hists(argset, parameters, dataset):
@@ -609,8 +611,8 @@ def make_templates(args, parameters={}):
                 # else:
                 variation_fixed = variation
             else:
-                variation_core = variation.replace("wgt_", "")
-                variation_core = variation_core.replace("_up", "")
+                variation_base = variation[4:] if variation.startswith("wgt_") else variation
+                variation_core = variation_base.replace("_up", "")
                 variation_core = variation_core.replace("_down", "")
                 logger.debug(f"variation_core: {variation_core}")
                 suffix = ""
@@ -634,13 +636,17 @@ def make_templates(args, parameters={}):
                         continue
                 elif variation_core in ["muID", "muIso", "muTrig"]:
                     suffix = str(year)
+                elif variation_core in ["mu_roccor", "mu_scale", "mu_resol"]:
+                    suffix = str(year)
                 elif variation_core in ["pu", "l1prefiring"]:
                     suffix = "_wgt"+str(year)
                 elif variation_core in ["qgl"]:
                     suffix = "_wgt"
+                elif variation_core in ["qgl_wgt", "zpt_wgt"]:
+                    suffix = ""
 
                 # TODO: decorrelate LHE, QGL, PDF uncertainties
-                variation_fixed = variation.replace("wgt_", "")
+                variation_fixed = variation_base
                 variation_fixed = variation_fixed.replace("_up", f"{suffix}Up")
                 variation_fixed = variation_fixed.replace("_down", f"{suffix}Down")
                 group_name = group

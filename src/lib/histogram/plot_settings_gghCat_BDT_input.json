@@ -250,7 +250,7 @@
     },
     "jet1_eta": {
         "variable": "jet1_eta",
-        "binning_linspace": [-4.7, 4.7, 100],
+        "binning_linspace": [-4.7, 4.7, 75],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta (jet1)$",
@@ -283,7 +283,7 @@
     },
     "jet2_eta": {
         "variable": "jet2_eta",
-        "binning_linspace": [-4.7, 4.7, 100],
+        "binning_linspace": [-4.7, 4.7, 75],
         "density": false,
         "ylabel": "Events",
         "xlabel": "$\\eta (jet2)$",

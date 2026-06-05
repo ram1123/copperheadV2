@@ -39,6 +39,16 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+    save_muon_roccor_variations:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
     do_save_partial_weights:
         '2016preVFP': false
         '2016postVFP': false
@@ -191,6 +201,16 @@ switches:
         '2022postEE': true
         "2023": true
         "2023BPix": true
+        "2024": true
+    save_zpt_variations:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
         "2024": false
     apply_jet_PUID_wgt:
         '2016preVFP': false
@@ -268,11 +288,11 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
     add_pt_cut_for_HE_HF_jets:
         '2016preVFP': false
         '2016postVFP': false
@@ -289,12 +309,12 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': false 
+        '2022preEE': false
         '2022postEE': false
         "2023": false
         "2023BPix": false
         "2024": false
-    do_jet_horn_puid: 
+    do_jet_horn_puid:
         # For run-2 samples where we added strict PUID cut for the horn region
         # For nanoAODv12, do_jet_horn_puid should be true
         '2016preVFP': false

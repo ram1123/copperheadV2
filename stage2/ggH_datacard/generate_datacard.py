@@ -147,6 +147,17 @@ def getProcessedEvents(events, fields2load, jec_unc_fields):
     return processed_events
 
 
+def discover_shape_unc_fields(fields):
+    prefixes = ("subCategory_idx_", "BDT_score_")
+    suffixes = set()
+    for field in fields:
+        for prefix in prefixes:
+            if field.startswith(prefix):
+                suffixes.add(field[len(prefix):])
+                break
+    return sorted(suffixes)
+
+
 def flipDfAddSample(df, sample : str):
     """
     flips the rows and columns of the given df and adds sample string value to each column
@@ -334,9 +345,7 @@ if __name__ == "__main__":
         fields2load  = [
             "dimuon_mass",
         ]
-        jec_unc_fields = ["Absolute", "FlavorQCD"]
-        # jec_unc_fields = []
-        jec_unc_fields = applyUpDown(jec_unc_fields)
+        jec_unc_fields = discover_shape_unc_fields(events.fields)
         processed_events = getProcessedEvents(events, fields2load, jec_unc_fields)
         print(f"processed_events.wgt_nominal: {processed_events.wgt_nominal}")
         # print(f"processed_events.wgt_nominal len: {ak.num(processed_events.wgt_nominal, axis=0)}")
@@ -388,18 +397,7 @@ if __name__ == "__main__":
             
         # df = pd.DataFrame(index=row_labels, columns=(jec_unc_fields+["year"))
         # jec_unc_fields = ["Absolute", "FlavorQCD", "Absolute_2018", "Absolute_2017"]
-        jec_yml_path = "configs/parameters/jec.yaml"
-
-        if args.year == "all":
-            years_for_jec = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
-            jec_unc_base = []
-            for y in years_for_jec:
-                jec_unc_base.extend(getJecJerUncertainties(jec_yml_path, year=y))
-            jec_unc_base = sorted(set(jec_unc_base))
-        else:
-            jec_unc_base = getJecJerUncertainties(jec_yml_path, year=args.year)
-
-        jec_unc_fields = applyUpDown(jec_unc_base)
+        jec_unc_fields = discover_shape_unc_fields(events.fields)
         print(f"jec_unc_fields: {jec_unc_fields}")
         
         # raise ValueError
@@ -472,4 +470,3 @@ pdf_index_ggh discrete
     print(f"Datacards saved at {base_path}")
 
     print("Success!")
-

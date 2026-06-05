@@ -53,13 +53,24 @@ def get_compactedPath(stage1_path):
         logger.critical(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
         raise FileNotFoundError(f"Neither {compacted_stage1_path} nor {stage1_path} exists! Exiting!")
 
-def discover_jes_systs(fields, jet_prefixes=None):
+def discover_shape_systs(fields, prefixes=None):
     """
-    Discover available JES/JER-like up/down suffixes from any jet-related variable.
-    Returns a sorted list of strings like ['Absolute_2018_up', 'HF_down', ...].
+    Discover available shape-variation suffixes from shifted stage1 branches.
+    This covers both jet/JEC-like variations and muon-momentum shape variations.
     """
-    if jet_prefixes is None:
-        jet_prefixes = [
+    if prefixes is None:
+        prefixes = [
+            "dimuon_mass_",
+            "dimuon_pt_",
+            "dimuon_pt_log_",
+            "dimuon_eta_",
+            "dimuon_rapidity_",
+            "dimuon_ebe_mass_res_",
+            "dimuon_ebe_mass_res_rel_",
+            "mu1_pt_",
+            "mu2_pt_",
+            "mu1_pt_over_mass_",
+            "mu2_pt_over_mass_",
             "jet1_pt_",
             "jet2_pt_",
             "jj_mass_",
@@ -72,29 +83,76 @@ def discover_jes_systs(fields, jet_prefixes=None):
     for f in fields:
         if not (f.endswith("_up") or f.endswith("_down")):
             continue
-        for p in jet_prefixes:
+        for p in prefixes:
             if f.startswith(p):
                 suffixes.add(f[len(p):])
                 break
     return sorted(suffixes)
 
-def columns_for_selection(category, variation):
-    # minimal columns for cuts; add here if your selection changes
+def resolve_variation_field(base, variation, fields):
     use_var = "nominal" if variation.startswith("wgt") else variation
-    base = [
+    candidates = [f"{base}_{use_var}", f"{base}_nominal", base]
+    for cand in candidates:
+        if cand in fields:
+            return cand
+    raise KeyError(
+        f"Selection/feature field '{base}' for variation '{variation}' is unavailable. Tried: {candidates}"
+    )
+
+
+def columns_for_selection(category, variation, fields):
+    # minimal columns for cuts; add here if your selection changes
+    base_names = [
         "dimuon_mass",
-        "event",
-        f"njets_{use_var}",
-        "gjj_mass",
-        f"nBtagLoose_{use_var}",
-        f"nBtagMedium_{use_var}",
-        f"jj_mass_{use_var}",
-        f"jj_dEta_{use_var}",
-        f"jet1_pt_{use_var}",
-        "nfatJets_drmuon",
-        "MET_pt",
+        "njets",
+        "nBtagLoose",
+        "nBtagMedium",
+        "jj_mass",
+        "jj_dEta",
+        "jet1_pt",
     ]
-    return base
+    cols = ["event", "gjj_mass", "nfatJets_drmuon", "MET_pt"]
+    cols.extend(resolve_variation_field(name, variation, fields) for name in base_names)
+    return cols
+
+
+def resolve_vbf_training_layout(model_path: Path, model_tag: str, nfolds: int):
+    """
+    Support both layouts:
+    1) <model_path>/training_features.pkl + fold*/best_torchscript.pt
+    2) <model_path>/training_features.pkl + <model_path>/<model_tag>/fold*/best_torchscript.pt
+    3) <model_path>/<model_tag>/training_features.pkl + fold*/best_torchscript.pt
+    """
+    feature_roots = []
+    for candidate in [model_path, model_path / model_tag]:
+        if candidate not in feature_roots:
+            feature_roots.append(candidate)
+
+    model_roots = []
+    for candidate in [model_path / model_tag, model_path]:
+        if candidate not in model_roots:
+            model_roots.append(candidate)
+
+    missing_reports = []
+    for feature_root in feature_roots:
+        tf_path = feature_root / "training_features.pkl"
+        scaler_paths = [feature_root / f"scalers_{fold}.npz" for fold in range(nfolds)]
+        if not tf_path.is_file() or not all(p.is_file() for p in scaler_paths):
+            continue
+
+        for model_root in model_roots:
+            model_paths = [
+                model_root / f"fold{fold}" / "best_torchscript.pt"
+                for fold in range(nfolds)
+            ]
+            if all(p.is_file() for p in model_paths):
+                return feature_root, model_root
+            missing_reports.extend([f"missing model: {p}" for p in model_paths if not p.is_file()])
+
+        missing_reports.extend([f"missing training feature/scaler artifact under: {feature_root}"])
+
+    details = "\n".join(missing_reports) if missing_reports else "No matching training layout found."
+    raise FileNotFoundError(details)
 
 class DNNWrapper(torch_wrapper):
     def _create_model(self):
@@ -122,6 +180,14 @@ class DNNWrapper(torch_wrapper):
         return [
             ak.values_astype(arr, "float32"), #only modification we do is is force float32
         ], {}
+
+
+def sigmoid_ak(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
+
+def clip_ak(x, min_value, max_value):
+    return ak.where(x < min_value, min_value, ak.where(x > max_value, max_value, x))
 
 
 def prepare_features(events, features, variation="nominal"):
@@ -341,28 +407,18 @@ if __name__ == "__main__":
         logger.debug(f"fields: {fields}")
 
         # Auto-discover JES/JER-like systematic suffixes from jet-related columns
-        jes_systs = discover_jes_systs(fields)
+        jes_systs = discover_shape_systs(fields)
         # if "log_" exists remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
         jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
         logger.info(f"Discovered JES/JER variations: {jes_systs}")
 
         model_trained_path = Path(args.model_path).resolve()
-        training_dir = (model_trained_path / args.model_tag).resolve()
-
-        missing = []
-        for fold in range(nfolds):
-            p = training_dir / f"fold{fold}" / "best_torchscript.pt"
-            s = model_trained_path / f"scalers_{fold}.npz"
-            if not p.is_file():
-                missing.append(f"missing model: {p}")
-            if not s.is_file():
-                missing.append(f"missing scaler: {s}")
-
-        if missing:
-            raise FileNotFoundError("\n".join(missing))
+        feature_dir, training_dir = resolve_vbf_training_layout(
+            model_trained_path, args.model_tag, nfolds
+        )
 
         # Load training features once per sample_type
-        with open(model_trained_path / "training_features.pkl", "rb") as f:
+        with open(feature_dir / "training_features.pkl", "rb") as f:
             training_features = pickle.load(f)
         logger.debug(f"training_features: {training_features}")
         logger.info(f"len training_features: {len(training_features)}")
@@ -375,7 +431,7 @@ if __name__ == "__main__":
         # cache scalers
         scaler_cache = {}
         for fold in range(nfolds):
-            sp = model_trained_path / f"scalers_{fold}.npz"
+            sp = feature_dir / f"scalers_{fold}.npz"
             with np.load(sp, allow_pickle=True) as f:
                 scaler_cache[fold] = {
                     "mean": f["mean"].astype(np.float64),
@@ -479,7 +535,7 @@ if __name__ == "__main__":
                 logger.debug(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
                 continue
 
-            sel_cols = columns_for_selection(category, variation)
+            sel_cols = columns_for_selection(category, variation, fields)
             needed_cols = set(sel_cols + [wgt_variation])
 
             logger.debug(f"sel_cols: {sel_cols}")
@@ -513,7 +569,7 @@ if __name__ == "__main__":
                 process=sample_type,
                 category=category,
                 region_name=region,
-                do_vbf_filter_study=True,
+                do_vbf_filter_study=False,
                 variation=variation,
             )
             events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
@@ -522,6 +578,11 @@ if __name__ == "__main__":
             if region == "h-sidebands":
                 try:
                     events["dimuon_mass"] = 125.0 * ak.ones_like(events.dimuon_mass)
+                    shifted_mass_field = feature_sources.get("dimuon_mass")
+                    if shifted_mass_field and shifted_mass_field in events.fields:
+                        events[shifted_mass_field] = 125.0 * ak.ones_like(
+                            events[shifted_mass_field]
+                        )
                     logger.debug("[sidebands] Forced dimuon_mass=125.0 for DNN inputs")
                 except Exception as _e:
                     logger.warning(f"[sidebands] Failed to fix dimuon_mass to 125.0: {_e}")
@@ -575,7 +636,7 @@ if __name__ == "__main__":
                 ],  # np.newaxis is added so that we can concat on axis=1
                 axis=1,
             )
-            dnn_score = nan_val * ak.ones_like(events.event)
+            dnn_logit = nan_val * ak.ones_like(events.event)
 
             for fold in range(nfolds):
                 eval_folds = [(fold + f) % nfolds for f in [3]]
@@ -584,9 +645,13 @@ if __name__ == "__main__":
                 dnn_score_fold = dnnWrap(input_arr)
                 dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
 
-                dnn_score = ak.where(eval_filter, dnn_score_fold, dnn_score)
-            # transform dnn_score
-            dnn_score = np.arctanh(dnn_score)
+                dnn_logit = ak.where(eval_filter, dnn_score_fold, dnn_logit)
+
+            valid_mask = dnn_logit != nan_val
+            dnn_score = sigmoid_ak(dnn_logit)
+            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
+            dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
+            dnn_score = ak.where(valid_mask, dnn_score, nan_val)
 
             # ---------------------------------------------------
             # Now onto converting DNN score as histograms

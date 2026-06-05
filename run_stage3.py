@@ -22,13 +22,16 @@ import uuid
 from modules.utils import logger
 import glob
 
+
+VALID_CORE_PDFS = {"sumExp", "BWZRedux", "FEWZxBern"}
+
 def load_compute_parquet(
-    load_path, 
+    load_path,
     fields2compute = ["wgt_nominal", "dimuon_mass", "subCategory_idx"]
     ):
     """
     helper function that takes an a load path to read parquet and returns a computed ak zip
-    
+
     """
     pattern = load_path
     load_path = glob.glob(pattern)  # loading from explicit list of parquet files is more stable
@@ -45,7 +48,66 @@ def load_compute_parquet(
         field :  events[field] for field in fields2compute
     }).compute()
     return processed_zip
-    
+
+
+def parse_excluded_core_pdfs(raw_value: str) -> List[str]:
+    if raw_value is None:
+        return []
+
+    excluded = [item.strip() for item in raw_value.split(",") if item.strip()]
+    invalid = sorted(set(excluded) - VALID_CORE_PDFS)
+    if invalid:
+        raise ValueError(
+            f"Invalid core PDF exclusion(s): {invalid}. Valid choices are {sorted(VALID_CORE_PDFS)}"
+        )
+    return excluded
+
+
+def make_variant_tag(excluded_core_pdfs: List[str]) -> str:
+    if not excluded_core_pdfs:
+        return "all_core_pdfs"
+    return "no_" + "_".join(sorted(excluded_core_pdfs))
+
+
+def build_core_pdf_arglist(core_pdf_entries: List[Tuple[str, ROOT.RooAbsPdf]], excluded_core_pdfs: List[str]) -> ROOT.RooArgList:
+    pdf_list = rt.RooArgList()
+    for core_name, pdf in core_pdf_entries:
+        if core_name in excluded_core_pdfs:
+            continue
+        pdf_list.add(pdf)
+
+    if pdf_list.getSize() == 0:
+        raise ValueError("At least one core PDF must remain in the RooMultiPdf.")
+    return pdf_list
+
+
+def workspace_root_path(dir_path: str, kind: str, cat_idx: int, category: str, variant_tag: str) -> str:
+    return f"{dir_path}/workspace_{kind}_cat{cat_idx}_{category}_{variant_tag}.root"
+
+def load_compute_parquet(
+    load_path,
+    fields2compute = ["wgt_nominal", "dimuon_mass", "subCategory_idx"]
+    ):
+    """
+    helper function that takes an a load path to read parquet and returns a computed ak zip
+
+    """
+    pattern = load_path
+    load_path = glob.glob(pattern)  # loading from explicit list of parquet files is more stable
+    if not load_path:
+        raise ValueError(
+            f"No parquet files found matching pattern: {pattern!r}. "
+            "Please check the input path or filename pattern."
+        )
+    events = dak.from_parquet(load_path)
+    for field in fields2compute:
+        if field not in events.fields:
+            raise ValueError(f"Error: field {field} not available to compute!")
+    processed_zip = ak.zip({
+        field :  events[field] for field in fields2compute
+    }).compute()
+    return processed_zip
+
 def normalizeFlatHist(x: rt.RooRealVar,rooHist: rt.RooDataHist) -> rt.RooDataHist :
     """
     Takes rootHistogram and returns a new copy with histogram values normalized to sum to one
@@ -133,7 +195,7 @@ def plotBkgByCoreFunc(mass:rt.RooRealVar, model_dict_by_coreFunction: Dict, rooH
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{core_type}.pdf")
         canvas.Close()
-        del canvas        
+        del canvas
 
 def plotBkgBySubCat_normalized(mass:rt.RooRealVar, model_dict_by_subCat: Dict, save_path: str):
     """
@@ -220,7 +282,7 @@ def plotBkgBySubCat(mass:rt.RooRealVar, model_dict_by_subCat: Dict, data_dict_by
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_subCat{subCat_idx}.png")
         canvas.Close()
-        del canvas    
+        del canvas
 
 
 def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list: List, save_path: str):
@@ -266,7 +328,7 @@ def plotSigBySample(mass:rt.RooRealVar, model_dict_by_sample: Dict, sigHist_list
         canvas.Draw()
         canvas.SaveAs(f"{save_path}/simultaneousPlotTestFromTutorial_{model_type}.pdf")
         canvas.Close()
-        del canvas  
+        del canvas
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -309,7 +371,14 @@ if __name__ == "__main__":
     default="plots",
     action="store",
     help="Path where we save output files",
-    )    
+    )
+    parser.add_argument(
+    "--exclude-core-pdfs",
+    dest="exclude_core_pdfs",
+    default="",
+    action="store",
+    help="Comma-separated list of core PDFs to exclude from the final RooMultiPdf. Valid values: sumExp,BWZRedux,FEWZxBern",
+    )
     args = parser.parse_args()
     # check for valid arguments
     if args.load_path == None:
@@ -317,6 +386,10 @@ if __name__ == "__main__":
         raise ValueError
 
     category = args.category.lower()
+    excluded_core_pdfs = parse_excluded_core_pdfs(args.exclude_core_pdfs)
+    variant_tag = make_variant_tag(excluded_core_pdfs)
+    logger.info("Excluded core PDFs from RooMultiPdf: %s", excluded_core_pdfs if excluded_core_pdfs else "none")
+    logger.info("Stage3 output variant tag: %s", variant_tag)
     # load_path = "/work/users/yun79/stage2_output/ggH/test/processed_events_data.parquet"
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_data.parquet"
     # if args.year=="all":
@@ -339,7 +412,7 @@ if __name__ == "__main__":
     print("events loaded!")
 
     # make plot directory
-    base_path = f"{args.save_path}/stage3/{args.year}/{args.label}"
+    base_path = f"{args.save_path}/stage3/{args.year}/{args.label}_{variant_tag}"
     plot_save_path = base_path
     if not os.path.exists(plot_save_path):
         os.makedirs(plot_save_path)
@@ -441,12 +514,12 @@ if __name__ == "__main__":
 
     name = "subCat0_SMF"
     subCat0_SMF = rt.RooChebychev(
-        name, 
-        name, 
-        mass, 
+        name,
+        name,
+        mass,
         [
-            a0_subCat0, 
-            a1_subCat0, 
+            a0_subCat0,
+            a1_subCat0,
             a3_subCat0
         ],
     )
@@ -1391,11 +1464,18 @@ if __name__ == "__main__":
 
     # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
     # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
-    pdf_list_subCat0 = rt.RooArgList(
-        model_subCat0_sumExp,
-        model_subCat0_BWZRedux,
-        model_subCat0_FEWZxBern,
+    pdf_list_subCat0 = build_core_pdf_arglist(
+        [
+            ("sumExp", model_subCat0_sumExp),
+            ("BWZRedux", model_subCat0_BWZRedux),
+            ("FEWZxBern", model_subCat0_FEWZxBern),
+        ],
+        excluded_core_pdfs,
     )
+    print("----------------------------------")
+    print(f"pdf_list_subCat0: {pdf_list_subCat0}")
+    pdf_list_subCat0.Print("v")
+    print("----------------------------------")
     corePdf_subCat0 = rt.RooMultiPdf("CorePdf_subCat0","CorePdf_subCat0",cat_subCat0,pdf_list_subCat0)
     # penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     penalty = 0.5
@@ -1426,11 +1506,18 @@ if __name__ == "__main__":
 
     # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
     # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
-    pdf_list_subCat1 = rt.RooArgList(
-        model_subCat1_sumExp,
-        model_subCat1_BWZRedux,
-        model_subCat1_FEWZxBern,
+    pdf_list_subCat1 = build_core_pdf_arglist(
+        [
+            ("sumExp", model_subCat1_sumExp),
+            ("BWZRedux", model_subCat1_BWZRedux),
+            ("FEWZxBern", model_subCat1_FEWZxBern),
+        ],
+        excluded_core_pdfs,
     )
+    print("----------------------------------")
+    print(f"pdf_list_subCat1: {pdf_list_subCat1}")
+    pdf_list_subCat1.Print("v")
+    print("----------------------------------")
     corePdf_subCat1 = rt.RooMultiPdf("CorePdf_subCat1","CorePdf_subCat1",cat_subCat1,pdf_list_subCat1)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat1.setCorrectionFactor(penalty)
@@ -1459,11 +1546,18 @@ if __name__ == "__main__":
 
     # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
     # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
-    pdf_list_subCat2 = rt.RooArgList(
-        model_subCat2_sumExp,
-        model_subCat2_BWZRedux,
-        model_subCat2_FEWZxBern,
+    pdf_list_subCat2 = build_core_pdf_arglist(
+        [
+            ("sumExp", model_subCat2_sumExp),
+            ("BWZRedux", model_subCat2_BWZRedux),
+            ("FEWZxBern", model_subCat2_FEWZxBern),
+        ],
+        excluded_core_pdfs,
     )
+    print("----------------------------------")
+    print(f"pdf_list_subCat2: {pdf_list_subCat2}")
+    pdf_list_subCat2.Print("v")
+    print("----------------------------------")
     corePdf_subCat2 = rt.RooMultiPdf("CorePdf_subCat2","CorePdf_subCat2",cat_subCat2,pdf_list_subCat2)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat2.setCorrectionFactor(penalty)
@@ -1491,11 +1585,18 @@ if __name__ == "__main__":
 
     # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
     # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
-    pdf_list_subCat3 = rt.RooArgList(
-        model_subCat3_sumExp,
-        model_subCat3_BWZRedux,
-        model_subCat3_FEWZxBern,
+    pdf_list_subCat3 = build_core_pdf_arglist(
+        [
+            ("sumExp", model_subCat3_sumExp),
+            ("BWZRedux", model_subCat3_BWZRedux),
+            ("FEWZxBern", model_subCat3_FEWZxBern),
+        ],
+        excluded_core_pdfs,
     )
+    print("----------------------------------")
+    print(f"pdf_list_subCat3: {pdf_list_subCat3}")
+    pdf_list_subCat3.Print("v")
+    print("----------------------------------")
     corePdf_subCat3 = rt.RooMultiPdf("CorePdf_subCat3","CorePdf_subCat3",cat_subCat3,pdf_list_subCat3)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat3.setCorrectionFactor(penalty)
@@ -1523,11 +1624,18 @@ if __name__ == "__main__":
 
     # FEWZxBern Sumexp is less dependent to dimuon mass as stated in line 1585 of RERECO AN
     # I suppose BWZredux is there bc it's the one function with overall least bias (which is why BWZredux is used if CORE-PDF is not used)
-    pdf_list_subCat4 = rt.RooArgList(
-        model_subCat4_sumExp,
-        model_subCat4_BWZRedux,
-        model_subCat4_FEWZxBern,
+    pdf_list_subCat4 = build_core_pdf_arglist(
+        [
+            ("sumExp", model_subCat4_sumExp),
+            ("BWZRedux", model_subCat4_BWZRedux),
+            ("FEWZxBern", model_subCat4_FEWZxBern),
+        ],
+        excluded_core_pdfs,
     )
+    print("----------------------------------")
+    print(f"pdf_list_subCat4: {pdf_list_subCat4}")
+    pdf_list_subCat4.Print("v")
+    print("----------------------------------")
     corePdf_subCat4 = rt.RooMultiPdf("CorePdf_subCat4","CorePdf_subCat4",cat_subCat4,pdf_list_subCat4)
     penalty = 0 # as told in https://cms-talk.web.cern.ch/t/combine-fitting-not-working-with-roomultipdf-leading-to-bad-signal-significance/44238/
     corePdf_subCat4.setCorrectionFactor(penalty)
@@ -2506,7 +2614,7 @@ if __name__ == "__main__":
     yield_df = pd.concat([yield_df, summed_values], ignore_index=True)
     # print(f"yield_df after all: \n {yield_df}")
     yield_df = yield_df.sort_values(by=["dataset", "category"], ascending=[False, True])
-    yield_df.to_csv(f"{base_path}/yield_df.csv")
+    yield_df.to_csv(f"{base_path}/yield_df_{variant_tag}.csv")
 
 
 
@@ -2781,7 +2889,7 @@ if __name__ == "__main__":
     # ----------------------------------------------------------------
 
     # subCat 0
-    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat0_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "bkg", 0, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     roo_histData_subCat0.SetName("data_cat0_ggh");
@@ -2802,13 +2910,13 @@ if __name__ == "__main__":
     # -------------------------------
     # freeze all fit params for post-fit
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_bkg_cat0_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "bkg", 0, category, variant_tag),"RECREATE")
     freeze_all_vars(wout, make_exception=["mh_ggh", "_norm"]) # normalization is explicitly linked with the r (our POI) so we keep that floating)
     wout.Write();
     print_workspace_vars(wout)
     # raise ValueError
 
-    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat0_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "sig", 0, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat0.SetName("ggH_cat0_ggh_pdf");
@@ -2832,12 +2940,12 @@ if __name__ == "__main__":
     # copy signal workspace to post-fit path too
     # All relevant params are frozen in signal, so just copy paste
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_sig_cat0_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "sig", 0, category, variant_tag),"RECREATE")
     wout.Write();
 
 
     # subCat 1
-    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat1_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "bkg", 1, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     roo_histData_subCat1.SetName("data_cat1_ggh");
@@ -2857,14 +2965,14 @@ if __name__ == "__main__":
     # -------------------------------
     # freeze all fit params for post-fit
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_bkg_cat1_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "bkg", 1, category, variant_tag),"RECREATE")
     freeze_all_vars(wout, make_exception=["mh_ggh", "_norm"]) # normalization is explicitly linked with the r (our POI) so we keep that floating)
     wout.Write();
     # print_workspace_vars(wout)
     # raise ValueError
 
 
-    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat1_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "sig", 1, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat1.SetName("ggH_cat1_ggh_pdf");
@@ -2887,11 +2995,11 @@ if __name__ == "__main__":
     # copy signal workspace to post-fit path too
     # All relevant params are frozen in signal, so just copy paste
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_sig_cat1_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "sig", 1, category, variant_tag),"RECREATE")
     wout.Write();
 
     # subCat 2
-    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat2_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "bkg", 2, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     roo_histData_subCat2.SetName("data_cat2_ggh");
@@ -2912,13 +3020,13 @@ if __name__ == "__main__":
     # -------------------------------
     # freeze all fit params for post-fit
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_bkg_cat2_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "bkg", 2, category, variant_tag),"RECREATE")
     freeze_all_vars(wout, make_exception=["mh_ggh", "_norm"]) # normalization is explicitly linked with the r (our POI) so we keep that floating)
     wout.Write();
     # print_workspace_vars(wout)
     # raise ValueError
 
-    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat2_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "sig", 2, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat2.SetName("ggH_cat2_ggh_pdf");
@@ -2941,12 +3049,12 @@ if __name__ == "__main__":
     # copy signal workspace to post-fit path too
     # All relevant params are frozen in signal, so just copy paste
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_sig_cat2_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "sig", 2, category, variant_tag),"RECREATE")
     wout.Write();
 
 
     # subCat 3
-    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat3_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "bkg", 3, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     roo_histData_subCat3.SetName("data_cat3_ggh");
@@ -2967,13 +3075,13 @@ if __name__ == "__main__":
     # -------------------------------
     # freeze all fit params for post-fit
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_bkg_cat3_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "bkg", 3, category, variant_tag),"RECREATE")
     freeze_all_vars(wout, make_exception=["mh_ggh", "_norm"]) # normalization is explicitly linked with the r (our POI) so we keep that floating)
     wout.Write();
     # print_workspace_vars(wout)
     # raise ValueError
 
-    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat3_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "sig", 3, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat3.SetName("ggH_cat3_ggh_pdf");
@@ -2996,12 +3104,12 @@ if __name__ == "__main__":
     # copy signal workspace to post-fit path too
     # All relevant params are frozen in signal, so just copy paste
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_sig_cat3_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "sig", 3, category, variant_tag),"RECREATE")
     wout.Write();
 
 
     # subCat 4
-    fout = rt.TFile(f"{workspace_path}/workspace_bkg_cat4_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "bkg", 4, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     roo_histData_subCat4.SetName("data_cat4_ggh");
@@ -3022,13 +3130,13 @@ if __name__ == "__main__":
     # -------------------------------
     # freeze all fit params for post-fit
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_bkg_cat4_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "bkg", 4, category, variant_tag),"RECREATE")
     freeze_all_vars(wout, make_exception=["mh_ggh", "_norm"]) # normalization is explicitly linked with the r (our POI) so we keep that floating)
     wout.Write();
     # print_workspace_vars(wout)
     # raise ValueError
 
-    fout = rt.TFile(f"{workspace_path}/workspace_sig_cat4_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(workspace_path, "sig", 4, category, variant_tag),"RECREATE")
     wout = rt.RooWorkspace("w","workspace")
     # matching names consistent with UCSD's naming scheme
     signal_subCat4.SetName("ggH_cat4_ggh_pdf");
@@ -3052,7 +3160,7 @@ if __name__ == "__main__":
     # copy signal workspace to post-fit path too
     # All relevant params are frozen in signal, so just copy paste
     # -------------------------------
-    fout = rt.TFile(f"{postFitWorkspace_path}/workspace_sig_cat4_{category}.root","RECREATE")
+    fout = rt.TFile(workspace_root_path(postFitWorkspace_path, "sig", 4, category, variant_tag),"RECREATE")
     wout.Write();
 
 

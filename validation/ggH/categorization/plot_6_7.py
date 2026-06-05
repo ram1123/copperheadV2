@@ -18,7 +18,7 @@ import copy
 from array import array
 ROOT.gStyle.SetOptStat(0) # remove stats box
 import dask.dataframe as dd
-import matplotlib.cm as cm
+from matplotlib import colormaps
 from modules.utils import pair_and_remove, getSqrtSOverB
 from modules.RooWorkspaceUtils import hist_stddev_with_unc
 from modules.selection import filterRegion
@@ -82,25 +82,25 @@ def get_unique_colors(n, cmap_name="tab10"):
 
     """
     Return a list of n unique colors (as RGBA tuples) compatible with pyplot.
-    
+
     Parameters
     ----------
     n : int
         Number of colors to generate.
     cmap_name : str, optional
         Name of a matplotlib colormap (default "tab10").
-    
+
     Returns
     -------
     list of RGBA tuples
     """
-    cmap = cm.get_cmap(cmap_name, n)  # sample 'n' distinct colors
+    cmap = colormaps.get_cmap(cmap_name).resampled(n)  # sample 'n' distinct colors
     return [cmap(i) for i in range(n)]
-    
+
 def weighted_quantile(values, quantile, sample_weight=None):
     """
     Compute weighted quantile of given data.
-    
+
     values : np.ndarray
         Data (e.g. BDT scores).
     quantile : float
@@ -113,7 +113,7 @@ def weighted_quantile(values, quantile, sample_weight=None):
         sample_weight = np.ones(len(values))
     else:
         sample_weight = np.array(sample_weight)
-    
+
     # sort by values
     sorter = np.argsort(values)
     values = values[sorter]
@@ -126,7 +126,7 @@ def weighted_quantile(values, quantile, sample_weight=None):
     return values[np.searchsorted(cumsum, cutoff)]
 
 def plot_6_7FineGrain(df, binning, var, xlabel, save_dir):
-    
+
     # --- binning ---
     # bdt_edges = np.array([-1.00, -0.28, -0.10, 0.08, 0.23, 0.32, 0.43, 0.51, 1.00])
     n_cats = 20
@@ -134,11 +134,11 @@ def plot_6_7FineGrain(df, binning, var, xlabel, save_dir):
     bdt_edges = np.linspace(-1,1,n_cats+1)
     # bdt_edges = np.array([-1.   , -0.625, -0.5  , -0.375, -0.25 , -0.125,        0.   ,  0.125,  0.25 ,  0.375,  0.5  ,  0.625,  0.75 ,  0.875,        1.   ])
     # n_cats = len(bdt_edges)-1
-    
+
     # --- plotting ---
     # plt.figure(figsize=(7,5))
     fig, ax_main = plt.subplots()
-    
+
     colors = get_unique_colors(n_cats, cmap_name="tab20")
     score_name =  "BDT_score"
     for (lo, hi), color in zip(zip(bdt_edges[:-1], bdt_edges[1:]), colors):
@@ -175,14 +175,14 @@ def plot_6_7FineGrain(df, binning, var, xlabel, save_dir):
     plt.savefig(fig_name)
 
 def plot_6_7BDTCatMerged(df, binning, var, xlabel, save_dir):
-    
+
     # --- binning ---
     bdt_edges = np.array([-1.00, -0.28, -0.10, 0.08, 0.23, 0.32, 0.43, 0.51, 1.00])
-    
+
     # --- plotting ---
     # plt.figure(figsize=(7,5))
     fig, ax_main = plt.subplots()
-    
+
     colors = ["black","red","blue","orange","green","cyan","magenta","gray"]
     score_name =  "BDT_score"
     hist_l = []
@@ -224,14 +224,14 @@ def plot_6_7BDTCatMerged(df, binning, var, xlabel, save_dir):
 
 
 def plot_6_7(df, binning, var, xlabel, save_dir):
-    
+
     # --- binning ---
     bdt_edges = np.array([-1.00, -0.28, -0.10, 0.08, 0.23, 0.32, 0.43, 0.51, 1.00])
-    
+
     # --- plotting ---
     # plt.figure(figsize=(7,5))
     fig, ax_main = plt.subplots()
-    
+
     colors = ["black","red","blue","orange","green","cyan","magenta","gray"]
     score_name =  "BDT_score"
     for (lo, hi), color in zip(zip(bdt_edges[:-1], bdt_edges[1:]), colors):
@@ -269,7 +269,7 @@ def plot_6_7(df, binning, var, xlabel, save_dir):
 
 
 def plot_6_7BySubCat(df, binning, var, xlabel, save_dir, cat_idx=None):
-    
+
     # --- binning --- # FIXME: copy the edges from 2024 BDT edges yaml file
     bdt_edges = np.array([ # 2018 UL subcat edges
         0.0,
@@ -284,7 +284,7 @@ def plot_6_7BySubCat(df, binning, var, xlabel, save_dir, cat_idx=None):
     # --- plotting ---
     # plt.figure(figsize=(7,5))
     fig, ax_main = plt.subplots()
-    
+
     colors = ["black","red","blue","orange","green","cyan","magenta","gray"]
     score_name =  "BDT_score"
     bdt_loop = zip(zip(bdt_edges[:-1], bdt_edges[1:]), colors)
@@ -348,23 +348,23 @@ def plot_6_7BySubCat(df, binning, var, xlabel, save_dir, cat_idx=None):
     plt.savefig(fig_name)
 
 # def compareMCByEbeMass(df_dict, binning, var, xlabel, save_dir, unweighted=False, abs_wgt=False, removeNegWgt=False, applyWgt=False, do_logscale=True):
-    
+
 #     # --- plotting ---
 #     # plt.figure(figsize=(7,5))
-    
-    
+
+
 #     wgt_var= "wgt_nominal"
 #     mass_res_edges = [0, 1.25, 8]
 #     for njet_target in [0, 1, 2, 3, 4]:
 #         plt.clf()
 #         fig, ax_main = plt.subplots()
-    
+
 #         for label, df in df_dict.items():
 #             if abs_wgt:
 #                 wgt = abs(df[wgt_var])
 #                 var_val = df[var]
 #             elif removeNegWgt:
-#                 is_pos = df[wgt_var] >=0 
+#                 is_pos = df[wgt_var] >=0
 #                 wgt = df[wgt_var][is_pos]
 #                 var_val = df[var][is_pos]
 #             else:
@@ -410,28 +410,28 @@ def plot_6_7BySubCat(df, binning, var, xlabel, save_dir, cat_idx=None):
 #                 fig_name = f"{save_dir}/{plot_var}_sigMC_compPosWgtNjet{njet_target}.pdf"
 #             elif applyWgt:
 #                 fig_name = f"{save_dir}/{plot_var}_sigMC_compXsecNormalizedNjet{njet_target}.pdf"
-#             else: 
+#             else:
 #                 fig_name = f"{save_dir}/{plot_var}_sigMC_compNjet{njet_target}.pdf"
 #             plt.savefig(fig_name)
 
 
 def compareMCByNjet(df_dict, binning, var, xlabel, save_dir, unweighted=False, abs_wgt=False, removeNegWgt=False, applyWgt=False, do_logscale=True):
-    
+
     # --- plotting ---
     # plt.figure(figsize=(7,5))
-    
+
     wgt_var= "wgt_nominal"
     for njet_target in [0, 1, 2, 3, 4]:
         hist_dict = {}
         plt.clf()
         fig, ax_main = plt.subplots()
-    
+
         for label, df in df_dict.items():
             if abs_wgt:
                 wgt = abs(df[wgt_var])
                 var_val = df[var]
             elif removeNegWgt:
-                is_pos = df[wgt_var] >=0 
+                is_pos = df[wgt_var] >=0
                 wgt = df[wgt_var][is_pos]
                 var_val = df[var][is_pos]
             else:
@@ -439,7 +439,7 @@ def compareMCByNjet(df_dict, binning, var, xlabel, save_dir, unweighted=False, a
                 var_val = df[var]
             njet_filter = df["njets_nominal"] >= njet_target
             current_label = label+f", njet >={njet_target}"
-            
+
             # if njet_target < 3:
             #     njet_filter = df["njets_nominal"] == njet_target
             #     current_label = label+f", njet ={njet_target}"
@@ -452,7 +452,7 @@ def compareMCByNjet(df_dict, binning, var, xlabel, save_dir, unweighted=False, a
             wgt_njet = wgt[njet_filter]
             # Merge bins: keep every 2nd edge
             current_bins = binning[::2]
-            
+
             hist, bins = np.histogram(var_val_njet, bins=current_bins, weights=wgt_njet)
             # --------------------
             print(f"hist: {len(hist)}")
@@ -462,7 +462,7 @@ def compareMCByNjet(df_dict, binning, var, xlabel, save_dir, unweighted=False, a
             if not applyWgt: # every other options lead to normalizing the histogram
                 hist = hist / np.sum(hist)
             hist_dict[label] = (hist, bins)
-            
+
             hep.histplot(
                 hist,
                 bins,
@@ -470,7 +470,7 @@ def compareMCByNjet(df_dict, binning, var, xlabel, save_dir, unweighted=False, a
                 histtype="step",
                 ax=ax_main,
             )
-        
+
         plt.xlabel(xlabel)
         if applyWgt:
             plt.ylabel("yield")
@@ -497,7 +497,7 @@ def compareMCByNjet(df_dict, binning, var, xlabel, save_dir, unweighted=False, a
             fig_name = f"{save_dir}/{plot_var}_sigMC_compPosWgtNjet{njet_target}.pdf"
         elif applyWgt:
             fig_name = f"{save_dir}/{plot_var}_sigMC_compXsecNormalizedNjet{njet_target}.pdf"
-        else: 
+        else:
             fig_name = f"{save_dir}/{plot_var}_sigMC_compNjet{njet_target}.pdf"
         plt.savefig(fig_name)
 
@@ -519,16 +519,16 @@ def compareMCByNjet(df_dict, binning, var, xlabel, save_dir, unweighted=False, a
         print(f"sig_counts: {len(sig_counts)}")
         print(f"bkg_counts: {len(bkg_counts)}")
         getSqrtSOverB(bin_edges, sig_counts, bkg_counts, save_path, fname)
-        
+
 
 
 def compareMC(df_dict, binning, var, xlabel, save_dir, unweighted=False, abs_wgt=False, removeNegWgt=False, applyWgt=False, do_logscale=True):
-    
+
     # --- plotting ---
     # plt.figure(figsize=(7,5))
     plt.clf()
     fig, ax_main = plt.subplots()
-    
+
     wgt_var= "wgt_nominal"
 
     for label, df in df_dict.items():
@@ -536,7 +536,7 @@ def compareMC(df_dict, binning, var, xlabel, save_dir, unweighted=False, abs_wgt
             wgt = abs(df[wgt_var])
             var_val = df[var]
         elif removeNegWgt:
-            is_pos = df[wgt_var] >=0 
+            is_pos = df[wgt_var] >=0
             wgt = df[wgt_var][is_pos]
             var_val = df[var][is_pos]
         else:
@@ -577,7 +577,7 @@ def compareMC(df_dict, binning, var, xlabel, save_dir, unweighted=False, abs_wgt
         fig_name = f"{save_dir}/{plot_var}_sigMC_compPosWgt.pdf"
     elif applyWgt:
         fig_name = f"{save_dir}/{plot_var}_sigMC_compXsecNormalized.pdf"
-    else: 
+    else:
         fig_name = f"{save_dir}/{plot_var}_sigMC_comp.pdf"
     plt.savefig(fig_name)
 
@@ -591,7 +591,7 @@ def getDfAndPreProcess(full_load_path):
     print(df.columns)
     df["BDT_score"] = (df["BDT_score"] *2 ) -1
     # print(df.columns)
-    # print(df.isna().any().any()) 
+    # print(df.isna().any().any())
     # print(df.isna().sum().sum())
     return df
 
@@ -710,14 +710,14 @@ if __name__ == "__main__":
         print("Error, region is not signal!")
         raise ValueError
     # for group, group_fname in sample_groups.items():
-    #     full_load_path = load_path+f"*{group_fname}.parquet" 
+    #     full_load_path = load_path+f"*{group_fname}.parquet"
     #     events = dak.from_parquet(full_load_path)
     #     _, events = filterRegion(events, region=args.region)
     #     sample_dict = fillSampleValues(events, sample_dict, group)
 
-    
-    full_load_path = load_path+f"processed_events_sigMC*.parquet" 
-    # full_load_path = load_path+f"processed_events_sigMC_ggh*.parquet" 
+
+    full_load_path = load_path+f"processed_events_sigMC*.parquet"
+    # full_load_path = load_path+f"processed_events_sigMC_ggh*.parquet"
     df = getDfAndPreProcess(full_load_path)
 
 
@@ -731,37 +731,37 @@ if __name__ == "__main__":
     save_dir = f"{args.save_path}/{args.label}_x_{args.category}/{args.year}_signal/Fig6_7"
     os.makedirs(save_dir, exist_ok=True)
     # extract BDT inputs
-    
+
     model_path = f"{args.mva_base_path}/output/bdt_{args.model_name}_{args.bdt_year}"
     training_feat_path = f"{model_path}/training_features.json"
     print(f"trainig_feat_path: {training_feat_path}")
     with open(training_feat_path, 'r') as file:
         bdt_inputs = json.load(file)
     # bdt_inputs = [
-    #     'dimuon_cos_theta_cs', 
-    #     'dimuon_phi_cs', 
-    #     'dimuon_rapidity', 
-    #     'dimuon_pt', 
-    #     'jet1_eta_nominal', 
-    #     # 'jet2_eta_nominal', 
-    #     'jet1_pt_nominal', 
-    #     'jet2_pt_nominal', 
-    #     'jj_dEta_nominal', 
-    #     'jj_dPhi_nominal', 
-    #     'jj_mass_nominal', 
-    #     # 'mmj1_dEta', 
-    #     # 'mmj1_dPhi',  
-    #     'mmj_min_dEta_nominal', 
-    #     'mmj_min_dPhi_nominal', 
-    #     'mu1_eta', 
-    #     'mu1_pt_over_mass', 
-    #     'mu2_eta', 
-    #     'mu2_pt_over_mass', 
+    #     'dimuon_cos_theta_cs',
+    #     'dimuon_phi_cs',
+    #     'dimuon_rapidity',
+    #     'dimuon_pt',
+    #     'jet1_eta_nominal',
+    #     # 'jet2_eta_nominal',
+    #     'jet1_pt_nominal',
+    #     'jet2_pt_nominal',
+    #     'jj_dEta_nominal',
+    #     'jj_dPhi_nominal',
+    #     'jj_mass_nominal',
+    #     # 'mmj1_dEta',
+    #     # 'mmj1_dPhi',
+    #     'mmj_min_dEta_nominal',
+    #     'mmj_min_dPhi_nominal',
+    #     'mu1_eta',
+    #     'mu1_pt_over_mass',
+    #     'mu2_eta',
+    #     'mu2_pt_over_mass',
     #     'zeppenfeld_nominal',
     #     'njets_nominal',
-    #     # 'mmj1_dEta_nominal', 
-    #     # 'mmj1_dPhi_nominal',  
-    #     'BDT_score',  
+    #     # 'mmj1_dEta_nominal',
+    #     # 'mmj1_dPhi_nominal',
+    #     'BDT_score',
     # ]
     variables = bdt_inputs + ["dimuon_mass", "dimuon_ebe_mass_res"]
     # variables =  ["dimuon_mass", "dimuon_ebe_mass_res"
@@ -788,14 +788,14 @@ if __name__ == "__main__":
         plot_6_7BDTCatMerged(df, binning, var, xlabel, save_dir)
 
 
-    
-    
+
+
     # # ----------------------------------------------------
     # #  compare jet eta distribution when | y_mumu | > 1.0
     # # ----------------------------------------------------
     # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_7_yMuMuCut"
     # os.makedirs(save_dir, exist_ok=True)
-    
+
     # yMuMuCut = abs(df["dimuon_rapidity"]) > 1.0
     # df_yMuMuCut = df[yMuMuCut]
     # for var in ["jet1_eta_nominal", "jet2_eta_nominal", "dimuon_rapidity"]:
@@ -812,7 +812,7 @@ if __name__ == "__main__":
     #     thresholds = np.array(thresholds)
     #     print("BDT score threshold (30% cumulative weight):", thresholds)
     #     plot_6_7BySubCat(df_yMuMuCut, binning, var, xlabel, save_dir)
-    
+
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Scatter"
     # # os.makedirs(save_dir, exist_ok=True)
 
@@ -831,15 +831,15 @@ if __name__ == "__main__":
     # os.makedirs(save_dir, exist_ok=True)
     # plot2D(df, variables, x_var, plot_settings, save_dir)
 
-    
+
     # # ----------------------------------------------------
     # #  Plot dy dimuon mass background
     # # ----------------------------------------------------
     # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/Fig6_7_dy"
     # os.makedirs(save_dir, exist_ok=True)
-    # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet" 
+    # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet"
     # df = getDfAndPreProcess(full_load_path)
-    
+
     # for var in ["dimuon_mass"]:
     #     plot_var = getPlotVar(var)
     #     if plot_var == "dimuon_mass":
@@ -857,7 +857,7 @@ if __name__ == "__main__":
     #     plot_6_7BySubCat(df, binning, var, xlabel, save_dir)
     #     for idx in range(5):
     #         plot_6_7BySubCat(df, binning, var, xlabel, save_dir, cat_idx=idx)
-            
+
     #     # plot_6_7FineGrain(df, binning, var, xlabel, save_dir)
     #     # plot_6_7BDTCatMerged(df, binning, var, xlabel, save_dir)
     # raise ValueError
@@ -868,12 +868,12 @@ if __name__ == "__main__":
     # # # # ----------------------------------------------------
     # # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/sigMC_comp"
     # # # os.makedirs(save_dir, exist_ok=True)
-    
-    # # # full_load_path = load_path+f"processed_events_sigMC_ggh.parquet" 
+
+    # # # full_load_path = load_path+f"processed_events_sigMC_ggh.parquet"
     # # # ggh_df = dd.read_parquet(full_load_path).compute()
-    # # # full_load_path = load_path+f"processed_events_sigMC_vbf.parquet" 
+    # # # full_load_path = load_path+f"processed_events_sigMC_vbf.parquet"
     # # # vbf_df = dd.read_parquet(full_load_path).compute()
-    
+
     # # # # for var in ["dimuon_pt", "dimuon_mass"]:
     # # # for var in variables:
     # # #     plot_var = getPlotVar(var)
@@ -894,12 +894,12 @@ if __name__ == "__main__":
     # # # ----------------------------------------------------
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/sigBkgMC_comp"
     # # os.makedirs(save_dir, exist_ok=True)
-    
-    # # full_load_path = load_path+f"processed_events_sigMC*.parquet" 
+
+    # # full_load_path = load_path+f"processed_events_sigMC*.parquet"
     # # sig_df = dd.read_parquet(full_load_path).compute()
     # # _, sig_df = filterRegion(sig_df, region="h-peak")
     # # # ------------------------------------------
-    # # full_load_path = load_path+f"processed_events_bkgMC*.parquet" 
+    # # full_load_path = load_path+f"processed_events_bkgMC*.parquet"
     # # print(full_load_path)
     # # pos_filter = sig_df["dimuon_rapidity"] > 0
     # # pos_wgt_sum =  sig_df.loc[pos_filter, "wgt_nominal"].sum()
@@ -910,8 +910,8 @@ if __name__ == "__main__":
     # # _, bkg_df = filterRegion(bkg_df, region="h-peak")
     # # print(bkg_df.columns)
 
-    
-    
+
+
     # # for var in variables:
     # #     plot_var = getPlotVar(var)
     # #     if plot_var == "dimuon_mass":
@@ -931,11 +931,11 @@ if __name__ == "__main__":
     # # # ----------------------------------------------------
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/sigBkgMC_comp/JJMassCutGeq400"
     # # os.makedirs(save_dir, exist_ok=True)
-    
+
     # # test_filter = sig_df["jj_mass_nominal"] > 400
-    # # sig_df_current = sig_df[test_filter] 
+    # # sig_df_current = sig_df[test_filter]
     # # test_filter = bkg_df["jj_mass_nominal"] > 400
-    # # bkg_df_current = bkg_df[test_filter] 
+    # # bkg_df_current = bkg_df[test_filter]
     # # for var in ["dimuon_pt"]:
     # #     plot_var = getPlotVar(var)
     # #     if plot_var == "dimuon_mass":
@@ -955,11 +955,11 @@ if __name__ == "__main__":
     # # # ----------------------------------------------------
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/sigBkgMC_comp/JJdEtaCutGeq2p5"
     # # os.makedirs(save_dir, exist_ok=True)
-    
+
     # # test_filter = sig_df["jj_dEta_nominal"] > 2.5
-    # # sig_df_current = sig_df[test_filter] 
+    # # sig_df_current = sig_df[test_filter]
     # # test_filter = bkg_df["jj_dEta_nominal"] > 2.5
-    # # bkg_df_current = bkg_df[test_filter] 
+    # # bkg_df_current = bkg_df[test_filter]
     # # for var in ["dimuon_pt"]:
     # #     plot_var = getPlotVar(var)
     # #     if plot_var == "dimuon_mass":
@@ -972,36 +972,36 @@ if __name__ == "__main__":
     # #         "Bkg, jj dEta > 2.5" : bkg_df_current,
     # #     }
     # #     compareMCByNjet(df_dict, binning, var, xlabel, save_dir)
-    
+
     # # ----------------------------------------------------
     # #  Add ggH vs VBF vs bkg comparison
     # # ----------------------------------------------------
     # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/ggHVBF_DYMC_comp"
     # os.makedirs(save_dir, exist_ok=True)
-    
-    # full_load_path = load_path+f"processed_events_sigMC*.parquet" 
+
+    # full_load_path = load_path+f"processed_events_sigMC*.parquet"
     # sig_df = dd.read_parquet(full_load_path).compute()
     # _, sig_df = filterRegion(sig_df, region="h-peak")
-    # full_load_path = load_path+f"processed_events_sigMC_ggh.parquet" 
+    # full_load_path = load_path+f"processed_events_sigMC_ggh.parquet"
     # ggh_df = dd.read_parquet(full_load_path).compute()
     # _, ggh_df = filterRegion(ggh_df, region="h-peak")
-    # full_load_path = load_path+f"processed_events_sigMC_vbf.parquet" 
+    # full_load_path = load_path+f"processed_events_sigMC_vbf.parquet"
     # vbf_df = dd.read_parquet(full_load_path).compute()
     # _, vbf_df = filterRegion(vbf_df, region="h-peak")
-    # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet" 
+    # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet"
     # dy_df = dd.read_parquet(full_load_path).compute()
     # _, dy_df = filterRegion(dy_df, region="h-peak")
     # print(dy_df.columns)
-    # full_load_path = load_path+f"processed_events_bkgMC_tt.parquet" 
+    # full_load_path = load_path+f"processed_events_bkgMC_tt.parquet"
     # dy_tt = dd.read_parquet(full_load_path).compute()
     # _, dy_tt = filterRegion(dy_tt, region="h-peak")
-    # full_load_path = load_path+f"processed_events_bkgMC_st.parquet" 
+    # full_load_path = load_path+f"processed_events_bkgMC_st.parquet"
     # dy_st = dd.read_parquet(full_load_path).compute()
     # _, dy_st = filterRegion(dy_st, region="h-peak")
-    # full_load_path = load_path+f"processed_events_bkgMC_ewk.parquet" 
+    # full_load_path = load_path+f"processed_events_bkgMC_ewk.parquet"
     # dy_ewk = dd.read_parquet(full_load_path).compute()
     # _, dy_ewk = filterRegion(dy_ewk, region="h-peak")
-    
+
     # for var in variables:
     #     plot_var = getPlotVar(var)
     #     if plot_var == "dimuon_mass":
@@ -1025,7 +1025,7 @@ if __name__ == "__main__":
     # # #     compareMC(df_dict, binning, var, xlabel, save_dir, applyWgt=True)
 
     # raise ValueError
-    
+
 
     # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/ggHVBF_TTMC_comp"
     # os.makedirs(save_dir, exist_ok=True)
@@ -1064,7 +1064,7 @@ if __name__ == "__main__":
     #     }
     #     compareMC(df_dict, binning, var, xlabel, save_dir)
     #     compareMCByNjet(df_dict, binning, var, xlabel, save_dir)
-    
+
 
     # # # # ----------------------------------------------------
     # # # #  check DY in z peak region with no ggH cat cuts
@@ -1080,14 +1080,14 @@ if __name__ == "__main__":
     # # # stage1_load_path=f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/stage1_output/{year_param}/f1_0/"
     # # # # stage1_load_path=f"/depot/cms/users/yun79/hmm/copperheadV1clean/{args.label}/stage1_output/2018/f1_0/"
 
-    # # # full_load_path = stage1_load_path+f"dy*/*/*.parquet" 
+    # # # full_load_path = stage1_load_path+f"dy*/*/*.parquet"
     # # # print(full_load_path)
     # # # fields2load = variables + ["wgt_nominal"]
     # # # dy_df = dd.read_parquet(full_load_path)[fields2load].compute()
     # # # _, dy_df_zpeak = filterRegion(dy_df, region="z-only")
     # # # _, dy_df_hpeak = filterRegion(dy_df, region="h-peak")
-    
-    
+
+
     # # # print(dy_df.columns)
     # # # for var in variables:
     # # #     plot_var = getPlotVar(var)
@@ -1105,13 +1105,13 @@ if __name__ == "__main__":
     # # # # ----------------------------------------------------
     # # # #  add DY with ggH channel cut
     # # # # ----------------------------------------------------
-    
+
     # # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/DYMCggHCut_comp"
     # # # os.makedirs(save_dir, exist_ok=True)
-    # # # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet" 
+    # # # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet"
     # # # dy_df_gghCut = dd.read_parquet(full_load_path).compute()
     # # # _, dy_df_gghCut = filterRegion(dy_df_gghCut, region="h-peak")
-    
+
     # # # for var in variables:
     # # #     plot_var = getPlotVar(var)
     # # #     if plot_var == "dimuon_mass":
@@ -1132,12 +1132,12 @@ if __name__ == "__main__":
     # # # ----------------------------------------------------
     # # #  compare DY sample with sample wgt annhilation
     # # # ----------------------------------------------------
-    
+
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/DYMCNegWgtPair_comp"
     # # os.makedirs(save_dir, exist_ok=True)
-    # # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet" 
+    # # full_load_path = load_path+f"processed_events_bkgMC_dy.parquet"
     # # plotWgtAnnhilation(full_load_path, save_dir)
-    
+
     # # # dy_df = dd.read_parquet(full_load_path).compute()
     # # # _, dy_df = filterRegion(dy_df, region="h-peak")
 
@@ -1169,15 +1169,12 @@ if __name__ == "__main__":
     # # # ----------------------------------------------------
     # # #  compare top sample with sample wgt annhilation
     # # # ----------------------------------------------------
-    
+
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/TTMCNegWgtPair_comp"
     # # os.makedirs(save_dir, exist_ok=True)
-    # # full_load_path = load_path+f"processed_events_bkgMC_tt.parquet" 
+    # # full_load_path = load_path+f"processed_events_bkgMC_tt.parquet"
     # # plotWgtAnnhilation(full_load_path, save_dir)
     # # save_dir = f"plots/{args.label}_x_{args.category}/{args.year}_signal/STMCNegWgtPair_comp"
     # # os.makedirs(save_dir, exist_ok=True)
-    # # full_load_path = load_path+f"processed_events_bkgMC_st.parquet" 
+    # # full_load_path = load_path+f"processed_events_bkgMC_st.parquet"
     # # plotWgtAnnhilation(full_load_path, save_dir)
-    
-    
-    

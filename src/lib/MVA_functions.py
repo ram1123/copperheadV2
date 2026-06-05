@@ -40,16 +40,36 @@ def prepare_features(events: ak.Record, training_features, variation="nominal", 
 # ggH BDT 
 # -----------------------------------------------------------------------------------------------------------------
 
+def variation_candidates(field: str, variation: str):
+    candidates = []
+    if field == "wgt_nominal":
+        return [field]
+    if "_nominal" in field:
+        candidates.append(field.replace("_nominal", f"_{variation}"))
+    else:
+        candidates.append(f"{field}_{variation}")
+    candidates.append(field)
+    # preserve order, remove duplicates
+    return list(dict.fromkeys(candidates))
+
+
+def resolve_variation_field(fields, field: str, variation: str):
+    for candidate in variation_candidates(field, variation):
+        if candidate in fields:
+            return candidate
+    raise KeyError(
+        f"Could not resolve variation '{variation}' for field '{field}'. Tried {variation_candidates(field, variation)}"
+    )
+
+
 def apply_variation(fields: list, variation:str):
     """
-    helper function that converts nominal training feature values to JEC/JER
-    uncertainty variation specific ones
+    helper function that maps nominal training feature values to the
+    preferred variation-specific field names
     """
     variation_fields = []
     for feature in fields:
-        if feature != "wgt_nominal":
-            feature = feature.replace("nominal", variation)
-        variation_fields.append(feature)
+        variation_fields.append(variation_candidates(feature, variation)[0])
 
     return variation_fields
 
@@ -77,7 +97,10 @@ def evaluate_bdt(df: ak.Record, variation, model, training_features: List[str], 
         features = training_features
     else:
         score_name = f"BDT_score_{variation}" # this is evaluation BDT score
-        features = apply_variation(training_features, variation)
+        features = [
+            resolve_variation_field(df.fields, feature, variation)
+            for feature in training_features
+        ]
 
 
     logger.info(f"{variation} bdt features: {features}")

@@ -10,12 +10,13 @@ import sys
 import time
 import warnings
 from itertools import islice
+from contextlib import contextmanager, nullcontext
 
 import awkward as ak
 import dask
 import numpy as np
 import tqdm
-from cli.common_argparser import build_common_parser
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
 
@@ -34,10 +35,39 @@ dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 np.set_printoptions(threshold=sys.maxsize)
-from contextlib import nullcontext
 
 ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
-report_ctx = performance_report(filename="dask-report.html") if ENABLE_DASK_REPORT else nullcontext()
+
+
+@contextmanager
+def optional_performance_report(filename="dask-report.html"):
+    """
+    Wrap Dask's performance report so dashboard/template issues never fail stage-1.
+    """
+    if not ENABLE_DASK_REPORT:
+        with nullcontext():
+            yield
+        return
+
+    report_cm = performance_report(filename=filename)
+    try:
+        report_cm.__enter__()
+    except Exception as err:
+        logger.warning("Could not start Dask performance report: %s", err)
+        yield
+        return
+
+    exc_info = (None, None, None)
+    try:
+        yield
+    except Exception as err:
+        exc_info = (type(err), err, err.__traceback__)
+        raise
+    finally:
+        try:
+            report_cm.__exit__(*exc_info)
+        except Exception as err:
+            logger.warning("Ignoring Dask performance report shutdown failure: %s", err)
 
 
 def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=None):
@@ -215,7 +245,7 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
     if eos_path.startswith("/depot") or eos_path.startswith("/work") or eos_path.startswith("test"):
         os.makedirs(eos_path, exist_ok=True)
         return
-    if not eos_path.startswith("/store") or not eos_path.startswith("davs"):
+    if not eos_path.startswith("/store") and not eos_path.startswith("davs"):
         raise RuntimeError(f"Path does not starts with /depot or /work or /store or davs. Please check path.")
     if not eos_path.startswith("davs://eos.cms.rcac.purdue.edu:9000/"):
         eos_path = f"davs://eos.cms.rcac.purdue.edu:9000/{eos_path.lstrip('/')}"
@@ -283,6 +313,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
+    args.dataset_yaml_file = resolve_dataset_yaml_file(
+        args.dataset_yaml_file, args.year, args.NanoAODv
+    )
+    logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
 
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")
@@ -345,7 +379,7 @@ if __name__ == "__main__":
         logger.info(f"git_info_path: {git_info_path}")
 
         # if True:
-        with report_ctx:
+        with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 logger.info("{}{}".format("\n" * 2, "=" * 51))
                 logger.info(f"===         Processing dataset: {dataset}       ===")
@@ -535,7 +569,7 @@ if __name__ == "__main__":
         start_save_path = f"{args.save_path}/stage1_output_test/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         os.makedirs(start_save_path, exist_ok=True)
-        with report_ctx:
+        with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items()):
                 logger.debug(f"dataset: {dataset}")
                 save_path = getSavePath(start_save_path, sample, 0)

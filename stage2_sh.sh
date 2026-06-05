@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
 echo "$(date)"
 
 # -----------------------------------------------------
@@ -10,17 +13,20 @@ echo "$(date)"
 # label="Run3_nanoAODv12_FilterJetsHorn25GeV_HE30GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
 # label="Run3_nanoAODv12_FilterJetsHorn25GeV_Apr03_tightPassLepVeto_NoJER_JetIDFix"
 label="Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER"
-base_path="/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean"
+# base_path="/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean"
+base_path="/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean"
+
 stage2_load_path="${base_path}/${label}/stage1_output"
 
 category="ggh"
 
-do_hyperparam_search="0" # true (enable hyperparameter search for BDT)
+do_hyperparam_search="1" # true (enable hyperparameter search for BDT)
+train_bdt="0"
 
 step="${1:-}"
 year="${2:-all}"
-n_trials="${3:-100}"
-date_tag="${4:-13Apr}"
+n_trials="${3:-050}"
+date_tag="${4:-26Apr}"
 
 # model_name="Run3_08March_HPeachFold_train_with_bestHP"
 # model_name="Run3_09March_Check"
@@ -51,8 +57,8 @@ if [[ -z "${step}" ]]; then
 fi
 
 # all_years=(2022preEE 2022postEE 2023 2023BPix 2024 all)
-all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
-# all_years=(all)
+# all_years=(2022preEE 2022postEE 2023 2023BPix 2024)
+all_years=(all)
 
 if [[ "${year}" == "all" ]]; then
     years=("${all_years[@]}")
@@ -68,7 +74,17 @@ fi
 stage2_label="${model_name}_${category}_${label_tag}"
 stage2_save_path="${base_path}/${label}/${stage2_label}/stage2_output"
 
-mva_base_path="${PWD}"
+mva_base_path="${SCRIPT_DIR}"
+trainer_script="MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py"
+stage3_variants_script="run_stage3_core_pdf_variants.sh"
+run_stage3_core_pdf_variants="0"
+stage3_baseline_variant_tag="all_core_pdfs"
+bias_run_mode="${BIAS_RUN_MODE:-local}"
+bias_local_jobs="${BIAS_LOCAL_JOBS:-32}"
+bias_fitdiag_parallel="${BIAS_FITDIAG_PARALLEL:-32}"
+bias_array_tasks="${BIAS_ARRAY_TASKS:-500}"
+bias_expect_signal="${BIAS_EXPECT_SIGNAL:-1}"
+bias_max_chi2ndf="${BIAS_MAX_CHI2NDF:-2.0}"
 
 
 # -----------------------------------------------------
@@ -96,11 +112,18 @@ print_config() {
     echo "model_trainYear  : ${model_trainYear}"
     echo "Search HP        : ${do_hyperparam_search}"
     echo "Number of trials : ${n_trials}"
+    echo "bias_run_mode    : ${bias_run_mode}"
+    echo "bias_local_jobs  : ${bias_local_jobs}"
+    echo "bias_fitdiag_par : ${bias_fitdiag_parallel}"
+    echo "bias_array_tasks : ${bias_array_tasks}"
+    echo "bias_expect_sig  : ${bias_expect_signal}"
+    echo "bias_max_chi2ndf : ${bias_max_chi2ndf}"
     echo "stage2_label     : ${stage2_label}"
     echo "base_path        : ${base_path}"
     echo "stage2_load_path : ${stage2_load_path}"
     echo "stage2_save_path : ${stage2_save_path}"
     echo "mva_base_path    : ${mva_base_path}"
+    echo "script_dir       : ${SCRIPT_DIR}"
 }
 
 init_run_log() {
@@ -117,44 +140,68 @@ init_run_log() {
     echo ""
 }
 
+resolve_stage3_output_label() {
+    local stage3_label="$1"
+    if [[ "${run_stage3_core_pdf_variants}" == "1" ]]; then
+        echo "${stage3_label}_${stage3_baseline_variant_tag}"
+    else
+        echo "${stage3_label}"
+    fi
+}
+
 # -----------------------------------------------------
 # Start logging + print config
 # -----------------------------------------------------
 init_run_log
 print_config
 
+if [[ ! -f "run_stage2.py" || ! -f "run_stage3.py" ]]; then
+    echo "Required workflow entrypoints are missing. Run this script from the copperheadV2 checkout."
+    exit 1
+fi
+
+if [[ "${run_stage3_core_pdf_variants}" == "1" && ! -f "${stage3_variants_script}" ]]; then
+    echo "Missing stage3 variants wrapper: ${stage3_variants_script}"
+    exit 1
+fi
+
+if [[ "${step}" == "0" && ! -f "${trainer_script}" ]]; then
+    echo "Missing ggH trainer script: ${trainer_script}"
+    echo "Step 0 cannot run in this checkout until that file is restored or the script path is updated."
+    exit 1
+fi
+
+
 # -----------------------------------------------------
 # Step 0: Train BDT
 # Only run once, not looped over years here.
 # -----------------------------------------------------
-if [[ "${step}" == "0" ]]; then
+if [[ ( "${step}" == "0" || "${step}" == "all" ) && "${train_bdt}" == "1" ]]; then
     # mass_decorrelation_strat="default" # no mass decorrelation
     # mass_decorrelation_strat="peking" # peking's mass flattening
     mass_decorrelation_strat="targetZpeakMass" # target distribution Zpeak mass
     # mass_decorrelation_strat="targetHpeakMass" # target distribution Hpeak mass
     # mass_decorrelation_strat="targetHsidebandMass" # target distribution lower H sidebands and uppper ZCR mass window
 
+    trainer_args=(
+        python "${trainer_script}"
+        --name "${model_name}"
+        --year "${year}"
+        -load "${stage2_load_path}"
+        --massDeCorrStrat "${mass_decorrelation_strat}"
+        --n_trials "${n_trials}"
+    )
+
     if [[ "${do_hyperparam_search}" == "1" ]]; then
         print_box "Step 0: Scan the hyperparameters for the BDT"
-        python MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py \
-            --name ${model_name} \
-            --year ${year} \
-            -load ${stage2_load_path} \
-            -param_search ${do_hyperparam_search} \
-            --n_trials ${n_trials} \
-            --massDeCorrStrat ${mass_decorrelation_strat} 
-            # --overwrite_cached_df
+        "${trainer_args[@]}" \
+            -param_search "${do_hyperparam_search}"
     fi
 
     print_box "Step 0: Training the BDT for ggH"
     do_hyperparam_search="0" # true (enable hyperparameter search for BDT)
-    python MVA_training/ggH_BDT/my_trainer_withWeight_gpu.py \
-        --name ${model_name} \
-        --year ${year} \
-        -load ${stage2_load_path} \
-        -param_search ${do_hyperparam_search} \
-        --n_trials ${n_trials} \
-        --massDeCorrStrat ${mass_decorrelation_strat}      
+    "${trainer_args[@]}" \
+        -param_search "${do_hyperparam_search}"
 fi
 
 # -----------------------------------------------------
@@ -370,7 +417,7 @@ fi
 # -----------------------------------------------------
 # Step 7: Workspace
 # -----------------------------------------------------
-if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" ]]; then
+if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" || "${step}" == "bias" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 7: Get workspace year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
@@ -379,12 +426,21 @@ if [[ "${step}" == "7" || "${step}" == "dcall" || "${step}" == "all" ]]; then
 
         echo "stage2_save_path: ${stage2_save_path}"
 
-        python run_stage3.py \
-            -load ${stage2_save_path} \
-            -cat ${category} \
-            --year ${year_i} \
-            --label ${stage3_label} \
-            -save ${save_path}
+        if [[ "${run_stage3_core_pdf_variants}" == "1" ]]; then
+            bash "${stage3_variants_script}" \
+                -load ${stage2_save_path} \
+                -cat ${category} \
+                --year ${year_i} \
+                --label ${stage3_label} \
+                -save ${save_path}
+        else
+            python run_stage3.py \
+                -load ${stage2_save_path} \
+                -cat ${category} \
+                --year ${year_i} \
+                --label ${stage3_label} \
+                -save ${save_path}
+        fi
     done
 fi
 
@@ -395,6 +451,7 @@ if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 8: Obtain datacard year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
@@ -404,18 +461,18 @@ if [[ "${step}" == "8" || "${step}" == "dcall" || "${step}" == "all" ]]; then
             -load ${stage2_save_path} \
             -cat ${category} \
             --year ${year_i} \
-            --label ${stage3_label} \
+            --label ${stage3_output_label} \
             -save ${save_path}
 
-        echo "Copy the scripts to: ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
-        cp scripts/get_significance.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
-        cp scripts/get_impactPlots.sh ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        echo "Copy the scripts to: ${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
+        cp scripts/get_significance.sh "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
+        cp scripts/get_impactPlots.sh "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
 
         echo "Copy the background datacards to the same path"
-        cp stage3/bkg_datacards_template/*bkg*.txt ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cp stage3/bkg_datacards_template/*bkg*.txt "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
 
         echo "Go to path given below and run"
-        echo "cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/"
+        echo "cd ${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
         echo "bash get_significance.sh"
         echo "bash get_impactPlots.sh"
     done
@@ -428,15 +485,111 @@ if [[ "${step}" == "9" || "${step}" == "dcall" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 9: Run significance for year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
 
-        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cd "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
         bash get_significance.sh
         cd - >/dev/null
+    done
+fi
+
+# -----------------------------------------------------
+# Step 11: Bias test submission
+# Requires the combined significance datacard from step 9.
+# -----------------------------------------------------
+if [[ "${step}" == "11" || "${step}" == "bias" || "${step}" == "all" ]]; then
+    bias_template_dir="validation/ggH/bias_test/FuncCandidateVsCorePdfBias"
+
+    for year_i in "${years[@]}"; do
+        print_box "Step 11: Prepare and submit bias test for year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        datacard_dir="${save_path}/stage3/${year_i}/${stage3_output_label}/datacards"
+        bias_output_dir="${SCRIPT_DIR}/${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test"
+        bias_job_dir="${bias_output_dir}/FuncCandidateVsCorePdfBias"
+        core_workspace_dir="${SCRIPT_DIR}/${datacard_dir}/my_workspace"
+        fitfunc_workspace_dir="${bias_output_dir}/workspaces"
+        combined_datacard="${SCRIPT_DIR}/${datacard_dir}/datacard_comb_sig_all_ggh.txt"
+
+        mkdir -p "${save_path}"
+
+        if [[ ! -f "${combined_datacard}" ]]; then
+            echo "Missing combined datacard: ${combined_datacard}"
+            echo "Run step 9 first so the significance workflow creates datacard_comb_sig_all_ggh.txt."
+            exit 1
+        fi
+
+        if [[ ! -d "${core_workspace_dir}" ]]; then
+            echo "Missing stage3 workspace directory: ${core_workspace_dir}"
+            exit 1
+        fi
+
+        python validation/ggH/bias_test/run_bias_test.py \
+            -load ${stage2_save_path} \
+            -cat ${category} \
+            --year ${year_i} \
+            --label ${stage3_output_label} \
+            -save ${save_path} \
+            --max-chi2ndf ${bias_max_chi2ndf}
+
+        if [[ ! -d "${fitfunc_workspace_dir}" ]]; then
+            echo "Missing bias-test workspace directory: ${fitfunc_workspace_dir}"
+            exit 1
+        fi
+
+        mkdir -p "${bias_job_dir}"
+        mkdir -p "${bias_job_dir}/corePdf_workspace" "${bias_job_dir}/funcCandidate_workspace" "${bias_job_dir}/slurm_log"
+
+        cp -f "${core_workspace_dir}/"*.root "${bias_job_dir}/corePdf_workspace/"
+        cp -f "${fitfunc_workspace_dir}/"*.root "${bias_job_dir}/funcCandidate_workspace/"
+        cp -f "${combined_datacard}" "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
+
+        sed 's#my_workspace/#funcCandidate_workspace/#g' "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt" > "${bias_job_dir}/datacard_comb_sig_all_ggh_fitFuncCand.txt"
+        sed -i.bak 's#my_workspace/#corePdf_workspace/#g' "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt"
+        rm -f "${bias_job_dir}/datacard_comb_sig_all_ggh_corePdf.txt.bak"
+        if [[ -f "${bias_output_dir}/selected_truth_function_indices.txt" ]]; then
+            cp -f "${bias_output_dir}/selected_truth_function_indices.txt" "${bias_job_dir}/"
+        fi
+        printf '%s\n' "${bias_expect_signal}" > "${bias_job_dir}/bias_truth_r.txt"
+
+        BIAS_FITDIAG_PARALLEL="${bias_fitdiag_parallel}" \
+        BIAS_ARRAY_TASKS="${bias_array_tasks}" \
+        BIAS_EXPECT_SIGNAL="${bias_expect_signal}" \
+        sh "${bias_template_dir}/slurm_wrapper.sh" "${bias_job_dir}" "${bias_run_mode}" "${bias_local_jobs}"
+
+        echo "Bias jobs submitted from: ${bias_job_dir}"
+        echo "After the Slurm jobs finish, run:"
+        echo "bash ${SCRIPT_DIR}/stage2_sh.sh bias_collect ${year_i} ${n_trials} ${date_tag}"
+    done
+fi
+
+# -----------------------------------------------------
+# Step 12: Bias test aggregation
+# Run this after the Slurm jobs from step 11 finish.
+# -----------------------------------------------------
+if [[ "${step}" == "12" || "${step}" == "bias_collect" ]]; then
+    for year_i in "${years[@]}"; do
+        print_box "Step 12: Aggregate bias test results for year: (${year_i})"
+        stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
+        save_path="output/bdt_${model_name}_${model_trainYear}"
+        bias_job_dir="${SCRIPT_DIR}/${save_path}/stage3/${year_i}/${stage3_output_label}/bias_test/FuncCandidateVsCorePdfBias"
+
+        if [[ ! -d "${bias_job_dir}" ]]; then
+            echo "Missing bias job directory: ${bias_job_dir}"
+            exit 1
+        fi
+
+        (
+            cd "${bias_job_dir}"
+            python "${SCRIPT_DIR}/validation/ggH/bias_test/FuncCandidateVsCorePdfBias/aggregate_bias_pull_fitDiagnostics.py"
+        )
     done
 fi
 
@@ -447,13 +600,14 @@ if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
     for year_i in "${years[@]}"; do
         print_box "Step 10: Run Impact for year: (${year_i})"
         stage3_label="${label}_X_${model_name}_${label_tag}"
+        stage3_output_label="$(resolve_stage3_output_label "${stage3_label}")"
         save_path="output/bdt_${model_name}_${model_trainYear}"
         mkdir -p "${save_path}"
 
         echo "stage2_save_path: ${stage2_save_path}"
         echo "Go to path given below and run"
 
-        cd ${save_path}/stage3/${year_i}/${stage3_label}/datacards/
+        cd "${save_path}/stage3/${year_i}/${stage3_output_label}/datacards/"
         bash get_impactPlots.sh
         cd - >/dev/null
     done

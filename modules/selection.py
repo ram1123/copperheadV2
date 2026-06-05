@@ -7,7 +7,7 @@ def filterRegion(events, region="h-peak"):
     if isinstance(events, pd.DataFrame):
         fields = events.columns
     else: # awkward zip
-        fields = events.fields  
+        fields = events.fields
     if "dimuon_mass" not in fields:
         raise ValueError("dimuon_mass not found in events fields for region selection.")
     dimuon_mass = events["dimuon_mass"]

@@ -21,10 +21,12 @@ FINAL_REP = REPEATS[-1]
 ZPT_JETS_CATS = ["0", "1", "2"]
 
 PLOT_CATS = ["nocat", "vbf", "ggh"]
+# PLOT_CATS = ["vbf", "ggh"]
+# PLOT_CATS = ["vbf"]
 # PLOT_CATS = ["nocat"]
-# PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
+PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
 # PLOT_NJETS = ["0", "1", "2"]   # adapt to what your script accepts
-PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
+# PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
 JJ_ETA_REGIONS = [
     "all",
     # "jj_both_central",
@@ -37,6 +39,7 @@ JJ_ETA_REGIONS = [
     # "jj_both_fwd30",
     # "jj_one_he_one_fwd30",
 ]
+#PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
 PLOT_ZPT_MODES  = ["withzpt", "nozpt"] # ["withzpt", "nozpt"]
 PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
 
@@ -96,15 +99,22 @@ def yaml_for_year(year: str) -> str:
 
 def label_for_year(year: str) -> str:
     era, nano = YEAR_META[year]
+    # nano = "12"
     era_tag = "Run2" if era == "run2" else "Run3"
     return f"{era_tag}_nanoAODv{nano}_{RUN_TAG}"
+
+
+def plot_base_for_year(year: str) -> str:
+    era, nano = YEAR_META[year]
+    # nano = "12"
+    era_tag = "Run2" if era == "run2" else "Run3"
+    return f"validation/figs/{era_tag}_nanoAODv{nano}"
 
 
 USE_GW = bool(config.get("use_gateway", False))
 CLIDX  = str(config.get("cluster_index", 0))
 
 ZPT = config["zpt"]
-ZPT_TAG = label_for_year(YEARS[0])  # Use first year's label for ZPT_TAG
 ZPT_OUT = ZPT.get("outbase", "try_zpt_dnn")
 ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
 ZPT_BATCH = int(ZPT.get("batch", 65536))
@@ -117,6 +127,26 @@ def gw_flags():
 def gw_flags_plots():
     return f" --use_gateway --cluster_index {CLIDX} " if USE_GW else ""
 
+PLOT_TARGETS = [
+    (year, cat, njets_plot, jj_eta_region, zpt_mode, var_set)
+    for year in YEARS
+    for cat in PLOT_CATS
+    for njets_plot in PLOT_NJETS
+    for jj_eta_region in JJ_ETA_REGIONS
+    for zpt_mode in PLOT_ZPT_MODES
+    for var_set in PLOT_VAR_SETS
+    if not (cat == "vbf" and njets_plot != "inclusive")
+]
+PLOT_DONE = expand(
+    STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
+    zip,
+    year=[x[0] for x in PLOT_TARGETS],
+    cat=[x[1] for x in PLOT_TARGETS],
+    njets_plot=[x[2] for x in PLOT_TARGETS],
+    jj_eta_region=[x[3] for x in PLOT_TARGETS],
+    zpt_mode=[x[4] for x in PLOT_TARGETS],
+    var_set=[x[5] for x in PLOT_TARGETS],
+)
 
 rule all:
     input:
@@ -125,15 +155,7 @@ rule all:
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
         # (4) get zpt
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
         expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
@@ -158,15 +180,7 @@ rule plot_all:
         # (2) stage1Compact for all years
         # expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
 
 
 rule all_stage1:
@@ -176,15 +190,7 @@ rule all_stage1:
         # (2) stage1Compact for all years
         expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
-        expand(
-           STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
-            year=YEARS,
-            cat=PLOT_CATS,
-            njets_plot=PLOT_NJETS,
-            jj_eta_region=JJ_ETA_REGIONS,
-            zpt_mode=PLOT_ZPT_MODES,
-            var_set=PLOT_VAR_SETS,
-        ),
+        PLOT_DONE,
         # f"{STATEDIR}/summary.done"
 
 
@@ -386,7 +392,7 @@ rule plots:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
         ),        
         save_path=lambda wc: (
-            f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/"
+            f"{plot_base_for_year(wc.year)}/"
             f"{label_for_year(wc.year)}/VBFfilter_False/"
         ),
         # map wildcards -> CLI flags
@@ -458,6 +464,7 @@ rule zpt0:
           -l {params.label} \
           -y "{wildcards.year}" \
           -m zpt_fit0 \
+          {params.gw} \
           > {log} 2>&1
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
@@ -493,6 +500,7 @@ rule zpt1:
           -y "{wildcards.year}" \
           -m zpt_fit1 \
           -n {wildcards.njets} \
+          {params.gw} \
           > {log} 2>&1
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
@@ -528,6 +536,7 @@ rule zpt2:
           -y "{wildcards.year}" \
           -m zpt_fit2 \
           -n {wildcards.njets} \
+          {params.gw} \
           > {log} 2>&1
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
@@ -788,7 +797,7 @@ rule plots_corr:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/f1_0"
         ),        
         save_path=lambda wc: (
-            f"validation/figs/Run3_nanoAODv{nano_for_year(wc.year)}/"
+            f"{plot_base_for_year(wc.year)}/"
             f"{label_for_year(wc.year)}/VBFfilter_False/"
         ),
         # map wildcards -> CLI flags
@@ -841,6 +850,7 @@ rule zpt_njet0:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -848,7 +858,7 @@ rule zpt_njet0:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet0 \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet0 \
           --njet-bin 0 \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \
@@ -867,6 +877,7 @@ rule zpt_njet1:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -874,7 +885,7 @@ rule zpt_njet1:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet1 \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet1 \
           --njet-bin 1 \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \
@@ -893,6 +904,7 @@ rule zpt_njet2p:
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
+        zpt_tag=lambda wc: label_for_year(wc.year),
     shell:
         r"""
         set -euo pipefail
@@ -900,7 +912,7 @@ rule zpt_njet2p:
         mkdir -p {params.logdir} {params.statedir}
         python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
           -y {wildcards.year} \
-          --outdir {ZPT_OUT}/{ZPT_TAG}/{wildcards.year}/njet2p \
+          --outdir {ZPT_OUT}/{params.zpt_tag}/{wildcards.year}/njet2p \
           --njet-bin 2p \
           --max-events {ZPT_MAXEV} \
           --batch {ZPT_BATCH} \

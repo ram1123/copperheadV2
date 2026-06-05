@@ -41,11 +41,11 @@ from modules.dask_utils import close_dask_client, get_dask_client
 from modules.git_utils import get_git_commit, get_git_state
 from modules.selection import applyRegionCatCuts
 from modules.utils import logger
-from MVA_training.VBF_new.utils.pre_scale_cleaning import pre_scaling_clean
+from MVA_training.VBF_run3.utils.pre_scale_cleaning import pre_scaling_clean
 
 # Optional: keep your existing diagnostic plots (safe to disable from CLI)
 try:
-    from MVA_training.VBF_new.utils.scaling_helper import (
+    from MVA_training.VBF_run3.utils.scaling_helper import (
         plot_before_after_scaling,
         plot_corr_before_after,
         plot_scaled_mean_std,
@@ -170,8 +170,26 @@ def resolve_glob(base_path: str, year: str, glob_template: str, process: str) ->
         .replace("{PROCESS}", process)
     )
     patt = Path(patt).as_posix() # ensure no // issues in the path
-    # logger.info(f"reading: {patt}")
     files = sorted(_glob.glob(patt))
+    if files:
+        return files
+
+    fallback_patterns = []
+    if "/compacted/" in patt:
+        fallback_patterns.append(patt.replace("/compacted/", "/f1_0/"))
+    if "/f1_0/" in patt:
+        fallback_patterns.append(patt.replace("/f1_0/", "/compacted/"))
+
+    for fallback_patt in fallback_patterns:
+        fallback_files = sorted(_glob.glob(fallback_patt))
+        if fallback_files:
+            logger.info(
+                "[resolve_glob] No files for %s; using fallback pattern %s",
+                patt,
+                fallback_patt,
+            )
+            return fallback_files
+
     return files
 
 
@@ -392,42 +410,49 @@ def preprocess(
             )
             dfs.append(df)
 
-            # backgrounds
-            for group_name, proc in all_bkg_procs:
-                files = resolve_glob(base_path, year, cfg.glob_template, proc)
-                if not files:
-                    logger.warning(
-                        "[year %s] Missing files for bkg group=%s proc=%s. Skipping.",
-                        year,
-                        group_name,
-                        proc,
-                    )
-                    continue
+        # backgrounds
+        for group_name, proc in all_bkg_procs:
+            files = resolve_glob(base_path, year, cfg.glob_template, proc)
+            if not files:
+                logger.warning(
+                    "[year %s] Missing files for bkg group=%s proc=%s. Skipping.",
+                    year,
+                    group_name,
+                    proc,
+                )
+                continue
 
-                chunk_size = 50
-                for ichunk, files_chunk in enumerate(chunk_list(files, chunk_size=chunk_size)):
-                    logger.info("[year %s] proc=%s chunk %d/%d (nfiles=%d)", year, proc, ichunk + 1, (len(files) - 1) // chunk_size + 1, len(files_chunk))
-                    events = dak.from_parquet(files_chunk, columns=features2load + cfg.required_columns)
+            chunk_size = 50
+            for ichunk, files_chunk in enumerate(chunk_list(files, chunk_size=chunk_size)):
+                logger.info(
+                    "[year %s] proc=%s chunk %d/%d (nfiles=%d)",
+                    year,
+                    proc,
+                    ichunk + 1,
+                    (len(files) - 1) // chunk_size + 1,
+                    len(files_chunk),
+                )
+                events = dak.from_parquet(files_chunk, columns=features2load + cfg.required_columns)
 
-                    if cfg.required_columns:
-                        missing_req = [
-                            c for c in cfg.required_columns if c not in events.fields
-                        ]
-                        if missing_req and (not cfg.allow_missing_columns):
-                            raise KeyError(
-                                f"[year {year}] Process '{proc}' missing required columns: {missing_req}"
-                            )
+                if cfg.required_columns:
+                    missing_req = [
+                        c for c in cfg.required_columns if c not in events.fields
+                    ]
+                    if missing_req and (not cfg.allow_missing_columns):
+                        raise KeyError(
+                            f"[year {year}] Process '{proc}' missing required columns: {missing_req}"
+                        )
 
-                    df = events_to_dataframe(
-                        events=events,
-                        keep_cols=features2load + cfg.required_columns,
-                        cfg=cfg,
-                        process=proc,
-                        label_int=cfg.background_label,
-                        group=str(group_name).lower(),
-                        year=year,
-                    )
-                    dfs.append(df)
+                df = events_to_dataframe(
+                    events=events,
+                    keep_cols=features2load + cfg.required_columns,
+                    cfg=cfg,
+                    process=proc,
+                    label_int=cfg.background_label,
+                    group=str(group_name).lower(),
+                    year=year,
+                )
+                dfs.append(df)
 
     if not dfs:
         raise RuntimeError(
@@ -620,50 +645,51 @@ def preprocess(
         )
 
     # ---- cross-fold feature distribution comparisons ----
-    logger.info("------------------------------------------------------------")
-    logger.info("[preprocess] Generating cross-fold feature distribution comparisons...")
-    sanity_dir = os.path.join(out_dir, "sanity_feature_plots")
-    # Compare folds for TRAIN background (most stable)
-    plot_feature_hists_compare_folds(
-        fold_parquet_dir=out_dir,
-        features=final_features,
-        label_col="label",
-        weight_col=cfg.weight_col,
-        outdir=sanity_dir,
-        n_folds=cfg.n_folds,
-        split="train",
-        cls=0,  # 0=bkg
-        bins=60,
-        logy=False,
-    )
+    if make_plots and HAVE_SCALING_PLOTS:
+        logger.info("------------------------------------------------------------")
+        logger.info("[preprocess] Generating cross-fold feature distribution comparisons...")
+        sanity_dir = os.path.join(out_dir, "sanity_feature_plots")
+        # Compare folds for TRAIN background (most stable)
+        plot_feature_hists_compare_folds(
+            fold_parquet_dir=out_dir,
+            features=final_features,
+            label_col="label",
+            weight_col=cfg.weight_col,
+            outdir=sanity_dir,
+            n_folds=cfg.n_folds,
+            split="train",
+            cls=0,  # 0=bkg
+            bins=60,
+            logy=False,
+        )
 
-    # Compare folds for VAL background
-    plot_feature_hists_compare_folds(
-        fold_parquet_dir=out_dir,
-        features=final_features,
-        label_col="label",
-        weight_col=cfg.weight_col,
-        outdir=sanity_dir,
-        n_folds=cfg.n_folds,
-        split="validation",
-        cls=0,
-        bins=60,
-        logy=False,
-    )
+        # Compare folds for VAL background
+        plot_feature_hists_compare_folds(
+            fold_parquet_dir=out_dir,
+            features=final_features,
+            label_col="label",
+            weight_col=cfg.weight_col,
+            outdir=sanity_dir,
+            n_folds=cfg.n_folds,
+            split="validation",
+            cls=0,
+            bins=60,
+            logy=False,
+        )
 
-    # Optional: signal overlays too (can be noisy if low stats)
-    plot_feature_hists_compare_folds(
-        fold_parquet_dir=out_dir,
-        features=final_features,
-        label_col="label",
-        weight_col=cfg.weight_col,
-        outdir=sanity_dir,
-        n_folds=cfg.n_folds,
-        split="train",
-        cls=1,  # 1=sig
-        bins=60,
-        logy=False,
-    )
+        # Optional: signal overlays too (can be noisy if low stats)
+        plot_feature_hists_compare_folds(
+            fold_parquet_dir=out_dir,
+            features=final_features,
+            label_col="label",
+            weight_col=cfg.weight_col,
+            outdir=sanity_dir,
+            n_folds=cfg.n_folds,
+            split="train",
+            cls=1,  # 1=sig
+            bins=60,
+            logy=False,
+        )
 
     # ---- manifest for reproducibility ----
     manifest = {

@@ -2,6 +2,49 @@
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
 
+```bash
+python MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py \
+  -y 2022postEE \
+  --outdir output/try_zpt_dnn/2022postEE/njet0 \
+  --njet-bin 0 \
+  --max-events 3000000 \
+  --batch 65536 \
+  --epochs 20 \
+  --patience 4
+```
+
+# 04 May 2026
+
+```bash
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER -y "2022preEE 2022postEE 2023 2023BPix 2024" -m "compact" -k )
+
+
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER -y "2022postEE" -m "zpt_fit12" )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER -y "2022postEE" -m 2 )
+
+bash stage1_loop_Improved.sh \
+  -m combine_vbf \
+  -y 2022preEE \
+  -l Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER \
+  -o May05_2026
+
+
+# 
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2 -y "2022preEE" -m "zpt_fit" )
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_Apr09_tightPassLepVeto_NoJER_v2 -y "2022postEE" -m "1" )
+```
+
+
+# 26 April 2026
+
+```bash
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER_Syst -y "2022preEE" -m 1 -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER_Syst -y "2022preEE" -m 1 -k)
+time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER_Syst -y "2022preEE" -m 1 -k)
+```
+
+
 # 06 April 2026
 
 ```bash
