@@ -10,7 +10,6 @@ from coffea.btag_tools import BTagScaleFactor
 from coffea.lookup_tools import extractor
 from coffea.lumi_tools import LumiMask
 from coffea.nanoevents.methods import vector
-import dask_awkward as dak
 
 from modules.classify_year import is_run2, is_run3
 from modules.get_sample_info import get_sample_info
