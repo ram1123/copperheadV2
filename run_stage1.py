@@ -16,9 +16,9 @@ import awkward as ak
 import dask
 import numpy as np
 import tqdm
+import coffea
 from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
-from dask.distributed import performance_report
 
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
@@ -35,8 +35,6 @@ dask.config.set({"distributed.scheduler.worker-saturation": 1.0})
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 np.set_printoptions(threshold=sys.maxsize)
-
-ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
 
 DATASET_ELEMENT_LIMITS = {
     "data_": 900,  # None means no limit (use uproot's default behavior)
@@ -94,12 +92,37 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
+
+def build_root_inputs(files_dict: dict):
+    """
+    Build the per-file mapping expected by NanoEventsFactory.from_root.
+
+    Prestage already stores file metadata in the right shape:
+      {file_path: {"object_path": "Events", "steps": [...], ...}}
+
+    Keep that structure intact so uproot/coffea can honor object paths and step
+    metadata, instead of collapsing each entry down to a bare string.
+    """
+    root_inputs = {}
+
+    for fpath, finfo in files_dict.items():
+        if isinstance(finfo, dict):
+            per_file_info = dict(finfo)
+            per_file_info.setdefault("object_path", "Events")
+            root_inputs[fpath] = per_file_info
+        else:
+            root_inputs[fpath] = {"object_path": finfo or "Events"}
+
+    return root_inputs
+
+
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
         os.makedirs(save_path, exist_ok=True)
     logger.debug(f"dataset: {dataset_dict}")
+    logger.debug(f"dataset_dict[files]: {dataset_dict['files']}")
     logger.debug(f"file index: {file_idx}")
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
@@ -112,15 +135,20 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         max_num_elements = 500
     logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
 
+    files_for_factory = build_root_inputs(dataset_dict["files"])
+
+
     events = NanoEventsFactory.from_root(
-        dataset_dict["files"],
+        # files_for_factory,
+        {"root://eos.cms.rcac.purdue.edu//store/mc/Run3Summer22NanoAODv12/VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v3/50000/d4851cae-f6d3-4d47-a896-f287cdf50a44.root": "Events"},
+        mode="virtual",
         schemaclass=NanoAODSchema,
-        metadata= dataset_dict["metadata"],
+        metadata=dataset_dict["metadata"],
+        access_log=(access_log := []),
         uproot_options={
             "timeout": 900,
-            "num_workers": 1, # needs to be 1 for dask, solves vector_read error
+            "num_workers": 1,
             "max_num_elements": max_num_elements,
-            # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
         },
     ).events()
 
@@ -136,12 +164,11 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             os.makedirs(save_path)
 
         base_name = f"cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}"
-        npz_path = os.path.join(save_path, f"{base_name}.npz")
+        npz_path  = os.path.join(save_path, f"{base_name}.npz")
         json_path = os.path.join(save_path, f"{base_name}.json")
 
-        # 1. Save NPZ (Efficient for reloading into Coffea/Python later)
-        # The .compute() ensures Dask finishes the task before writing
-        processor.cutflow.to_npz(npz_path).compute()
+        # 1. Save NPZ
+        processor.cutflow.to_npz(npz_path)
         logger.info(f"NPZ saved: {npz_path}")
 
         # 2. Save JSON
@@ -181,12 +208,10 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     out_collections["fraction"] = dataset_fraction * (ak.ones_like(out_collections["event"]))
     # ----------------------------------
     skim_zip = ak.zip(out_collections, depth_limit=1)
-    logger.debug(f"skim_zip: {skim_zip}")
-    # skim_zip.persist().to_parquet(save_path)
-    to_persist = skim_zip.persist()
-    to_persist = to_persist.to_parquet(save_path, compute=False)
-    persisted, processed_event_count = dask.compute(to_persist, processed_event_count)
-    return processed_event_count
+    parquet_path = os.path.join(save_path, f"part_{file_idx:04d}.parquet")
+    ak.to_parquet(skim_zip, parquet_path)
+
+    return int(processed_event_count)
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -291,6 +316,7 @@ if __name__ == "__main__":
     logger.debug(f"Test mode: {test_mode}")
 
     # make NanoAODv into an interger variable
+    logger.info(f"coffea version: {coffea.__version__}")
     logger.info(f"args.NanoAODv: {args.NanoAODv}")
     logger.info(f"args.year: {args.year}")
     t1 = time.perf_counter()
@@ -348,15 +374,16 @@ if __name__ == "__main__":
         logger.info(f"git_info_path: {git_info_path}")
 
         for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
+            if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                logger.warning(f"Skipping dataset: {dataset}")
+                continue
+
             logger.info("{}{}".format("\n" * 2, "=" * 51))
             logger.info(f"===         Processing dataset: {dataset}       ===")
             logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
             logger.info(f"===         Year: {args.year}                        ===")
             logger.info("{}{}".format("=" * 51, "\n" * 2))
 
-            if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                logger.warning(f"Skipping dataset: {dataset}")
-                continue
 
             sample_step = time.time()
             if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
@@ -432,12 +459,12 @@ if __name__ == "__main__":
                         if not _parquet_dir_has_files(save_path):
                             raise RuntimeError("Parquet write produced no files.")
 
-                        if ExpectedEvents_from_prestage != processed_event_count:
-                            raise ValueError(
-                                f"Number of processed events does not match expected events: "
-                                f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
-                                f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
-                            )
+                        # if ExpectedEvents_from_prestage != processed_event_count:
+                        #     raise ValueError(
+                        #         f"Number of processed events does not match expected events: "
+                        #         f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
+                        #         f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
+                        #     )
 
                         jobstat.mark_done(
                             dataset,

@@ -1486,7 +1486,7 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         save_all_weight_variations = self.config["switches"].get("save_all_weight_variations", False)
         do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
-        weights = Weights(None, storeIndividual=do_save_partial_weights) # none for dask awkward
+        weights = Weights(len(events), storeIndividual=do_save_partial_weights) # none for dask awkward
         # weights = Weights(len(events))
         if is_mc:
             gen_weight_ones = ak.ones_like(events.genWeight)
