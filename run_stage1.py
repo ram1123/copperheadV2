@@ -127,29 +127,6 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     return save_path
 
 
-def build_root_inputs(files_dict: dict):
-    """
-    Build the per-file mapping expected by NanoEventsFactory.from_root.
-
-    Prestage already stores file metadata in the right shape:
-      {file_path: {"object_path": "Events", "steps": [...], ...}}
-
-    Keep that structure intact so uproot/coffea can honor object paths and step
-    metadata, instead of collapsing each entry down to a bare string.
-    """
-    root_inputs = {}
-
-    for fpath, finfo in files_dict.items():
-        if isinstance(finfo, dict):
-            per_file_info = dict(finfo)
-            per_file_info.setdefault("object_path", "Events")
-            root_inputs[fpath] = per_file_info
-        else:
-            root_inputs[fpath] = {"object_path": finfo or "Events"}
-
-    return root_inputs
-
-
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
@@ -169,25 +146,37 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         max_num_elements = 500
     logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
 
-    files_for_factory = build_root_inputs(dataset_dict["files"])
+    files_for_factory = {
+        fpath: finfo["object_path"]
+        for fpath, finfo in dataset_dict["files"].items()
+    }
 
+    all_out_collections = []
+    total_processed = 0
 
-    events = NanoEventsFactory.from_root(
-        # files_for_factory,
-        {"root://eos.cms.rcac.purdue.edu//store/mc/Run3Summer22NanoAODv12/VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v3/50000/d4851cae-f6d3-4d47-a896-f287cdf50a44.root": "Events"},
-        mode="virtual",
-        schemaclass=NanoAODSchema,
-        metadata=dataset_dict["metadata"],
-        access_log=(access_log := []),
-        uproot_options={
-            "timeout": 900,
-            "num_workers": 1,
-            "max_num_elements": max_num_elements,
-        },
-    ).events()
+    for fpath, treename in files_for_factory.items():
+        events = NanoEventsFactory.from_root(
+            {fpath: treename},
+            mode="virtual",
+            schemaclass=NanoAODSchema,
+            metadata=dataset_dict["metadata"],
+            uproot_options={
+                "timeout": 900,
+                "num_workers": 1,
+                "max_num_elements": max_num_elements,
+            },
+        ).events()
 
-    processed_event_count = 0
-    out_collections, processed_event_count = processor.process(events, dataset_yaml_file=dataset_yaml_file)
+        out_cols, n_processed = processor.process(events, dataset_yaml_file=dataset_yaml_file)
+        all_out_collections.append(out_cols)
+        total_processed += int(n_processed)
+
+    # Merge output collections after processing — safe because cross-refs are already resolved
+    out_collections = {
+        key: ak.concatenate([c[key] for c in all_out_collections])
+        for key in all_out_collections[0].keys()
+    }
+    processed_event_count = total_processed
 
     # Save the cutflow
     if hasattr(processor, "cutflow") and isCutflow:
