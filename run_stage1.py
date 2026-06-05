@@ -19,6 +19,7 @@ import tqdm
 import coffea
 from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
+from dask.distributed import performance_report
 
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
@@ -36,12 +37,45 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 np.set_printoptions(threshold=sys.maxsize)
 
+ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
+
 DATASET_ELEMENT_LIMITS = {
     "data_": 900,  # None means no limit (use uproot's default behavior)
     "dy": 500,
     "ttjets_dl": 500,
     "ttjets_sl": 500,
 }
+
+
+@contextmanager
+def optional_performance_report(filename="dask-report.html"):
+    """
+    Wrap Dask's performance report so dashboard/template issues never fail stage-1.
+    """
+    if not ENABLE_DASK_REPORT:
+        with nullcontext():
+            yield
+        return
+
+    report_cm = performance_report(filename=filename)
+    try:
+        report_cm.__enter__()
+    except Exception as err:
+        logger.warning("Could not start Dask performance report: %s", err)
+        yield
+        return
+
+    exc_info = (None, None, None)
+    try:
+        yield
+    except Exception as err:
+        exc_info = (type(err), err, err.__traceback__)
+        raise
+    finally:
+        try:
+            report_cm.__exit__(*exc_info)
+        except Exception as err:
+            logger.warning("Ignoring Dask performance report shutdown failure: %s", err)
 
 
 def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=None):
@@ -164,7 +198,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
             os.makedirs(save_path)
 
         base_name = f"cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}"
-        npz_path  = os.path.join(save_path, f"{base_name}.npz")
+        npz_path = os.path.join(save_path, f"{base_name}.npz")
         json_path = os.path.join(save_path, f"{base_name}.json")
 
         # 1. Save NPZ
@@ -373,150 +407,107 @@ if __name__ == "__main__":
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
-        for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
-            logger.info("{}{}".format("\n" * 2, "=" * 51))
-            logger.info(f"===         Processing dataset: {dataset}       ===")
-            logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
-            logger.info(f"===         Year: {args.year}                        ===")
-            logger.info("{}{}".format("=" * 51, "\n" * 2))
-
-            if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                logger.warning(f"Skipping dataset: {dataset}")
-                continue
-
-            sample_step = time.time()
-            if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
-                args.max_file_len = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset][0]]
-                logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
-            else:
-                args.max_file_len = 500
-            logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
-
-            # split the sample files into smaller chunks of size args.max_file_len
-            # # use only 1/4 of the total files available in sample for test mode
-            # if True:
-            #     total_files = len(sample["files"])
-            #     print(f"total_files for {dataset}: {total_files}")
-            #     print(f"files: {sample['files']}")
-            #     test_files = sample["files"][100]
-            #     sample["files"] = test_files
-            #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
-            smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-            logger.info(f"len(smaller_files): {len(smaller_files)}")
-            for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
-                # Skip if already done (unless user wants a full rerun)
-                if not args.rerun and not jobstat.should_run(dataset, idx):
-                    logger.info(f"[resume] skip {dataset}[{idx}] (done marker present)")
+        # if True:
+        with optional_performance_report():
+            for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
+                if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                    logger.warning(f"Skipping dataset: {dataset}")
                     continue
 
-                smaller_sample = copy.deepcopy(sample)
-                smaller_sample["files"] = smaller_files[idx]
-                var_step = time.time()
-                save_path = getSavePath(start_save_path, smaller_sample, idx)
-                ExpectedEvents_from_prestage = get_expected_events_from_files_dict(smaller_sample["files"])
-                logger.debug(f"ExpectedEvents_from_prestage: {ExpectedEvents_from_prestage}")
+                logger.info("{}{}".format("\n" * 2, "=" * 51))
+                logger.info(f"===         Processing dataset: {dataset}       ===")
+                logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
+                logger.info(f"===         Year: {args.year}                        ===")
+                logger.info("{}{}".format("=" * 51, "\n" * 2))
 
-                processed_event_count = 0
+                # if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                #     logger.warning(f"Skipping dataset: {dataset}")
+                #     continue
 
-                # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
-                jobstat.mark_running(dataset, idx,
-                    meta={
-                        "split count": len(smaller_files),
-                        "max_attempts": len(AAA_REDIRECTORS),
-                        "args.max_file_len": args.max_file_len,
-                        "redirector": None,
-                        "path": save_path,
-                        "git_commit_hash": git_commit_hash,
-                        "git_branch": branch_name,
-                        "git patch path": git_info_path,
-                        })
-                for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
-                    try:
-                        logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
-                        # build fresh file list with this redirector
-                        alt_sample = copy.deepcopy(smaller_sample)
-                        # logger.info(f"alt_sample['files']: {alt_sample['files']}")
+                sample_step = time.time()
+                if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
+                    args.max_file_len = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset][0]]
+                    logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
+                else:
+                    args.max_file_len = 500
+                logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
 
-                        alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
+                # split the sample files into smaller chunks of size args.max_file_len
+                # # use only 1/4 of the total files available in sample for test mode
+                # if True:
+                #     total_files = len(sample["files"])
+                #     print(f"total_files for {dataset}: {total_files}")
+                #     print(f"files: {sample['files']}")
+                #     test_files = sample["files"][100]
+                #     sample["files"] = test_files
+                #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
+                smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
+                logger.info(f"len(smaller_files): {len(smaller_files)}")
+                for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
+                    # Skip if already done (unless user wants a full rerun)
+                    if not args.rerun and not jobstat.should_run(dataset, idx):
+                        logger.info(f"[resume] skip {dataset}[{idx}] (done marker present)")
+                        continue
 
-                        logger.debug(f"alt_sample['files']: {alt_sample['files']}")
+                    smaller_sample = copy.deepcopy(sample)
+                    smaller_sample["files"] = smaller_files[idx]
+                    var_step = time.time()
+                    save_path = getSavePath(start_save_path, smaller_sample, idx)
+                    ExpectedEvents_from_prestage = get_expected_events_from_files_dict(smaller_sample["files"])
+                    logger.debug(f"ExpectedEvents_from_prestage: {ExpectedEvents_from_prestage}")
 
-                        # clean partial output from previous tries
-                        os.system(f"rm -rf '{save_path}'")
-                        eos_mkdirs(save_path)
+                    processed_event_count = 0
 
-                        # rebuild the events/out collections for this attempt
-                        processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
+                    # Try up to several times, cycling through redirectors defined in AAA_REDIRECTORS
+                    jobstat.mark_running(dataset, idx,
+                        meta={
+                            "split count": len(smaller_files),
+                            "max_attempts": len(AAA_REDIRECTORS),
+                            "args.max_file_len": args.max_file_len,
+                            "redirector": None,
+                            "path": save_path,
+                            "git_commit_hash": git_commit_hash,
+                            "git_branch": branch_name,
+                            "git patch path": git_info_path,
+                            })
+                    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+                        try:
+                            logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
+                            # build fresh file list with this redirector
+                            alt_sample = copy.deepcopy(smaller_sample)
+                            # logger.info(f"alt_sample['files']: {alt_sample['files']}")
 
-                        logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
-                        logger.info(f"Processed events: {processed_event_count}")
+                            alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
 
-                        # to_persist = to_persist.persist()
-                        # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
-                        # to_persist.to_parquet(save_path)
+                            logger.debug(f"alt_sample['files']: {alt_sample['files']}")
 
-                        if not _parquet_dir_has_files(save_path):
-                            raise RuntimeError("Parquet write produced no files.")
+                            # clean partial output from previous tries
+                            os.system(f"rm -rf '{save_path}'")
+                            eos_mkdirs(save_path)
 
-                        # if ExpectedEvents_from_prestage != processed_event_count:
-                        #     raise ValueError(
-                        #         f"Number of processed events does not match expected events: "
-                        #         f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
-                        #         f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
-                        #     )
+                            # rebuild the events/out collections for this attempt
+                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
 
-                        jobstat.mark_done(
-                            dataset,
-                            idx,
-                            meta={
-                                "split count": len(smaller_files),
-                                "attempt": attempt,
-                                "max_attempts": len(AAA_REDIRECTORS),
-                                "args.max_file_len": args.max_file_len,
-                                "redirector": host_prefix,
-                                "path": save_path,
-                                "git_commit_hash": git_commit_hash,
-                                "git_branch": branch_name,
-                                "git patch path": git_info_path,
-                                "Expected events from pre-stage": ExpectedEvents_from_prestage,
-                                "Processed events from stage-1": processed_event_count,
-                            },
-                        )
-                        logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
-                        break  # stop trying once successful
+                            logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
+                            logger.info(f"Processed events: {processed_event_count}")
 
-                    except Exception as e:
-                        msg = str(e)
-                        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-                        logger.warning(
-                            f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
-                            f"({type(e).__name__}: {e})"
-                        )
-                        # save the list of files that were attempted in this failure for debugging,
-                        # with the redirector info in the filename
-                        # as well as the error message for this failure
-                        timestamp = time.strftime("%Y%m%d-%H%M%S")
-                        error_info_path = os.path.join(
-                            start_save_path,
-                            "_status",
-                            f"error_{dataset}_{idx}_{timestamp}.txt",
-                        )
-                        with open(error_info_path, "w") as f:
-                            f.write(f"Error message: {msg}\n")
-                            f.write(f"Attempted files with {host_prefix}:\n")
-                            f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
-                            for i, file in enumerate(alt_sample["files"]):
-                                f.write(f"{i:4}: {file}\n")
-                        logger.info(f"Saved error info to {error_info_path}")
+                            # to_persist = to_persist.persist()
+                            # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
+                            # to_persist.to_parquet(save_path)
 
-                        if attempt < len(AAA_REDIRECTORS) and tls_bad:
-                            logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
-                            continue  # next redirector in list
-                        else:
-                            jobstat.mark_failed(
+                            if not _parquet_dir_has_files(save_path):
+                                raise RuntimeError("Parquet write produced no files.")
+
+                            # if ExpectedEvents_from_prestage != processed_event_count:
+                            #     raise ValueError(
+                            #         f"Number of processed events does not match expected events: "
+                            #         f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
+                            #         f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
+                            #     )
+
+                            jobstat.mark_done(
                                 dataset,
                                 idx,
-                                e,
                                 meta={
                                     "split count": len(smaller_files),
                                     "attempt": attempt,
@@ -528,19 +519,68 @@ if __name__ == "__main__":
                                     "git_branch": branch_name,
                                     "git patch path": git_info_path,
                                     "Expected events from pre-stage": ExpectedEvents_from_prestage,
-                                    "Processed events from stage-1": processed_event_count,                                        
+                                    "Processed events from stage-1": processed_event_count,
                                 },
                             )
-                            logger.exception(
-                                f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
-                            )
+                            logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
+                            break  # stop trying once successful
 
-                var_elapsed = round(time.time() - var_step, 3)
-                logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
-            sample_elapsed = round(time.time() - sample_step, 3)
-            logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
-            t6 = time.perf_counter()
-            logger.info(f"[Timing] Time taken to process sample {dataset}: {round(t6 - t2, 3)} seconds")
+                        except Exception as e:
+                            msg = str(e)
+                            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                            logger.warning(
+                                f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
+                                f"({type(e).__name__}: {e})"
+                            )
+                            # save the list of files that were attempted in this failure for debugging,
+                            # with the redirector info in the filename
+                            # as well as the error message for this failure
+                            timestamp = time.strftime("%Y%m%d-%H%M%S")
+                            error_info_path = os.path.join(
+                                start_save_path,
+                                "_status",
+                                f"error_{dataset}_{idx}_{timestamp}.txt",
+                            )
+                            with open(error_info_path, "w") as f:
+                                f.write(f"Error message: {msg}\n")
+                                f.write(f"Attempted files with {host_prefix}:\n")
+                                f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
+                                for i, file in enumerate(alt_sample["files"]):
+                                    f.write(f"{i:4}: {file}\n")
+                            logger.info(f"Saved error info to {error_info_path}")
+
+                            if attempt < len(AAA_REDIRECTORS) and tls_bad:
+                                logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
+                                continue  # next redirector in list
+                            else:
+                                jobstat.mark_failed(
+                                    dataset,
+                                    idx,
+                                    e,
+                                    meta={
+                                        "split count": len(smaller_files),
+                                        "attempt": attempt,
+                                        "max_attempts": len(AAA_REDIRECTORS),
+                                        "args.max_file_len": args.max_file_len,
+                                        "redirector": host_prefix,
+                                        "path": save_path,
+                                        "git_commit_hash": git_commit_hash,
+                                        "git_branch": branch_name,
+                                        "git patch path": git_info_path,
+                                        "Expected events from pre-stage": ExpectedEvents_from_prestage,
+                                        "Processed events from stage-1": processed_event_count,                                        
+                                    },
+                                )
+                                logger.exception(
+                                    f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
+                                )
+
+                    var_elapsed = round(time.time() - var_step, 3)
+                    logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
+                sample_elapsed = round(time.time() - sample_step, 3)
+                logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
+                t6 = time.perf_counter()
+                logger.info(f"[Timing] Time taken to process sample {dataset}: {round(t6 - t2, 3)} seconds")
 
     else:
         # FIXME: update this for /store usage
@@ -555,22 +595,23 @@ if __name__ == "__main__":
         start_save_path = f"{args.save_path}/stage1_output_test/{args.year}"
         logger.info(f"start_save_path: {start_save_path}")
         os.makedirs(start_save_path, exist_ok=True)
-        for dataset, sample in tqdm.tqdm(samples.items()):
-            logger.debug(f"dataset: {dataset}")
-            save_path = getSavePath(start_save_path, sample, 0)
+        with optional_performance_report():
+            for dataset, sample in tqdm.tqdm(samples.items()):
+                logger.debug(f"dataset: {dataset}")
+                save_path = getSavePath(start_save_path, sample, 0)
 
-            logger.info(f"save_path: {save_path}")
-            if not os.path.exists(save_path):
-                logger.debug(f"Path: {save_path} is going to be created")
-                os.makedirs(save_path)
-            else:
-                # remove previously existing files and make path if doesn't exist
-                filelist = glob.glob(f"{save_path}/*.parquet")
-                logger.debug(f"Going to delete files: len(filelist): {len(filelist)}")
-                for file in filelist:
-                    os.remove(file)
-            logger.debug("Directory created or cleaned")
-            dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
+                logger.info(f"save_path: {save_path}")
+                if not os.path.exists(save_path):
+                    logger.debug(f"Path: {save_path} is going to be created")
+                    os.makedirs(save_path)
+                else:
+                    # remove previously existing files and make path if doesn't exist
+                    filelist = glob.glob(f"{save_path}/*.parquet")
+                    logger.debug(f"Going to delete files: len(filelist): {len(filelist)}")
+                    for file in filelist:
+                        os.remove(file)
+                logger.debug("Directory created or cleaned")
+                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
 
     elapsed = round(time.time() - time_step, 3)
 
