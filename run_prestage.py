@@ -31,28 +31,6 @@ from modules.dask_utils import close_dask_client, get_dask_client
 dask.config.set({'logging.distributed': 'error'})
 
 
-def count_event_entries(events, file_input):
-    """
-    Count entries in the Events tree for virtual NanoEvents.
-
-    If direct counting from the NanoEvents wrapper fails, fall back to ROOT metadata.
-    """
-    try:
-        return int(ak.num(events, axis=0))
-    except Exception as err:
-        logger.warning(
-            "[prestage] Falling back to uproot entry counting after NanoEvents count "
-            "failed: %s: %s",
-            type(err).__name__,
-            err,
-        )
-
-    n_events_total = 0
-    for fname_normalized in file_input.keys():
-        with uproot.open(f"{fname_normalized}:Events") as tree:
-            n_events_total += tree.num_entries
-    return int(n_events_total)
-
 def nanoevents_from_root_with_redirectors(
     file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
 ):
@@ -525,9 +503,24 @@ if __name__ == "__main__":
                         ).events()
                         logger.debug(f"file_input: {file_input}")
                         logger.debug(f"events.fields: {events.fields}")
-                        preprocess_metadata["data_entries"] = count_event_entries(
-                            events, file_input
-                        )
+
+                        data_entries = 0
+                        try:
+                            data_entries = int(ak.num(events, axis=0))
+                        except (ValueError, RuntimeError, OSError) as err:
+                            logger.warning(
+                                "[prestage] Falling back to uproot entry counting after NanoEvents "
+                                "count failed: %s: %s",
+                                type(err).__name__,
+                                err,
+                            )
+                            # Reset to 0 before accumulating from uproot to avoid double-counting
+                            data_entries = 0
+                            for fname_normalized in file_input.keys():
+                                with uproot.open(f"{fname_normalized}:Events") as tree:
+                                    data_entries += tree.num_entries
+
+                        preprocess_metadata["data_entries"] = data_entries
                         total_events += preprocess_metadata["data_entries"]
 
                         logger.info(
