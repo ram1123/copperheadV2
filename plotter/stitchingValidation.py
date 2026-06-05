@@ -172,7 +172,7 @@ for Year in Years:
         pad2.cd()
 
         hRatio.SetTitle("")
-        axis_title = "m_{jj} (GEN) [GeV]" if plot_var == "gjj_mass" else "m_{jj} (RECO) [GeV]"
+axis_title = {"gjj_mass": "m_{jj} (GEN) [GeV]", "jj_mass_nominal": "m_{jj} (RECO) [GeV]", "dimuon_mass": "m_{#mu#mu} [GeV]", "dimuon_pt": "p_{T}^{#mu#mu} [GeV]"}.get(plot_var, plot_var)
         hRatio.GetXaxis().SetTitle(axis_title)
         hRatio.GetYaxis().SetTitle("Stack / Ref")
         hRatio.GetYaxis().SetRangeUser(0.5, 1.5)
