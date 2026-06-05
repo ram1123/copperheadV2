@@ -374,16 +374,15 @@ if __name__ == "__main__":
         logger.info(f"git_info_path: {git_info_path}")
 
         for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
-            if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                logger.warning(f"Skipping dataset: {dataset}")
-                continue
-
             logger.info("{}{}".format("\n" * 2, "=" * 51))
             logger.info(f"===         Processing dataset: {dataset}       ===")
             logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
             logger.info(f"===         Year: {args.year}                        ===")
             logger.info("{}{}".format("=" * 51, "\n" * 2))
 
+            if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                logger.warning(f"Skipping dataset: {dataset}")
+                continue
 
             sample_step = time.time()
             if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
