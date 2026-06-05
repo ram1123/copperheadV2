@@ -41,15 +41,10 @@ import pandas as pd
 from scipy import stats
 
 # ── Optional coffea/awkward imports ────────────────────────────────────────────
-try:
-    import awkward as ak
-    import coffea
-    from coffea.nanoevents import NanoEventsFactory, BaseSchema
-    print(f"coffea {coffea.__version__} loaded")
-    HAS_COFFEA = True
-except ImportError:
-    HAS_COFFEA = False
-    print("coffea/awkward not found — using pandas backend (parquet only)")
+import awkward as ak
+import coffea
+from coffea.nanoevents import NanoEventsFactory, BaseSchema
+print(f"coffea {coffea.__version__} loaded")
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -615,55 +610,6 @@ def plot_mu_comparison(df: pd.DataFrame, outdir: str):
     save_panel(axes[0], outdir, "3a_mu1_pt_by_jettype")
     save_panel(axes[1], outdir, "3b_mu1_eta_by_jettype")
     plt.close(fig)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Coffea-based processor (optional, for large datasets)
-# ══════════════════════════════════════════════════════════════════════════════
-
-if HAS_COFFEA:
-    from coffea.processor import ProcessorABC, column_accumulator, defaultdict_accumulator
-    import coffea.processor as processor
-
-    class JetMuonProcessor(ProcessorABC):
-        """
-        coffea processor — fills accumulators with:
-          mu_pt_real, mu_pt_fake, dr_real, dr_fake
-        """
-        def __init__(self):
-            self._accumulator = processor.dict_accumulator({
-                "mu_pt_real": processor.column_accumulator(np.array([])),
-                "mu_pt_fake": processor.column_accumulator(np.array([])),
-                "dr_real":    processor.column_accumulator(np.array([])),
-                "dr_fake":    processor.column_accumulator(np.array([])),
-            })
-
-        @property
-        def accumulator(self):
-            return self._accumulator
-
-        def process(self, events):
-            out = self.accumulator.identity()
-            real_mask = events["jet1_hasMatchedGenJet_nominal"] > GEN_JET_CUT
-            fake_mask = ~real_mask
-
-            mu_pt  = ak.to_numpy(events["mu1_pt"])
-            j_eta  = ak.to_numpy(events["jet1_eta_nominal"])
-            j_phi  = ak.to_numpy(events["jet1_phi_nominal"])
-            mu_eta = ak.to_numpy(events["mu1_eta"])
-            mu_phi = ak.to_numpy(events["mu1_phi"])
-
-            dr = delta_r(mu_eta, mu_phi, j_eta, j_phi)
-
-            out["mu_pt_real"] += processor.column_accumulator(mu_pt[real_mask])
-            out["mu_pt_fake"] += processor.column_accumulator(mu_pt[fake_mask])
-            out["dr_real"]    += processor.column_accumulator(dr[real_mask])
-            out["dr_fake"]    += processor.column_accumulator(dr[fake_mask])
-            return out
-
-        def postprocess(self, accumulator):
-            return accumulator
-
 
 
 # ══════════════════════════════════════════════════════════════════════════════
