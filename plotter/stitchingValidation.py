@@ -200,8 +200,10 @@ axis_title = {"gjj_mass": "m_{jj} (GEN) [GeV]", "jj_mass_nominal": "m_{jj} (RECO
         refLine.Draw()
 
         c.Update()
-        c.SaveAs(f"validation/DY_Stiching/{nanoAODv}/stitching_validation_{Year}_{plot_var}.pdf")
-        c.SaveAs(f"validation/DY_Stiching/{nanoAODv}/stitching_validation_{Year}_{plot_var}.png")
+outdir = Path(f"validation/DY_Stitching/{nanoAODv}")
+outdir.mkdir(parents=True, exist_ok=True)
+c.SaveAs(str(outdir / f"stitching_validation_{Year}_{plot_var}.pdf"))
+c.SaveAs(str(outdir / f"stitching_validation_{Year}_{plot_var}.png"))
 
         # Clean up ROOT objects before next iteration to avoid name clashes
         for obj in [h50, hVBF, h50_nc, hSum, hStack_sum, hRatio, stack, c]:
