@@ -60,6 +60,7 @@ from modules.vector_operations import (
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
+LUMI_MASK_CACHE = {}
 
 
 # ---------------------------------------------------------
@@ -729,8 +730,14 @@ class EventProcessor(processor.ProcessorABC):
         lumi_mask = ak.ones_like(event_filter, dtype="bool")
         if not is_mc:
             logger.debug(f'self.config["lumimask"]: {self.config["lumimask"]}')
-            lumi_info = LumiMask(self.config["lumimask"])
-            lumi_mask = lumi_info(events.run, events.luminosityBlock)
+            lumimask_path = self.config["lumimask"]
+            if not os.path.isabs(lumimask_path):
+                repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+                lumimask_path = os.path.join(repo_root, lumimask_path)
+            if lumimask_path not in LUMI_MASK_CACHE:
+                logger.info(f"Loading lumi mask: {lumimask_path}")
+                LUMI_MASK_CACHE[lumimask_path] = LumiMask(lumimask_path)
+            lumi_mask = LUMI_MASK_CACHE[lumimask_path](events.run, events.luminosityBlock)
         self.selection.add("lumi_mask", lumi_mask)
 
         # ------------------------------------------------------------#

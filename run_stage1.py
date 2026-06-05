@@ -8,10 +8,11 @@ import os
 import subprocess
 import sys
 import time
-import uuid
 import warnings
 from itertools import islice
 from contextlib import contextmanager, nullcontext
+
+import uuid as _uuid_mod
 
 import awkward as ak
 from coffea import processor as coffea_processor_api
@@ -28,6 +29,7 @@ from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
+from src.stage1.runner_processor import RunnerStage1Processor, write_cutflow_outputs
 from configs.skip_stage1_run import samples_to_skip, samples_to_run
 
 dask.config.set(annotations={"retries": 5})
@@ -217,7 +219,13 @@ def discover_preload_branches(
     )
     trace_processor.process(trace_events, dataset_yaml_file=dataset_yaml_file)
 
-    preload_branches = sorted(set(access_log))
+    # access_log stores coffea Accessed(branch=..., buffer_key=...) namedtuples.
+    # NanoEventsFactory.from_root(preload=...) and WorkItem.preload need plain
+    # branch name strings, so we extract the .branch attribute here.
+    if access_log and hasattr(access_log[0], "branch"):
+        preload_branches = sorted({entry.branch for entry in access_log})
+    else:
+        preload_branches = sorted(set(access_log))
     PRELOAD_BRANCH_CACHE[cache_key] = preload_branches
     logger.info(
         "Discovered %d preload branches for %s",
@@ -227,74 +235,63 @@ def discover_preload_branches(
     return preload_branches
 
 
-def write_cutflow_outputs(cutflow, save_path, dataset_name, file_idx):
+def prestage_to_runner_fileset(dataset_name, files_dict, runner_metadata, preload_branches, metadata_cache):
+    """Convert a prestage file dict to a coffea Runner-compatible fileset dict.
+
+    The Runner's _normalize_fileset expects ``{"file.root": "treename"}`` string
+    values, but the prestage format has dict values with object_path, steps, uuid,
+    and num_entries.  This function:
+
+    1. Converts each file entry to the simple ``{"file.root": "Events"}`` format.
+    2. Pre-populates the Runner's ``metadata_cache`` with num_entries and uuid from
+       the prestage output so the Runner skips its own per-file XRootD metadata-
+       fetching pass (one open per file), saving significant latency.
+
+    Note: coffea ``WorkItem`` objects (and the internal ``coffea.processor.executor``
+    module) are intentionally NOT used here.  When a Dask Gateway cluster is in use,
+    those objects are pickled and sent to scheduler/worker processes that may run in
+    a different pixi environment, causing ``ModuleNotFoundError`` on unpickling.
+    Using the standard fileset dict avoids that problem entirely.
     """
-    Persist merged cutflow outputs after runner execution.
-    """
-    logger.info("Saving cutflow information (NPZ and JSON)")
-    os.makedirs(save_path, exist_ok=True)
+    # FileMeta is imported lazily because it's only used on the client side
+    # for cache key construction and is never pickled to Dask workers.
+    from coffea.processor.executor import FileMeta  # client-side only
 
-    base_name = f"cutflow_{dataset_name}_{file_idx}"
-    npz_path = os.path.join(save_path, f"{base_name}.npz")
-    json_path = os.path.join(save_path, f"{base_name}.json")
+    runner_files = {}
+    for fname, finfo in files_dict.items():
+        if isinstance(finfo, dict):
+            treename    = finfo.get("object_path", "Events")
+            num_entries = int(finfo.get("num_entries", 0))
+            uuid_str    = finfo.get("uuid", "")
+        else:
+            treename    = finfo if isinstance(finfo, str) else "Events"
+            num_entries = 0
+            uuid_str    = ""
 
-    npz_result = cutflow.to_npz(npz_path)
-    if hasattr(npz_result, "compute"):
-        npz_result.compute()
-    logger.info(f"NPZ saved: {npz_path}")
+        runner_files[fname] = treename
 
-    try:
-        combined_data = {}
-        for i, name in enumerate(cutflow._names):
-            cumulative = cutflow._nevcutflow[i]
-            individual = cutflow._nevonecut[i]
-            combined_data[name] = {
-                "cumulative": cumulative.item() if hasattr(cumulative, "item") else cumulative,
-                "individual": individual.item() if hasattr(individual, "item") else individual,
-            }
+        # Pre-populate the metadata cache so the Runner's preprocessing pass
+        # finds entries already populated and skips the expensive file-open step.
+        try:
+            uuid_bytes = _uuid_mod.UUID(uuid_str).bytes if uuid_str else b""
+        except (ValueError, AttributeError):
+            uuid_bytes = b""
 
-        with open(json_path, "w") as handle:
-            json.dump(combined_data, handle, indent=4)
-
-        logger.info(f"JSON saved to {json_path}")
-    except Exception as err:
-        logger.error(f"JSON save failed: {err}")
-
-
-class RunnerStage1Processor(EventProcessor):
-    """
-    Thin runner-friendly wrapper around the analysis processor.
-
-    Each runner chunk writes its parquet shard directly to disk and returns only
-    tiny metadata so the runner can merge results efficiently.
-    """
-    def __init__(self, config, save_path, dataset_yaml_file, test_mode=False, isCutflow=False):
-        super().__init__(config, test_mode=test_mode, isCutflow=isCutflow)
-        self.save_path = save_path
-        self.dataset_yaml_file = dataset_yaml_file
-
-    def process(self, events):
-        out_collections, processed_event_count = super().process(
-            events,
-            dataset_yaml_file=self.dataset_yaml_file,
-        )
-
-        out_collections["fraction"] = (
-            events.metadata["fraction"] * ak.ones_like(out_collections["event"])
-        )
-        skim_zip = ak.zip(out_collections, depth_limit=1)
-
-        parquet_name = f"part_{uuid.uuid4().hex}.parquet"
-        parquet_path = os.path.join(self.save_path, parquet_name)
-        ak.to_parquet(skim_zip, parquet_path)
-
-        result = {
-            "processed_event_count": int(np.asarray(processed_event_count).item()),
-            "written_files": 1,
+        cache_key = FileMeta(dataset_name, fname, treename)
+        cache_metadata = {
+            "numentries": num_entries,
+            "uuid": uuid_bytes,
         }
-        if self.isCutflow:
-            result["cutflow"] = self.cutflow
-        return {events.metadata["dataset"]: result}
+        cache_metadata.update(runner_metadata)
+        metadata_cache[cache_key] = cache_metadata
+
+    return {
+        dataset_name: {
+            "files": runner_files,
+            "metadata": runner_metadata,
+            "preload": preload_branches,
+        }
+    }
 
 
 def dataset_loop(
@@ -367,13 +364,10 @@ def dataset_loop(
         ak.to_parquet(skim_zip, parquet_path)
         return int(np.asarray(processed_event_count).item())
 
-    fileset = {
-        dataset_dict["metadata"]["dataset"]: {
-            "files": dataset_dict["files"],
-            "metadata": dataset_dict["metadata"],
-            "preload": preload_branches,
-        }
-    }
+    runner_metadata = dict(dataset_dict["metadata"])
+    runner_metadata.pop("dataset", None)
+
+    dataset_name = dataset_dict["metadata"]["dataset"]
 
     runner_processor = RunnerStage1Processor(
         copy.deepcopy(processor.config),
@@ -382,23 +376,37 @@ def dataset_loop(
         test_mode=test,
         isCutflow=isCutflow,
     )
+    # Build Runner first so we can pre-populate its metadata_cache
     runner = coffea_processor_api.Runner(
         executor=runner_executor,
         schema=NanoAODSchema,
         format="root",
         skipbadfiles=False,
+        # coffea's _work_function extracts "timeout" from uproot_options and then
+        # also passes **uproot_options to uproot.open(), causing "multiple values"
+        # if "timeout" is also in uproot_options. Use xrootdtimeout instead.
+        xrootdtimeout=900,
     )
+    # Convert the prestage file dict to the Runner's expected format and
+    # pre-populate the metadata cache to skip per-file XRootD metadata fetches.
+    fileset = prestage_to_runner_fileset(
+        dataset_name=dataset_name,
+        files_dict=dataset_dict["files"],
+        runner_metadata=runner_metadata,
+        preload_branches=preload_branches,
+        metadata_cache=runner.metadata_cache,
+    )
+    logger.info(
+        "Built fileset for dataset %s (%d files, preload: %d branches)",
+        dataset_name, len(dataset_dict["files"]), len(preload_branches),
+    )
+    # uproot_options must NOT include "timeout" (handled via xrootdtimeout above).
     runner_output = runner(
         fileset,
         processor_instance=runner_processor,
-        uproot_options={
-            "timeout": 900,
-            "num_workers": 1,
-            "max_num_elements": max_num_elements,
-        },
+        uproot_options={},
     )
 
-    dataset_name = dataset_dict["metadata"]["dataset"]
     dataset_result = runner_output[dataset_name]
     return int(np.asarray(dataset_result["processed_event_count"]).item())
 
