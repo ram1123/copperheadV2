@@ -1354,7 +1354,15 @@ class EventProcessor(processor.ProcessorABC):
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
+        logger.debug(f"jets type before pad_none: {jets.type}")
+        logger.debug(f"jets ndim: {jets.ndim}")
+
         factory = None
+        if jets.ndim < 2:
+            # Empty chunk: awkward collapsed the jagged 'var' dimension.
+            # Rebuild an empty jagged array so downstream axis=1 ops work.
+            jets = ak.unflatten(jets, ak.zeros_like(events.event, dtype="int64"))        
+
         jet_default = ak.pad_none(jets, target=4) # save pre jec and jer Jet for comparison
         jet1_default = jet_default[:, 0]
         jet2_default = jet_default[:, 1]
@@ -1460,7 +1468,7 @@ class EventProcessor(processor.ProcessorABC):
                 logger.debug("Applying JER smearing!")
                 jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
             else:
-                logger.warning(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
+                logger.debug(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
             # 4) Sort jets *after* final pt is set
             sorted_args = ak.argsort(jets.pt, ascending=False)
@@ -1665,13 +1673,13 @@ class EventProcessor(processor.ProcessorABC):
             If the year does not match these patterns, it is converted directly to float (e.g., "2017" -> 2017.0).
             If the format is unexpected, this may raise a ValueError.
             """
-            logger.warning(f"Year format contains more than 4 characters: {year}")
+            logger.debug(f"Year format contains more than 4 characters: {year}")
             dnn_year = float(year[:4])
             if "pre" in year:
                 dnn_year += 0.0
             else:
                 dnn_year += 0.5
-            logger.warning(f"Mapped year to dnn_year: {dnn_year}")
+            logger.debug(f"Mapped year to dnn_year: {dnn_year}")
         else:
             dnn_year = float(year)
         logger.debug(f"dnn_year: {dnn_year}")
@@ -2712,7 +2720,7 @@ class EventProcessor(processor.ProcessorABC):
         # Prefer asymmetric if true
         if self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]:
             thr_lead, thr_sub = self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]
-            logger.warning(
+            logger.debug(
                 f"Applying asymmetric jet pT cut for HE/HF jets (|eta|>2.5): "
                 f"leading>{thr_lead} GeV, subleading>{thr_sub} GeV"
             )
@@ -2737,7 +2745,7 @@ class EventProcessor(processor.ProcessorABC):
 
         if self.config["switches"]["add_pt_cut_for_HE_HF_jets"]:
             thr = self.config["switches"]["add_pt_cut_for_HE_HF_jets"]
-            logger.warning(f"Applying additional jet pT cut of {thr} GeV for HE/HF jets!")
+            logger.info(f"Applying additional jet pT cut of {thr} GeV for HE/HF jets!")
 
             is_hehf = abs(jets.eta) > 2.5
             HE_HF_ptcut = ak.where(is_hehf, jets.pt > thr, HE_HF_ptcut)

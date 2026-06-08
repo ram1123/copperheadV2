@@ -14,11 +14,14 @@ from contextlib import contextmanager, nullcontext
 
 import awkward as ak
 import dask
+from dask import delayed
 import numpy as np
 import tqdm
 import coffea
-from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
+from coffea import processor as coffea_processor_module
+# from coffea.processor import ProcessorABC
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from dask.distributed import performance_report
 
 from modules.dask_utils import close_dask_client, get_dask_client
@@ -28,6 +31,8 @@ from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
 from configs.skip_stage1_run import samples_to_skip, samples_to_run
+
+from copperhead_runner_adapter import CopperheadRunnerAdapter
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -127,6 +132,22 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     return save_path
 
 
+def process_single_file(fpath, treename, dataset_dict, max_num_elements, dataset_yaml_file, processor):
+    """Process a single ROOT file and return (out_collections, n_processed)."""
+    events = NanoEventsFactory.from_root(
+        {fpath: treename},
+        mode="virtual",
+        schemaclass=NanoAODSchema,
+        metadata=dataset_dict["metadata"],
+        uproot_options={
+            "timeout": 900,
+            "num_workers": 1,
+            "max_num_elements": max_num_elements,
+        },
+    ).events()
+    return processor.process(events, dataset_yaml_file=dataset_yaml_file)
+
+
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
@@ -137,104 +158,59 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     logger.debug(f"file index: {file_idx}")
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
+    os.makedirs(save_path, exist_ok=True)
 
-    max_num_elements = 500 # default
-    if any(key in dataset_dict["metadata"]["dataset"] for key in DATASET_ELEMENT_LIMITS.keys()):
-        max_num_elements = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
-        logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
-    else:
-        max_num_elements = 500
-    logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
+    dataset_name = dataset_dict["metadata"]["dataset"]
+
+    max_num_elements = 500
+    for key in DATASET_ELEMENT_LIMITS:
+        if key in dataset_name:
+            max_num_elements = DATASET_ELEMENT_LIMITS[key]
+            break
+    logger.info(f"max_num_elements for {dataset_name} set to {max_num_elements}")
 
     files_for_factory = {
         fpath: finfo["object_path"]
         for fpath, finfo in dataset_dict["files"].items()
     }
 
-    all_out_collections = []
-    total_processed = 0
+    # Filter out Runner-reserved keys from metadata before passing to fileset
+    RUNNER_RESERVED_KEYS = {"dataset", "filename", "treename", "entrystart", "entrystop"}
 
-    for fpath, treename in files_for_factory.items():
-        events = NanoEventsFactory.from_root(
-            {fpath: treename},
-            mode="virtual",
-            schemaclass=NanoAODSchema,
-            metadata=dataset_dict["metadata"],
-            uproot_options={
-                "timeout": 900,
-                "num_workers": 1,
-                "max_num_elements": max_num_elements,
-            },
-        ).events()
-
-        out_cols, n_processed = processor.process(events, dataset_yaml_file=dataset_yaml_file)
-        all_out_collections.append(out_cols)
-        total_processed += int(n_processed)
-
-    # Merge output collections after processing — safe because cross-refs are already resolved
-    out_collections = {
-        key: ak.concatenate([c[key] for c in all_out_collections])
-        for key in all_out_collections[0].keys()
+    user_metadata = {
+        k: v for k, v in dataset_dict["metadata"].items()
+        if k not in RUNNER_RESERVED_KEYS
     }
-    processed_event_count = total_processed
 
-    # Save the cutflow
-    if hasattr(processor, "cutflow") and isCutflow:
-        logger.info("Saving cutflow information (NPZ and JSON)")
-        
-        # Ensure directory exists
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+    # Wrap EventProcessor in the Runner-compatible adapter
+    # adapter = CopperheadRunnerAdapter(processor, dataset_yaml_file)
+    adapter = CopperheadRunnerAdapter(
+        config=processor.config,      # plain dict — picklable
+        dataset_yaml_file=dataset_yaml_file,
+        save_path=save_path,
+        test_mode=processor.test_mode,
+        isCutflow=processor.isCutflow,
+    )
 
-        base_name = f"cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}"
-        npz_path = os.path.join(save_path, f"{base_name}.npz")
-        json_path = os.path.join(save_path, f"{base_name}.json")
+    runner = coffea_processor_module.Runner(
+        executor=coffea_processor_module.DaskExecutor(client=client),  # reuse existing client
+        schema=NanoAODSchema,
+        chunksize=100_000,
+        skipbadfiles=False,
+    )
 
-        # 1. Save NPZ
-        processor.cutflow.to_npz(npz_path)
-        logger.info(f"NPZ saved: {npz_path}")
+    fileset = {
+        dataset_name: {
+            "files": list(files_for_factory.keys()),
+            "treename": "Events",
+            "metadata": user_metadata,
+        }
+    }
 
-        # 2. Save JSON
-        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.print()}")
-        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.result()}")
-        try:
-            cf_res = processor.cutflow
-            
-            # Helper to safely convert numpy values to python scalars
-            def clean(val):
-                return val.item() if hasattr(val, "item") else val
+    result = runner(fileset, processor_instance=adapter)
+    total_processed = int(ak.sum(result["__n_processed__"].arr))
 
-            # Build a structured dictionary
-            # _names: list of cut names
-            # _nevcutflow: cumulative counts
-            # _nevonecut: individual cut counts
-            combined_data = {}
-            for i, name in enumerate(cf_res._names):
-                combined_data[name] = {
-                    "cumulative": clean(cf_res._nevcutflow[i]),
-                    "individual": clean(cf_res._nevonecut[i])
-                }
-
-            with open(json_path, 'w') as f:
-                json.dump(combined_data, f, indent=4)
-                
-            logger.info(f"JSON saved to {json_path}")
-
-        except Exception as e:
-            logger.error(f"JSON save failed: {e}")
-
-
-    dataset_fraction = dataset_dict["metadata"]["fraction"]
-
-    logger.debug(f"out_collections keys: {out_collections.keys()}")
-
-    out_collections["fraction"] = dataset_fraction * (ak.ones_like(out_collections["event"]))
-    # ----------------------------------
-    skim_zip = ak.zip(out_collections, depth_limit=1)
-    parquet_path = os.path.join(save_path, f"part_{file_idx:04d}.parquet")
-    ak.to_parquet(skim_zip, parquet_path)
-
-    return int(processed_event_count)
+    return total_processed
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -359,16 +335,42 @@ if __name__ == "__main__":
 
     config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
+
+    # Anchor all relative file paths to the project root so gateway workers
+    # (which have a different CWD) can resolve them via the shared filesystem
+    PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+    def _absolutize(value):
+        """Convert a relative file path to absolute against PROJECT_ROOT."""
+        if isinstance(value, str) and not os.path.isabs(value):
+            # Only rewrite things that look like file paths that exist
+            candidate = os.path.join(PROJECT_ROOT, value)
+            if os.path.exists(candidate):
+                return candidate
+        return value
+
+    def _absolutize_config(obj):
+        if isinstance(obj, dict):
+            return {k: _absolutize_config(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_absolutize_config(v) for v in obj]
+        return _absolutize(obj)
+
+    config = _absolutize_config(config)
+    logger.info("Resolved relative config paths to absolute against project root")
+
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
     client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+    # client.restart()   # ensures workers load fresh copperhead_runner_adapter.py
+
     if not test_mode: # full scale implementation
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         if args.sync:
-            sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path        
+            sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path
         logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
             samples = json.loads(file.read())
@@ -487,12 +489,12 @@ if __name__ == "__main__":
                             if not _parquet_dir_has_files(save_path):
                                 raise RuntimeError("Parquet write produced no files.")
 
-                            # if ExpectedEvents_from_prestage != processed_event_count:
-                            #     raise ValueError(
-                            #         f"Number of processed events does not match expected events: "
-                            #         f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
-                            #         f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
-                            #     )
+                            if ExpectedEvents_from_prestage != processed_event_count:
+                                raise ValueError(
+                                    f"Number of processed events does not match expected events: "
+                                    f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
+                                    f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
+                                )
 
                             jobstat.mark_done(
                                 dataset,
@@ -557,7 +559,7 @@ if __name__ == "__main__":
                                         "git_branch": branch_name,
                                         "git patch path": git_info_path,
                                         "Expected events from pre-stage": ExpectedEvents_from_prestage,
-                                        "Processed events from stage-1": processed_event_count,                                        
+                                        "Processed events from stage-1": processed_event_count,
                                     },
                                 )
                                 logger.exception(
