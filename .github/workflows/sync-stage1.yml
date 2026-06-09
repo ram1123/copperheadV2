@@ -114,7 +114,7 @@ jobs:
 
       - name: Compare cutflow JSON against references
         run: |
-          pixi run -e ci bash -lc '
+          pixi run -e ci bash -l << 'BASH_EOF'
             set -euo pipefail
             export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
@@ -224,7 +224,7 @@ jobs:
               "${vbf_cutflow_ref}" \
               "${vbf_cutflow}" \
               -o diff_cutflow_vbf_${{ matrix.year }}.csv
-          '
+          BASH_EOF
 
       - name: Compare against references
         run: |
