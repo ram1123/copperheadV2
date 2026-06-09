@@ -636,25 +636,33 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"jet_veto_maps_cset: {cset}")
         logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
 
-        input_dict = {
+        # correctionlib's evaluate flattens jagged inputs and returns a FLAT
+        # array. Flatten explicitly, evaluate, then unflatten back to the jet
+        # structure so the mask stays jagged and boolean indexing preserves
+        # the per-event axis.
+        flat_inputs = {
             "type": "jetvetomap",
-            "eta": jets.eta,
-            "phi": jets.phi,
+            "eta": ak.flatten(jets.eta),
+            "phi": ak.flatten(jets.phi),
         }
+        counts = ak.num(jets, axis=1)
 
         jetVetoMapTag = self.config.get("jet_veto_maps_tag", None)
         logger.debug(f"Jet veto map tag from config: {jetVetoMapTag}")
 
         jet_veto_map = cset[jetVetoMapTag]
-        inputs = [input_dict[input.name] for input in cset[jetVetoMapTag].inputs]
+        inputs = [flat_inputs[input.name] for input in jet_veto_map.inputs]
 
         # logger.debug(f"eta: {ak.to_list(jets.eta[40:47].compute())}")
         # logger.debug(f"phi: {ak.to_list(jets.phi[40:47].compute())}")
 
+
+
         jet_veto_mask = jet_veto_map.evaluate(*(inputs))
         # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
 
-        jet_veto_eventFilter = ak.any(jet_veto_mask, axis=1)
+        jet_veto_mask = ak.unflatten(jet_veto_mask, counts)   # jagged, same shape as jets
+        jet_veto_eventFilter = ak.any(jet_veto_mask != 0.0, axis=1)
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
 
         # logger.debug(f"PuppiMET.pt after jet veto jet filter: {ak.to_list(PuppiMET.pt[30:35].compute())}")
@@ -1346,24 +1354,50 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         jets = events.Jet
 
+        def ensure_event_axis(collection, label):
+            # Single-event chunks squeeze the outer event axis, leaving the
+            # collection flat (ndim=1). Restore the per-event axis before any
+            # axis=1 operation.
+            if collection.ndim >= 2:
+                return collection
+
+            n_events = len(events)
+            n_items = len(collection)
+
+            if n_events == 1:
+                # Re-add the squeezed length-1 outer axis -> (1 * n_items * record).
+                # np.newaxis just wraps the layout; it avoids ak.unflatten's
+                # offset-fitting check, which fails on the IndexedArray produced
+                # by the earlier events[event_filter] slice.
+                rebuilt = collection[np.newaxis]
+            elif n_items == 0:
+                rebuilt = ak.unflatten(collection, np.zeros(n_events, dtype="int64"))
+            else:
+                raise RuntimeError(
+                    f"Unexpected {label} collapse: ndim={collection.ndim}, "
+                    f"n_items={n_items}, n_events={n_events}"
+                )
+
+            logger.info(
+                f"[{label}-norm] restored event axis: ndim {collection.ndim} -> "
+                f"{rebuilt.ndim}, n_events={n_events}, n_items={n_items}"
+            )
+            return rebuilt
+
+        jets = ensure_event_axis(jets, "jet")
+
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
             jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
-
+            jets = ensure_event_axis(jets, "jet-post-veto")
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        logger.debug(f"jets type before pad_none: {jets.type}")
-        logger.debug(f"jets ndim: {jets.ndim}")
+        logger.info(f"jets type before pad_none: {jets.type}")
+        logger.info(f"jets ndim: {jets.ndim}")
 
-        factory = None
-        if jets.ndim < 2:
-            # Empty chunk: awkward collapsed the jagged 'var' dimension.
-            # Rebuild an empty jagged array so downstream axis=1 ops work.
-            jets = ak.unflatten(jets, ak.zeros_like(events.event, dtype="int64"))        
-
-        jet_default = ak.pad_none(jets, target=4) # save pre jec and jer Jet for comparison
+        jet_default = ak.pad_none(jets, target=4, axis=1)
         jet1_default = jet_default[:, 0]
         jet2_default = jet_default[:, 1]
         save_four_jets_kinematics = self.config["switches"]["save_four_jets_kinematics"]
@@ -1381,6 +1415,7 @@ class EventProcessor(processor.ProcessorABC):
         do_getFatJet_vars = self.config["switches"].get("do_getFatJet_vars", False)
         if do_getFatJet_vars:
             fatJets = events.FatJet
+            fatJets = ensure_event_axis(fatJets, "fatjet")
             nfatJets = ak.num(fatJets, axis=1)
             fatjet_selection = (
                 (fatJets.pt > 150)

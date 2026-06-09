@@ -11,6 +11,7 @@ import time
 import warnings
 from itertools import islice
 from contextlib import contextmanager, nullcontext
+from omegaconf import OmegaConf, DictConfig, ListConfig
 
 import awkward as ak
 import dask
@@ -309,6 +310,18 @@ if __name__ == "__main__":
     args.dataset_yaml_file = resolve_dataset_yaml_file(
         args.dataset_yaml_file, args.year, args.NanoAODv
     )
+    # Make the dataset YAML path absolute so gateway workers can find it
+    if not os.path.isabs(args.dataset_yaml_file):
+        args.dataset_yaml_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            args.dataset_yaml_file,
+        )
+    logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
+
+    if not os.path.exists(args.dataset_yaml_file):
+        raise FileNotFoundError(
+            f"dataset_yaml_file not found on submit node: {args.dataset_yaml_file}"
+        )
     logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
 
     test_mode = args.test_mode
@@ -336,33 +349,35 @@ if __name__ == "__main__":
     config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
 
-    # Anchor all relative file paths to the project root so gateway workers
-    # (which have a different CWD) can resolve them via the shared filesystem
+    # Convert OmegaConf -> plain dict/list so the walker recurses correctly
+    # and so the config is cleanly picklable for dask workers.
+    if isinstance(config, (DictConfig, ListConfig)):
+        config = OmegaConf.to_container(config, resolve=True)
+
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+    _PATH_SUFFIXES = (".json", ".json.gz", ".gz", ".txt", ".npz", ".pt", ".root", ".csv")
 
     def _absolutize(value):
         """Convert a relative file path to absolute against PROJECT_ROOT."""
         if isinstance(value, str) and not os.path.isabs(value):
-            # Only rewrite things that look like file paths that exist
-            candidate = os.path.join(PROJECT_ROOT, value)
-            if os.path.exists(candidate):
-                return candidate
+            if value.startswith("data/") or value.endswith(_PATH_SUFFIXES):
+                return os.path.join(PROJECT_ROOT, value)
         return value
 
+
     def _absolutize_config(obj):
-        if isinstance(obj, dict):
+        if isinstance(obj, (dict, DictConfig)):
             return {k: _absolutize_config(v) for k, v in obj.items()}
-        if isinstance(obj, list):
+        if isinstance(obj, (list, tuple, ListConfig)):
             return [_absolutize_config(v) for v in obj]
         return _absolutize(obj)
-
+        
     config = _absolutize_config(config)
     logger.info("Resolved relative config paths to absolute against project root")
 
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
     client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
-    # client.restart()   # ensures workers load fresh copperhead_runner_adapter.py
 
     if not test_mode: # full scale implementation
         t2 = time.perf_counter()
