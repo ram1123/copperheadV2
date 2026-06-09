@@ -1,9 +1,9 @@
 import json
 import os
-import uuid
 
-import awkward as ak
 import numpy as np
+
+from modules.utils import logger
 
 from modules.utils import logger
 from src.copperhead_processor import EventProcessor
