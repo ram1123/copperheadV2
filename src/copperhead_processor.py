@@ -11,6 +11,7 @@ from coffea.btag_tools import BTagScaleFactor
 from coffea.lumi_tools import LumiMask
 from omegaconf import OmegaConf
 
+from modules.awkward_utils import ensure_event_axis
 from modules.classify_year import is_run2, is_run3
 from modules.correctionlib_file_cache import get_corrset
 from modules.get_sample_info import get_sample_info
@@ -1347,43 +1348,13 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         jets = events.Jet
 
-        def ensure_event_axis(collection, label):
-            # Single-event chunks squeeze the outer event axis, leaving the
-            # collection flat (ndim=1). Restore the per-event axis before any
-            # axis=1 operation.
-            if collection.ndim >= 2:
-                return collection
-
-            n_events = len(events)
-            n_items = len(collection)
-
-            if n_events == 1:
-                # Re-add the squeezed length-1 outer axis -> (1 * n_items * record).
-                # np.newaxis just wraps the layout; it avoids ak.unflatten's
-                # offset-fitting check, which fails on the IndexedArray produced
-                # by the earlier events[event_filter] slice.
-                rebuilt = collection[np.newaxis]
-            elif n_items == 0:
-                rebuilt = ak.unflatten(collection, np.zeros(n_events, dtype="int64"))
-            else:
-                raise RuntimeError(
-                    f"Unexpected {label} collapse: ndim={collection.ndim}, "
-                    f"n_items={n_items}, n_events={n_events}"
-                )
-
-            logger.info(
-                f"[{label}-norm] restored event axis: ndim {collection.ndim} -> "
-                f"{rebuilt.ndim}, n_events={n_events}, n_items={n_items}"
-            )
-            return rebuilt
-
-        jets = ensure_event_axis(jets, "jet")
+        jets = ensure_event_axis(jets, len(events), "jet")
 
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
             jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
-            jets = ensure_event_axis(jets, "jet-post-veto")
+            jets = ensure_event_axis(jets, len(events), "jet-post-veto")
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
@@ -1408,7 +1379,7 @@ class EventProcessor(processor.ProcessorABC):
         do_getFatJet_vars = self.config["switches"].get("do_getFatJet_vars", False)
         if do_getFatJet_vars:
             fatJets = events.FatJet
-            fatJets = ensure_event_axis(fatJets, "fatjet")
+            fatJets = ensure_event_axis(fatJets, len(events), "fatjet")
             nfatJets = ak.num(fatJets, axis=1)
             fatjet_selection = (
                 (fatJets.pt > 150)
