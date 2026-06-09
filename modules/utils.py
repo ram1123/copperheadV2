@@ -76,10 +76,17 @@ def absolutize_path(value, project_root):
 
 
 def absolutize_config(obj, project_root):
-    """Recursively convert relative file paths in a config dict to absolute paths."""
-    if isinstance(obj, dict):
+    """Recursively convert relative file paths in a config dict to absolute paths.
+
+    Handles plain dicts/lists AND OmegaConf DictConfig/ListConfig objects, since
+    getParametersForYr returns a plain dict whose values are raw OmegaConf nodes.
+    """
+    # Duck-typing: treat any non-string mapping as a dict, any non-string iterable as a list.
+    if hasattr(obj, "items"):  # dict or DictConfig
         return {k: absolutize_config(v, project_root) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, (list, tuple)) or (
+        hasattr(obj, "__iter__") and not isinstance(obj, str)
+    ):
         return [absolutize_config(v, project_root) for v in obj]
     return absolutize_path(obj, project_root)
 
