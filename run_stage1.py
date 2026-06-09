@@ -24,7 +24,7 @@ from omegaconf import DictConfig, ListConfig, OmegaConf
 # from coffea.processor import ProcessorABC
 from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from configs.skip_stage1_run import samples_to_run, samples_to_skip
-from copperhead_runner_adapter import CopperheadRunnerAdapter
+from src.stage1.runner_adapter import CopperheadRunnerAdapter
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import get_git_info, logger

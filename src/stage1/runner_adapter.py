@@ -3,7 +3,7 @@ import os
 import awkward as ak
 from coffea.processor import ProcessorABC
 
-from src.stage1.runner_processor import write_cutflow_outputs
+from src.stage1.cutflow_io import write_cutflow_outputs
 
 
 class CopperheadRunnerAdapter(ProcessorABC):
