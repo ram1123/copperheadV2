@@ -1,5 +1,4 @@
 import os
-import uuid
 
 import awkward as ak
 from coffea.processor import ProcessorABC
@@ -91,7 +90,7 @@ class CopperheadRunnerAdapter(ProcessorABC):
         )
         skim_zip = ak.zip(out_collections, depth_limit=1)
 
-        shard_id = uuid.uuid4().hex
+        shard_id = self._build_shard_id(events)
         parquet_path = os.path.join(self._save_path, f"part_{shard_id}.parquet")
         ak.to_parquet(skim_zip, parquet_path)
 
@@ -111,3 +110,12 @@ class CopperheadRunnerAdapter(ProcessorABC):
 
     def postprocess(self, accumulator):
         return accumulator
+
+    @staticmethod
+    def _build_shard_id(events):
+        metadata = getattr(events, "metadata", {}) or {}
+        filename = os.path.basename(str(metadata.get("filename", "chunk")))
+        file_stem = os.path.splitext(filename)[0].replace(".", "_")
+        entry_start = metadata.get("entrystart", 0)
+        entry_stop = metadata.get("entrystop", 0)
+        return f"{file_stem}_{entry_start}_{entry_stop}"
