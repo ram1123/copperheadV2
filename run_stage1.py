@@ -27,7 +27,7 @@ from configs.skip_stage1_run import samples_to_run, samples_to_skip
 from src.stage1.runner_adapter import CopperheadRunnerAdapter
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
-from modules.utils import get_git_info, logger
+from modules.utils import absolutize_config, get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
@@ -328,24 +328,7 @@ if __name__ == "__main__":
         config = OmegaConf.to_container(config, resolve=True)
 
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-    _PATH_SUFFIXES = (".json", ".json.gz", ".gz", ".txt", ".npz", ".pt", ".root", ".csv")
-
-    def _absolutize(value):
-        """Convert a relative file path to absolute against PROJECT_ROOT."""
-        if isinstance(value, str) and not os.path.isabs(value):
-            if value.startswith("data/") or value.endswith(_PATH_SUFFIXES):
-                return os.path.join(PROJECT_ROOT, value)
-        return value
-
-
-    def _absolutize_config(obj):
-        if isinstance(obj, (dict, DictConfig)):
-            return {k: _absolutize_config(v) for k, v in obj.items()}
-        if isinstance(obj, (list, tuple, ListConfig)):
-            return [_absolutize_config(v) for v in obj]
-        return _absolutize(obj)
-
-    config = _absolutize_config(config)
+    config = absolutize_config(config, PROJECT_ROOT)
     logger.info("Resolved relative config paths to absolute against project root")
 
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)

@@ -64,6 +64,26 @@ logger.addHandler(stream_handler)
 logger.setLevel(logging.WARNING)
 # logger.setLevel(logging.ERROR)
 
+_PATH_SUFFIXES = (".json", ".json.gz", ".gz", ".txt", ".npz", ".pt", ".root", ".csv")
+
+
+def absolutize_path(value, project_root):
+    """Convert a relative file path to absolute against project_root."""
+    if isinstance(value, str) and not os.path.isabs(value):
+        if value.startswith("data/") or value.endswith(_PATH_SUFFIXES):
+            return os.path.join(project_root, value)
+    return value
+
+
+def absolutize_config(obj, project_root):
+    """Recursively convert relative file paths in a config dict to absolute paths."""
+    if isinstance(obj, dict):
+        return {k: absolutize_config(v, project_root) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [absolutize_config(v, project_root) for v in obj]
+    return absolutize_path(obj, project_root)
+
+
 def ifPathExists(load_path):
     if not os.path.exists(load_path):
         logger.error(f"Path: {load_path} does not exists")

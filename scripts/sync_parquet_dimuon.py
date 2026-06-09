@@ -725,12 +725,12 @@ def main():
         file1, file2 = (str(item).strip() for item in dirs)
 
         def normalize_input_path(path: str) -> str:
-            cleaned = path.rstrip("\r\n")
-            if cleaned.endswith(".jsonn") and not os.path.exists(cleaned):
+            cleaned = path.strip()
+            if cleaned.endswith(".jsonn"):
                 candidate = cleaned[:-1]
                 if os.path.exists(candidate):
                     print(f"[DEBUG] repaired suspicious .jsonn suffix: {cleaned!r} -> {candidate!r}")
-                    cleaned = candidate
+                    return candidate
             return cleaned
 
         file1 = normalize_input_path(file1)
