@@ -6,28 +6,6 @@ from coffea.processor import ProcessorABC
 from src.stage1.runner_processor import write_cutflow_outputs
 
 
-class AkArray:
-    def __init__(self, arr=None):
-        self.arr = ak.Array([]) if arr is None else arr
-
-    def __iadd__(self, other):
-        if len(self.arr) == 0:
-            self.arr = other.arr
-        elif len(other.arr) == 0:
-            pass
-        else:
-            self.arr = ak.concatenate([self.arr, other.arr])
-        return self
-
-    def __add__(self, other):
-        result = AkArray(self.arr)
-        result += other
-        return result
-
-    def identity(self):
-        return AkArray()
-
-
 class CopperheadRunnerAdapter(ProcessorABC):
     """
     Adapter for coffea.processor.Runner.
@@ -103,8 +81,8 @@ class CopperheadRunnerAdapter(ProcessorABC):
             )
 
         result = {
-            "__n_processed__": AkArray(ak.Array([int(n_processed)])),
-            "__written_files__": AkArray(ak.Array([1])),
+            "__n_processed__": int(n_processed),
+            "__written_files__": 1,
         }
         return result
 

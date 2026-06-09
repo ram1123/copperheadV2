@@ -146,7 +146,7 @@ def process_single_file(fpath, treename, dataset_dict, max_num_elements, dataset
     return processor.process(events, dataset_yaml_file=dataset_yaml_file)
 
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml", client):
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml", client=None):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
@@ -199,7 +199,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     }
 
     result = runner(fileset, processor_instance=adapter)
-    total_processed = int(ak.sum(result["__n_processed__"].arr))
+    total_processed = int(result["__n_processed__"])
 
     return total_processed
 
@@ -360,7 +360,7 @@ if __name__ == "__main__":
         if isinstance(obj, (list, tuple, ListConfig)):
             return [_absolutize_config(v) for v in obj]
         return _absolutize(obj)
-        
+
     config = _absolutize_config(config)
     logger.info("Resolved relative config paths to absolute against project root")
 
