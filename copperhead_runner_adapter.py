@@ -6,11 +6,6 @@ from coffea.processor import ProcessorABC
 from src.stage1.runner_processor import write_cutflow_outputs
 
 
-def strip_behavior(val):
-    if isinstance(val, ak.Array):
-        return ak.Array(ak.without_parameters(val))
-    return val
-
 
 class AkArray:
     def __init__(self, arr=None):
