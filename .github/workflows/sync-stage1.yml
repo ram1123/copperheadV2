@@ -83,7 +83,7 @@ jobs:
             set -euo pipefail
             export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
-            time bash stage1_loop_Improved.sh \
+            time bash run_analysis_pipeline.sh \
               -c configs/datasets/sync_dataset_nanoAODv12.yaml \
               -v 12 \
               -l label_output \
@@ -174,30 +174,54 @@ jobs:
               printf '%s\n' "${matches[0]}"
             }
 
+            normalize_existing_path() {
+              local raw_path="$1"
+              local cleaned_path
+
+              cleaned_path=$(printf '%s' "${raw_path}" | tr -d '\r\n')
+              if [ ! -e "${cleaned_path}" ] && [[ "${cleaned_path}" == *.jsonn ]] && [ -e "${cleaned_path%n}" ]; then
+                echo "[debug] repairing suspicious .jsonn suffix: ${cleaned_path} -> ${cleaned_path%n}" >&2
+                cleaned_path="${cleaned_path%n}"
+              fi
+
+              if [ ! -e "${cleaned_path}" ]; then
+                echo "[debug] normalized path does not exist: ${cleaned_path}" >&2
+                exit 1
+              fi
+
+              realpath "${cleaned_path}"
+            }
+
             data_cutflow=$(find_cutflow_file "${year_root}/${data_sample}/0" "${data_sample}")
             dy_cutflow=$(find_cutflow_file "${year_root}/${dy_sample}/0" "${dy_sample}")
             vbf_cutflow=$(find_cutflow_file "${year_root}/${vbf_sample}/0" "${vbf_sample}")
+            data_cutflow=$(normalize_existing_path "${data_cutflow}")
+            dy_cutflow=$(normalize_existing_path "${dy_cutflow}")
+            vbf_cutflow=$(normalize_existing_path "${vbf_cutflow}")
+            data_cutflow_ref=$(normalize_existing_path "test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json")
+            dy_cutflow_ref=$(normalize_existing_path "test/reference/${{ matrix.year }}_cutflow_${dy_sample}_0.json")
+            vbf_cutflow_ref=$(normalize_existing_path "test/reference/${{ matrix.year }}_cutflow_${vbf_sample}_0.json")
 
-            echo "[debug] reference data cutflow: test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json"
-            echo "[debug] reference dy cutflow: test/reference/${{ matrix.year }}_cutflow_${dy_sample}_0.json"
-            echo "[debug] reference vbf cutflow: test/reference/${{ matrix.year }}_cutflow_${vbf_sample}_0.json"
+            echo "[debug] reference data cutflow: ${data_cutflow_ref}"
+            echo "[debug] reference dy cutflow: ${dy_cutflow_ref}"
+            echo "[debug] reference vbf cutflow: ${vbf_cutflow_ref}"
             echo "[debug] produced data cutflow: ${data_cutflow}"
             echo "[debug] produced dy cutflow: ${dy_cutflow}"
             echo "[debug] produced vbf cutflow: ${vbf_cutflow}"
             echo "[debug] using script: scripts/sync_parquet_dimuon.py"
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json \
+              "${data_cutflow_ref}" \
               "${data_cutflow}" \
               -o diff_cutflow_data_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/${{ matrix.year }}_cutflow_${dy_sample}_0.json \
+              "${dy_cutflow_ref}" \
               "${dy_cutflow}" \
               -o diff_cutflow_dy_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/${{ matrix.year }}_cutflow_${vbf_sample}_0.json \
+              "${vbf_cutflow_ref}" \
               "${vbf_cutflow}" \
               -o diff_cutflow_vbf_${{ matrix.year }}.csv
           '
