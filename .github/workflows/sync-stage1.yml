@@ -136,6 +136,25 @@ jobs:
             vbf_sample="vbf_powheg_dipole"
             year_root="test/output/label_output/stage1_output/${{ matrix.year }}/f1_0"
 
+            echo "[debug] matrix.year=${{ matrix.year }}"
+            echo "[debug] year_root=${year_root}"
+            echo "[debug] data_sample=${data_sample}"
+            echo "[debug] dy_sample=${dy_sample}"
+            echo "[debug] vbf_sample=${vbf_sample}"
+
+            for sample_dir in \
+              "${year_root}/${data_sample}/0" \
+              "${year_root}/${dy_sample}/0" \
+              "${year_root}/${vbf_sample}/0"
+            do
+              echo "[debug] listing ${sample_dir}"
+              if [ -d "${sample_dir}" ]; then
+                find "${sample_dir}" -maxdepth 1 -type f | sort
+              else
+                echo "[debug] directory missing: ${sample_dir}"
+              fi
+            done
+
             find_cutflow_file() {
               local sample_dir="$1"
               local sample_name="$2"
@@ -151,12 +170,21 @@ jobs:
                 exit 1
               fi
 
+              echo "[debug] selected cutflow for ${sample_name}: ${matches[0]}" >&2
               printf '%s\n' "${matches[0]}"
             }
 
             data_cutflow=$(find_cutflow_file "${year_root}/${data_sample}/0" "${data_sample}")
             dy_cutflow=$(find_cutflow_file "${year_root}/${dy_sample}/0" "${dy_sample}")
             vbf_cutflow=$(find_cutflow_file "${year_root}/${vbf_sample}/0" "${vbf_sample}")
+
+            echo "[debug] reference data cutflow: test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json"
+            echo "[debug] reference dy cutflow: test/reference/${{ matrix.year }}_cutflow_${dy_sample}_0.json"
+            echo "[debug] reference vbf cutflow: test/reference/${{ matrix.year }}_cutflow_${vbf_sample}_0.json"
+            echo "[debug] produced data cutflow: ${data_cutflow}"
+            echo "[debug] produced dy cutflow: ${dy_cutflow}"
+            echo "[debug] produced vbf cutflow: ${vbf_cutflow}"
+            echo "[debug] using script: scripts/sync_parquet_dimuon.py"
 
             python scripts/sync_parquet_dimuon.py \
               test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json \
