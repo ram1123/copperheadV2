@@ -163,6 +163,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         config=processor.config,      # plain dict — picklable
         dataset_yaml_file=dataset_yaml_file,
         save_path=save_path,
+        log_level=logger.level,
         test_mode=processor.test_mode,
         isCutflow=processor.isCutflow,
     )

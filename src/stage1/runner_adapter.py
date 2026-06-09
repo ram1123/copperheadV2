@@ -19,6 +19,7 @@ class CopperheadRunnerAdapter(ProcessorABC):
         config,
         dataset_yaml_file,
         save_path,
+        log_level=None,
         test_mode=False,
         isCutflow=False,
     ):
@@ -26,6 +27,7 @@ class CopperheadRunnerAdapter(ProcessorABC):
         self._config = self._normalize_config(config)
         self._dataset_yaml_file = dataset_yaml_file
         self._save_path = save_path
+        self._log_level = log_level
         self._test_mode = test_mode
         self._isCutflow = isCutflow
 
@@ -49,7 +51,11 @@ class CopperheadRunnerAdapter(ProcessorABC):
 
     def process(self, events):
         # Reconstruct EventProcessor fresh on the worker — avoids pickling behaviors
+        from modules.utils import logger
         from src.copperhead_processor import EventProcessor
+
+        if self._log_level is not None:
+            logger.setLevel(self._log_level)
 
         processor = EventProcessor(
             self._config,
