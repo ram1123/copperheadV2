@@ -130,22 +130,6 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     return save_path
 
 
-def process_single_file(fpath, treename, dataset_dict, max_num_elements, dataset_yaml_file, processor):
-    """Process a single ROOT file and return (out_collections, n_processed)."""
-    events = NanoEventsFactory.from_root(
-        {fpath: treename},
-        mode="virtual",
-        schemaclass=NanoAODSchema,
-        metadata=dataset_dict["metadata"],
-        uproot_options={
-            "timeout": 900,
-            "num_workers": 1,
-            "max_num_elements": max_num_elements,
-        },
-    ).events()
-    return processor.process(events, dataset_yaml_file=dataset_yaml_file)
-
-
 def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml", client=None):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
@@ -406,7 +390,7 @@ if __name__ == "__main__":
         with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                    logger.warning(f"Skipping dataset: {dataset}")
+                    logger.warning(f"Skipping Year: {args.year:10}, dataset: {dataset}")
                     continue
 
                 logger.info("{}{}".format("\n" * 2, "=" * 51))
@@ -414,10 +398,6 @@ if __name__ == "__main__":
                 logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
                 logger.info(f"===         Year: {args.year}                        ===")
                 logger.info("{}{}".format("=" * 51, "\n" * 2))
-
-                # if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                #     logger.warning(f"Skipping dataset: {dataset}")
-                #     continue
 
                 sample_step = time.time()
                 if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
