@@ -146,7 +146,7 @@ def process_single_file(fpath, treename, dataset_dict, max_num_elements, dataset
     return processor.process(events, dataset_yaml_file=dataset_yaml_file)
 
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml", client):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
@@ -159,13 +159,6 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     os.makedirs(save_path, exist_ok=True)
 
     dataset_name = dataset_dict["metadata"]["dataset"]
-
-    max_num_elements = 500
-    for key in DATASET_ELEMENT_LIMITS:
-        if key in dataset_name:
-            max_num_elements = DATASET_ELEMENT_LIMITS[key]
-            break
-    logger.info(f"max_num_elements for {dataset_name} set to {max_num_elements}")
 
     files_for_factory = {
         fpath: finfo["object_path"]
@@ -319,7 +312,6 @@ if __name__ == "__main__":
         raise FileNotFoundError(
             f"dataset_yaml_file not found on submit node: {args.dataset_yaml_file}"
         )
-    logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
 
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")
@@ -489,7 +481,7 @@ if __name__ == "__main__":
                             eos_mkdirs(save_path)
 
                             # rebuild the events/out collections for this attempt
-                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
+                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file, client=client)
 
                             logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
                             logger.info(f"Processed events: {processed_event_count}")
@@ -614,7 +606,7 @@ if __name__ == "__main__":
                     for file in filelist:
                         os.remove(file)
                 logger.debug("Directory created or cleaned")
-                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
+                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file, client=client)
 
     elapsed = round(time.time() - time_step, 3)
 
