@@ -1,7 +1,5 @@
 import argparse
 import copy
-import ctypes
-from datetime import datetime
 import glob
 import json
 import os
@@ -9,31 +7,30 @@ import subprocess
 import sys
 import time
 import warnings
-from itertools import islice
 from contextlib import contextmanager, nullcontext
-from omegaconf import OmegaConf, DictConfig, ListConfig
+from datetime import datetime
+from itertools import islice
 
 import awkward as ak
+import coffea
 import dask
-from dask import delayed
 import numpy as np
 import tqdm
-import coffea
-from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from coffea import processor as coffea_processor_module
+from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
+from dask.distributed import performance_report
+from omegaconf import DictConfig, ListConfig, OmegaConf
+
 # from coffea.processor import ProcessorABC
 from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
-from dask.distributed import performance_report
-
+from configs.skip_stage1_run import samples_to_run, samples_to_skip
+from copperhead_runner_adapter import CopperheadRunnerAdapter
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
-from configs.skip_stage1_run import samples_to_skip, samples_to_run
-
-from copperhead_runner_adapter import CopperheadRunnerAdapter
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -196,7 +193,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     runner = coffea_processor_module.Runner(
         executor=coffea_processor_module.DaskExecutor(client=client),  # reuse existing client
         schema=NanoAODSchema,
-        chunksize=100_000,
+        chunksize=600_000,
         skipbadfiles=False,
     )
 
@@ -240,7 +237,7 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
         os.makedirs(eos_path, exist_ok=True)
         return
     if not eos_path.startswith("/store") and not eos_path.startswith("davs"):
-        raise RuntimeError(f"Path does not starts with /depot or /work or /store or davs. Please check path.")
+        raise RuntimeError("Path does not starts with /depot or /work or /store or davs. Please check path.")
     if not eos_path.startswith("davs://eos.cms.rcac.purdue.edu:9000/"):
         eos_path = f"davs://eos.cms.rcac.purdue.edu:9000/{eos_path.lstrip('/')}"
     logger.info(f"Creating EOS directory: {eos_path}")

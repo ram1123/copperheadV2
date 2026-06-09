@@ -1,10 +1,10 @@
 import os
 import uuid
+
 import awkward as ak
 from coffea.processor import ProcessorABC
 
 from src.stage1.runner_processor import write_cutflow_outputs
-
 
 
 class AkArray:

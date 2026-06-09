@@ -10,20 +10,19 @@ import time
 import uuid
 
 import awkward as ak
-
 import dask
 import numpy as np
 import tqdm
 import uproot
-from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from coffea.dataset_tools import rucio_utils
 from coffea.dataset_tools.preprocess import preprocess
 from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
-from distributed import Client
+from omegaconf import OmegaConf
+
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
+from modules.dask_utils import close_dask_client, get_dask_client
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
-from omegaconf import OmegaConf
-from modules.dask_utils import close_dask_client, get_dask_client
 
 # import warnings
 # warnings.filterwarnings("error", module="coffea.*")

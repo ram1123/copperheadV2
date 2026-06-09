@@ -1,22 +1,29 @@
+import json
+import os
 import time
-from typing import Tuple, TypeVar
+from typing import TypeVar
 
 import awkward as ak
 import coffea.processor as processor
-import correctionlib
 import numpy as np
 from coffea.analysis_tools import PackedSelection, Weights
 from coffea.btag_tools import BTagScaleFactor
-from coffea.lookup_tools import extractor
 from coffea.lumi_tools import LumiMask
-from coffea.nanoevents.methods import vector
+from omegaconf import OmegaConf
 
 from modules.classify_year import is_run2, is_run3
+from modules.correctionlib_file_cache import get_corrset
 from modules.get_sample_info import get_sample_info
 from modules.utils import logger
-from omegaconf import OmegaConf
-import json
-import os
+
+# from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
+from modules.vector_operations import (
+    _delta_phi,
+    cs_variables,
+    delta_r_V1,
+    etaFrame_variables,
+    getRapidity,
+)
 
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import (
@@ -24,44 +31,30 @@ from src.corrections.evaluator import (
     add_stxs_variations,
     btag_weights_jsonKeepDim,
     get_jetpuid_weights_eta_dependent,
-    get_musf_lookup,
     lhe_weights,
-    musf_evaluator,
     nnlops_weights,
     pu_evaluator,
     qgl_weights_V2,
 )
-from src.corrections.muon_sf import add_muon_sfs_correctionlib
 from src.corrections.fsr_recovery import fsr_recoveryV1
-from src.corrections.geofit import apply_geofit
 from src.corrections.jet import (
     applyHemVeto,
     applyJetUncertaintyKinematics,
     applyUpDown,
     btag_jet_selection,
     custom_jet_id,
-    get_jec_sources,
     do_jec_scale,
     do_jer_smear,
     fill_softjets_HIG19006,
-    getJecDataTag,
-    get_jec_factories,
+    get_jec_sources,
     get_jet_variation,
     get_puId,
+    getJecDataTag,
     jet_id,
     jet_puid,
 )
-from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
-from src.corrections.rochester import apply_roccor, apply_KitMuScaleRe_Run3
-# from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
-
-from modules.vector_operations import (
-    getRapidity,
-    delta_r_V1,
-    etaFrame_variables,
-    cs_variables,
-    _delta_phi,
-)
+from src.corrections.muon_sf import add_muon_sfs_correctionlib
+from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
@@ -2792,7 +2785,7 @@ class EventProcessor(processor.ProcessorABC):
                 - Remove jets having nConstituents <= 3
                   and horn region: 3.0 > abs(eta) > 2.5
             """
-            logger.info(f"Applying nConstituent cut > 3 for the HE region")
+            logger.info("Applying nConstituent cut > 3 for the HE region")
             jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) <= 3.0)
             jetHorn_nConst_cut_local = (jets.nConstituents > 3)
 

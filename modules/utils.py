@@ -1,9 +1,10 @@
 import logging
-from rich.logging import RichHandler
 import os
 import sys
-import awkward as ak
 from pathlib import Path
+
+import awkward as ak
+from rich.logging import RichHandler
 
 LOGGER_NAME = "CopperHead"
 NO_GIT_INFO_AVAILABLE = "No git info available"
@@ -60,8 +61,8 @@ stream_handler = RichHandler(show_time=False, rich_tracebacks=True,tracebacks_wo
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 # logger.setLevel(logging.INFO)
-# logger.setLevel(logging.WARNING)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.WARNING)
+# logger.setLevel(logging.ERROR)
 
 def ifPathExists(load_path):
     if not os.path.exists(load_path):

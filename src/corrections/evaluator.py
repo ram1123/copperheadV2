@@ -1,16 +1,13 @@
+import awkward as ak
 import numpy as np
 import uproot
-import json
-import coffea
 from coffea.lookup_tools import dense_lookup
-import awkward as ak
 from omegaconf import OmegaConf
-import correctionlib
 
-import logging
+from modules.classify_year import is_run2
+from modules.correctionlib_file_cache import get_corrset
 from modules.utils import logger
-from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
-from modules.classify_year import is_run2, is_run3
+
 
 def get_corr_inputs(input_dict, corr_obj):
     """

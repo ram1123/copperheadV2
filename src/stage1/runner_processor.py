@@ -1,12 +1,8 @@
 import json
 import os
 
-import numpy as np
 
 from modules.utils import logger
-
-from modules.utils import logger
-from src.copperhead_processor import EventProcessor
 
 
 def write_cutflow_outputs(cutflow, save_path, dataset_name, file_idx):
