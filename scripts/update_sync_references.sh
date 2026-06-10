@@ -68,7 +68,7 @@ for year in "${years[@]}"; do
 
     vbf_sample="vbf_powheg_dipole"
 
-    bash stage1_loop_Improved.sh \
+    bash run_analysis_pipeline.sh \
         -c "$dataset_yaml" \
         -v "$nanoaodv" \
         -l "$label" \
