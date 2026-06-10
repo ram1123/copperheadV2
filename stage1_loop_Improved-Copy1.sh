@@ -195,8 +195,18 @@ echo "  isMC: $isMC"
 # save_postfix="Jun01_2026" # FIXME
 # save_postfix="Jun03_2026_oldDnnBinning" # FIXME
 # save_postfix="Jun04_2026_50startNBins" # FIXME
-save_postfix="Jun08_2026_50nTrialsFoldsAll" # FIXME
-# save_postfix="Jun08_2026_50nTrialsFoldsAll_17Bins" # FIXME
+# save_postfix="Jun05_2026_RamMay2025Binning" # FIXME
+# save_postfix="Jun07_2026_17Bins" # FIXME
+# save_postfix="Jun07_2026_21Bins" # FIXME
+# save_postfix="Jun07_2026_100nTrialsFoldsAll" # FIXME
+# save_postfix="Jun08_2026_50nTrialsFoldsAll" # FIXME
+save_postfix="Jun08_2026_50nTrialsFoldsAll_17Bins" # FIXME
+# save_postfix="Jun08_2026_50nTrialsFoldsAll_7Bins" # FIXME
+# save_postfix="Jun08_2026_20nTrialsFoldsAll" # FIXME
+# save_postfix="Jun08_2026_50nTrialsFoldsAll_Max40bins" # FIXME
+# save_postfix="Jun08_2026_20nTrialsFoldsAll_Max40bins" # FIXME
+# save_postfix="Jun10_2026_50nTrialsFoldsAll" # FIXME
+# save_postfix="Jun10_2026_2pDebug" # FIXME
 
 # ----------- Main loop -----------
 for year in "${years[@]}"; do
@@ -229,8 +239,10 @@ for year in "${years[@]}"; do
     # model_trained_path="./dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf"
     # model_trained_path="./dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf"
     # model_trained_path="./dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026/2017_h-peak_vbf"
-    model_trained_path="./dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf"
+    # model_trained_path="./dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf"
+    model_trained_path="./dnn/trained_models/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf"
     # training_tag="trained_best_optuna"
+    # training_tag="trained_best_optuna_20Trials_w_VBF_filterFoldAll"
     training_tag="trained_best_optuna_50Trials_w_VBF_filterFoldAll"
     
 

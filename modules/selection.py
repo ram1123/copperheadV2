@@ -371,7 +371,7 @@ binning_DNN_HIG19006 = np.array([
 # binning = binning_HPScan_13bins
 # binning = binning_HPScan_17bins
 # binning = binning_based_on_significanceScan
-# binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
+binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
 
 
 
@@ -416,12 +416,194 @@ binning_DNN_HIG19006 = np.array([
 #   (7.254329+0.1),
 # ])
 
-binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage3_datacards_June01_2026 NOTE: found it surprising that the results were same, but we checked the stage1 output and DNN model paths and they were correct
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage3_datacards_June01_2026 NOTE: found it surprising that the results were same, but we checked the stage1 output and DNN model paths and they were correct
+#   0.000000,
+#   0.483622,
+#   0.967244,
+#   1.450866,
+#   1.934488,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc june 04 2026
+#   0.000000,
+#   0.164871,
+#   0.329742,
+#   0.494613,
+#   0.659484,
+#   0.824356,
+#   0.989227,
+#   1.154098,
+#   1.318969,
+#   1.483840,
+#   1.648711,
+#   1.813582,
+#   1.978453,
+#   (7.254329+0.1),
+# ])
+
+
+
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc june 04 2026
+#   0.000000,
+#   0.148048,
+#   0.296095,
+#   0.444143,
+#   0.592190,
+#   0.740238,
+#   0.888285,
+#   1.036333,
+#   1.184380,
+#   1.332428,
+#   1.480475,
+#   1.628523,
+#   1.776570,
+#   1.924618,
+#   2.072665,
+#   2.220713,
+#   (7.254329+0.1),
+# ])
+
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun07_2026_17Bins june 07 2026
+#   0.000000,
+#   0.127269,
+#   0.254538,
+#   0.381807,
+#   0.509076,
+#   0.636345,
+#   0.763614,
+#   0.890882,
+#   1.018151,
+#   1.145420,
+#   1.272689,
+#   1.399958,
+#   1.527227,
+#   1.654496,
+#   1.781765,
+#   1.909034,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun07_2026_21Bins june 07 2026
+#   0.000000,
+#   0.127269,
+#   0.190903,
+#   0.254538,
+#   0.318172,
+#   0.381807,
+#   0.509076,
+#   0.572710,
+#   0.699979,
+#   0.827248,
+#   0.954517,
+#   1.018151,
+#   1.145420,
+#   1.336324,
+#   1.463593,
+#   1.527227,
+#   1.654496,
+#   1.781765,
+#   1.909034,
+#   1.972668,
+#   2.099937,
+#   (7.254329+0.1),
+# ])
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll june 08 2026. it has 24 bins
+#   0.000000,
+#   0.102174,
+#   0.153260,
+#   0.204347,
+#   0.306521,
+#   0.357608,
+#   0.459781,
+#   0.510868,
+#   0.613042,
+#   0.715215,
+#   0.817389,
+#   0.919563,
+#   1.072823,
+#   1.174997,
+#   1.277171,
+#   1.430431,
+#   1.532605,
+#   1.685865,
+#   1.788039,
+#   1.941299,
+#   1.992386,
+#   2.043473,
+#   2.094560,
+#   2.196733,
+#   (7.254329+0.1),
+# ])
+
+binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll_17Bins june 08 2026. it has 17 bins
   0.000000,
-  0.483622,
-  0.967244,
-  1.450866,
-  1.934488,
+  0.129542,
+  0.259083,
+  0.388625,
+  0.518166,
+  0.647708,
+  0.777249,
+  0.906791,
+  1.036333,
+  1.165874,
+  1.295416,
+  1.424957,
+  1.554499,
+  1.684041,
+  1.813582,
+  1.943124,
+  2.202207,
   (7.254329+0.1),
 ])
 
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll_7Bins june 08 2026. it has 7 bins
+#   0.000000,
+#   0.315406,
+#   0.630811,
+#   0.946217,
+#   1.261622,
+#   1.577028,
+#   1.892434,
+#   (7.254329+0.1),
+# ])
+
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_20nTrialsFoldsAll_Max40bins june 08 2026. it has 11 bins
+#   0.000000,
+#   0.190903,
+#   0.381807,
+#   0.572710,
+#   0.763614,
+#   0.954517,
+#   1.145420,
+#   1.336324,
+#   1.527227,
+#   1.718130,
+#   1.909034,
+#   (7.254329+0.1),
+# ])
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll_Max40bins june 08 2026. it has 11 bins
+#   0.000000,
+#   0.196063,
+#   0.392126,
+#   0.588189,
+#   0.784252,
+#   0.980315,
+#   1.176378,
+#   1.372441,
+#   1.568503,
+#   1.764566,
+#   1.960629,
+#   (7.254329+0.1),
+# ])

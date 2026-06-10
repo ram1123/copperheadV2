@@ -1,6 +1,11 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# 04 June 2026
+```bash
+sh produce_postFitPlot.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage3_datacards_Jun03_2026_oldDnnBinning/score_Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/  2017
+```
+
 # 26 May 2026
 ```bash
 time python plotter/compare_inclusiveDY_DYvbfFilter.py      --dirs1 /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage1_output/2018/f1_0/dyTo2L_M-50_aMCatNLO      --dirs2 /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_May26_2026_dyVbfFilterValidation/stage1_output/2018/f1_0/dy_VBF_filter      --nbins  55 --xmin 110  --xmax 150     --output compareDY_incl_vs_VBFfilter55bins_110_150_2018UL.pdf

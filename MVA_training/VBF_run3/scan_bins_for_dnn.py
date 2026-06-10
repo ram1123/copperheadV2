@@ -621,44 +621,45 @@ if __name__ == "__main__":
     stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
     # compacted_tag="May08_2026_FixDimuonMass"
     # compacted_tag="Jun05_2026_RamMay2025Binning_FixDimuonMass"
-    compacted_tag="Jun07_2026_100nTrialsFoldsAll_FixDimuonMass"
+    # compacted_tag="Jun07_2026_50nTrialsFoldsAll_FixDimuonMass"
+    compacted_tag="Jun08_2026_20nTrialsFoldsAll_FixDimuonMass"
     
     year="*"
-    # sig_globs = {
-    #     "vbf_powheg_dipole": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/vbf_powheg_dipole/**/*.parquet",
-    #     # "ggh_powhegPS": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ggh_powhegPS/**/*.parquet",
-    # }
     sig_globs = {
-        "vbf_powheg_dipole": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
-        # "ggh_powhegPS": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ggh_powhegPS/**/*.parquet",
+        "vbf_powheg_dipole": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/vbf_powheg_dipole/**/*.parquet",
+        # "ggh_powhegPS": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ggh_powhegPS/**/*.parquet",
     }
+    # sig_globs = {
+    #     "vbf_powheg_dipole": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
+    #     # "ggh_powhegPS": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ggh_powhegPS/**/*.parquet",
+    # }
     sig_score, sig_w = collect_scores(sig_globs, selection)
 
-    # bkg_globs = {
-    #     "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
-    #     # "dy_M-100To200_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-100To200_MiNNLO/**/*.parquet",
-    #     "dy_M-Incl_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*MiNNLO/**/*.parquet",
-    #     # "dyInclM-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*M-50_aMCatNLO/**/*.parquet",
-    #     # "dy_M-50_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-50_MiNNLO/**/*.parquet",
-    #     "ewk_incl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk*/**/*.parquet",
-    #     # "ewk_lljj_mll50_mjj120": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_lljj_mll50_mjj120/**/*.parquet",
-    #     # "ewk_zlljj": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_zlljj/**/*.parquet",
-    #     "ttjets_dl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_dl/**/*.parquet",
-    #     "ttjets_sl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_sl/**/*.parquet",
-    #     "zz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/zz*/**/*.parquet",
-    #     # "ww": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ww_*/**/*.parquet",
-    #     # "wz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/wz_*/**/*.parquet",
-    # }
-
     bkg_globs = {
-        "dy_VBF_filter": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_VBF_filter/**/*.parquet",
-        "dy_M-50_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-50_aMCatNLO/**/*.parquet",
-        "dy_M-100To200_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-100To200_aMCatNLO/**/*.parquet",
-        "ewk_lljj_mll50_mjj120": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ewk_lljj_mll50_mjj120/**/*.parquet",
-        "ttjets_dl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_dl/**/*.parquet",
-        "ttjets_sl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_sl/**/*.parquet",
-        "zz": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/zz/**/*.parquet",
+        "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
+        # "dy_M-100To200_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-100To200_MiNNLO/**/*.parquet",
+        "dy_M-Incl_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*MiNNLO/**/*.parquet",
+        # "dyInclM-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*M-50_aMCatNLO/**/*.parquet",
+        # "dy_M-50_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-50_MiNNLO/**/*.parquet",
+        "ewk_incl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk*/**/*.parquet",
+        # "ewk_lljj_mll50_mjj120": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_lljj_mll50_mjj120/**/*.parquet",
+        # "ewk_zlljj": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_zlljj/**/*.parquet",
+        "ttjets_dl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_dl/**/*.parquet",
+        "ttjets_sl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_sl/**/*.parquet",
+        "zz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/zz*/**/*.parquet",
+        # "ww": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ww_*/**/*.parquet",
+        # "wz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/wz_*/**/*.parquet",
     }
+
+    # bkg_globs = {
+    #     "dy_VBF_filter": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_VBF_filter/**/*.parquet",
+    #     "dy_M-50_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-50_aMCatNLO/**/*.parquet",
+    #     "dy_M-100To200_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-100To200_aMCatNLO/**/*.parquet",
+    #     "ewk_lljj_mll50_mjj120": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ewk_lljj_mll50_mjj120/**/*.parquet",
+    #     "ttjets_dl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_dl/**/*.parquet",
+    #     "ttjets_sl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_sl/**/*.parquet",
+    #     "zz": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/zz/**/*.parquet",
+    # }
     
     bkg_score, bkg_w = collect_scores(bkg_globs, selection)
 
@@ -680,7 +681,9 @@ if __name__ == "__main__":
     # max_nbins = 65  # max number of bins to try
     # max_nbins = 70  # max number of bins to try
     # max_nbins = 57  # max number of bins to try
-    max_nbins = 25  # max number of bins to try
+    # max_nbins = 25  # max number of bins to try
+    # max_nbins = 25  # max number of bins to try
+    max_nbins = 40  # max number of bins to try
     # max_nbins = 24  # max number of bins to try
     # max_nbins = 23  # max number of bins to try
     #------------------------------

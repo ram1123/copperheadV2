@@ -111,13 +111,26 @@
 # --optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFold0/optuna_best.json
 
 
-time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
---data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/ \
---out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFoldAll \
---n-trials 20 --folds 0,1,2,3
+# time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
+# --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/ \
+# --out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFoldAll \
+# --n-trials 20 --folds 0,1,2,3
+
+
+# time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
+# --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/  \
+# --out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna \
+# --optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFoldAll/optuna_best.json
+
+
+# time python MVA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
+# --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/ \
+# --out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials_w_VBF_filterFoldAll \
+# --n-trials 50 --folds 0,1,2,3
+
 
 
 time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yaml \
 --data-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/  \
---out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna \
---optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/20Trials_w_VBF_filterFoldAll/optuna_best.json
+--out-dir dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/trained_best_optuna_50Trials_w_VBF_filterFoldAll \
+--optuna-best-json dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf/hpo_optuna/50Trials_w_VBF_filterFoldAll/optuna_best.json
