@@ -155,13 +155,13 @@ load_year_maps() {
 
     if [[ "${debug_level}" -ge 1 ]]; then
         log "Debug mode ON"
-        year_data_map["2016preVFP"]=""
-        year_data_map["2016postVFP"]=""
-        year_data_map["2017"]=""
-        year_data_map["2018"]=""
-        year_data_map["2022postEE"]=""
-        bkg_groups=""
-        sig_groups="Higgs"
+        # year_data_map["2016preVFP"]=""
+        # year_data_map["2016postVFP"]=""
+        # year_data_map["2017"]=""
+        # year_data_map["2018"]=""
+        # year_data_map["2022postEE"]=""
+        # bkg_groups=""
+        # sig_groups="Higgs"
     fi
 }
 

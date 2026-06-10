@@ -29,7 +29,7 @@ Before running the Z-pT derivation, you need:
 This step reads stage-1 parquet files, removes any already-applied Z-pT weight from DY, makes `Data`, `DY`, and `Data / DY` histograms in each jet bin, and saves them into ROOT workspaces.
 
 ```bash
-bash stage1_loop_Improved.sh \
+bash run_analysis_pipeline.sh \
   -c configs/datasets/dataset_nanoAODv12_run3.yaml \
   -v 12 \
   -l Run3_nanoAODv12_myLabel \
@@ -54,7 +54,7 @@ Important details:
 This step rebins the `Data / DY` histogram using [bin_definitions.py](../src/copperhead/zpt_rewgt/derive/bin_definitions.py), scans polynomial orders, and writes the preferred orders for the low- and mid-pT regions into `zpt_fit_config.yaml`.
 
 ```bash
-bash stage1_loop_Improved.sh \
+bash run_analysis_pipeline.sh \
   -c configs/datasets/dataset_nanoAODv12_run3.yaml \
   -v 12 \
   -l Run3_nanoAODv12_myLabel \
@@ -83,7 +83,7 @@ Important details:
 This step reads the `zpt_fit_config.yaml` from step 1, performs the final piecewise fit, produces goodness-of-fit plots, and saves the final function coefficients into the year- and jet-dependent YAML used later by the processor.
 
 ```bash
-bash stage1_loop_Improved.sh \
+bash run_analysis_pipeline.sh \
   -c configs/datasets/dataset_nanoAODv12_run3.yaml \
   -v 12 \
   -l Run3_nanoAODv12_myLabel \
@@ -170,7 +170,7 @@ If you use [workflow/Snakefile](../workflow/Snakefile), the relevant rules are:
 3. `zpt2`
 4. `plots`
 
-Those rules call `stage1_loop_Improved.sh` with:
+Those rules call `run_analysis_pipeline.sh` with:
 
 1. `-m zpt_fit0`
 2. `-m zpt_fit1`
