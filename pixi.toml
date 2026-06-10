@@ -2,7 +2,7 @@
 authors = ["ram1123 <ramkrishna.sharma71@gmail.com>"]
 channels = ["conda-forge", "bioconda"]
 name = "copperhead-analysis"
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64"]
 version = "0.1.0"
 
 [system-requirements]
@@ -20,11 +20,10 @@ unlock = "snakemake -s workflow/Snakefile --unlock"
 stage2 = "bash stage2_sh.sh all all"
 
 # ----------------------------------------------------------------------
-# Core analysis stack: needed for stage-prestage/stage1
+# Core analysis base stack: needed for stage-prestage/stage1
 # ----------------------------------------------------------------------
-[feature.analysis.dependencies]
+[feature.analysis_base.dependencies]
 python = ">=3.11,<3.12"
-coffea = "==2024.11.0"
 awkward = "*"
 uproot = "*"
 hist = "*"
@@ -33,7 +32,6 @@ lmfit = "*"
 correctionlib = "==2.6.4"
 dask = "*"
 dask-gateway = "*"
-dask-awkward = "==2025.5.0"
 xrootd = "*"
 omegaconf = "*"
 numpy = "*"
@@ -54,9 +52,19 @@ ripgrep = ">=15.1.0,<16"
 pytz = "*"
 
 # ----------------------------------------------------------------------
+# Coffea version selectors
+# ----------------------------------------------------------------------
+[feature.coffea_legacy.dependencies]
+coffea = "==2024.11.0"
+dask-awkward = "==2025.5.0"
+
+[feature.coffea_latest.dependencies]
+coffea = "==2026.5.0"
+
+# ----------------------------------------------------------------------
 # ROOT / HEP extras
 # ----------------------------------------------------------------------
-[feature.root.dependencies]
+[feature.root.target.linux-64.dependencies]
 # ROOT for the main analysis stack. Keep this separate from the Combine stack
 # because cms-combine requires a newer ROOT series.
 root = "==6.32.2"
@@ -66,7 +74,7 @@ scikit-hep-testdata = "*"
 # ----------------------------------------------------------------------
 # Higgs Combine
 # ----------------------------------------------------------------------
-[feature.combine.dependencies]
+[feature.combine.target.linux-64.dependencies]
 cms-combine = "==10.4.2"
 # Kept in its own solve group because it is not compatible with the analysis ROOT pin.
 root = "6.36.*"
@@ -94,11 +102,11 @@ graphviz = "*"
 # ----------------------------------------------------------------------
 # Symbolic regression
 # ----------------------------------------------------------------------
-[feature.symbolic.dependencies]
+[feature.symbolic.target.linux-64.dependencies]
 julia = ">=1.9,<1.12"
 pysr = "*"
 
-[feature.symbolic.pypi-dependencies]
+[feature.symbolic.target.linux-64.pypi-dependencies]
 juliacall = "*"
 
 # ----------------------------------------------------------------------
@@ -110,7 +118,7 @@ snakemake-minimal = ">=9.16.3,<10"
 # ----------------------------------------------------------------------
 # CUDA helpers
 # ----------------------------------------------------------------------
-[feature.cuda.dependencies]
+[feature.cuda.target.linux-64.dependencies]
 libnvjitlink-dev = "*"
 
 # ----------------------------------------------------------------------
@@ -135,10 +143,18 @@ scripts = ["scripts/pixi_activate.sh"]
 # Reference: https://pixi.prefix.dev/v0.21.0/features/multi_environment/
 
 # Minimal CI environment for sync checks and lightweight validation.
-ci = { features = ["analysis"], solve-group = "analysis-stack" }
+ci-legacy = { features = ["analysis_base", "coffea_legacy"], solve-group = "ci-stack-legacy" }
+
+# Same as ci, but with the latest coffea release line for migration work.
+ci = { features = ["analysis_base", "coffea_latest"], solve-group = "ci-stack-latest" }
 
 # Main day-to-day analysis environment, including symbolic regression and CUDA helpers.
-default = { features = ["analysis", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"], solve-group = "analysis-stack" }
+default-legacy = { features = ["analysis_base", "coffea_legacy", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"], solve-group = "analysis-stack-legacy" }
+
+# Main analysis environment against the latest coffea release.
+default = { features = ["analysis_base", "coffea_latest", "dev", "root", "ml", "symbolic", "workflow", "style", "cuda", "local"], solve-group = "analysis-stack-latest" }
 
 # Kept in a separate solve group because the combine stack pins a different ROOT version.
-combine = { features = ["analysis", "combine", "ml", "style", "dev", "workflow", "local"], solve-group = "combine-stack" }
+combine-legacy = { features = ["analysis_base", "coffea_legacy", "combine", "ml", "style", "dev", "workflow", "local"], solve-group = "combine-stack-legacy" }
+
+combine = { features = ["analysis_base", "coffea_latest", "combine", "ml", "style", "dev", "workflow", "local"], solve-group = "combine-stack-latest" }

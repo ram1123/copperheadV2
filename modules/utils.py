@@ -1,9 +1,10 @@
 import logging
-from rich.logging import RichHandler
 import os
 import sys
-import awkward as ak
 from pathlib import Path
+
+import awkward as ak
+from rich.logging import RichHandler
 
 LOGGER_NAME = "CopperHead"
 NO_GIT_INFO_AVAILABLE = "No git info available"
@@ -59,7 +60,36 @@ formatter = logging.Formatter("%(message)s")
 stream_handler = RichHandler(show_time=False, rich_tracebacks=True,tracebacks_word_wrap=False)
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
+# logger.setLevel(logging.ERROR)
+
+_PATH_SUFFIXES = (".json", ".json.gz", ".gz", ".txt", ".npz", ".pt", ".root", ".csv")
+
+
+def absolutize_path(value, project_root):
+    """Convert a relative file path to absolute against project_root."""
+    if isinstance(value, str) and not os.path.isabs(value):
+        if value.startswith("data/") or value.endswith(_PATH_SUFFIXES):
+            return os.path.join(project_root, value)
+    return value
+
+
+def absolutize_config(obj, project_root):
+    """Recursively convert relative file paths in a config dict to absolute paths.
+
+    Handles plain dicts/lists AND OmegaConf DictConfig/ListConfig objects, since
+    getParametersForYr returns a plain dict whose values are raw OmegaConf nodes.
+    """
+    # Duck-typing: treat any non-string mapping as a dict, any non-string iterable as a list.
+    if hasattr(obj, "items"):  # dict or DictConfig
+        return {k: absolutize_config(v, project_root) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)) or (
+        hasattr(obj, "__iter__") and not isinstance(obj, str)
+    ):
+        return [absolutize_config(v, project_root) for v in obj]
+    return absolutize_path(obj, project_root)
+
 
 def ifPathExists(load_path):
     if not os.path.exists(load_path):

@@ -1,17 +1,13 @@
+import awkward as ak
 import numpy as np
 import uproot
-import json
-import coffea
 from coffea.lookup_tools import dense_lookup
-import awkward as ak
-import dask_awkward as dak
 from omegaconf import OmegaConf
-import correctionlib
 
-import logging
+from modules.classify_year import is_run2
+from modules.correctionlib_file_cache import get_corrset
 from modules.utils import logger
-from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
-from modules.classify_year import is_run2, is_run3
+
 
 def get_corr_inputs(input_dict, corr_obj):
     """
@@ -75,8 +71,8 @@ def pu_lookups(parameters, mode="nom", auto=[], is_rereco=False):
                 pu_hist_mc = np.array(config["pu_mc"])
         else:
             pu_hist_mc = np.histogram(auto, bins=range(nbins + 1))[0]
-            # auto = sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
-            # pu_hist_mc = dak.map_partitions(ak.sum, weights, keepdims=True)[0]
+            # auto = sum_before = ak.sum(weights, keepdims=True)
+            # pu_hist_mc = ak.sum(weights, keepdims=True)[0]
         #----------------------------------------------------
 
         lookup = dense_lookup.dense_lookup(pu_reweight(pu_hist_data, pu_hist_mc), edges)
@@ -244,8 +240,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_0jet[mode].member("fX"),
             self.ratio_0jet[mode].member("fY")
         )
-        njet0_interp_out = dak.map_partitions(
-            njet0_interp,
+        njet0_interp_out = njet0_interp(
             ak.where((hig_pt < 125), hig_pt, 125.0)
         )
         # njet0_interp_out =  np.interp(
@@ -259,8 +254,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_1jet[mode].member("fX"),
             self.ratio_1jet[mode].member("fY")
         )
-        njet1_interp_out = dak.map_partitions(
-            njet1_interp,
+        njet1_interp_out = njet1_interp(
             ak.where((hig_pt < 625), hig_pt, 625.0)
         )
         # print(f"njet1_interp_out: {njet1_interp_out.compute()}")
@@ -275,8 +269,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_2jet[mode].member("fX"),
             self.ratio_2jet[mode].member("fY")
         )
-        njet2_interp_out = dak.map_partitions(
-            njet2_interp,
+        njet2_interp_out = njet2_interp(
             ak.where((hig_pt < 800), hig_pt, 800.0)
         )
         # njet2_interp_out =  np.interp(
@@ -290,8 +283,7 @@ class NNLOPS_Evaluator(object):
             self.ratio_3jet[mode].member("fX"),
             self.ratio_3jet[mode].member("fY")
         )
-        njet3_interp_out = dak.map_partitions(
-            njet3_interp,
+        njet3_interp_out = njet3_interp(
             ak.where((hig_pt < 925), hig_pt, 925.0)
         )
         # njet3_interp_out =  np.interp(
@@ -1022,7 +1014,8 @@ def qgl_weights_V2(jets, config, isHerwig, year):
     nevents_selected = (ak.sum(jets.pt,axis=1) > 0) # if there's no jets, you select nothing
     # print(f"jets: {jets.compute()}")
     # print(f"nevents_selected: {nevents_selected.compute()}")
-    nevents_selected = dak.map_partitions(np.sum, nevents_selected, keepdims=True) # needed due to "Check that the total normalization is unchanged (the scope of this sf is not to change the production cross section)"
+    nevents_selected = ak.sum(nevents_selected, keepdims=True) # needed due to "Check that the total normalization is unchanged (the scope of this sf is not to change the production cross section)"
+    logger.debug(f"nevents_selected = {nevents_selected}")
     # reinitialize light and gluon masks
     light = (abs(jets.partonFlavour) < 4)
     gluon = (jets.partonFlavour == 21)
@@ -1077,12 +1070,14 @@ def qgl_weights_V2(jets, config, isHerwig, year):
     qgl_wgt_applied = qgl_weights!= 1.0 # we assume if one, then the sf weren't applied
     sf_values = qgl_weights[qgl_wgt_applied]
     # print(f"sf_values: {sf_values.compute()}")
-    current_normalization = dak.map_partitions(np.sum, sf_values, keepdims=True)
+    current_normalization = ak.sum(sf_values, keepdims=True)
+    logger.debug(f"current_normalization = {current_normalization}")
     norm_factor = ak.where(
         current_normalization != 0,
         nevents_selected / current_normalization,
         1.0,
     )
+    logger.debug(f"norm_factor = {norm_factor}")
 
     # print(f"nevents_selected: {nevents_selected.compute()}")
     # print(f"current_normalization: {current_normalization.compute()}")
@@ -1093,7 +1088,7 @@ def qgl_weights_V2(jets, config, isHerwig, year):
     # Dmitry's method start -----------------------------------------------------------------
     # qgl_weights = ak.where((njets == 1), 1.0, qgl_weights)
     # sf_values = qgl_weights[(njets > 2)]
-    # norm_factor = 1/dak.map_partitions(np.mean, sf_values, keepdims=True) # change norm factor to mean, which is what Dmitry uses
+    # norm_factor = 1/ak.mean(sf_values, keepdims=True) # change norm factor to mean, which is what Dmitry uses
     # qgl_wgt_applied = qgl_weights!= 1.0
     # print(f"sf_values: {sf_values.compute()}")
     # print(f"qgl mean: {1/norm_factor.compute()}")
@@ -1104,8 +1099,8 @@ def qgl_weights_V2(jets, config, isHerwig, year):
 
     # debug
     sf_values = qgl_weights[qgl_wgt_applied]
-    sanity_check_norm = dak.map_partitions(np.sum, sf_values, keepdims=True)
-    # print(f"sanity_check_norm: {sanity_check_norm.compute()}")
+    sanity_check_norm = ak.sum(sf_values, keepdims=True)
+    logger.debug(f"sanity_check_norm = {sanity_check_norm}")
 
     # padd events with no jets with ones
     # qgl_weights = ak.fill_none(ak.pad_none(qgl_weights, target=1), value=1.0)
@@ -1142,7 +1137,9 @@ def qgl_weights_keepDim(jet1, jet2, njets, isHerwig):
 
 
     njet_selection = njets > 2 # think this is a bug, but have to double check
-    qgl_mean = dak.map_partitions(np.mean, qgl_nom[njet_selection], keepdims=True)
+    qgl_mean = ak.mean(qgl_nom[njet_selection], keepdims=True)
+    logger.debug(f"qgl_mean = {qgl_mean}")
+
     # print(f"qgl_mean: {ak.to_numpy(qgl_mean.compute())}")
     # print(f"qgl nom b4: {ak.to_numpy(qgl_nom[njet_selection].compute())}")
     qgl_nom = qgl_nom/ qgl_mean
@@ -1390,8 +1387,11 @@ def btag_weights_jsonKeepDim(processor, systs, jets, btag_eta_val, weights, bjet
         btag_syst[sys] = {"up": btag_wgt_up, "down": btag_wgt_down}
 
     weights = weights.weight()
-    sum_before = dak.map_partitions(ak.sum, weights, keepdims=True)
-    sum_after = dak.map_partitions(ak.sum, weights*btag_wgt, keepdims=True)
+    sum_before = ak.sum(weights, keepdims=True)
+    sum_after = ak.sum(weights*btag_wgt, keepdims=True)
+    logger.debug(f"sum_before: {sum_before}")
+    logger.debug(f"sum_after: {sum_after}")
+
     normalization = sum_before / sum_after
     btag_wgt = btag_wgt * normalization # normalize to match the cross section
     for sys in btag_syst:

@@ -1,23 +1,30 @@
+import json
+import os
 import time
-from typing import Tuple, TypeVar
+from typing import TypeVar
 
 import awkward as ak
 import coffea.processor as processor
-import correctionlib
 import numpy as np
 from coffea.analysis_tools import PackedSelection, Weights
 from coffea.btag_tools import BTagScaleFactor
-from coffea.lookup_tools import extractor
 from coffea.lumi_tools import LumiMask
-from coffea.nanoevents.methods import vector
-import dask_awkward as dak
+from omegaconf import OmegaConf
 
+from modules.awkward_utils import ensure_event_axis
 from modules.classify_year import is_run2, is_run3
+from modules.correctionlib_file_cache import get_corrset
 from modules.get_sample_info import get_sample_info
 from modules.utils import logger
-from omegaconf import OmegaConf
-import json
-import os
+
+# from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
+from modules.vector_operations import (
+    _delta_phi,
+    cs_variables,
+    delta_r_V1,
+    etaFrame_variables,
+    getRapidity,
+)
 
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import (
@@ -25,44 +32,30 @@ from src.corrections.evaluator import (
     add_stxs_variations,
     btag_weights_jsonKeepDim,
     get_jetpuid_weights_eta_dependent,
-    get_musf_lookup,
     lhe_weights,
-    musf_evaluator,
     nnlops_weights,
     pu_evaluator,
     qgl_weights_V2,
 )
-from src.corrections.muon_sf import add_muon_sfs_correctionlib
 from src.corrections.fsr_recovery import fsr_recoveryV1
-from src.corrections.geofit import apply_geofit
 from src.corrections.jet import (
     applyHemVeto,
     applyJetUncertaintyKinematics,
     applyUpDown,
     btag_jet_selection,
     custom_jet_id,
-    get_jec_sources,
     do_jec_scale,
     do_jer_smear,
     fill_softjets_HIG19006,
-    getJecDataTag,
-    get_jec_factories,
+    get_jec_sources,
     get_jet_variation,
     get_puId,
+    getJecDataTag,
     jet_id,
     jet_puid,
 )
-from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
-from src.corrections.rochester import apply_roccor, apply_KitMuScaleRe_Run3
-# from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
-
-from modules.vector_operations import (
-    getRapidity,
-    delta_r_V1,
-    etaFrame_variables,
-    cs_variables,
-    _delta_phi,
-)
+from src.corrections.muon_sf import add_muon_sfs_correctionlib
+from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
@@ -637,25 +630,33 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"jet_veto_maps_cset: {cset}")
         logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
 
-        input_dict = {
+        # correctionlib's evaluate flattens jagged inputs and returns a FLAT
+        # array. Flatten explicitly, evaluate, then unflatten back to the jet
+        # structure so the mask stays jagged and boolean indexing preserves
+        # the per-event axis.
+        flat_inputs = {
             "type": "jetvetomap",
-            "eta": jets.eta,
-            "phi": jets.phi,
+            "eta": ak.flatten(jets.eta),
+            "phi": ak.flatten(jets.phi),
         }
+        counts = ak.num(jets, axis=1)
 
         jetVetoMapTag = self.config.get("jet_veto_maps_tag", None)
         logger.debug(f"Jet veto map tag from config: {jetVetoMapTag}")
 
         jet_veto_map = cset[jetVetoMapTag]
-        inputs = [input_dict[input.name] for input in cset[jetVetoMapTag].inputs]
+        inputs = [flat_inputs[input.name] for input in jet_veto_map.inputs]
 
         # logger.debug(f"eta: {ak.to_list(jets.eta[40:47].compute())}")
         # logger.debug(f"phi: {ak.to_list(jets.phi[40:47].compute())}")
 
+
+
         jet_veto_mask = jet_veto_map.evaluate(*(inputs))
         # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
 
-        jet_veto_eventFilter = ak.any(jet_veto_mask, axis=1)
+        jet_veto_mask = ak.unflatten(jet_veto_mask, counts)   # jagged, same shape as jets
+        jet_veto_eventFilter = ak.any(jet_veto_mask != 0.0, axis=1)
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
 
         # logger.debug(f"PuppiMET.pt after jet veto jet filter: {ak.to_list(PuppiMET.pt[30:35].compute())}")
@@ -1347,16 +1348,20 @@ class EventProcessor(processor.ProcessorABC):
         year = self.config["year"]
         jets = events.Jet
 
+        jets = ensure_event_axis(jets, len(events), "jet")
+
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
             jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
-
+            jets = ensure_event_axis(jets, len(events), "jet-post-veto")
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        factory = None
-        jet_default = ak.pad_none(jets, target=4) # save pre jec and jer Jet for comparison
+        logger.info(f"jets type before pad_none: {jets.type}")
+        logger.info(f"jets ndim: {jets.ndim}")
+
+        jet_default = ak.pad_none(jets, target=4, axis=1)
         jet1_default = jet_default[:, 0]
         jet2_default = jet_default[:, 1]
         save_four_jets_kinematics = self.config["switches"]["save_four_jets_kinematics"]
@@ -1374,6 +1379,7 @@ class EventProcessor(processor.ProcessorABC):
         do_getFatJet_vars = self.config["switches"].get("do_getFatJet_vars", False)
         if do_getFatJet_vars:
             fatJets = events.FatJet
+            fatJets = ensure_event_axis(fatJets, len(events), "fatjet")
             nfatJets = ak.num(fatJets, axis=1)
             fatjet_selection = (
                 (fatJets.pt > 150)
@@ -1461,7 +1467,7 @@ class EventProcessor(processor.ProcessorABC):
                 logger.debug("Applying JER smearing!")
                 jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
             else:
-                logger.warning(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
+                logger.debug(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
             # 4) Sort jets *after* final pt is set
             sorted_args = ak.argsort(jets.pt, ascending=False)
@@ -1486,7 +1492,7 @@ class EventProcessor(processor.ProcessorABC):
         # # ------------------------------------------------------------#
         save_all_weight_variations = self.config["switches"].get("save_all_weight_variations", False)
         do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
-        weights = Weights(None, storeIndividual=do_save_partial_weights) # none for dask awkward
+        weights = Weights(len(events), storeIndividual=do_save_partial_weights) # none for dask awkward
         # weights = Weights(len(events))
         if is_mc:
             gen_weight_ones = ak.ones_like(events.genWeight)
@@ -1666,13 +1672,13 @@ class EventProcessor(processor.ProcessorABC):
             If the year does not match these patterns, it is converted directly to float (e.g., "2017" -> 2017.0).
             If the format is unexpected, this may raise a ValueError.
             """
-            logger.warning(f"Year format contains more than 4 characters: {year}")
+            logger.debug(f"Year format contains more than 4 characters: {year}")
             dnn_year = float(year[:4])
             if "pre" in year:
                 dnn_year += 0.0
             else:
                 dnn_year += 0.5
-            logger.warning(f"Mapped year to dnn_year: {dnn_year}")
+            logger.debug(f"Mapped year to dnn_year: {dnn_year}")
         else:
             dnn_year = float(year)
         logger.debug(f"dnn_year: {dnn_year}")
@@ -2713,7 +2719,7 @@ class EventProcessor(processor.ProcessorABC):
         # Prefer asymmetric if true
         if self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]:
             thr_lead, thr_sub = self.config["switches"]["add_asymmetric_pt_cut_for_HE_HF_jets"]
-            logger.warning(
+            logger.debug(
                 f"Applying asymmetric jet pT cut for HE/HF jets (|eta|>2.5): "
                 f"leading>{thr_lead} GeV, subleading>{thr_sub} GeV"
             )
@@ -2738,7 +2744,7 @@ class EventProcessor(processor.ProcessorABC):
 
         if self.config["switches"]["add_pt_cut_for_HE_HF_jets"]:
             thr = self.config["switches"]["add_pt_cut_for_HE_HF_jets"]
-            logger.warning(f"Applying additional jet pT cut of {thr} GeV for HE/HF jets!")
+            logger.info(f"Applying additional jet pT cut of {thr} GeV for HE/HF jets!")
 
             is_hehf = abs(jets.eta) > 2.5
             HE_HF_ptcut = ak.where(is_hehf, jets.pt > thr, HE_HF_ptcut)
@@ -2750,7 +2756,7 @@ class EventProcessor(processor.ProcessorABC):
                 - Remove jets having nConstituents <= 3
                   and horn region: 3.0 > abs(eta) > 2.5
             """
-            logger.info(f"Applying nConstituent cut > 3 for the HE region")
+            logger.info("Applying nConstituent cut > 3 for the HE region")
             jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) <= 3.0)
             jetHorn_nConst_cut_local = (jets.nConstituents > 3)
 

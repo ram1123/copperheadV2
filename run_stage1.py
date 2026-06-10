@@ -1,7 +1,5 @@
 import argparse
 import copy
-import ctypes
-from datetime import datetime
 import glob
 import json
 import os
@@ -9,24 +7,30 @@ import subprocess
 import sys
 import time
 import warnings
-from itertools import islice
 from contextlib import contextmanager, nullcontext
+from datetime import datetime
+from itertools import islice
 
 import awkward as ak
+import coffea
 import dask
 import numpy as np
 import tqdm
-from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
+from coffea import processor as coffea_processor_module
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from dask.distributed import performance_report
+from omegaconf import DictConfig, ListConfig, OmegaConf
 
+# from coffea.processor import ProcessorABC
+from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
+from configs.skip_stage1_run import samples_to_run, samples_to_skip
+from src.stage1.runner_adapter import CopperheadRunnerAdapter
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
-from modules.utils import get_git_info, logger
+from modules.utils import absolutize_config, get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
-from configs.skip_stage1_run import samples_to_skip, samples_to_run
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -125,99 +129,64 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
 
-def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml"):
+
+def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None,  isCutflow=False, dataset_yaml_file="configs/datasets/dataset.yaml", client=None):
     if save_path is None:
         username = os.environ.get("USER") or os.environ.get("USERNAME")
         save_path = f"/depot/cms/users/{username}/results/stage1/test/" # default
         os.makedirs(save_path, exist_ok=True)
     logger.debug(f"dataset: {dataset_dict}")
+    logger.debug(f"dataset_dict[files]: {dataset_dict['files']}")
     logger.debug(f"file index: {file_idx}")
     logger.debug(f"test: {test}")
     logger.debug(f"Output path: {save_path}")
+    os.makedirs(save_path, exist_ok=True)
 
-    max_num_elements = 500 # default
-    if any(key in dataset_dict["metadata"]["dataset"] for key in DATASET_ELEMENT_LIMITS.keys()):
-        max_num_elements = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset_dict["metadata"]["dataset"]][0]]
-        logger.debug(f"Setting max_num_elements for {dataset_dict['metadata']['dataset']} to {max_num_elements}")
-    else:
-        max_num_elements = 500
-    logger.info(f"max_num_elements for {dataset_dict['metadata']['dataset']} set to {max_num_elements}")
+    dataset_name = dataset_dict["metadata"]["dataset"]
 
-    events = NanoEventsFactory.from_root(
-        dataset_dict["files"],
-        schemaclass=NanoAODSchema,
-        metadata= dataset_dict["metadata"],
-        uproot_options={
-            "timeout": 900,
-            "num_workers": 1, # needs to be 1 for dask, solves vector_read error
-            "max_num_elements": max_num_elements,
-            # "allow_read_errors_with_report": True, # this makes process skip over OSErrors
-        },
-    ).events()
+    files_for_factory = {
+        fpath: finfo["object_path"]
+        for fpath, finfo in dataset_dict["files"].items()
+    }
 
-    processed_event_count = 0
-    out_collections, processed_event_count = processor.process(events, dataset_yaml_file=dataset_yaml_file)
+    # Filter out Runner-reserved keys from metadata before passing to fileset
+    RUNNER_RESERVED_KEYS = {"dataset", "filename", "treename", "entrystart", "entrystop"}
 
-    # Save the cutflow
-    if hasattr(processor, "cutflow") and isCutflow:
-        logger.info("Saving cutflow information (NPZ and JSON)")
-        
-        # Ensure directory exists
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+    user_metadata = {
+        k: v for k, v in dataset_dict["metadata"].items()
+        if k not in RUNNER_RESERVED_KEYS
+    }
 
-        base_name = f"cutflow_{dataset_dict['metadata']['dataset']}_{file_idx}"
-        npz_path = os.path.join(save_path, f"{base_name}.npz")
-        json_path = os.path.join(save_path, f"{base_name}.json")
+    # Wrap EventProcessor in the Runner-compatible adapter
+    # adapter = CopperheadRunnerAdapter(processor, dataset_yaml_file)
+    adapter = CopperheadRunnerAdapter(
+        config=processor.config,      # plain dict — picklable
+        dataset_yaml_file=dataset_yaml_file,
+        save_path=save_path,
+        log_level=logger.level,
+        test_mode=processor.test_mode,
+        isCutflow=processor.isCutflow,
+    )
 
-        # 1. Save NPZ (Efficient for reloading into Coffea/Python later)
-        # The .compute() ensures Dask finishes the task before writing
-        processor.cutflow.to_npz(npz_path).compute()
-        logger.info(f"NPZ saved: {npz_path}")
+    runner = coffea_processor_module.Runner(
+        executor=coffea_processor_module.DaskExecutor(client=client),  # reuse existing client
+        schema=NanoAODSchema,
+        chunksize=600_000,
+        skipbadfiles=False,
+    )
 
-        # 2. Save JSON
-        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.print()}")
-        logger.debug(f"processor.cutflow.logger.info(): {processor.cutflow.result()}")
-        try:
-            cf_res = processor.cutflow
-            
-            # Helper to safely convert numpy values to python scalars
-            def clean(val):
-                return val.item() if hasattr(val, "item") else val
+    fileset = {
+        dataset_name: {
+            "files": list(files_for_factory.keys()),
+            "treename": "Events",
+            "metadata": user_metadata,
+        }
+    }
 
-            # Build a structured dictionary
-            # _names: list of cut names
-            # _nevcutflow: cumulative counts
-            # _nevonecut: individual cut counts
-            combined_data = {}
-            for i, name in enumerate(cf_res._names):
-                combined_data[name] = {
-                    "cumulative": clean(cf_res._nevcutflow[i]),
-                    "individual": clean(cf_res._nevonecut[i])
-                }
+    result = runner(fileset, processor_instance=adapter)
+    total_processed = int(result["__n_processed__"])
 
-            with open(json_path, 'w') as f:
-                json.dump(combined_data, f, indent=4)
-                
-            logger.info(f"JSON saved to {json_path}")
-
-        except Exception as e:
-            logger.error(f"JSON save failed: {e}")
-
-
-    dataset_fraction = dataset_dict["metadata"]["fraction"]
-
-    logger.debug(f"out_collections keys: {out_collections.keys()}")
-
-    out_collections["fraction"] = dataset_fraction * (ak.ones_like(out_collections["event"]))
-    # ----------------------------------
-    skim_zip = ak.zip(out_collections, depth_limit=1)
-    logger.debug(f"skim_zip: {skim_zip}")
-    # skim_zip.persist().to_parquet(save_path)
-    to_persist = skim_zip.persist()
-    to_persist = to_persist.to_parquet(save_path, compute=False)
-    persisted, processed_event_count = dask.compute(to_persist, processed_event_count)
-    return processed_event_count
+    return total_processed
 
 
 def divide_chunks(data: dict, SIZE: int):
@@ -246,7 +215,7 @@ def eos_mkdirs(eos_path: str, retries: int = 3, sleep: float = 2.0):
         os.makedirs(eos_path, exist_ok=True)
         return
     if not eos_path.startswith("/store") and not eos_path.startswith("davs"):
-        raise RuntimeError(f"Path does not starts with /depot or /work or /store or davs. Please check path.")
+        raise RuntimeError("Path does not starts with /depot or /work or /store or davs. Please check path.")
     if not eos_path.startswith("davs://eos.cms.rcac.purdue.edu:9000/"):
         eos_path = f"davs://eos.cms.rcac.purdue.edu:9000/{eos_path.lstrip('/')}"
     logger.info(f"Creating EOS directory: {eos_path}")
@@ -316,12 +285,24 @@ if __name__ == "__main__":
     args.dataset_yaml_file = resolve_dataset_yaml_file(
         args.dataset_yaml_file, args.year, args.NanoAODv
     )
+    # Make the dataset YAML path absolute so gateway workers can find it
+    if not os.path.isabs(args.dataset_yaml_file):
+        args.dataset_yaml_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            args.dataset_yaml_file,
+        )
     logger.info(f"Using dataset YAML: {args.dataset_yaml_file}")
+
+    if not os.path.exists(args.dataset_yaml_file):
+        raise FileNotFoundError(
+            f"dataset_yaml_file not found on submit node: {args.dataset_yaml_file}"
+        )
 
     test_mode = args.test_mode
     logger.debug(f"Test mode: {test_mode}")
 
     # make NanoAODv into an interger variable
+    logger.info(f"coffea version: {coffea.__version__}")
     logger.info(f"args.NanoAODv: {args.NanoAODv}")
     logger.info(f"args.year: {args.year}")
     t1 = time.perf_counter()
@@ -341,16 +322,27 @@ if __name__ == "__main__":
 
     config = getParametersForYr("./configs/parameters/" , yearForConfig)
     logger.debug(f"stage1 config: {config}")
+
+    # Convert OmegaConf -> plain dict/list so the walker recurses correctly
+    # and so the config is cleanly picklable for dask workers.
+    if isinstance(config, (DictConfig, ListConfig)):
+        config = OmegaConf.to_container(config, resolve=True)
+
+    PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+    config = absolutize_config(config, PROJECT_ROOT)
+    logger.info("Resolved relative config paths to absolute against project root")
+
     coffea_processor = EventProcessor(config, test_mode=test_mode, isCutflow=args.isCutflow)
 
     client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+
     if not test_mode: # full scale implementation
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
         if args.sync:
-            sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path        
+            sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path
         logger.debug(f"Sample path: {sample_path}")
         with open(sample_path) as file:
             samples = json.loads(file.read())
@@ -381,15 +373,15 @@ if __name__ == "__main__":
         # if True:
         with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
+                if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
+                    logger.warning(f"Skipping Year: {args.year:10}, dataset: {dataset}")
+                    continue
+
                 logger.info("{}{}".format("\n" * 2, "=" * 51))
                 logger.info(f"===         Processing dataset: {dataset}       ===")
                 logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
                 logger.info(f"===         Year: {args.year}                        ===")
                 logger.info("{}{}".format("=" * 51, "\n" * 2))
-
-                if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                    logger.warning(f"Skipping dataset: {dataset}")
-                    continue
 
                 sample_step = time.time()
                 if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
@@ -453,7 +445,7 @@ if __name__ == "__main__":
                             eos_mkdirs(save_path)
 
                             # rebuild the events/out collections for this attempt
-                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file)
+                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file, client=client)
 
                             logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
                             logger.info(f"Processed events: {processed_event_count}")
@@ -535,7 +527,7 @@ if __name__ == "__main__":
                                         "git_branch": branch_name,
                                         "git patch path": git_info_path,
                                         "Expected events from pre-stage": ExpectedEvents_from_prestage,
-                                        "Processed events from stage-1": processed_event_count,                                        
+                                        "Processed events from stage-1": processed_event_count,
                                     },
                                 )
                                 logger.exception(
@@ -578,7 +570,7 @@ if __name__ == "__main__":
                     for file in filelist:
                         os.remove(file)
                 logger.debug("Directory created or cleaned")
-                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file)
+                dataset_loop(coffea_processor, sample, test=test_mode, save_path=save_path, dataset_yaml_file=args.dataset_yaml_file, client=client)
 
     elapsed = round(time.time() - time_step, 3)
 

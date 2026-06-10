@@ -14,6 +14,7 @@ Example:
 
 import argparse
 import glob
+import os
 from pathlib import Path
 from typing import List, Optional
 
@@ -721,9 +722,24 @@ def main():
         dump_single_dir_sync(df, out_path)
 
     elif len(dirs) == 2:
-        file1, file2 = dirs
+        file1, file2 = (str(item).strip() for item in dirs)
+
+        def normalize_input_path(path: str) -> str:
+            cleaned = path.strip()
+            if cleaned.endswith(".jsonn"):
+                candidate = cleaned[:-1]
+                if os.path.exists(candidate):
+                    print(f"[DEBUG] repaired suspicious .jsonn suffix: {cleaned!r} -> {candidate!r}")
+                    return candidate
+            return cleaned
+
+        file1 = normalize_input_path(file1)
+        file2 = normalize_input_path(file2)
 
         out_path = Path(args.out) if args.out else Path("sync_txt_diff.txt")
+
+        print(f"[DEBUG] normalized input 1: {file1!r}")
+        print(f"[DEBUG] normalized input 2: {file2!r}")
 
         # If both are text dumps -> compare text files
         if (str(file1).endswith(".txt")) and (str(file2).endswith(".txt")):
@@ -737,6 +753,7 @@ def main():
 
         # If both are cutflow json files -> compare json files
         if str(file1).endswith(".json") and str(file2).endswith(".json"):
+            print("[DEBUG] entering cutflow JSON comparison branch")
             compare_two_cutflow_json(
                 json1=file1,
                 json2=file2,
@@ -746,6 +763,7 @@ def main():
             return
 
         # Otherwise treat as directories (existing behavior)
+        print("[DEBUG] falling back to directory/parquet comparison branch")
         dir1, dir2 = file1, file2
 
         compare_two_dirs(
