@@ -169,7 +169,7 @@ def arrangeHist_bySampleGroup(pickled_hist_dict):
         "ggH": ["ggh_"],
         "VBF": ["vbf_"],
         "DYVBF": ["dy_VBF_filter"],
-        "DY": ["dyTo2L_M-50_incl", "dyTo2Mu_M-50_aMCatNLO", "dyTo2L_M-50_aMCatNLO", "dy_M-100To200_MiNNLO","dy_M-50_aMCatNLO"],
+        "DY": ["dyTo2L_M-50_incl", "dyTo2Mu_M-50_aMCatNLO", "dyTo2L_M-50_aMCatNLO", "dy_M-100To200_MiNNLO","dy_M-50_aMCatNLO", "dy_M-50_MiNNLO"],
         # "DYJ01": ["DYJ01"],
         # "DYJ2": ["DYJ2"],
         "Top": ["ttjets", "top", "st"],

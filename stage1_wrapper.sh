@@ -1,6 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2018
+sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2017
+sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016postVFP
+sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016preVFP
+sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ Run2
+
+bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2018 
+bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2017 
+bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016postVFP 
+bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016preVFP 
+bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun11_2026_50nTrialsFoldsAll_Max70bins/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ Run2 
+
+
+# time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 2 -k)
+# time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 2p -k)
+# time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 3 -k)
+
+
 # sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun04_2026_50startNBins//score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2018
 # sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun04_2026_50startNBins//score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2017
 # sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun04_2026_50startNBins//score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016postVFP
@@ -31,7 +49,7 @@ set -euo pipefail
 # time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 2p -k)
 # time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 3 -k)
 
-time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m compact -k)
+# time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m compact -k)
 # time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 2 -k)
 # time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 2p -k)
 # time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv15_run2.yaml -v 15 -l  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc -y "2018,2017,2016postVFP,2016preVFP" -m 3 -k)

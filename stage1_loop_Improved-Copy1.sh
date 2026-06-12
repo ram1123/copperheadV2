@@ -200,13 +200,15 @@ echo "  isMC: $isMC"
 # save_postfix="Jun07_2026_21Bins" # FIXME
 # save_postfix="Jun07_2026_100nTrialsFoldsAll" # FIXME
 # save_postfix="Jun08_2026_50nTrialsFoldsAll" # FIXME
-save_postfix="Jun08_2026_50nTrialsFoldsAll_17Bins" # FIXME
+# save_postfix="Jun08_2026_50nTrialsFoldsAll_17Bins" # FIXME
 # save_postfix="Jun08_2026_50nTrialsFoldsAll_7Bins" # FIXME
 # save_postfix="Jun08_2026_20nTrialsFoldsAll" # FIXME
 # save_postfix="Jun08_2026_50nTrialsFoldsAll_Max40bins" # FIXME
 # save_postfix="Jun08_2026_20nTrialsFoldsAll_Max40bins" # FIXME
 # save_postfix="Jun10_2026_50nTrialsFoldsAll" # FIXME
-# save_postfix="Jun10_2026_2pDebug" # FIXME
+# save_postfix="Jun10_2026_2p_Debug" # FIXME
+# save_postfix="Jun11_2026_50nTrialsFoldsAll_Max57bins" # FIXME
+save_postfix="Jun11_2026_50nTrialsFoldsAll_Max70bins" # FIXME
 
 # ----------- Main loop -----------
 for year in "${years[@]}"; do

@@ -616,13 +616,14 @@ if __name__ == "__main__":
     # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
     # compacted_tag="May08_2026_FixDimuonMass"
     # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc"
-    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc"
+    stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc"
     # compacted_tag="Jun01_2026_FixDimuonMass"
-    stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
+    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
     # compacted_tag="May08_2026_FixDimuonMass"
     # compacted_tag="Jun05_2026_RamMay2025Binning_FixDimuonMass"
     # compacted_tag="Jun07_2026_50nTrialsFoldsAll_FixDimuonMass"
-    compacted_tag="Jun08_2026_20nTrialsFoldsAll_FixDimuonMass"
+    # compacted_tag="Jun08_2026_20nTrialsFoldsAll_FixDimuonMass"
+    compacted_tag="Jun08_2026_50nTrialsFoldsAll_FixDimuonMass"
     
     year="*"
     sig_globs = {
@@ -638,8 +639,8 @@ if __name__ == "__main__":
     bkg_globs = {
         "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
         # "dy_M-100To200_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-100To200_MiNNLO/**/*.parquet",
-        "dy_M-Incl_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*MiNNLO/**/*.parquet",
-        # "dyInclM-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*M-50_aMCatNLO/**/*.parquet",
+        # "dy_M-Incl_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*MiNNLO/**/*.parquet",
+        "dyInclM-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*M-50_aMCatNLO/**/*.parquet",
         # "dy_M-50_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-50_MiNNLO/**/*.parquet",
         "ewk_incl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk*/**/*.parquet",
         # "ewk_lljj_mll50_mjj120": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_lljj_mll50_mjj120/**/*.parquet",
@@ -680,12 +681,15 @@ if __name__ == "__main__":
     # max_nbins = 30  # max number of bins to try
     # max_nbins = 65  # max number of bins to try
     # max_nbins = 70  # max number of bins to try
-    # max_nbins = 57  # max number of bins to try
+    # max_nbins = 57  # max     number of bins to try
     # max_nbins = 25  # max number of bins to try
     # max_nbins = 25  # max number of bins to try
-    max_nbins = 40  # max number of bins to try
+    # max_nbins = 40  # max number of bins to try
     # max_nbins = 24  # max number of bins to try
     # max_nbins = 23  # max number of bins to try
+    max_nbins = 70  # max number of bins to try
+    # max_nbins = 80  # max number of bins to try
+    # max_nbins = 100  # max number of bins to try
     #------------------------------
     # min_total_events_per_bin=5.0
     min_total_events_per_bin= 15
