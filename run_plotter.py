@@ -26,7 +26,18 @@ if DEBUG:
 # -----------------------------------------------------------------------------
 BASE_SCRIPT = ["python", "plotter/validation_plotter_unified.py"]
 
-stage1_dir = Path(get_stage1_path())  # default = "current"
+# stage1_dir = Path("/depot/cms/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Ap04_2026_JetHornPuId_JerStrat3/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_Apr24_2026_JetHornPuId_JerStrat3_UpdatedBtagWp_wQgl/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_Apr14_2026_UpdatedBtagWp/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUncDataCorrected/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_May24_2026/stage1_output")  # default = "current"
+# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage1_output")  # default = "current"
+stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage1_output")  # default = "current"
+
 LOAD_PATH = stage1_dir / "{year}" / "f1_0"
 logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
@@ -44,51 +55,58 @@ SAVE_ROOT = Path("./validation/figs") / outputDir / f"{stage1_name}_{SAVE_TAG}"
 logger.info(f"Using SAVE_ROOT: {SAVE_ROOT}")
 
 # Prevent overwriting
-if SAVE_ROOT.exists() and not FORCE:
-    raise RuntimeError(f"SAVE_ROOT exists: {SAVE_ROOT} (use --force to proceed)")
+# if SAVE_ROOT.exists() and not FORCE:
+#     raise RuntimeError(f"SAVE_ROOT exists: {SAVE_ROOT} (use --force to proceed)")
 
 # years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years = ["2022preEE"]
-years = ["2022postEE"]
+# years = ["2022postEE"]
+# years = ["2016postVFP"]
+# years = ["2018", "2017", "2016preVFP", "2016postVFP", ]
+years = ["2017", ]
+# years = ["2016preVFP"]
 # years = ["2023"]
 # years = ["2023BPix"]
 # years = ["2024"]
 
-# categories = ["nocat", "vbf", "ggh"]
-categories = ["nocat", "ggh"]
-# categories = ["ggh"]
-# categories = ["vbf"]
+# categories = ["nocat", "vbf", "ggh", "bJetVeto"]
+# categories = ["nocat", "vbf","ggh",]
+# categories = ["bJetVeto"]
+categories = ["vbf"]
 # categories = ["nocat"]
 
 
 JJ_ETA_REGIONS = [
     "all",
-    "jj_both_central",
-    "jj_non_central",
-    "jj_one_fwd25_one_central",
-    "jj_one_he_one_central",
-    "jj_one_fwd30_one_central",
-    "jj_both_fwd25",
-    "jj_both_he",
-    "jj_both_fwd30",
-    "jj_one_he_one_fwd30",
+    # "jj_both_central",
+    # "jj_non_central",
+    # "jj_one_fwd25_one_central",
+    # "jj_one_he_one_central",
+    # "jj_one_fwd30_one_central",
+    # "jj_both_fwd25",
+    # "jj_both_he",
+    # "jj_both_fwd30",
+    # "jj_one_he_one_fwd30",
 ]
 
 # Boolean flags
-vbf_filter_study_options = [False]  # True/False list
-remove_zpt_weights_options = [True]  # True/False list
+# vbf_filter_study_options = [False]  # True/False list
+vbf_filter_study_options = [True]  # True/False list
+remove_zpt_weights_options = [False,True]  # True/False list
+# remove_zpt_weights_options = [True]  # True/False list
 add_dnn_zpt_weights_options = [False]  # True/False list
 min_set_of_vars = True  # minimal set of vars
 
 region_options = [
     # ["h-sidebands", "z-peak"],
     ["h-sidebands"],
+    # ["z-peak"],
 ]
 
-# njets_options = ["inclusive"]
+njets_options = ["inclusive"]
 # njets_options = ["inclusive", "0", "1", "2"]
 # njets_options = ["0", "1", "2"]
-njets_options = [ "2"]
+# njets_options = [ "2"]
 
 
 # -----------------------------------------------------------------------------

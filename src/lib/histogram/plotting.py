@@ -62,6 +62,7 @@ def plotDataMC_compare(
     lumi = "",
     status = "Private Work",
     CenterOfMass = 13,
+    log_y_range=None,
     ):
     """
     Takes in
@@ -88,7 +89,7 @@ def plotDataMC_compare(
     # -----------------------------------------
     data_hist = data["hist_arr"]
     data_hist_err = np.sqrt(data["hist_w2_arr"])
-
+    print(f"binning: {binning}")
     hep.histplot(
         data_hist,
         xerr=True,
@@ -130,7 +131,10 @@ def plotDataMC_compare(
 
     if log_scale:
         ax_main.set_yscale('log')
-        ax_main.set_ylim(0.001, 1e9)
+        if log_y_range is None:
+            ax_main.set_ylim(0.001, 1e9)
+        else:
+            ax_main.set_ylim(log_y_range[0], log_y_range[1])
         # temporary overwrite to match the range of AN plots
         # if x_title == "ll_zstar_log":
         #     ax_main.set_ylim(0.1,  599.48425032)
@@ -143,6 +147,7 @@ def plotDataMC_compare(
     if len(sig_MC_dict.keys()) > 0:
         for sig_mc_sample,  sig_mc_sample_arrs in sig_MC_dict.items():
             sig_MC_hist = sig_mc_sample_arrs["hist_arr"]
+            print(f"{sig_mc_sample} hist: {sig_MC_hist}")
             hep.histplot(
                 sig_MC_hist,
                 bins=binning,
@@ -320,7 +325,7 @@ def plotDataMC_compare(
     if title != "":
         ax_main.set_title(title)
     # save figure, we assume that the directory exists
-    hep.cms.label(data=True, loc=0, text=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
     plt.close(fig)
 
@@ -328,7 +333,7 @@ def plotDataMC_compare(
     with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
         f.write(f"Data: {np.sum(data_hist)}\n")
         for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
-            f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist):.2f}\n")
+            f.write(f"sum {bkg_mc_sample}: {np.sum(bkg_mc_hist):.2f}\n")
         if len(sig_MC_dict.keys()) > 0:
             f.write(f"{sig_mc_sample}: {np.sum(sig_MC_hist):.2f}\n")
         if plot_ratio:
@@ -338,6 +343,10 @@ def plotDataMC_compare(
             f.write(
                 f"Data/MC ratio (Sum ratio_hist then divide by number of bins): {np.sum(ratio_hist) / len(binning):.2f}\n"
             )
+        for bkg_mc_sample, bkg_mc_hist, bkg_mc_histW2 in zip(bkg_mc_sample_names, bkg_MC_hist_l, bkg_MC_histW2_l):
+            f.write("--------------------------------\n")
+            f.write(f"{bkg_mc_sample} values: {(bkg_mc_hist)}\n")
+            f.write(f"{bkg_mc_sample} w2 values (for error propagation): {(bkg_mc_histW2)}\n")
     # logger.debug(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 
@@ -564,7 +573,7 @@ def plotDataMC_compare_normalized(
     if title != "":
         ax_main.set_title(title)
     # save figure, we assume that the directory exists
-    hep.cms.label(data=True, loc=0, text=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
+    hep.cms.label(data=True, loc=0, label=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
     plt.close(fig)
 

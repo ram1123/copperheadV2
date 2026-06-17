@@ -407,14 +407,14 @@ binning = binning_based_on_significanceScanV2  # 17 bins; one used for September
 # ])
 
 
-# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_June01_2026
-#   0.000000,
-#   0.483622,
-#   0.967244,
-#   1.450866,
-#   1.934488,
-#   (7.254329+0.1),
-# ])
+binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_June01_2026
+  0.000000,
+  0.483622,
+  0.967244,
+  1.450866,
+  1.934488,
+  (7.254329+0.1),
+])
 
 # binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage3_datacards_June01_2026 NOTE: found it surprising that the results were same, but we checked the stage1 output and DNN model paths and they were correct
 #   0.000000,
@@ -695,26 +695,26 @@ binning = binning_based_on_significanceScanV2  # 17 bins; one used for September
 #   (7.254329+0.1),
 # ])
 
-binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc June 11 2026. max n bins 70
-  0.000000,
-  0.103633,
-  0.207267,
-  0.310900,
-  0.414533,
-  0.518166,
-  0.621800,
-  0.725433,
-  0.829066,
-  0.932699,
-  1.036333,
-  1.139966,
-  1.243599,
-  1.347232,
-  1.450866,
-  1.554499,
-  1.658132,
-  1.865399,
-  1.969032,
-  2.176299,
-  (7.254329+0.1),
-])
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc June 11 2026. max n bins 70
+#   0.000000,
+#   0.103633,
+#   0.207267,
+#   0.310900,
+#   0.414533,
+#   0.518166,
+#   0.621800,
+#   0.725433,
+#   0.829066,
+#   0.932699,
+#   1.036333,
+#   1.139966,
+#   1.243599,
+#   1.347232,
+#   1.450866,
+#   1.554499,
+#   1.658132,
+#   1.865399,
+#   1.969032,
+#   2.176299,
+#   (7.254329+0.1),
+# ])

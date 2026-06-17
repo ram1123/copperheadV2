@@ -5,7 +5,7 @@ background:
         DY:
             processes:
                 # - dyTo2L_M-50_incl
-                # - dy_M-100To200_MiNNLO
+                - dy_M-100To200_MiNNLO
                 - dyTo2L_M-50_aMCatNLO
                 - dy_M-50_aMCatNLO
                 - dy_VBF_filter

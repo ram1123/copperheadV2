@@ -206,6 +206,7 @@ def build_datacards(var_name, yield_df, parameters):
                 #     f"XSecAndNorm{year}DYJ01  rateParam {bin_name} DYJ01 1 [0.2,5]\n"
                 # )
                 datacard.write(f"{bin_name} autoMCStats 0 1 1\n")
+                # datacard.write(f"{bin_name} autoMCStats -1 1 1\n") # FIXME: this removes stat unc
                 datacard.write("---------------\n")
                 # nuisnace edit start ----------------------------
                 # datacard.write(

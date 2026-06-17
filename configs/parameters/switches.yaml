@@ -272,20 +272,20 @@ switches:
         # 1 : jer strat 1 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets if pT > 50. For fake jets with pT < 50 and passing tight PU Id, apply stochastic method. For fake jets with pT < 50 and failing tight PU Id, apply no jer smearing.
         # 2 : jer strat 2 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets except fake jets with pT <= 50 and abseta > 2.5. For fake jets with pT <= 50 and abseta > 2.5, apply no jer smearing.
         # 3 : our custom Run2 jer smearinig method for CHS jets. Source: https://indico.cern.ch/event/1499935/#175-update-from-purdue, slide 19
-        '2016preVFP': 0 # For nanoAODv12, jer_strat should be 3
-        '2016postVFP': 0 # For nanoAODv12, jer_strat should be 3
-        '2017': 0 # For nanoAODv12, jer_strat should be 3
-        '2018': 0 # For nanoAODv12, jer_strat should be 3
+        '2016preVFP': -1 # For nanoAODv12, jer_strat should be 3
+        '2016postVFP': -1 # For nanoAODv12, jer_strat should be 3
+        '2017': -1 # For nanoAODv12, jer_strat should be 3
+        '2018': -1 # For nanoAODv12, jer_strat should be 3
         '2022preEE': -1
         '2022postEE': -1
         "2023": -1
         "2023BPix": -1
         "2024": -1
     do_jec_unc:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -301,21 +301,21 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_qgl_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+    do_qgl_wgt: # NOTE: for nanoAODv15 Run2 we don't have any SF available. source: https://btv-wiki.docs.cern.ch/ScaleFactors/Run2UL2016postVFPNanoAODv15/#ak4-qg-tagging .  (last checked on Apr 24 2026)
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
         "2023BPix": false
         "2024": false
-    do_btag_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+    do_btag_wgt: # NOTE: NOTE: for nanoAODv15 Run2 we don't have any SF available. source: btv-wiki.docs.cern.ch/ScaleFactors/Run2UL2016postVFPNanoAODv15/#ak4-b-tagging .  (last checked on Apr 24 2026)
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
