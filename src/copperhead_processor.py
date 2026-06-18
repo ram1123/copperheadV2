@@ -53,6 +53,7 @@ from src.corrections.jet import (
     getJecDataTag,
     jet_id,
     jet_puid,
+    getJecDataTag,
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
@@ -211,6 +212,17 @@ def build_pysr_pu_masks(jets, configs):
     outputs["jet_pysr_pu_pass"] = combined_pass
 
     return outputs, regions_out
+
+
+def getJetType(NanoAODv: int, year: str):
+    if is_run2(year):
+        if NanoAODv<15:
+            jet_type = "AK4PFchs"
+        else: # nanoV15
+            jet_type = "AK4PFPuppi"
+    else: # run3 all jets are PUPPI
+        jet_type = "AK4PFPuppi"
+    return jet_type
 
 
 def safe_ratio(num, den, default=0.0):
@@ -724,6 +736,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"Dataset going to read: {dataset}")
         logger.debug(f"events.metadata: {events.metadata}")
         NanoAODv = events.metadata['NanoAODv']
+        self.config['NanoAODv'] = NanoAODv
         is_mc = events.metadata['is_mc']
         logger.debug(f"NanoAODv: {NanoAODv}")
 
@@ -749,7 +762,7 @@ class EventProcessor(processor.ProcessorABC):
             #            dilepton mass between 100 and 200 GeV, to avoid double counting with DY_M-100to200 sample.
             # FIXME: currently, `dy_M-50` is hardcoded
 
-            logger.debug("doing dy_M-50 LHE cut!")
+            logger.info("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
             LHE_leptons = LHE_particles[bool_filter]
@@ -1105,7 +1118,7 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"electron_veto: {electron_veto[debug_mask_2].compute()}")
         self.selection.add("electron_veto", electron_veto)
         if self.config["switches"]["do_HemVeto"]:
-            HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc)
+            HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc, NanoAODv)
             if (not self.config["switches"]["do_HemVetoStudy"]): # when we are calculating HemVeto fraction for MC, we shouldn't filter out hem veto events
                 logger.info("adding HemVeto!")
                 event_filter = event_filter & HemVeto_filter
@@ -1421,8 +1434,17 @@ class EventProcessor(processor.ProcessorABC):
 
         do_jec = self.config["switches"]["do_jec"]
         do_jec_unc = self.config["switches"]["do_jec_unc"]
+        # FIXME: override do_jec_unc if on data
+        if not is_mc:
+            do_jec_unc = False
+            self.config["switches"]["do_jec_unc"] = False
+        logger.info(f"do_jec_unc: {do_jec_unc}")
         do_jer_unc = self.config["switches"]["do_jer_unc"]
+        logger.info(f"do_jer_unc: {do_jer_unc}")
         jec_unc_sources = []
+        jet_type = getJetType(NanoAODv, year)
+        self.config["jec_parameters"]["jet_algorithm"] = jet_type # define jet type / jet algorithm into the jec.yaml
+        logger.debug(f'jec params: {self.config["jec_parameters"]}')
         if do_jec:
             logger.info("doing JEC  (+ JER for MC)!")
 
@@ -1430,12 +1452,15 @@ class EventProcessor(processor.ProcessorABC):
             if do_jec_unc:
                 if is_mc:
                     jec_tag = self.config["jec_parameters"]["jec_tags"]
-                else: # data
+                    if (not isinstance(jec_tag, str)): 
+                        jec_tag = jec_tag[f"nanoAODv{NanoAODv}"]
+                else: # data  FIXME: jec_unc on data leads to diff data/MC agreement on control plots for VBF channel. This doesn't happen on MC
                     jec_tag = None
                     for run in self.config["jec_parameters"]["runs"]:
                         logger.debug(f"run: {run}, dataset: {dataset}")
+                        logger.debug(f"run in dataset: {run in dataset}")
                         if run in dataset:
-                            jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"])
+                            jec_tag = getJecDataTag(run, self.config["jec_parameters"]["jec_data_tags"], NanoAODv=self.config["NanoAODv"])
                     if jec_tag is None:
                         raise ValueError(
                             f"No JEC tag found for dataset '{dataset}'. "
@@ -1444,8 +1469,8 @@ class EventProcessor(processor.ProcessorABC):
                             f"is present in the dataset name."
                         )
                 jerc_load_path = self.config["jec_parameters"]["jerc_load_path"]
-                cset = get_corrset(jerc_load_path)
-                jec_unc_sources = get_jec_sources(cset, jec_tag)
+                cset = get_corrset(jerc_load_path, NanoAODv)
+                jec_unc_sources = get_jec_sources(cset, jec_tag, jet_type=jet_type)
                 variation_l = ["nominal"] + jec_unc_sources
             else:
                 variation_l = ["nominal"]
@@ -1465,7 +1490,7 @@ class EventProcessor(processor.ProcessorABC):
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
             if is_mc and (self.config["switches"]["jer_strat"] >=0):
                 logger.debug("Applying JER smearing!")
-                jets = do_jer_smear(jets, self.config, events.event, nanoAOD_version=NanoAODv)
+                jets = do_jer_smear(jets, self.config, events.event)
             else:
                 logger.debug(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
@@ -1551,14 +1576,15 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # FIXME: For data (is is_mc == False) I should not add this variations.
         pt_variations = ["nominal"]
-        if self.config["switches"]["do_jec_unc"]:
-            pt_variations += applyUpDown(jec_unc_sources)
+        if is_mc:
+            if self.config["switches"]["do_jec_unc"]:
+                pt_variations += applyUpDown(jec_unc_sources)
 
-        if self.config["switches"]["do_jer_unc"] and self.config["switches"]["jer_strat"] >= 0:
-            # FIXME: JER variation part is not running.
-            #         As for Run-3 we are not applying the JER so we don't need it, yet.
-            jec_pars = self.config["jec_parameters"]
-            pt_variations += jec_pars["jer_variations"]
+            if self.config["switches"]["do_jer_unc"] and self.config["switches"]["jer_strat"] >= 0:
+                # FIXME: JER variation part is not running. 
+                #         As for Run-3 we are not applying the JER so we don't need it, yet.
+                jec_pars = self.config["jec_parameters"]
+                pt_variations += jec_pars["jer_variations"]            
 
         logger.debug(f"pt_variations: {pt_variations}")
         if is_mc:
@@ -2640,7 +2666,7 @@ class EventProcessor(processor.ProcessorABC):
 
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         logger.debug(f"dnn_year: {dnn_year}")
-        if self.config["switches"]["apply_jet_PUID_wgt"]:
+        if self.config["switches"]["do_jet_PUID_cut"]:
             logger.info("Applying jet PUID cut!")
             pass_jet_puid = jet_puid(jets, self.config)
         else:
@@ -2649,9 +2675,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Select jets
         # ------------------------------------------------------------#
-        # get QGL discriminator
-        if NanoAODv == 9 and is_run2(year):
-            jets["qgl"] = jets.qgl
+        if NanoAODv == 9:
+            pass
         elif NanoAODv == 12:
             jets["btagPNetQvG"] = jets.btagPNetQvG if hasattr(jets, "btagPNetQvG") else ak.zeros_like(jets.pt) - 1.0
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
@@ -2661,7 +2686,7 @@ class EventProcessor(processor.ProcessorABC):
             jets["btagDeepFlavQG"] = jets.btagDeepFlavQG if hasattr(jets, "btagDeepFlavQG") else ak.zeros_like(jets.pt) - 1.0
             jets["btagUParTAK4QvG"] = jets.btagUParTAK4QvG if hasattr(jets, "btagUParTAK4QvG") else ak.zeros_like(jets.pt) - 1.0
         else:
-            raise ValueError(f"Year {year} not recognized for jet QGL assignment!")
+            raise ValueError(f"Year {year} not recognized for btag assigment!")
 
         jet_pt_cut = (jets.pt > self.config["jet_pt_cut"])
         # add additonal pT cut for the forward regions to reduce jet horn  ----------------------------------------------
@@ -2921,11 +2946,13 @@ class EventProcessor(processor.ProcessorABC):
                     })
 
         jet_loop_out_dict.update({
+            f"jet1_mass_{variation}": jet1.mass,
             f"jet1_pt_{variation}": jet1.pt,
             f"jet1_eta_{variation}": jet1.eta,
             f"jet1_phi_{variation}": jet1.phi,
             f"jet1_puId_{variation}": get_puId(jet1),
             # -------------------------
+            f"jet2_mass_{variation}": jet2.mass,
             f"jet2_pt_{variation}": jet2.pt,
             f"jet2_eta_{variation}": jet2.eta,
             f"jet2_phi_{variation}": jet2.phi,
@@ -2963,6 +2990,30 @@ class EventProcessor(processor.ProcessorABC):
                 f"mmjj_mass_{variation}": mmjj.mass,
             }
         )
+
+        if is_run2(year):
+            """Additional jet variables only for Run2"""
+            if NanoAODv<15: # v9 or v12
+                jet_loop_out_dict.update({
+                    f"jet1_qgl_{variation}": jet1.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
+                    f"jet2_qgl_{variation}": jet2.qgl,
+                })
+                if save_four_jets_kinematics:
+                    jet_loop_out_dict.update({
+                        f"jet3_qgl_{variation}": jet3.qgl,
+                        f"jet4_qgl_{variation}": jet4.qgl,
+                    })
+            else: # v15
+                jet_loop_out_dict.update({
+                    f"jet1_qgl_{variation}": jet1.btagUParTAK4QvG,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
+                    f"jet2_qgl_{variation}": jet2.btagUParTAK4QvG,
+                })
+                if save_four_jets_kinematics:
+                    jet_loop_out_dict.update({
+                        f"jet3_qgl_{variation}": jet3.btagUParTAK4QvG,
+                        f"jet4_qgl_{variation}": jet4.btagUParTAK4QvG,
+                    })
+
         if save_four_jets_kinematics:
             jet_loop_out_dict.update(
                 {
@@ -3186,7 +3237,7 @@ class EventProcessor(processor.ProcessorABC):
             btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp"]
 
         if is_run2(year) and NanoAODv == 12 and hasattr(btag_jets, "btagDeepB"):
-            logger.info("Using deepJet btag!")
+            logger.info("Using btagDeepB btag!")
             btagLoose_filter = btag_jets.btagDeepB > self.config["btag_loose_wp_DeepCSV"] # FIXME: check the var name and score
             btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp_DeepCSV"]
 
@@ -3204,6 +3255,7 @@ class EventProcessor(processor.ProcessorABC):
             logger.info("Using btagUParTAK4B btag!")
             btagLoose_filter = btag_jets.btagUParTAK4B > self.config["btag_loose_wp_UParT"]
             btagMedium_filter = btag_jets.btagUParTAK4B > self.config["btag_medium_wp_UParT"]
+        logger.info(f"hasattr(btag_jets, 'btagUParTAK4B'): {hasattr(btag_jets, 'btagUParTAK4B')}")
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)

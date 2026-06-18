@@ -1,25 +1,41 @@
 jec_parameters:
-    jet_algorithm:
-        "2016_RERECO": AK4PFchs
-        "2017_RERECO": AK4PFchs
-        "2018_RERECO": AK4PFchs
-        "2016preVFP": AK4PFchs
-        "2016postVFP": AK4PFchs
-        "2017": AK4PFchs
-        "2018": AK4PFchs
-        "2022preEE": AK4PFPuppi
-        "2022postEE": AK4PFPuppi
-        "2023": AK4PFPuppi
-        "2023BPix": AK4PFPuppi
-        "2024": AK4PFPuppi
+    # jet_algorithm: # uses getJetType() instead of this --- IGNORE ---
+    #     "2016_RERECO": AK4PFchs
+    #     "2017_RERECO": AK4PFchs
+    #     "2018_RERECO": AK4PFchs
+    #     "2016preVFP": AK4PFchs
+    #     "2016postVFP": AK4PFchs
+    #     "2017": AK4PFchs
+    #     "2018": AK4PFchs
+    #     "2022preEE": AK4PFPuppi
+    #     "2022postEE": AK4PFPuppi
+    #     "2023": AK4PFPuppi
+    #     "2023BPix": AK4PFPuppi
+    #     "2024": AK4PFPuppi
     jerc_load_path:
         "2016_RERECO": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jet_jerc.json.gz
         "2017_RERECO": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jet_jerc.json.gz
         "2018_RERECO": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jet_jerc.json.gz
-        "2016preVFP": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jet_jerc.json.gz
-        "2016postVFP": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jet_jerc.json.gz
-        "2017": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jet_jerc.json.gz
-        "2018": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jet_jerc.json.gz
+        "2016preVFP": 
+            nanoAODv12:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jet_jerc.json.gz
+            nanoAODv15:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/Run2-2016preVFP-UL-NanoAODv15/2026-04-13/jet_jerc.json.gz
+        "2016postVFP": 
+            nanoAODv12:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jet_jerc.json.gz
+            nanoAODv15:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/Run2-2016postVFP-UL-NanoAODv15/2026-04-13/jet_jerc.json.gz
+        "2017": 
+            nanoAODv12:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jet_jerc.json.gz
+            nanoAODv15:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/Run2-2017-UL-NanoAODv15/2026-04-13/jet_jerc.json.gz
+        "2018": 
+            nanoAODv12:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jet_jerc.json.gz
+            nanoAODv15:
+                data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/Run2-2018-UL-NanoAODv15/2026-04-13/jet_jerc.json.gz
         2022preEE: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2025-09-23/jet_jerc.json.gz
         2022postEE: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jet_jerc.json.gz
         "2023": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jet_jerc.json.gz
@@ -632,10 +648,26 @@ jec_parameters:
             - L3Absolute
             - L2L3Residual
     jec_tags:
-        2016preVFP: Summer19UL16APV_V7_MC
-        2016postVFP: Summer19UL16_V7_MC
-        "2017": Summer19UL17_V5_MC
-        "2018": Summer19UL18_V5_MC
+        2016preVFP: 
+            nanoAODv12:
+                Summer19UL16APV_V7_MC
+            nanoAODv15:
+                Summer20UL16APVNanoV15_V1_MC
+        2016postVFP: 
+            nanoAODv12:
+                Summer19UL16_V7_MC
+            nanoAODv15:
+                Summer20UL16NanoV15_V1_MC
+        "2017": 
+            nanoAODv12:
+                Summer19UL17_V5_MC
+            nanoAODv15:
+                Summer20UL17NanoV15_V1_MC
+        "2018": 
+            nanoAODv12:
+                Summer19UL18_V5_MC
+            nanoAODv15:
+                Summer20UL18NanoV15_V1_MC
         2016_RERECO: Summer19UL16_V7_MC
         "2017_RERECO": Summer19UL17_V5_MC
         "2018_RERECO": Summer19UL18_V5_MC
@@ -659,38 +691,67 @@ jec_parameters:
         "2024": Summer24Prompt24_V2_MC
     jec_data_tags:
         2016preVFP:
-            Summer19UL16APV_RunBCD_V7_DATA:
-                - B
-                - C
-                - D
-            Summer19UL16APV_RunEF_V7_DATA:
-                - E
-                - F
+            nanoAODv12:
+                Summer19UL16APV_RunBCD_V7_DATA:
+                    - B
+                    - C
+                    - D
+                Summer19UL16APV_RunEF_V7_DATA:
+                    - E
+                    - F
+            nanoAODv15:
+                Summer20UL16APVNanoV15_V1_DATA:
+                    - B
+                    - C
+                    - D
+                    - E
+                    - F
         2016postVFP:
-            Summer19UL16_RunFGH_V7_DATA:
-                - F
-                - G
-                - H
+            nanoAODv12:
+                Summer19UL16_RunFGH_V7_DATA:
+                    - F
+                    - G
+                    - H
+            nanoAODv15:
+                Summer20UL16NanoV15_V1_DATA:
+                    - F
+                    - G
+                    - H
         "2017":
-            Summer19UL17_RunB_V5_DATA:
-                - B
-            Summer19UL17_RunC_V5_DATA:
-                - C
-            Summer19UL17_RunD_V5_DATA:
-                - D
-            Summer19UL17_RunE_V5_DATA:
-                - E
-            Summer19UL17_RunF_V5_DATA:
-                - F
+            nanoAODv12:
+                Summer19UL17_RunB_V5_DATA:
+                    - B
+                Summer19UL17_RunC_V5_DATA:
+                    - C
+                Summer19UL17_RunD_V5_DATA:
+                    - D
+                Summer19UL17_RunE_V5_DATA:
+                    - E
+                Summer19UL17_RunF_V5_DATA:
+                    - F
+            nanoAODv15:
+                Summer20UL17NanoV15_V1_DATA:
+                    - B
+                    - C
+                    - D
+                    - E
+                    - F
         "2018":
-            Summer19UL18_RunA_V5_DATA:
-                - A
-            Summer19UL18_RunB_V5_DATA:
-                - B
-            Summer19UL18_RunC_V5_DATA:
-                - C
-            Summer19UL18_RunD_V5_DATA:
-                - D
+            nanoAODv12:
+                Summer19UL18_RunA_V5_DATA:
+                    - A
+                Summer19UL18_RunB_V5_DATA:
+                    - B
+                Summer19UL18_RunC_V5_DATA:
+                    - C
+                Summer19UL18_RunD_V5_DATA:
+                    - D
+            nanoAODv15:
+                Summer20UL18NanoV15_V1_DATA:
+                    - A
+                    - B
+                    - C
+                    - D
         2016_RERECO: # temporary values
             Summer19UL16APV_RunBCD_V7_DATA:
                 - B

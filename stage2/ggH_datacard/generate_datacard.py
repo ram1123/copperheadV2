@@ -391,6 +391,7 @@ if __name__ == "__main__":
         jec_yml_path = "configs/parameters/jec.yaml"
 
         if args.year == "all":
+            # years_for_jec = ["2018", "2017", "2016postVFP", "2016preVFP"]
             years_for_jec = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
             jec_unc_base = []
             for y in years_for_jec:
