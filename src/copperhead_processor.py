@@ -2990,29 +2990,6 @@ class EventProcessor(processor.ProcessorABC):
             }
         )
 
-        if is_run2(year):
-            """Additional jet variables only for Run2"""
-            if NanoAODv<15: # v9 or v12
-                jet_loop_out_dict.update({
-                    f"jet1_qgl_{variation}": jet1.qgl,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
-                    f"jet2_qgl_{variation}": jet2.qgl,
-                })
-                if save_four_jets_kinematics:
-                    jet_loop_out_dict.update({
-                        f"jet3_qgl_{variation}": jet3.qgl,
-                        f"jet4_qgl_{variation}": jet4.qgl,
-                    })
-            else: # v15
-                jet_loop_out_dict.update({
-                    f"jet1_qgl_{variation}": jet1.btagUParTAK4QvG,  # FIXME: NanoAODv12 and NanoAODv15 have qgl as a field as AK4 jets are CHS for run-2, but not for run-3
-                    f"jet2_qgl_{variation}": jet2.btagUParTAK4QvG,
-                })
-                if save_four_jets_kinematics:
-                    jet_loop_out_dict.update({
-                        f"jet3_qgl_{variation}": jet3.btagUParTAK4QvG,
-                        f"jet4_qgl_{variation}": jet4.btagUParTAK4QvG,
-                    })
-
         if save_four_jets_kinematics:
             jet_loop_out_dict.update(
                 {

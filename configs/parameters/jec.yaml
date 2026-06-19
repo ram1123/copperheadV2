@@ -1,17 +1,4 @@
 jec_parameters:
-    # jet_algorithm: # uses getJetType() instead of this --- IGNORE ---
-    #     "2016_RERECO": AK4PFchs
-    #     "2017_RERECO": AK4PFchs
-    #     "2018_RERECO": AK4PFchs
-    #     "2016preVFP": AK4PFchs
-    #     "2016postVFP": AK4PFchs
-    #     "2017": AK4PFchs
-    #     "2018": AK4PFchs
-    #     "2022preEE": AK4PFPuppi
-    #     "2022postEE": AK4PFPuppi
-    #     "2023": AK4PFPuppi
-    #     "2023BPix": AK4PFPuppi
-    #     "2024": AK4PFPuppi
     jerc_load_path:
         "2016_RERECO": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jet_jerc.json.gz
         "2017_RERECO": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2017_UL/jet_jerc.json.gz
