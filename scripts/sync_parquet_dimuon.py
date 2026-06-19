@@ -18,12 +18,10 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-import dask_awkward as dak
-import awkward as ak
-import pandas as pd
 import json
+import pandas as pd
+import pyarrow.parquet as pq
 
-from distributed import Client
 from modules.dask_utils import close_dask_client, get_dask_client
 
 
@@ -78,7 +76,10 @@ SYNCVARLIST: List[str] = [
     "separate_wgt_btag",
     "separate_wgt_qgl",
     "separate_wgt_zpt",
+    "separate_wgt_zpt_wgt",
     "separate_wgt_ones",
+    "zpt_wgt_reco",
+    "zpt_wgt_gen",
 ]
 
 TXT_COMPARE_EXCLUDED_VARS = {
@@ -99,7 +100,48 @@ TXT_COMPARE_EXCLUDED_VARS = {
     "separate_wgt_btag",
     "separate_wgt_qgl",
     "separate_wgt_zpt",
+    "separate_wgt_zpt_wgt",
     "separate_wgt_ones",
+    "zpt_wgt_reco",
+    "zpt_wgt_gen",
+}
+
+WEIGHT_LIKE_VARS = {
+    "wgt_nominal",
+    "nBtagLoose_nominal",
+    "nBtagMedium_nominal",
+    "separate_wgt_genWeight",
+    "separate_wgt_genWeight_normalization",
+    "separate_wgt_xsec",
+    "separate_wgt_lumi",
+    "separate_wgt_pu",
+    "separate_wgt_l1prefiring",
+    "separate_wgt_muID",
+    "separate_wgt_muIso",
+    "separate_wgt_muTrig",
+    "separate_wgt_LHERen",
+    "separate_wgt_LHEFac",
+    "separate_wgt_pdf_2rms",
+    "separate_wgt_jetpuid",
+    "separate_wgt_btag",
+    "separate_wgt_qgl",
+    "separate_wgt_zpt",
+    "separate_wgt_zpt_wgt",
+    "separate_wgt_ones",
+    "zpt_wgt_reco",
+    "zpt_wgt_gen",
+}
+
+MUON_DIMUON_VARS = {
+    "mu1_pt", "mu1_eta", "mu1_phi",
+    "mu2_pt", "mu2_eta", "mu2_phi",
+    "dimuon_mass", "dimuon_pt", "dimuon_eta", "dimuon_phi",
+}
+
+JET_VARS = {
+    "jet1_pt_nominal", "jet1_eta_nominal", "jet1_phi_nominal",
+    "jet2_pt_nominal", "jet2_eta_nominal", "jet2_phi_nominal",
+    "jj_mass_nominal", "jj_dEta_nominal",
 }
 
 
@@ -107,6 +149,195 @@ def _is_data_sync_source(label: str) -> bool:
     label_l = str(label).lower()
     name_l = Path(str(label)).name.lower()
     return ("_data_" in label_l) or name_l.startswith("data") or "data_" in name_l
+
+
+def _summary_path(out_path: Path) -> Path:
+    return out_path.with_name(f"summary_{out_path.stem}.txt")
+
+
+def _classify_variable_group(variable: str) -> str:
+    if variable in WEIGHT_LIKE_VARS:
+        return "weights"
+    if variable in MUON_DIMUON_VARS:
+        return "muon_dimuon"
+    if variable in JET_VARS:
+        return "jet_jj"
+    return "other"
+
+
+def _write_summary_report(
+    out_path: Path,
+    common_events: int,
+    only1_count: int,
+    only2_count: int,
+    mismatch_count: int,
+    variable_stats: list[dict],
+    comparison_label: str,
+) -> None:
+    summary_path = _summary_path(out_path)
+    lines = [
+        f"comparison: {comparison_label}",
+        f"common_events: {common_events}",
+        f"only_in_1: {only1_count}",
+        f"only_in_2: {only2_count}",
+        f"mismatching_events: {mismatch_count}",
+        "",
+        "top_changed_variables:",
+    ]
+
+    if variable_stats:
+        for row in variable_stats:
+            lines.append(
+                f"- {row['variable']}: count={row['count']}, "
+                f"group={row['group']}, max_abs_delta={row['max_abs_delta']}, "
+                f"mean_abs_delta={row['mean_abs_delta']}"
+            )
+    else:
+        lines.append("- none")
+
+    summary_path.write_text("\n".join(lines) + "\n")
+    print(f"[INFO] Wrote summary report to {summary_path}")
+
+
+def _build_diff_output(
+    left_df: pd.DataFrame,
+    right_df: pd.DataFrame,
+    variables: list[str],
+    tolerance: float,
+    out_path: Path,
+    common_idx,
+    only1_count: int,
+    only2_count: int,
+    comparison_label: str,
+) -> None:
+    if not variables:
+        print("[WARNING] No shared variables available to compare.")
+        _write_summary_report(
+            out_path=out_path,
+            common_events=len(common_idx),
+            only1_count=only1_count,
+            only2_count=only2_count,
+            mismatch_count=0,
+            variable_stats=[],
+            comparison_label=comparison_label,
+        )
+        return
+
+    left = left_df[variables].astype(float).add_suffix("_1")
+    right = right_df[variables].astype(float).add_suffix("_2")
+    merged = left.join(right, how="inner")
+
+    mismatch_mask = pd.Series(False, index=merged.index)
+    mismatch_by_var = {}
+    max_abs_delta_by_var = {}
+    mean_abs_delta_by_var = {}
+
+    for var in variables:
+        delta_col = (merged[f"{var}_2"] - merged[f"{var}_1"]).round(6)
+        merged[f"delta_{var}"] = delta_col
+        var_mask = delta_col.abs() > tolerance
+        mismatch_by_var[var] = int(var_mask.sum())
+        if mismatch_by_var[var] > 0:
+            abs_delta = delta_col[var_mask].abs()
+            max_abs_delta_by_var[var] = round(float(abs_delta.max()), 6)
+            mean_abs_delta_by_var[var] = round(float(abs_delta.mean()), 6)
+        else:
+            max_abs_delta_by_var[var] = 0.0
+            mean_abs_delta_by_var[var] = 0.0
+        mismatch_mask |= var_mask
+
+    variable_stats = [
+        {
+            "variable": var,
+            "count": mismatch_by_var[var],
+            "group": _classify_variable_group(var),
+            "max_abs_delta": max_abs_delta_by_var[var],
+            "mean_abs_delta": mean_abs_delta_by_var[var],
+        }
+        for var in variables
+        if mismatch_by_var[var] > 0
+    ]
+    variable_stats.sort(key=lambda row: (-row["count"], -row["max_abs_delta"], row["variable"]))
+
+    if not bool(mismatch_mask.any()):
+        print("[INFO] No mismatches found (within tolerance).")
+        _write_summary_report(
+            out_path=out_path,
+            common_events=len(common_idx),
+            only1_count=only1_count,
+            only2_count=only2_count,
+            mismatch_count=0,
+            variable_stats=[],
+            comparison_label=comparison_label,
+        )
+        return
+
+    mismatches = merged.loc[mismatch_mask].copy()
+    delta_cols = [f"delta_{var}" for var in variables]
+    changed_lists = []
+    changed_groups = []
+    n_changed = []
+    max_abs_delta = []
+    physics_category = []
+
+    for _, row in mismatches[delta_cols].iterrows():
+        changed = []
+        groups = set()
+        max_delta = 0.0
+        for var in variables:
+            delta = row[f"delta_{var}"]
+            if abs(delta) > tolerance:
+                changed.append(var)
+                groups.add(_classify_variable_group(var))
+                max_delta = max(max_delta, abs(float(delta)))
+        changed_lists.append(",".join(changed))
+        changed_groups.append(",".join(sorted(groups)))
+        n_changed.append(len(changed))
+        max_abs_delta.append(round(max_delta, 6))
+        if groups == {"weights"}:
+            physics_category.append("weight_only")
+        elif "weights" in groups:
+            physics_category.append("kinematics_and_weights")
+        else:
+            physics_category.append("kinematics_only")
+
+    mismatches["changed_columns"] = changed_lists
+    mismatches["changed_groups"] = changed_groups
+    mismatches["physics_category"] = physics_category
+    mismatches["n_changed"] = n_changed
+    mismatches["max_abs_delta"] = max_abs_delta
+
+    key_df = mismatches.reset_index()[KEY_VARS + ["_sync_instance"]]
+    compact = key_df.copy()
+    compact["physics_category"] = mismatches["physics_category"].to_numpy()
+    compact["changed_groups"] = mismatches["changed_groups"].to_numpy()
+    compact["changed_columns"] = mismatches["changed_columns"].to_numpy()
+    compact["n_changed"] = mismatches["n_changed"].to_numpy()
+    compact["max_abs_delta"] = mismatches["max_abs_delta"].to_numpy()
+
+    for var in variables:
+        mask = mismatches[f"delta_{var}"].abs() > tolerance
+        compact[f"{var}_1"] = mismatches[f"{var}_1"].where(mask).round(6).to_numpy()
+        compact[f"{var}_2"] = mismatches[f"{var}_2"].where(mask).round(6).to_numpy()
+        compact[f"delta_{var}"] = mismatches[f"delta_{var}"].where(mask).round(6).to_numpy()
+
+    compact = compact.sort_values(
+        ["n_changed", "max_abs_delta", "physics_category", "changed_columns"],
+        ascending=[False, False, True, True],
+        kind="mergesort",
+    ).reset_index(drop=True)
+    compact.to_csv(out_path, index=False, float_format="%.6f")
+    print(f"[INFO] Wrote {len(compact)} mismatching events to {out_path}")
+
+    _write_summary_report(
+        out_path=out_path,
+        common_events=len(common_idx),
+        only1_count=only1_count,
+        only2_count=only2_count,
+        mismatch_count=len(compact),
+        variable_stats=variable_stats,
+        comparison_label=comparison_label,
+    )
 
 
 # ----------------------------------------------------------------------
@@ -145,10 +376,11 @@ def load_dir_to_df(
     category: Optional[str] = None,
     region: Optional[str] = None,
     process: str = "data",
+    use_gateway: bool = False,
 ) -> pd.DataFrame:
     """
     Load all parquet files from a directory into a pandas DataFrame
-    using dask_awkward, with optional selection.applyRegionCatCuts.
+    using awkward parquet readers, with optional selection.applyRegionCatCuts.
 
     Columns kept: run, luminosityBlock, event, dimuon_pt, dimuon_mass, dimuon_eta
     (and V1_FIELDS_2COMPUTE, only those that exist).
@@ -162,48 +394,37 @@ def load_dir_to_df(
         if c not in cols:
             cols.append(c)
 
-    # dask_awkward lazy collection
-    events_lazy = dak.from_parquet(pattern)
+    parquet_files = sorted(glob.glob(pattern))
+    if not parquet_files:
+        raise FileNotFoundError(f"No parquet files matched pattern '{pattern}'")
 
     # Restrict to columns that actually exist
-    available = [c for c in cols if c in events_lazy.fields]
-    missing = [c for c in cols if c not in events_lazy.fields]
+    available_fields = set(pq.ParquetFile(parquet_files[0]).schema.names)
+    available = [c for c in cols if c in available_fields]
+    missing = [c for c in cols if c not in available]
 
     if missing:
         print(f"[WARNING] Missing columns in {directory}: {missing}")
 
-    events_lazy = events_lazy[available]
+    if use_gateway:
+        from distributed import Client
 
-    # Materialize to awkward Array
-    events = events_lazy.compute()
-
-    # # Optional selection
-    # if category is not None and region is not None:
-    #     print(
-    #         f"[INFO] Applying selection: category={category}, "
-    #         f"region={region}, process={process}"
-    #     )
-    #     events = selection.applyRegionCatCuts(
-    #         events,
-    #         category=category,
-    #         region_name=region,
-    #         process=process,
-    #         variation="nominal",
-    #         do_vbf_filter_study=False,
-    #         do_VH_veto=False,
-    #     )
-    # else:
-    #     print("[INFO] No selection applied (category/region not both provided).")
-
-    # Convert to pandas (awkward v2: no ak.to_pandas)
-    df = pd.DataFrame(ak.to_list(events))
-
-    # Keep only our desired columns (those that exist)
-    keep_cols = [c for c in cols if c in df.columns]
-    df = df[keep_cols]
+        print("[INFO] Loading parquet in parallel with Dask workers using pyarrow")
+        client = Client.current()
+        futures = client.map(_load_parquet_file_to_df, parquet_files, columns=available)
+        parts = client.gather(futures)
+        df = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=available)
+    else:
+        parts = [_load_parquet_file_to_df(parquet_file, available) for parquet_file in parquet_files]
+        df = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=available)
 
     print(f"[INFO] Loaded {len(df)} rows from {directory}\n")
     return df
+
+
+def _load_parquet_file_to_df(parquet_file: str, columns: list[str]) -> pd.DataFrame:
+    table = pq.read_table(parquet_file, columns=columns)
+    return table.to_pandas()
 
 
 def _with_occurrence_index(df: pd.DataFrame, label: str) -> pd.DataFrame:
@@ -310,6 +531,7 @@ def compare_two_dirs(
     category: Optional[str] = None,
     region: Optional[str] = None,
     process: str = "data",
+    use_gateway: bool = False,
 ) -> None:
     """
     Compare two directories of parquet files by (run, luminosityBlock, event).
@@ -323,10 +545,22 @@ def compare_two_dirs(
       dimuon_eta_1, dimuon_eta_2, delta_dimuon_eta
     """
     print(f"[INFO] Loading directory 1: {dir1}")
-    df1 = load_dir_to_df(dir1, category=category, region=region, process=process)
+    df1 = load_dir_to_df(
+        dir1,
+        category=category,
+        region=region,
+        process=process,
+        use_gateway=use_gateway,
+    )
 
     print(f"[INFO] Loading directory 2: {dir2}")
-    df2 = load_dir_to_df(dir2, category=category, region=region, process=process)
+    df2 = load_dir_to_df(
+        dir2,
+        category=category,
+        region=region,
+        process=process,
+        use_gateway=use_gateway,
+    )
 
     df1 = _with_occurrence_index(df1, f"dir1 ({dir1})")
     df2 = _with_occurrence_index(df2, f"dir2 ({dir2})")
@@ -346,46 +580,21 @@ def compare_two_dirs(
     c1 = df1.loc[common_idx]
     c2 = df2.loc[common_idx]
 
-    rows: List[dict] = []
+    shared_vars = [var for var in SYNCVARLIST if var in c1.columns and var in c2.columns]
+    if _is_data_sync_source(dir1) or _is_data_sync_source(dir2):
+        shared_vars = [var for var in shared_vars if var not in WEIGHT_LIKE_VARS]
 
-    for idx in common_idx:
-        row1 = c1.loc[idx]
-        row2 = c2.loc[idx]
-
-        record = {
-            "run": idx[0],
-            "luminosityBlock": idx[1],
-            "event": idx[2],
-            "_sync_instance": idx[3],
-        }
-
-        mismatch = False
-
-        for var in SYNCVARLIST:
-            if var not in row1 or var not in row2:
-                continue
-
-            v1 = row1[var]
-            v2 = row2[var]
-            delta = v2 - v1
-
-            record[f"{var}_1"] = v1
-            record[f"{var}_2"] = v2
-            record[f"delta_{var}"] = delta
-
-            if abs(delta) > tolerance:
-                mismatch = True
-
-        if mismatch:
-            rows.append(record)
-
-    if not rows:
-        print("[INFO] No mismatches found (within tolerance).")
-        return
-
-    df_out = pd.DataFrame(rows)
-    df_out.to_csv(out_path, index=False)
-    print(f"[INFO] Wrote {len(df_out)} mismatching events to {out_path}")
+    _build_diff_output(
+        left_df=c1,
+        right_df=c2,
+        variables=shared_vars,
+        tolerance=tolerance,
+        out_path=out_path,
+        common_idx=common_idx,
+        only1_count=len(only1),
+        only2_count=len(only2),
+        comparison_label=f"{dir1} vs {dir2}",
+    )
 
 
 def parse_sync_txt(path: str) -> pd.DataFrame:
@@ -525,38 +734,17 @@ def compare_two_sync_txt(
     else:
         vars_to_check = [c for c in c1.columns if c in c2.columns]
 
-    rows = []
-    for idx in common_idx:
-        r1 = c1.loc[idx]
-        r2 = c2.loc[idx]
-
-        mismatch = False
-        rec = {
-            "run": idx[0],
-            "luminosityBlock": idx[1],
-            "event": idx[2],
-            "_sync_instance": idx[3],
-        }
-
-        for v in vars_to_check:
-            v1 = float(r1[v])
-            v2 = float(r2[v])
-            d = v2 - v1
-            rec[f"{v}_1"] = v1
-            rec[f"{v}_2"] = v2
-            rec[f"delta_{v}"] = d
-            if abs(d) > tolerance:
-                mismatch = True
-
-        if mismatch:
-            rows.append(rec)
-
-    if not rows:
-        print("[INFO] No mismatches found (within tolerance).")
-        return
-
-    pd.DataFrame(rows).to_csv(out_path, index=False)
-    print(f"[INFO] Wrote {len(rows)} mismatching events to {out_path}")
+    _build_diff_output(
+        left_df=c1,
+        right_df=c2,
+        variables=vars_to_check,
+        tolerance=tolerance,
+        out_path=out_path,
+        common_idx=common_idx,
+        only1_count=len(only1),
+        only2_count=len(only2),
+        comparison_label=f"{txt1} vs {txt2}",
+    )
     return
 
 
@@ -690,6 +878,20 @@ def parse_args():
         default="data",
         help="Process name passed to selection.applyRegionCatCuts (default: 'data').",
     )
+    parser.add_argument(
+        "--use_gateway",
+        dest="use_gateway",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="If true, read parquet files in parallel on a Dask Gateway client using ak.from_parquet on workers.",
+    )
+    parser.add_argument(
+        "--cluster_index",
+        dest="cluster_index",
+        default=0,
+        type=int,
+        help="Index of the Dask Gateway cluster to connect to when --use_gateway is enabled.",
+    )
     return parser.parse_args()
 
 
@@ -699,87 +901,95 @@ def parse_args():
 def main():
     args = parse_args()
     dirs = args.dirs
+    client = None
 
-    client = get_dask_client()
+    if args.use_gateway:
+        print(f"[INFO] Connecting to Dask Gateway cluster index {args.cluster_index}")
+        client = get_dask_client(use_gateway=True, cluster_index=args.cluster_index)
+        print(f"[INFO] Connected Dask client: {client}")
 
-    if len(dirs) == 1:
-        print("[INFO] Single directory provided: dumping sync txt file.")
-        directory = dirs[0]
-        print(f"[INFO] Loading directory: {directory}")
-        if args.out is None:
-            out_path = Path(directory.rstrip("/")).name + "_sync.txt"
-            out_path = Path(out_path)
+    try:
+        if len(dirs) == 1:
+            print("[INFO] Single directory provided: dumping sync txt file.")
+            directory = dirs[0]
+            print(f"[INFO] Loading directory: {directory}")
+            if args.out is None:
+                out_path = Path(directory.rstrip("/")).name + "_sync.txt"
+                out_path = Path(out_path)
+            else:
+                out_path = Path(args.out)
+
+            print(f"[INFO] Output path: {out_path}")
+            df = load_dir_to_df(
+                directory,
+                category=args.category,
+                region=args.region,
+                process=args.process,
+                use_gateway=args.use_gateway,
+            )
+            dump_single_dir_sync(df, out_path)
+
+        elif len(dirs) == 2:
+            file1, file2 = (str(item).strip() for item in dirs)
+
+            def normalize_input_path(path: str) -> str:
+                cleaned = path.strip()
+                if cleaned.endswith(".jsonn"):
+                    candidate = cleaned[:-1]
+                    if os.path.exists(candidate):
+                        print(f"[DEBUG] repaired suspicious .jsonn suffix: {cleaned!r} -> {candidate!r}")
+                        return candidate
+                return cleaned
+
+            file1 = normalize_input_path(file1)
+            file2 = normalize_input_path(file2)
+
+            out_path = Path(args.out) if args.out else Path("sync_txt_diff.txt")
+
+            print(f"[DEBUG] normalized input 1: {file1!r}")
+            print(f"[DEBUG] normalized input 2: {file2!r}")
+
+            # If both are text dumps -> compare text files
+            if (str(file1).endswith(".txt")) and (str(file2).endswith(".txt")):
+                compare_two_sync_txt(
+                    txt1=file1,
+                    txt2=file2,
+                    out_path=out_path,
+                    tolerance=args.tolerance,
+                )
+                return
+
+            # If both are cutflow json files -> compare json files
+            if str(file1).endswith(".json") and str(file2).endswith(".json"):
+                print("[DEBUG] entering cutflow JSON comparison branch")
+                compare_two_cutflow_json(
+                    json1=file1,
+                    json2=file2,
+                    out_path=out_path,
+                    tolerance=args.tolerance,
+                )
+                return
+
+            # Otherwise treat as directories (existing behavior)
+            print("[DEBUG] falling back to directory/parquet comparison branch")
+            dir1, dir2 = file1, file2
+
+            compare_two_dirs(
+                dir1=dir1,
+                dir2=dir2,
+                out_path=out_path,
+                tolerance=args.tolerance,
+                category=args.category,
+                region=args.region,
+                process=args.process,
+                use_gateway=args.use_gateway,
+            )
+
         else:
-            out_path = Path(args.out)
-
-        print(f"[INFO] Output path: {out_path}")
-        df = load_dir_to_df(
-            directory,
-            category=args.category,
-            region=args.region,
-            process=args.process,
-        )
-        dump_single_dir_sync(df, out_path)
-
-    elif len(dirs) == 2:
-        file1, file2 = (str(item).strip() for item in dirs)
-
-        def normalize_input_path(path: str) -> str:
-            cleaned = path.strip()
-            if cleaned.endswith(".jsonn"):
-                candidate = cleaned[:-1]
-                if os.path.exists(candidate):
-                    print(f"[DEBUG] repaired suspicious .jsonn suffix: {cleaned!r} -> {candidate!r}")
-                    return candidate
-            return cleaned
-
-        file1 = normalize_input_path(file1)
-        file2 = normalize_input_path(file2)
-
-        out_path = Path(args.out) if args.out else Path("sync_txt_diff.txt")
-
-        print(f"[DEBUG] normalized input 1: {file1!r}")
-        print(f"[DEBUG] normalized input 2: {file2!r}")
-
-        # If both are text dumps -> compare text files
-        if (str(file1).endswith(".txt")) and (str(file2).endswith(".txt")):
-            compare_two_sync_txt(
-                txt1=file1,
-                txt2=file2,
-                out_path=out_path,
-                tolerance=args.tolerance,
-            )
-            return
-
-        # If both are cutflow json files -> compare json files
-        if str(file1).endswith(".json") and str(file2).endswith(".json"):
-            print("[DEBUG] entering cutflow JSON comparison branch")
-            compare_two_cutflow_json(
-                json1=file1,
-                json2=file2,
-                out_path=out_path,
-                tolerance=args.tolerance,
-            )
-            return
-
-        # Otherwise treat as directories (existing behavior)
-        print("[DEBUG] falling back to directory/parquet comparison branch")
-        dir1, dir2 = file1, file2
-
-        compare_two_dirs(
-            dir1=dir1,
-            dir2=dir2,
-            out_path=out_path,
-            tolerance=args.tolerance,
-            category=args.category,
-            region=args.region,
-            process=args.process,
-        )
-
-    else:
-        raise SystemExit("Please provide one or two directories.")
-
-    close_dask_client()
+            raise SystemExit("Please provide one or two directories.")
+    finally:
+        if client is not None:
+            close_dask_client()
 
 
 if __name__ == "__main__":
