@@ -808,6 +808,19 @@ years:
           - null
 
     DY:
+      dy_M-50_aMCatNLO:
+        skip_sample: False
+        datasets:
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016/UL2016/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODv9
+        cross_section_pb: 6077.22
+        cross_section_source: null
+        kfactor:
+          value: 1.0
+          source: null
+        filter_efficiency: 1.0
+        references:
+          - null
+
       dy_VBF_filter:
         skip_sample: False
         datasets:
@@ -1162,7 +1175,7 @@ years:
       dy_M-50_aMCatNLO:
         skip_sample: False
         datasets:
-          - /eos/purdue/store/user/rasharma/Run2_CustomNanoAODv12/haddedv2/UL2016preVFP/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODAPVv9
+          - /eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_2016APV/UL2016APV/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL16NanoAODAPVv9
         cross_section_pb: 6077.22
         cross_section_source: null
         kfactor:

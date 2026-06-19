@@ -18,11 +18,6 @@ import matplotlib
 import copy
 from distributed import LocalCluster, Client, progress
 
-
-
-# Add the parent directory to the system path
-main_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")) # in order to import plotDataMC_compare
-sys.path.append(main_dir)
 from src.lib.histogram.plotting import plotDataMC_compare
 
 # def plotHemVetoValidation(compute_dict, save_fname, hem_veto_on=False):
@@ -229,10 +224,11 @@ if __name__ == "__main__":
         "is_HemRegion",
     ]
     # label = "HemVetoStudy_04Apr2025"
-    label = "HemVetoStudy_Dec16_2025" # nanoAODv12
-    
+    # label = "HemVetoStudy_Dec16_2025" # nanoAODv12
+    label = args.label
     year="2018"
-    load_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
+    # load_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
+    load_path = f"/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
 
     # data2load = ['data_A', 'data_B', 'data_C', 'data_D']
     # # data2load = ['data_C', 'data_B']
