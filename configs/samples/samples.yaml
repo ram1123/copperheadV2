@@ -4,19 +4,22 @@ background:
     groups:
         DY:
             processes:
-                # - dyTo2L_M-50_incl
-                - dy_M-100To200_MiNNLO
-                - dyTo2L_M-50_aMCatNLO
-                - dy_M-50_aMCatNLO
-                - dy_VBF_filter
-                # - dyTo2Mu_MLL_10To50
-                # - dyTo2Mu_MLL_50To120
-                # - dyTo2Mu_MLL_120To200
+                - dyTo2L_M-50_incl
             processes_per_year:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
-                # 2017:
-                    # - dyTo2L_M-50_aMCatNLO
+                2018:
+                    - dyTo2L_M-50_aMCatNLO
+                2017:
+                    - dyTo2L_M-50_aMCatNLO
+                2016postVFP:
+                    - dyTo2L_M-50_aMCatNLO
+                2016preVFP:
+                    - dyTo2L_M-50_aMCatNLO
+        DYVBF:
+            processes:
+                - dy_VBF_filter
+            processes_per_year: {}
 
         TT:
             processes:
@@ -30,41 +33,83 @@ background:
                 - st_tw_antitop
                 - st_t_top
                 - st_t_antitop
-            processes_per_year: {}
+            processes_per_year:
+                2022preEE: {}
+                2022postEE: {}
+                2023: {}
+                2023BPix: {}
+                2024: {}
 
         EWK:
             processes:
                 # - ewk_lljj_mll105_160_ptj0
                 # - ewk_lljj_mll105_160_py_dipole
-                - ewk_lljj_mll50_mjj120
+                # - ewk_lljj_mll50_mjj120
                 # - ewk_lljj
-                - ewk_mmjj
-                - ewk_zlljj
+                - ewk_mmjj_mll_105_160
             processes_per_year:
                 2022preEE:
-                    - ewk_lljj
+                    - ewk_mmjj_mll_105_160
                 2022postEE:
-                    - ewk_lljj
+                    - ewk_mmjj_mll_105_160
                 2023:
-                    - ewk_lljj
+                    - ewk_mmjj_mll_105_160
                 2023BPix:
-                    - ewk_lljj
+                    - ewk_mmjj_mll_105_160
+                2018:
+                    - ewk_zlljj
+                2017:
+                    - ewk_zlljj
+                2016postVFP:
+                    - ewk_zlljj
+                2016preVFP:
+                    - ewk_zlljj
         VV:
             processes:
                 - ww_2l2nu
                 - wz_3lnu
                 - wz_2l2q
                 - wz_1l1nu2q
-                - zz
-            processes_per_year: {}
-
-        # VVV:
-        #     processes:
-        #         - www
-        #         - wwz
-        #         - wzz
-        #         - zzz
-        #     processes_per_year: {}
+                - zz_2l2nu
+                - zz_2l2q
+                - zz_4l
+                # - zz
+            processes_per_year:
+                2018:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+                2017:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+                2016postVFP:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+                2016preVFP:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+        VVV:
+            processes:
+                - www
+                - wwz
+                - wzz
+                - zzz
+            processes_per_year:
+                2022preEE: {}
+                2022postEE: {}
+                2023: {}
+                2023BPix: {}
 
 # --------------------------------------------------
 
