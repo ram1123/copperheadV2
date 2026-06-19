@@ -112,4 +112,7 @@ AAA_ERROR_FRAGMENTS = (
     "No servers have access to the file",
     "[ERROR] Socket timeout",
     "[ERROR] Server responded with an error",
+    "OSError: Failed to open file",
+    "Failed to open file",
+    "Operation expired",
 )

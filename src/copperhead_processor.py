@@ -2632,7 +2632,6 @@ class EventProcessor(processor.ProcessorABC):
                 "puId",
                 "jetId",
                 "qgl",
-                "rho",
                 "area",
                 "btagDeepB",
                 "btagPNetB",
