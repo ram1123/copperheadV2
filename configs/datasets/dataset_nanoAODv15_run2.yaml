@@ -122,6 +122,16 @@ years:
                 references:
                     - null
 
+            dyTo2Mu_M-50_MiNNLO:
+              skip_sample: False
+              datasets:
+                - /DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
+              cross_section_pb: 1976
+              cross_section_source: null
+              kfactor: { value: 1.0, source: null }
+              filter_efficiency: null
+              references: [null]
+
             dyTo2Mu_M-200to400_MiNNLO:
                 skip_sample: True
                 datasets:
@@ -733,6 +743,16 @@ years:
           filter_efficiency: null
           references: [null]
 
+        dyTo2Mu_M-50_MiNNLO:
+          skip_sample: False
+          datasets:
+            - /DYJetsToMuMu_M-50_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv15-150X_mc2018_realistic_v1-v1/NANOAODSIM
+          cross_section_pb: 1976
+          cross_section_source: null
+          kfactor: { value: 1.0, source: null }
+          filter_efficiency: null
+          references: [null]
+
         dyTo2Mu_M-200to400_MiNNLO:
           skip_sample: True
           datasets: []
@@ -1185,9 +1205,19 @@ years:
 
         dyTo2Mu_M-100to200_MiNNLO:
           skip_sample: False
-          datasets: []
-          note: Missing in samples.md for 2016postVFP UL
+          datasets:
+            - /DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
           cross_section_pb: 77.95
+          cross_section_source: null
+          kfactor: { value: 1.0, source: null }
+          filter_efficiency: null
+          references: [null]
+
+        dyTo2Mu_M-50_MiNNLO:
+          skip_sample: False
+          datasets:
+            - /DYJetsToMuMu_M-50_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
+          cross_section_pb: 1976
           cross_section_source: null
           kfactor: { value: 1.0, source: null }
           filter_efficiency: null
@@ -1578,9 +1608,19 @@ years:
 
         dyTo2Mu_M-100to200_MiNNLO:
           skip_sample: False
-          datasets: []
-          note: Missing in samples.md for 2016preVFP UL
+          datasets:
+            - /DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v1/NANOAODSIM
           cross_section_pb: 77.95
+          cross_section_source: null
+          kfactor: { value: 1.0, source: null }
+          filter_efficiency: null
+          references: [null]
+
+        dyTo2Mu_M-50_MiNNLO:
+          skip_sample: False
+          datasets:
+            - /DYJetsToMuMu_M-50_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v1/NANOAODSIM
+          cross_section_pb: 1976
           cross_section_source: null
           kfactor: { value: 1.0, source: null }
           filter_efficiency: null
