@@ -69,20 +69,46 @@ def discover_shape_systs(fields, prefixes=None):
                 break
     return sorted(suffixes)
 
+SHIFTED_SELECTION_VARIABLES = {
+    "njets",
+    "nBtagLoose",
+    "nBtagMedium",
+    "jj_mass",
+    "jj_dEta",
+    "jet1_pt",
+}
+
+NOMINAL_SELECTION_VARIABLES = {
+    "dimuon_mass",
+    "event",
+    "gjj_mass",
+    "nfatJets_drmuon",
+    "MET_pt",
+}
+
+
 def resolve_variation_field(base, variation, fields):
-    use_var = "nominal" if variation.startswith("wgt") else variation
-    candidates = [f"{base}_{use_var}", f"{base}_nominal", base]
-    for cand in candidates:
-        if cand in fields:
-            return cand
-    raise KeyError(
-        f"Selection/feature field '{base}' for variation '{variation}' is unavailable. Tried: {candidates}"
-    )
+    if base in NOMINAL_SELECTION_VARIABLES:
+        if base in fields:
+            return base
+        raise KeyError(f"Missing nominal selection field '{base}'")
+
+    if base in SHIFTED_SELECTION_VARIABLES:
+        use_var = "nominal" if variation == "nominal" or variation.startswith("wgt") else variation
+        candidate = f"{base}_{use_var}"
+        if candidate in fields:
+            return candidate
+        raise KeyError(
+            f"Selection field '{candidate}' for variation '{variation}' is unavailable."
+        )
+
+    raise KeyError(f"Unknown selection variable '{base}'")
 
 
 def columns_for_selection(category, variation, fields):
     # minimal columns for cuts; add here if your selection changes
     base_names = [
+        "event",
         "dimuon_mass",
         "njets",
         "nBtagLoose",
@@ -90,10 +116,11 @@ def columns_for_selection(category, variation, fields):
         "jj_mass",
         "jj_dEta",
         "jet1_pt",
+        "gjj_mass",
+        "nfatJets_drmuon",
+        "MET_pt",
     ]
-    cols = ["event", "gjj_mass", "nfatJets_drmuon", "MET_pt"]
-    cols.extend(resolve_variation_field(name, variation, fields) for name in base_names)
-    return cols
+    return [resolve_variation_field(name, variation, fields) for name in base_names]
 
 
 class DNNWrapper(torch_wrapper):
@@ -163,18 +190,32 @@ def prepare_features(events, features, variation="nominal"):
     return features_var
 
 
-def feature_name_for_variation(feat, variation, fields):
-    # For weight-only variations, features must stay at nominal.
-    # Also protect soft-drop features; fall back gracefully.
-    if variation.startswith("wgt"):
+def feature_name_for_variation(
+    feat,
+    variation,
+    fields,
+    allow_nominal_fallback=False,
+    nominal_only_features=None,
+):
+    """Resolve DNN inputs; default caller passes nominal to match sideHustle5."""
+    if variation == "nominal" or variation.startswith("wgt"):
+        use_var = "nominal"
+    elif "soft" in feat:
         use_var = "nominal"
     else:
-        use_var = "nominal" if "soft" in feat else variation
+        use_var = variation
+
     candidates = [f"{feat}_{use_var}", f"{feat}_nominal", feat]
     for c in candidates:
         if c in fields:
             return c
-    raise KeyError(f"Feature {feat} (var={variation}) not found in fields.")
+    if allow_nominal_fallback:
+        return feat
+    raise KeyError(
+        f"Feature {feat} (var={variation}) not found in fields. "
+        f"Tried: {candidates}. "
+        "DNN inputs are resolved to nominal fields for all variations."
+    )
 
 
 def getFoldFilter(events, fold_vals, nfolds):
@@ -235,7 +276,13 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         score_name,
         no_variations=False,
         do_vbf_filter_study=False,
+        allow_nominal_feature_fallback=True,
+        use_nominal_dnn_features_for_systs=True,
     ):
+        NO_SCALE_FEATURES = {
+            "year",
+            "nsoftjets5_nominal",
+        }
         self.training_features = training_features
         self.scalers = scalers
         self.model_paths = model_paths
@@ -243,41 +290,76 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.score_name = score_name
         self.no_variations = no_variations
         self.do_vbf_filter_study = do_vbf_filter_study
-        self.no_scale_features = {"year", "nsoftjets5_nominal"}
+        self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
+        self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
+        self.no_scale_features = NO_SCALE_FEATURES
 
     def evaluate_scores(self, events, variation):
         fields = set(events.fields)
         event_numbers = ak.to_numpy(ak.materialize(events.event))
+        n_events = len(events)
         columns = {}
         for feature in self.training_features:
-            source = feature_name_for_variation(feature, variation, fields)
+            source = feature_name_for_variation(
+                feature,
+                variation,
+                fields,
+                allow_nominal_fallback=self.allow_nominal_feature_fallback,
+                nominal_only_features=self.no_scale_features,
+            )
+            logger.debug(
+                "DNN feature mapping: variation=%s, feature=%s -> source=%s",
+                variation,
+                feature,
+                source,
+            )
             values = ak.materialize(events[source])
             fill_value = -10.0 if "phi" in feature else 0.0
             values = ak.fill_none(values, fill_value)
-            columns[feature] = ak.to_numpy(values).astype(np.float32)
+            columns[feature] = ak.to_numpy(values)
 
-        logits = np.full(len(events), -99.0, dtype=np.float32)
+        nan_val = -99.0
+        input_columns = {
+            feature: np.full(n_events, nan_val, dtype=np.float64)
+            for feature in self.training_features
+        }
+        for fold in range(self.nfolds):
+            fold_mask = (event_numbers % self.nfolds) == ((fold + 3) % self.nfolds)
+            scaler = self.scalers[fold]
+            missing_in_scaler = [
+                feature
+                for feature in self.training_features
+                if feature not in scaler and feature not in self.no_scale_features
+            ]
+            if missing_in_scaler:
+                raise ValueError(
+                    "Features "
+                    f"{missing_in_scaler} are missing in scaler and not in "
+                    "NO_SCALE_FEATURES!"
+                )
+
+            for feature in self.training_features:
+                values = columns[feature]
+                if feature in scaler and feature not in self.no_scale_features:
+                    mean, std = scaler[feature]
+                    values = (values - mean) / std
+                input_columns[feature][fold_mask] = values[fold_mask]
+
+        inputs = np.column_stack(
+            [input_columns[feature] for feature in self.training_features]
+        ).astype(np.float32)
+
+        logits = np.full(n_events, nan_val, dtype=np.float32)
         torch.set_num_threads(1)
         for fold in range(self.nfolds):
             fold_mask = (event_numbers % self.nfolds) == ((fold + 3) % self.nfolds)
             if not np.any(fold_mask):
                 continue
 
-            scaled_columns = []
-            scaler = self.scalers[fold]
-            for feature in self.training_features:
-                values = columns[feature][fold_mask]
-                if feature in scaler and feature not in self.no_scale_features:
-                    mean, std = scaler[feature]
-                    values = (values - mean) / std
-                scaled_columns.append(values)
-
-            inputs = np.column_stack(scaled_columns).astype(np.float32)
-            inputs = np.nan_to_num(inputs, nan=0.0, posinf=0.0, neginf=0.0)
             model = load_torchscript_model(self.model_paths[fold])
             with torch.inference_mode():
                 fold_logits = model(torch.from_numpy(inputs)).reshape(-1).numpy()
-            logits[fold_mask] = fold_logits
+            logits[fold_mask] = fold_logits[fold_mask]
 
         probabilities = torch.sigmoid(torch.from_numpy(logits)).numpy()
         return np.arctanh(np.clip(probabilities, 0.0, 0.999999))
@@ -336,7 +418,9 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if not variation:
                 continue
 
-            feature_variation = "nominal" if variation.startswith("wgt") else variation
+            feature_variation = (
+                "nominal" if self.use_nominal_dnn_features_for_systs else variation
+            )
             region_events = selection.applyRegionCatCuts(
                 events,
                 process=sample_type,
@@ -498,6 +582,28 @@ if __name__ == "__main__":
         action="store",
         help="Number of folds for cross-validation (default: 4)",
     )
+    parser.add_argument(
+        "--allow_nominal_feature_fallback",
+        dest="allow_nominal_feature_fallback",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Allow shape variations to use nominal DNN input features when the "
+            "shifted feature branch is missing. Enabled by default to match "
+            "the sideHustle5 nominal-DNN-input resolution scheme."
+        ),
+    )
+    parser.add_argument(
+        "--use_nominal_dnn_features_for_systs",
+        dest="use_nominal_dnn_features_for_systs",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Use nominal DNN input features for systematic variations while "
+            "still applying shifted event selection and weights. This is the "
+            "default and matches the sideHustle5 resolution scheme."
+        ),
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -575,8 +681,8 @@ if __name__ == "__main__":
         scaler_path = model_trained_path / f"scalers_{fold}.npz"
         with np.load(scaler_path, allow_pickle=True) as scaler_file:
             features = [str(feature) for feature in scaler_file["features"]]
-            means = scaler_file["mean"].astype(np.float32)
-            stds = scaler_file["std"].astype(np.float32)
+            means = scaler_file["mean"].astype(np.float64)
+            stds = scaler_file["std"].astype(np.float64)
         scalers.append(dict(zip(features, zip(means, stds))))
         model_paths.append(
             (training_dir / f"fold{fold}" / "best_torchscript.pt").as_posix()
@@ -621,6 +727,8 @@ if __name__ == "__main__":
                 score_name=f"score_{args.label}",
                 no_variations=args.no_variations,
                 do_vbf_filter_study=args.do_vbf_filter_study,
+                allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
+                use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
             ),
         )
         t5 = time.perf_counter()
