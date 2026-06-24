@@ -16,7 +16,7 @@ from coffea.ml_tools.torch_wrapper import torch_wrapper
 from coffea.nanoevents import BaseSchema
 from modules import selection
 from modules.dask_utils import get_dask_client
-from modules.utils import get_compacted_path, logger
+from modules.utils import get_compacted_path, logger, fillEventNans
 from modules.sample_config import get_bkg_sig_dicts
 
 
@@ -105,22 +105,40 @@ def resolve_variation_field(base, variation, fields):
     raise KeyError(f"Unknown selection variable '{base}'")
 
 
-def columns_for_selection(category, variation, fields):
+# def columns_for_selection(category, variation, fields):
+#     # minimal columns for cuts; add here if your selection changes
+#     base_names = [
+#         "event",
+#         "dimuon_mass",
+#         "njets",
+#         "nBtagLoose",
+#         "nBtagMedium",
+#         "jj_mass",
+#         "jj_dEta",
+#         "jet1_pt",
+#         "gjj_mass",
+#         "nfatJets_drmuon",
+#         "MET_pt",
+#     ]
+#     return [resolve_variation_field(name, variation, fields) for name in base_names]
+
+def columns_for_selection(category, variation):
     # minimal columns for cuts; add here if your selection changes
-    base_names = [
-        "event",
+    use_var = "nominal" if variation.startswith("wgt") else variation
+    base = [
         "dimuon_mass",
-        "njets",
-        "nBtagLoose",
-        "nBtagMedium",
-        "jj_mass",
-        "jj_dEta",
-        "jet1_pt",
+        "event",
+        f"njets_{use_var}",
         "gjj_mass",
+        f"nBtagLoose_{use_var}",
+        f"nBtagMedium_{use_var}",
+        f"jj_mass_{use_var}",
+        f"jj_dEta_{use_var}",
+        f"jet1_pt_{use_var}",
         "nfatJets_drmuon",
         "MET_pt",
     ]
-    return [resolve_variation_field(name, variation, fields) for name in base_names]
+    return base
 
 
 class DNNWrapper(torch_wrapper):
@@ -361,12 +379,26 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 fold_logits = model(torch.from_numpy(inputs)).reshape(-1).numpy()
             logits[fold_mask] = fold_logits[fold_mask]
 
-        probabilities = torch.sigmoid(torch.from_numpy(logits)).numpy()
-        return np.arctanh(np.clip(probabilities, 0.0, 0.999999))
+        # probabilities = torch.sigmoid(torch.from_numpy(logits)).numpy()
+        has_non_finite = not np.isfinite(logits).all()
+        # if has_non_finite:
+        #     raise ValueError("Found non-finite values in logits. This may indicate a problem with the model or input data.")
+        finite_mask = np.isfinite(logits)
+        logits = np.where(finite_mask, logits, nan_val)
+        dnn_score = sigmoid_ak(logits)
+        # valid_mask = logits != nan_val
+        # dnn_score = np.where(valid_mask, dnn_score, nan_val)
+        # dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
+        # dnn_score = np.where(valid_mask, dnn_score, nan_val)
+        # # return np.arctanh(np.clip(probabilities, 0.0, 0.999999))
+        # return dnn_score
+        return np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
+
 
     def process(self, events):
         sample_type = events.metadata["dataset"]
         year = events.metadata["year"]
+        # events["MET_pt"] = events["PuppiMET_pt"]
         fields = set(events.fields)
 
         if "data" in sample_type:
@@ -417,19 +449,58 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             variation = get_variation(weight_variation, syst_variation)
             if not variation:
                 continue
+            category= "vbf"
+            sel_cols = columns_for_selection(category, variation)
+            needed_cols = set(sel_cols + [weight_variation])
 
+            # ----------------------------------
+            for feature in self.training_features:
+                source = feature_name_for_variation(
+                    feature,
+                    variation,
+                    fields,
+                    allow_nominal_fallback=self.allow_nominal_feature_fallback,
+                    nominal_only_features=self.no_scale_features,
+                )
+                needed_cols.add(source)
+
+            needed_cols4print = sorted(needed_cols)
+            needed_cols = needed_cols & set(events.fields) # merge with existing fields
+            needed_cols = sorted(needed_cols)
+            # ----------------------------------
+            debug_variations = {
+                "Absolute_2017_up",
+                "Absolute_up",
+                "BBEC1_2017_up",
+                "BBEC1_up",
+                "EC2_2017_up",
+                "EC2_up",
+                "FlavorQCD_up",
+                "HF_up",
+                "RelativeBal_down",
+                "RelativeBal_up",
+                "RelativeSample_2017_down",
+                "RelativeSample_2017_up",
+                "Total_up",
+            }
+            # if variation in debug_variations:
             feature_variation = (
                 "nominal" if self.use_nominal_dnn_features_for_systs else variation
             )
+            filtered_events = events[needed_cols]
+            fields = filtered_events.fields
+            # if variation in debug_variations:
+            #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {fields}")
             region_events = selection.applyRegionCatCuts(
-                events,
+                filtered_events,
                 process=sample_type,
-                category="vbf",
+                category=category,
                 region_name=region,
                 do_vbf_filter_study=self.do_vbf_filter_study,
                 variation=variation,
-                year=year,
+                # year=year,
             )
+            region_events = fillEventNans(region_events, category=category)
             if region == "h-sidebands":
                 region_events = ak.with_field(
                     region_events,
@@ -589,8 +660,7 @@ if __name__ == "__main__":
         action=argparse.BooleanOptionalAction,
         help=(
             "Allow shape variations to use nominal DNN input features when the "
-            "shifted feature branch is missing. Enabled by default to match "
-            "the sideHustle5 nominal-DNN-input resolution scheme."
+            "shifted feature branch is missing."
         ),
     )
     parser.add_argument(
@@ -600,8 +670,10 @@ if __name__ == "__main__":
         action=argparse.BooleanOptionalAction,
         help=(
             "Use nominal DNN input features for systematic variations while "
-            "still applying shifted event selection and weights. This is the "
-            "default and matches the sideHustle5 resolution scheme."
+            "still applying shifted event selection and weights. Enabled by "
+            "default to avoid DNN score migration from shifted input features. "
+            "Use --no-use_nominal_dnn_features_for_systs to try shifted DNN "
+            "feature branches first, with nominal/base fallback."
         ),
     )
     args = parser.parse_args()
@@ -649,6 +721,7 @@ if __name__ == "__main__":
     logger.info(f"Histograms will be saved to: {hist_save_path}")
 
     full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
+    # full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=[], sig_samples=["GGH"], bkg_samples=[], do_vbf_filter_study=args.do_vbf_filter_study)
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
     logger.info(f"full_sample_dict: {full_sample_dict.keys()}")

@@ -1,7 +1,6 @@
 import numpy as np
 import awkward as ak
 import pandas as pd
-from modules.classify_year import is_run3
 
 
 def filterRegion(events, region="h-peak"):
@@ -45,7 +44,6 @@ def applyRegionCatCuts(
     do_VH_veto: bool = False,
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
-    year: str | None = None,
 ):
     use_var = (
         "nominal"
@@ -144,18 +142,16 @@ def applyRegionCatCuts(
             )
 
     if do_vbf_filter_study:
-        process_lower = process.lower()
-        if process_lower.startswith("dy"):
-            gjj_threshold = 300 if (year is not None and is_run3(year)) else 350
-            vbf_filter = ak.fill_none((events.gjj_mass > gjj_threshold), value=False)
-            is_vbf_filter = "dy_vbf_filter" in process_lower
+        if process.startswith("dy"):
+            vbf_filter = ak.fill_none((events.gjj_mass > 350), value=False)
+            is_vbf_filter = ("dy_VBF_filter" in process)
             if is_vbf_filter:
                 # print(f"applying VBF filter cut on: {process}")
 
                 prod_cat_cut = prod_cat_cut & vbf_filter
             else:
                 prod_cat_cut = prod_cat_cut & (~vbf_filter)
-
+            print(f"[INFO] applying VBF filter cut for {process}!")
     # ---------------------------------------------------------
     #  Select events based on number of jets
     # ---------------------------------------------------------
@@ -223,129 +219,6 @@ def applyRegionCatCuts(
             jj_eta_mask = ak.fill_none(masks[jj_eta_region], value=False)
 
         prod_cat_cut = prod_cat_cut & jj_eta_mask
-
-    category_selection = prod_cat_cut & region
-    events = events[category_selection]
-    return events
-
-
-def applyRegionCatCutsByScore(
-    events,
-    category: str,
-    region_name: str,
-    process: str,
-    variation: str,
-    do_vbf_filter_study: bool = False,
-    year: str | None = None,
-    do_VH_veto: bool = False,
-    jj_eta_region: str = "all",
-    njets_selection: str = "inclusive",
-):
-    """
-    Apply the same region-level selection as `applyRegionCatCuts`, but assign
-    ggH/VBF categories using transformer scores instead of the cut-based VBF
-    definition.
-
-    Strategy:
-    - if transf_vbf_score > transf_ggh_score, tag as VBF
-    - otherwise tag as ggH
-    """
-    use_var = (
-        "nominal"
-        if (isinstance(variation, str) and variation.startswith("wgt"))
-        else variation
-    )
-
-    # Helper to fetch the right column, falling back to _nominal or base if needed
-    def varcol(base):
-        """
-        Fetch the appropriate column from the events object, handling variations.
-
-        Attempts to retrieve the column named '{base}_{use_var}', falling back to '{base}_nominal' and then '{base}'.
-        Raises a KeyError if none of these columns are present in events.fields.
-
-        Parameters
-        ----------
-        base : str
-            The base name of the column to retrieve.
-
-        Returns
-        -------
-        awkward.Array
-            The selected column from the events object.
-
-        Raises
-        ------
-        KeyError
-            If none of the candidate columns are found in events.fields.
-        """
-        # print(f"Fetching variable column for: {base}")
-        # print(f"Using variation: {use_var}")
-        for cand in (f"{base}_{use_var}", f"{base}_nominal", base):
-            if cand in events.fields:
-                return events[cand]
-        raise KeyError(
-            f"[selection] Missing required field for selection: tried {base}_{use_var}, {base}_nominal, {base}"
-        )
-
-    # do mass region cut
-    region, _ = filterRegion(events, region=region_name)
-
-    # --- category cuts: USE varcol(...) for JES/JER-affected columns ---
-    nbt_loose = varcol("nBtagLoose")
-    nbt_medium = varcol("nBtagMedium")
-    jj_mass = varcol("jj_mass")
-    jj_dEta = varcol("jj_dEta")
-    jet1_pt = varcol("jet1_pt")
-    njets = varcol("njets")
-
-    prod_cat_cut = ak.ones_like(region, dtype="bool")
-
-    required_fields = {"transf_vbf_score", "transf_ggh_score"}
-    missing_fields = sorted(required_fields - set(events.fields))
-    if missing_fields:
-        raise KeyError(
-            "Missing transformer score field(s) required for score-based "
-            f"categorization: {missing_fields}"
-        )
-
-    vbf_score = ak.fill_none(events["transf_vbf_score"], float("-inf"))
-    ggh_score = ak.fill_none(events["transf_ggh_score"], float("-inf"))
-    # is_vbf = ak.fill_none(vbf_score > ggh_score, value=False)
-    is_vbf = ak.fill_none((vbf_score/(vbf_score + ggh_score)) > 0.92522, value=False)
-    # is_vbf = ak.fill_none(vbf_score > 0.925, value=False)
-
-    if category == "nocat":
-        prod_cat_cut = prod_cat_cut  # no additional cut
-    else:
-        # NOTE: btag cut for VH and ttH categories
-        btagLoose_filter = ak.fill_none((nbt_loose >= 2), value=False)
-        btagMedium_filter = ak.fill_none((nbt_medium >= 1), value=False) & ak.fill_none(
-            (njets >= 2), value=False
-        )
-        btag_cut = btagLoose_filter | btagMedium_filter
-
-        if category == "vbf":
-            prod_cat_cut = prod_cat_cut & is_vbf
-            prod_cat_cut = prod_cat_cut & (~btag_cut)         
-        elif category == "ggh":
-            prod_cat_cut = prod_cat_cut & (~is_vbf)
-            prod_cat_cut = prod_cat_cut & (~btag_cut)        
-        else:
-            raise ValueError(
-                "Invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'."
-            )
-
-    if do_vbf_filter_study:
-        process_lower = process.lower()
-        if process_lower.startswith("dy"):
-            gjj_threshold = 300 if (year is not None and is_run3(year)) else 350
-            vbf_filter = ak.fill_none((events.gjj_mass > gjj_threshold), value=False)
-            is_vbf_filter = "dy_vbf_filter" in process_lower
-            if is_vbf_filter:
-                prod_cat_cut = prod_cat_cut & vbf_filter
-            else:
-                prod_cat_cut = prod_cat_cut & (~vbf_filter)
 
     category_selection = prod_cat_cut & region
     events = events[category_selection]
@@ -499,3 +372,369 @@ binning_DNN_HIG19006 = np.array([
 # binning = binning_HPScan_17bins
 # binning = binning_based_on_significanceScan
 binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
+
+
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May10_2026
+#     0.000000,
+#   0.518166,
+#   1.036333,
+#   1.554499,
+#   2.072665,
+#   2.590832,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May19_2026
+#     0.000000,
+#   0.574031,
+#   1.051195,
+#   1.528359,
+#   2.005523,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ # Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May10_2026
+#   (-7.254329-0.1),
+#   -6.287085,
+#   -1.450866,
+#   -0.483622,
+#   0.483622,
+#   1.450866,
+#   2.418110,
+#   5.319841,
+#   (7.254329+0.1),
+# ])
+
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_June01_2026
+#   0.000000,
+#   0.483622,
+#   0.967244,
+#   1.450866,
+#   1.934488,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc/stage3_datacards_June01_2026 NOTE: found it surprising that the results were same, but we checked the stage1 output and DNN model paths and they were correct
+#   0.000000,
+#   0.483622,
+#   0.967244,
+#   1.450866,
+#   1.934488,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc june 04 2026
+#   0.000000,
+#   0.164871,
+#   0.329742,
+#   0.494613,
+#   0.659484,
+#   0.824356,
+#   0.989227,
+#   1.154098,
+#   1.318969,
+#   1.483840,
+#   1.648711,
+#   1.813582,
+#   1.978453,
+#   (7.254329+0.1),
+# ])
+
+
+
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc june 04 2026
+#   0.000000,
+#   0.148048,
+#   0.296095,
+#   0.444143,
+#   0.592190,
+#   0.740238,
+#   0.888285,
+#   1.036333,
+#   1.184380,
+#   1.332428,
+#   1.480475,
+#   1.628523,
+#   1.776570,
+#   1.924618,
+#   2.072665,
+#   2.220713,
+#   (7.254329+0.1),
+# ])
+
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun07_2026_17Bins june 07 2026
+#   0.000000,
+#   0.127269,
+#   0.254538,
+#   0.381807,
+#   0.509076,
+#   0.636345,
+#   0.763614,
+#   0.890882,
+#   1.018151,
+#   1.145420,
+#   1.272689,
+#   1.399958,
+#   1.527227,
+#   1.654496,
+#   1.781765,
+#   1.909034,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun07_2026_21Bins june 07 2026
+#   0.000000,
+#   0.127269,
+#   0.190903,
+#   0.254538,
+#   0.318172,
+#   0.381807,
+#   0.509076,
+#   0.572710,
+#   0.699979,
+#   0.827248,
+#   0.954517,
+#   1.018151,
+#   1.145420,
+#   1.336324,
+#   1.463593,
+#   1.527227,
+#   1.654496,
+#   1.781765,
+#   1.909034,
+#   1.972668,
+#   2.099937,
+#   (7.254329+0.1),
+# ])
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll june 08 2026. it has 24 bins
+#   0.000000,
+#   0.102174,
+#   0.153260,
+#   0.204347,
+#   0.306521,
+#   0.357608,
+#   0.459781,
+#   0.510868,
+#   0.613042,
+#   0.715215,
+#   0.817389,
+#   0.919563,
+#   1.072823,
+#   1.174997,
+#   1.277171,
+#   1.430431,
+#   1.532605,
+#   1.685865,
+#   1.788039,
+#   1.941299,
+#   1.992386,
+#   2.043473,
+#   2.094560,
+#   2.196733,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll_17Bins june 08 2026. it has 17 bins
+#   0.000000,
+#   0.129542,
+#   0.259083,
+#   0.388625,
+#   0.518166,
+#   0.647708,
+#   0.777249,
+#   0.906791,
+#   1.036333,
+#   1.165874,
+#   1.295416,
+#   1.424957,
+#   1.554499,
+#   1.684041,
+#   1.813582,
+#   1.943124,
+#   2.202207,
+#   (7.254329+0.1),
+# ])
+
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll_7Bins june 08 2026. it has 7 bins
+#   0.000000,
+#   0.315406,
+#   0.630811,
+#   0.946217,
+#   1.261622,
+#   1.577028,
+#   1.892434,
+#   (7.254329+0.1),
+# ])
+
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_20nTrialsFoldsAll_Max40bins june 08 2026. it has 11 bins
+#   0.000000,
+#   0.190903,
+#   0.381807,
+#   0.572710,
+#   0.763614,
+#   0.954517,
+#   1.145420,
+#   1.336324,
+#   1.527227,
+#   1.718130,
+#   1.909034,
+#   (7.254329+0.1),
+# ])
+
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_Jun08_2026_50nTrialsFoldsAll_Max40bins june 08 2026. it has 11 bins
+#   0.000000,
+#   0.196063,
+#   0.392126,
+#   0.588189,
+#   0.784252,
+#   0.980315,
+#   1.176378,
+#   1.372441,
+#   1.568503,
+#   1.764566,
+#   1.960629,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc June 11 2026. max n bins 57
+#   0.000000,
+#   0.154347,
+#   0.308695,
+#   0.463042,
+#   0.617390,
+#   0.771737,
+#   0.926085,
+#   1.080432,
+#   1.234779,
+#   1.389127,
+#   1.543474,
+#   1.697822,
+#   1.852169,
+#   2.006516,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc June 11 2026. max n bins 57
+#   0.000000,
+#   0.148048,
+#   0.296095,
+#   0.444143,
+#   0.592190,
+#   0.740238,
+#   0.888285,
+#   1.036333,
+#   1.184380,
+#   1.332428,
+#   1.480475,
+#   1.628523,
+#   1.776570,
+#   1.924618,
+#   2.072665,
+#   2.220713,
+#   (7.254329+0.1),
+# ])
+
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc June 11 2026. max n bins 100
+#   0.000000,
+#   0.086361,
+#   0.172722,
+#   0.259083,
+#   0.345444,
+#   0.431805,
+#   0.604527,
+#   0.777249,
+#   0.949972,
+#   1.122694,
+#   1.209055,
+#   1.381777,
+#   1.554499,
+#   1.640860,
+#   1.727221,
+#   1.813582,
+#   1.986304,
+#   2.072665,
+#   2.159026,
+#   2.245387,
+#   (7.254329+0.1),
+# ])
+
+
+# binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc June 11 2026. max n bins 70
+#   0.000000,
+#   0.118923,
+#   0.237847,
+#   0.356770,
+#   0.475694,
+#   0.594617,
+#   0.713541,
+#   0.832464,
+#   0.951387,
+#   1.070311,
+#   1.189234,
+#   1.308158,
+#   1.427081,
+#   1.546004,
+#   1.664928,
+#   1.783851,
+#   1.902775,
+#   2.021698,
+#   2.259545,
+#   (7.254329+0.1),
+# ])
+
+# binning = np.array([ #  Run2_NanoV12_forVBFChannel_May15_2026_jetUnc June 11 2026. max n bins 70
+#   0.000000,
+#   0.103633,
+#   0.207267,
+#   0.310900,
+#   0.414533,
+#   0.518166,
+#   0.621800,
+#   0.725433,
+#   0.829066,
+#   0.932699,
+#   1.036333,
+#   1.139966,
+#   1.243599,
+#   1.347232,
+#   1.450866,
+#   1.554499,
+#   1.658132,
+#   1.865399,
+#   1.969032,
+#   2.176299,
+#   (7.254329+0.1),
+# ])
+
+binning = np.array([ #  Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc June 11 2026. max n bins 57
+  0.000000,
+  0.148048,
+  0.296095,
+  0.444143,
+  0.592190,
+  0.740238,
+  0.888285,
+  1.036333,
+  1.184380,
+  1.332428,
+  1.480475,
+  1.628523,
+  1.776570,
+  1.924618,
+  2.072665,
+  2.220713,
+  (7.254329+0.1),
+])
