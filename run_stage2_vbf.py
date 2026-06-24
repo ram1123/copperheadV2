@@ -20,6 +20,9 @@ from modules.utils import get_compacted_path, logger, fillEventNans
 from modules.sample_config import get_bkg_sig_dicts
 
 
+DATASET_SEPARATOR = "::"
+
+
 def get_variation(wgt_variation, sys_variation):
     if "nominal" in wgt_variation:
         if "nominal" in sys_variation:
@@ -270,6 +273,20 @@ def dy_vbf_filter_is_available(stage1_path, year, sample_config):
     return False
 
 
+def parse_years_option(year, years):
+    """Return ordered years from -y/--year or --years."""
+    raw_years = years if years != ["2018"] else [year]
+    parsed_years = []
+    for raw_year in raw_years:
+        for candidate in str(raw_year).split(","):
+            candidate = candidate.strip()
+            if candidate and candidate not in parsed_years:
+                parsed_years.append(candidate)
+    if not parsed_years:
+        raise ValueError("At least one year must be provided.")
+    return tuple(parsed_years)
+
+
 _MODEL_CACHE = {}
 
 
@@ -409,7 +426,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
 
     def process(self, events):
-        sample_type = events.metadata["dataset"]
+        dataset_key = events.metadata["dataset"]
+        sample_type = events.metadata.get("sample", dataset_key)
         year = events.metadata["year"]
         # events["MET_pt"] = events["PuppiMET_pt"]
         fields = set(events.fields)
@@ -539,7 +557,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             )
 
         return {
-            sample_type: {
+            dataset_key: {
                 "events": processor.value_accumulator(int, selected_events),
                 "chunks": processor.value_accumulator(int, 1),
                 "score_hist": score_hist,
@@ -702,26 +720,13 @@ if __name__ == "__main__":
     logger.info(f"[timing] Dask client creation time: {t2 - t1:.2f} seconds")
 
     base_path = Path(args.input_path)
+    years = parse_years_option(args.year, args.years)
+    logger.info(f"Years scheduled together: {years}")
 
     bkg_samples = args.bkg_samples
     sig_samples = args.sig_samples
     data_samples = args.data_samples
     logger.info(f"data_samples: {data_samples}")
-
-    stage1_path = base_path / "stage1_output" / args.year / "f1_0"
-    stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
-    logger.info(f"stage1 path: {stage1_path}")
-    if not os.path.exists(stage1_path):
-        logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
-        raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
-
-    # if dy_vbf_filter_is_available(stage1_path, args.year, args.sample_config):
-    #     if not args.do_vbf_filter_study:
-    #         logger.info(
-    #             "Setting do_vbf_filter_study=True because dy_VBF_filter "
-    #             "samples are available."
-    #         )
-    #     args.do_vbf_filter_study = True
 
     histDirName = f"score_{args.label}" if args.save_postfix == "" else f"score_{args.label}_{args.save_postfix}"
     if args.do_vbf_filter_study:
@@ -729,15 +734,33 @@ if __name__ == "__main__":
     if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
-    hist_save_path = base_path / "stage2_histograms" / histDirName / args.year
-    os.makedirs(hist_save_path, exist_ok=True)
-    logger.info(f"Histograms will be saved to: {hist_save_path}")
+    sample_dict_by_year = {}
+    for year in years:
+        stage1_path = base_path / "stage1_output" / year / "f1_0"
+        stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
+        logger.info(f"{year} stage1 path: {stage1_path}")
+        if not os.path.exists(stage1_path):
+            logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
+            raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
-    # full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
-    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=[], sig_samples=["GGH"], bkg_samples=[], do_vbf_filter_study=args.do_vbf_filter_study)
+        # if dy_vbf_filter_is_available(stage1_path, year, args.sample_config):
+        #     if not args.do_vbf_filter_study:
+        #         logger.info(
+        #             "Setting do_vbf_filter_study=True because dy_VBF_filter "
+        #             "samples are available."
+        #         )
+        #     args.do_vbf_filter_study = True
 
-    logger.debug(f"full_sample_dict: {full_sample_dict}")
-    logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
+        hist_save_path = base_path / "stage2_histograms" / histDirName / year
+        os.makedirs(hist_save_path, exist_ok=True)
+        logger.info(f"{year} histograms will be saved to: {hist_save_path}")
+
+        full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
+        # full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=[], sig_samples=["GGH"], bkg_samples=[], do_vbf_filter_study=args.do_vbf_filter_study)
+
+        sample_dict_by_year[year] = full_sample_dict
+        logger.debug(f"{year} full_sample_dict: {full_sample_dict}")
+        logger.info(f"{year} full_sample_dict: {full_sample_dict.keys()}")
     t3 = time.perf_counter()
     logger.info(f"[timing] sample dict processing time: {t3 - t2:.2f} seconds")
 
@@ -776,23 +799,26 @@ if __name__ == "__main__":
 
     fileset = {}
     skipped_existing = []
-    for sample_type, sample_l in full_sample_dict.items():
-        output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
-        if output_pkl_path.exists():
-            logger.warning(
-                f"Output pkl file {output_pkl_path} already exists. "
-                f"Skipping {sample_type}."
-            )
-            skipped_existing.append(sample_type)
-            continue
-        if len(sample_l) == 0:
-            logger.critical(f"No files for {sample_type} is found! Skipping!")
-            continue
-        fileset[sample_type] = {
-            "files": sample_l,
-            "treename": "Events",
-            "metadata": {"year": args.year},
-        }
+    for year, full_sample_dict in sample_dict_by_year.items():
+        hist_save_path = base_path / "stage2_histograms" / histDirName / year
+        for sample_type, sample_l in full_sample_dict.items():
+            output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
+            if output_pkl_path.exists():
+                logger.warning(
+                    f"Output pkl file {output_pkl_path} already exists. "
+                    f"Skipping {year} {sample_type}."
+                )
+                skipped_existing.append(f"{year}{DATASET_SEPARATOR}{sample_type}")
+                continue
+            if len(sample_l) == 0:
+                logger.critical(f"No files for {year} {sample_type} is found! Skipping!")
+                continue
+            dataset_key = f"{year}{DATASET_SEPARATOR}{sample_type}"
+            fileset[dataset_key] = {
+                "files": sample_l,
+                "treename": "Events",
+                "metadata": {"year": year, "sample": sample_type},
+            }
 
     logger.info(f"Samples skipped because outputs exist: {skipped_existing}")
     if fileset:
@@ -820,12 +846,14 @@ if __name__ == "__main__":
         t5 = time.perf_counter()
         logger.info(f"[timing] Coffea Runner time: {t5 - t4:.2f} seconds")
 
-        for sample_type, output in results.items():
+        for dataset_key, output in results.items():
+            year, sample_type = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
+            hist_save_path = base_path / "stage2_histograms" / histDirName / year
             output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
             with open(output_pkl_path, "wb") as file:
                 pickle.dump(output["score_hist"], file)
             logger.info(
-                f"{sample_type} histogram on {output_pkl_path}; "
+                f"{year} {sample_type} histogram on {output_pkl_path}; "
                 f"chunks={output['chunks'].value}; "
                 f"selected events={output['events'].value}"
             )

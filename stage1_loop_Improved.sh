@@ -203,6 +203,21 @@ echo "  Region: $region"
 echo "  Category: $category"
 echo "  isMC: $isMC"
 
+# save_postfix="Jun22_2026_stage2PR_test" # FIXME
+# save_postfix="Jun22_2026_stage2PR_test_noVbfFilterDY" # FIXME
+save_postfix="Jun23_2026_frozen_resolution_test" # FIXME
+
+stage2_years_csv="$(join_by "," "${years[@]}")"
+stage2_data_l=""
+declare -A stage2_seen_data=()
+for stage2_year in "${years[@]}"; do
+    for era in ${data_l_dict[$stage2_year]:-}; do
+        if [[ -z "${stage2_seen_data[$era]:-}" ]]; then
+            stage2_data_l="${stage2_data_l:+$stage2_data_l }$era"
+            stage2_seen_data[$era]=1
+        fi
+    done
+done
 
 # ----------- Main loop -----------
 for year in "${years[@]}"; do
@@ -215,7 +230,8 @@ for year in "${years[@]}"; do
     log "  Save path: $save_path"
 
     # ########## PRE-STAGE command ##########
-    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  "
+    # command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data $data_l --background $bkg_l --signal $sig_l  --NanoAODv $NanoAODv  "
+    command0="python run_prestage.py --chunksize $chunksize -y $year --yaml $datasetYAML --data --background DY --NanoAODv $NanoAODv  "
 
     # ########## STAGE-1 command ##########
     # INFO: If running with JES variation use the max file length = 350, else 2500
@@ -237,9 +253,11 @@ for year in "${years[@]}"; do
     training_fold=4
     model_label="${label}"
     # model_dir="${dnn_years_csv//,/-}_${region}_${category}"
-    model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-    training_tag="${dnn_train_label}"
-    model_trained_path="./dnn/trained_models/${label}/${model_dir}"
+    # model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    # training_tag="${dnn_train_label}"
+    # model_trained_path="./dnn/trained_models/${label}/${model_dir}"
+    model_trained_path="/work/users/yun79/sideHustle5/copperheadV2/dnn/trained_models/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf"
+    training_tag="trained_best_optuna_50Trials_w_VBF_filterFoldAll"
 
     # ########## Compact command ##########
     # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path --model_tag $training_tag --add_dnn_score --fix_dimuon_mass --save_postfix $save_postfix "
@@ -255,13 +273,24 @@ for year in "${years[@]}"; do
     # ########## STAGE-2 command ##########
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
     sig_l_stage2="ggH VBF"
-    variation=false
+    stage2_year_arg="$year"
+    stage2_data_arg="$data_l"
+    if [[ "$mode" == "2" ]]; then # this combines the years and data for stage2
+        stage2_year_arg="$stage2_years_csv"
+        stage2_data_arg="$stage2_data_l"
+    fi
+    echo "stage2_year_arg: $stage2_year_arg"
+    echo "stage2_data_arg: $stage2_data_arg"
+
+    variation=true
     if ${variation}; then
-        command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}  "
+        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}"
+        echo "Running stage2 command: $command2"
+        # command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}  --log-level DEBUG"
         command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} "
         variation_tag=""
     else
-        command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} --no_variations "
+        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} --no_variations "
         command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} --no_variations "
         variation_tag="_NoSyst"
     fi
@@ -346,7 +375,11 @@ for year in "${years[@]}"; do
             eval "$command1"
             ;;
         2)
-            log "Running stage2 for year $year..."
+            if [[ "$year" != "${years[0]}" ]]; then
+                log "Skipping duplicate stage2 launch for year $year; stage2 was submitted once for: $stage2_years_csv"
+                continue
+            fi
+            log "Running stage2 for years: $stage2_years_csv..."
             log "Command: $command2"
             eval "$command2"
             ;;

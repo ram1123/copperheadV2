@@ -19,6 +19,7 @@ import numpy as np
 RUN2_YEARS = ("2018", "2017", "2016postVFP", "2016preVFP")
 DEFAULT_RTOL = 1e-6
 DEFAULT_ATOL = 1e-9
+DEFAULT_FLOW = True
 # TEST_HISTOGRAM_BASE = Path(
 #     # "quick_tests/histograms/trained_dnn_groups/with_variations"
 #     "quick_tests/histograms/trained_dnn_groups/nominal"
@@ -133,7 +134,14 @@ def format_selection(selection):
     return ", ".join(f"{axis}={label}" for axis, label in selection.items())
 
 
-def extract_arrays(histogram, variation="nominal", axis_selection=None):
+def score_bin_labels(edges, include_flow):
+    labels = [f"[{low}, {high})" for low, high in zip(edges[:-1], edges[1:])]
+    if include_flow:
+        return [f"underflow (< {edges[0]})", *labels, f"overflow (>= {edges[-1]})"]
+    return labels
+
+
+def extract_arrays(histogram, variation="nominal", axis_selection=None, include_flow=True):
     """Project one variation's values and stored sumw2 onto the score axis."""
     score_name = score_axis_name(histogram)
     common_selection = dict(axis_selection or {})
@@ -143,8 +151,8 @@ def extract_arrays(histogram, variation="nominal", axis_selection=None):
         projected = histogram[common_selection].project(score_name)
         return (
             projected.axes[score_name].edges,
-            projected.values(flow=False),
-            projected.variances(flow=False),
+            projected.values(flow=include_flow),
+            projected.variances(flow=include_flow),
         )
 
     value_histogram = histogram[
@@ -155,8 +163,8 @@ def extract_arrays(histogram, variation="nominal", axis_selection=None):
     ].project(score_name)
     return (
         value_histogram.axes[score_name].edges,
-        value_histogram.values(flow=False),
-        sumw2_histogram.values(flow=False),
+        value_histogram.values(flow=include_flow),
+        sumw2_histogram.values(flow=include_flow),
     )
 
 
@@ -176,6 +184,7 @@ def print_comparison(
     axis_selection=None,
     rtol=DEFAULT_RTOL,
     atol=DEFAULT_ATOL,
+    include_flow=True,
 ):
     test_edges, test_values, test_variances = test_arrays
     reference_edges, reference_values, reference_variances = reference_arrays
@@ -185,6 +194,7 @@ def print_comparison(
     print(f"Selection: {format_selection(axis_selection or {})}")
     print(f"Variation: {variation}")
     print(f"Bin edges: {test_edges.tolist()}")
+    print(f"Flow bins included: {include_flow}")
     if not np.array_equal(test_edges, reference_edges):
         print("Result: NOT COMPARED because the score bin edges differ")
         print(f"Test edges:      {test_edges.tolist()}")
@@ -199,6 +209,7 @@ def print_comparison(
         where=reference_values != 0,
     )
 
+    print(f"Score bins:          {score_bin_labels(test_edges, include_flow)}")
     print(f"Test values:         {test_values.tolist()}")
     print(f"Reference values:    {reference_values.tolist()}")
     print(f"Difference (test-ref): {difference.tolist()}")
@@ -226,6 +237,7 @@ def compare_year(
     rtol=DEFAULT_RTOL,
     atol=DEFAULT_ATOL,
     print_all=False,
+    include_flow=DEFAULT_FLOW,
 ):
     """Compare all available samples for one Run-2 year."""
     test_directory = Path(test_histogram_base) / year
@@ -266,14 +278,17 @@ def compare_year(
             - {"nominal"}
         )
         selections = side_by_side_selections(test_histogram, reference_histogram)
+        # raise ValueError(f"selections: {selections}")
         for selection in selections:
             nominal_test_arrays = extract_arrays(
                 test_histogram,
                 axis_selection=selection,
+                include_flow=include_flow,
             )
             nominal_reference_arrays = extract_arrays(
                 reference_histogram,
                 axis_selection=selection,
+                include_flow=include_flow,
             )
             nominal_differs = arrays_differ(
                 nominal_test_arrays,
@@ -289,6 +304,7 @@ def compare_year(
                     axis_selection=selection,
                     rtol=rtol,
                     atol=atol,
+                    include_flow=include_flow,
                 )
             failed_histograms += nominal_differs
 
@@ -298,11 +314,13 @@ def compare_year(
                     reference_histogram,
                     variation,
                     selection,
+                    include_flow,
                 )
                 test_arrays = extract_arrays(
                     test_histogram,
                     variation,
                     selection,
+                    include_flow,
                 )
                 variation_differs = arrays_differ(
                     test_arrays,
@@ -319,6 +337,7 @@ def compare_year(
                         selection,
                         rtol,
                         atol,
+                        include_flow,
                     )
                 if variation_differs:
                     different_variations += 1
@@ -343,9 +362,11 @@ def main(
     years=RUN2_YEARS,
     test_histogram_path=TEST_HISTOGRAM_BASE,
     reference_histogram_path=REFERENCE_HISTOGRAM_BASE,
+    include_flow=DEFAULT_FLOW,
 ):
     print(f"Comparison tolerances: rtol={rtol:g}, atol={atol:g}")
     print(f"Print all histogram comparisons: {print_all}")
+    print(f"Include underflow/overflow bins: {include_flow}")
     total_groups = 0
     total_failures = 0
     years_compared = 0
@@ -357,6 +378,7 @@ def main(
             rtol,
             atol,
             print_all,
+            include_flow,
         )
         total_groups += compared_samples
         total_failures += failed_histograms
@@ -387,6 +409,16 @@ if __name__ == "__main__":
         "--print-all",
         action="store_true",
         help="Print passing histogram comparisons as well as failures.",
+    )
+    parser.add_argument(
+        "--flow",
+        dest="include_flow",
+        default=DEFAULT_FLOW,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Include underflow and overflow bins in value and sumw2 comparisons "
+            f"(default: {DEFAULT_FLOW})."
+        ),
     )
     parser.add_argument(
         "--years",
@@ -426,4 +458,5 @@ if __name__ == "__main__":
         arguments.years,
         arguments.test_histogram_path,
         arguments.reference_histogram_path,
+        arguments.include_flow,
     )
