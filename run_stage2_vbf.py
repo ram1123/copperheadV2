@@ -379,6 +379,19 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 fold_logits = model(torch.from_numpy(inputs)).reshape(-1).numpy()
             logits[fold_mask] = fold_logits[fold_mask]
 
+            # has_non_finite = not np.isfinite(fold_logits).all()
+            # if has_non_finite:
+            #     nan_cols = np.isnan(inputs[~np.isfinite(fold_logits)]).any(axis=0)
+            #     # raise ValueError("Found non-finite values in fold_logits. This may indicate a problem with the model or input data.")
+            #     # raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and input {inputs[~np.isfinite(fold_logits)]}.")
+            #     # raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and input {nan_cols.shape}, {self.training_features}.")
+            #     from itertools import compress
+            #     # raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and input {list(compress(self.training_features, nan_cols))}.")
+            #     jj_dEta_nan_arr = input_columns["jj_dEta_nominal"][~np.isfinite(fold_logits)]
+            #     jj_dEta_variation_nan_arr = events[f"jj_dEta_{variation}"][~np.isfinite(fold_logits)]
+            #     raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and jj_dEta nominal {jj_dEta_nan_arr} and jj_dEta {variation} {jj_dEta_variation_nan_arr}.")
+
+
         # probabilities = torch.sigmoid(torch.from_numpy(logits)).numpy()
         has_non_finite = not np.isfinite(logits).all()
         # if has_non_finite:
@@ -720,8 +733,8 @@ if __name__ == "__main__":
     os.makedirs(hist_save_path, exist_ok=True)
     logger.info(f"Histograms will be saved to: {hist_save_path}")
 
-    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
-    # full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=[], sig_samples=["GGH"], bkg_samples=[], do_vbf_filter_study=args.do_vbf_filter_study)
+    # full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
+    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=[], sig_samples=["GGH"], bkg_samples=[], do_vbf_filter_study=args.do_vbf_filter_study)
 
     logger.debug(f"full_sample_dict: {full_sample_dict}")
     logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
