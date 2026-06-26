@@ -45,47 +45,51 @@ group_dict = {
         "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
     },
     "DY": {
-        "2016preVFP": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
-        "2016postVFP": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
-        "2017": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
-        "2018": ["dy_M-50_aMCatNLO", "dy_M-100To200_aMCatNLO"],
+        "2016preVFP": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2016postVFP": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2017": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
+        "2018": [
+            # "dyTo2Mu_M-100to200_MiNNLO", 
+            # "dy_M-100To200_MiNNLO",# run2 nanoV12
+            # "dy_M-50_MiNNLO", # run2 nanoV12
+            "dy_M-50_aMCatNLO", # run2 nanoV12
+            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+        ],
         "2022preEE": ["dyTo2L_M-50_incl"],
         "2022postEE": ["dyTo2L_M-50_incl"],
         "2023": ["dyTo2L_M-50_incl"],
         "2023BPix": ["dyTo2L_M-50_incl"],
         "2024": ["dyTo2Mu_M-50_aMCatNLO"],
 
-        # "2022preEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2022postEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023BPix": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2024": ["dyTo2Mu_M-50_aMCatNLO", "dy_VBF_filter"],
-
-
         # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
         # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-
-        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-    },
-    "DYVBF": {
-        "2016preVFP": ["dy_VBF_filter"],
-        "2016postVFP": ["dy_VBF_filter"],
-        "2017": ["dy_VBF_filter"],
-        "2018": ["dy_VBF_filter"],
-        "2022preEE": ["dy_VBF_filter"],
-        "2022postEE": ["dy_VBF_filter"],
-        "2023": ["dy_VBF_filter"],
-        "2023BPix": ["dy_VBF_filter"],
-        "2024": ["dy_VBF_filter"],
     },
     "EWK": {
+        "2016preVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2016postVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2017": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
+        "2018": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
         "2022preEE": ["ewk_mmjj_mll_105_160"],
         "2022postEE": ["ewk_mmjj_mll_105_160"],
         "2023": ["ewk_mmjj_mll_105_160"],
@@ -108,12 +112,17 @@ group_dict = {
         "wz_2l2q",
         "wz_1l1nu2q",
         "zz_2l2q",
+        "zz_2l2u",
         "zz_2l2nu",
         "zz_4l",
     ],
     # "OTHER": ["www", "wwz", "wzz", "zzz"],
     "ggH": ["ggh_powhegPS"],
     "VBF": {
+        "2016preVFP": ["vbf_powheg_dipole"],
+        "2016postVFP": ["vbf_powheg_dipole"],
+        "2017": ["vbf_powheg_dipole"],
+        "2018": ["vbf_powheg_dipole"],
         "2022preEE": ["vbf_powheg_dipole"],
         "2022postEE": ["vbf_powheg_dipole"],
         "2023": ["vbf_powheg"],
@@ -691,7 +700,7 @@ if __name__ == "__main__":
                     args.do_vbf_filter_study,
                     jj_eta_region=args.jj_eta_region,
                     njets_selection=str(args.njets),
-                    year=args.year,
+                    # year=args.year,
                 )
 
                 #  FOR DEBUG PURPOSES
@@ -729,13 +738,20 @@ if __name__ == "__main__":
                 # values = np.arctanh((raw+1)/2.0)  # arctanh transform
                 # overwrite variable names with two bin ranges
                 if ("_range2" in var):
-                    var_reduced = var.replace("_range2","")
-                    values = ak.fill_none(events[var_reduced], value=-999.0)
+                    value_var = var.replace("_range2","")
                 elif ("_zpeak" in var):
-                    var_reduced = var.replace("_zpeak","")
-                    values = ak.fill_none(events[var_reduced], value=-999.0)
+                    value_var = var.replace("_zpeak","")
                 else:
-                    values = ak.fill_none(events[var], value=-999.0)
+                    value_var = var
+
+                if value_var not in events.fields:
+                    logger.warning(
+                        f"Variable '{value_var}' not found for process '{process}' "
+                        f"in region '{region_name}'. Skipping histogram fill for '{var}'."
+                    )
+                    continue
+
+                values = ak.fill_none(events[value_var], value=-999.0)
 
                 #### TODO: Add overflow bins to the last bin
 
