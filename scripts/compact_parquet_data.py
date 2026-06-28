@@ -1,10 +1,12 @@
 import os
 import pickle
+import math
 from pathlib import Path
 
 import awkward as ak
 import dask_awkward as dak
 import numpy as np
+import pyarrow.parquet as pq
 from cli.common_argparser import build_common_parser
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.utils import logger
@@ -133,6 +135,11 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             logger.warning(f"No parquet files found under {orig_path}. Skipping.")
             return
 
+        total_rows = sum(pq.ParquetFile(path).metadata.num_rows for path in parquet_files)
+        if total_rows == 0:
+            logger.warning(f"No rows found in parquet files under {orig_path}. Skipping.")
+            return
+
         inFile = dak.from_parquet(orig_path)
 
         if "vbf_powheg_dipole" in sample:
@@ -140,7 +147,31 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             target_chunksize = 100_000
         else:
             target_chunksize = 300_000
-        inFile = inFile.repartition(rows_per_partition=target_chunksize)
+
+        target_npartitions = min(
+            inFile.npartitions,
+            max(1, math.ceil(total_rows / target_chunksize)),
+        )
+        # print(f"Target npartitions: {target_npartitions}")
+        # print(f"inFile number of rows: {ak.num(inFile, axis=0).compute()}")
+        logger.info(
+            "Repartitioning %s rows from %s to %s partitions",
+            total_rows,
+            inFile.npartitions,
+            target_npartitions,
+        )
+        if target_npartitions < inFile.npartitions:
+            repartitioned = inFile.repartition(npartitions=target_npartitions)
+            if repartitioned.npartitions <= 0:
+                logger.warning(
+                    "Repartition produced %s partitions for %s. Keeping original %s partitions.",
+                    repartitioned.npartitions,
+                    sample,
+                    inFile.npartitions,
+                )
+
+            else:
+                inFile = repartitioned
 
         logger.info("Writing compacted dataset")
         inFile.to_parquet(compacted_path)
