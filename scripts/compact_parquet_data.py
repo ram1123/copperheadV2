@@ -1,7 +1,6 @@
 import os
 import pickle
 import math
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import awkward as ak
@@ -121,32 +120,15 @@ def group_parquet_files(file_infos, target_n_final_files):
     if not file_infos:
         return []
 
-    target_n_final_files = min(target_n_final_files, len(file_infos))
-    total_rows = sum(rows for _, rows in file_infos)
+    if target_n_final_files >= len(file_infos):
+        return [[file_info] for file_info in file_infos]
+
     groups = []
-    current_group = []
-    current_rows = 0
-    remaining_rows = total_rows
-    remaining_groups = target_n_final_files
-
-    for idx, (path, rows) in enumerate(file_infos):
-        current_group.append((path, rows))
-        current_rows += rows
-        remaining_files = len(file_infos) - idx - 1
-
-        if remaining_groups == 1:
-            continue
-
-        target_rows = math.ceil(remaining_rows / remaining_groups)
-        if current_rows >= target_rows and remaining_files >= remaining_groups - 1:
-            groups.append(current_group)
-            current_group = []
-            remaining_rows -= current_rows
-            remaining_groups -= 1
-            current_rows = 0
-
-    if current_group:
-        groups.append(current_group)
+    n_files = len(file_infos)
+    for group_idx in range(target_n_final_files):
+        start = group_idx * n_files // target_n_final_files
+        stop = (group_idx + 1) * n_files // target_n_final_files
+        groups.append(file_infos[start:stop])
 
     return groups
 
@@ -167,11 +149,11 @@ def write_compacted_group(idx, group_files, compacted_path):
     return idx, len(group_files), group_rows, output_path
 
 
-def ensure_compacted(year, sample, input_path, compacted_path):
-    logger.debug(f"year: {year}")
-    logger.debug(f"samples: {sample}")
-    logger.debug(f"input_path: {input_path}")
-    logger.debug(f"Checking compacted dataset: {compacted_path}")
+def ensure_compacted(year, sample, input_path, compacted_path, client=None):
+    logger.info(f"year: {year}")
+    logger.info(f"samples: {sample}")
+    logger.info(f"input_path: {input_path}")
+    logger.info(f"Checking compacted dataset: {compacted_path}")
 
     if not os.path.exists(compacted_path):
         logger.info("No compacted dataset exists")
@@ -195,8 +177,9 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             logger.warning(f"No rows found in parquet files under {orig_path}. Skipping.")
             return
 
-        if "vbf_powheg_dipole" in sample:
-            logger.warning(f"Sample {sample} is a VBF sample, so, using a smaller maximum row count (100k) per compacted file.")
+        # if ("vbf_powheg_dipole" in sample) or ("minnlo" in sample.lower()) or ("dy_VBF_filter" in sample):
+        if ("vbf_powheg_dipole" in sample):
+            logger.warning(f"Sample {sample} has high density (e.g. vbf signal), so, using a smaller maximum row count (100k) per compacted file.")
             max_num_of_rows = 100_000
         else:
             max_num_of_rows = 300_000
@@ -215,31 +198,43 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             (path, pq.ParquetFile(path).metadata.num_rows)
             for path in sorted(parquet_files)
         ]
-        grouped_files = group_parquet_files(file_infos, target_n_final_files)
-
+        grouped_files = group_parquet_files(file_infos, target_n_final_files) # FIXME: this function doesn't properly group to a list of length target_n_final_files. Needs to be fixed. For now, we will just use the function as it is.
+        # print(f"Grouped files: {grouped_files}")
         logger.info(
             "Writing compacted dataset as %s parquet files",
             len(grouped_files),
         )
         os.makedirs(compacted_path, exist_ok=True)
-        max_n_workers = 16
-        max_workers = min(len(grouped_files), os.cpu_count() or 1, max_n_workers)
-        logger.info("Writing compacted dataset with %s parallel workers", max_workers)
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [
-                executor.submit(write_compacted_group, idx, group_files, compacted_path)
+        if client is None:
+            logger.warning("No Dask client provided; writing compacted dataset sequentially")
+            results = [
+                write_compacted_group(idx, group_files, compacted_path)
                 for idx, group_files in enumerate(grouped_files)
             ]
-            for future in as_completed(futures):
-                idx, n_files, n_rows, output_path = future.result()
-                logger.debug(
-                    "Finished compacted part %s with %s input files and %s rows at %s",
+        else:
+            n_workers = len(client.scheduler_info().get("workers", {}))
+            logger.info("Writing compacted dataset with Dask client (%s workers)", n_workers)
+            futures = [
+                client.submit(
+                    write_compacted_group,
                     idx,
-                    n_files,
-                    n_rows,
-                    output_path,
+                    group_files,
+                    compacted_path,
+                    pure=False, # Since it performs I/O, do not optimize it away as a reusable pure computation.
                 )
-        logger.debug("Dataset successfully compacted.")
+                for idx, group_files in enumerate(grouped_files)
+            ]
+            results = client.gather(futures)
+
+        for idx, n_files, n_rows, output_path in sorted(results):
+            logger.debug(
+                "Finished compacted part %s with %s input files and %s rows at %s",
+                idx,
+                n_files,
+                n_rows,
+                output_path,
+            )
+        logger.info("Dataset successfully compacted.")
     else:
         logger.warning(f"Compacted dataset already exists at {compacted_path}")
 
@@ -351,6 +346,7 @@ def compact_and_add_dnn_score(
     tag="",
     fix_dimuon_mass=False,
     model_tag="",
+    client=None,
 ):
     compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
 
@@ -361,7 +357,7 @@ def compact_and_add_dnn_score(
     logger.info(f"Checking compacted dataset for: {compacted_path}")
 
     # compact the dataset
-    ensure_compacted(year, sample, input_path, compacted_path)
+    ensure_compacted(year, sample, input_path, compacted_path, client=client)
 
     # Add the DNN score to the compacted dataset
     if not add_dnn_score_flag:
@@ -451,8 +447,8 @@ if __name__ == "__main__":
         if not args.model_tag:
             raise ValueError("--model_tag is required when --add_dnn_score is used.")
 
-    # client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
-    client = get_dask_client(False) # FIXME: no using dask gateway for now, as it is not working on the cluster
+    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+    # client = get_dask_client(False) # FIXME: no using dask gateway for now, as it is not working on the cluster
 
     # append /stage1_output/2018/f1_0 to load path
     args.input_path = os.path.join(args.input_path, f"stage1_output/{args.year}/f1_0")
@@ -483,6 +479,7 @@ if __name__ == "__main__":
             args.save_postfix,
             args.fix_dimuon_mass,
             args.model_tag,
+            client=client,
         )
 
     close_dask_client()
