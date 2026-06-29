@@ -1,6 +1,7 @@
 import os
 import pickle
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import awkward as ak
@@ -112,6 +113,60 @@ def resolve_vbf_training_layout(base_path, model_tag, nfolds=4):
     )
 
 
+def group_parquet_files(file_infos, target_n_final_files):
+    if target_n_final_files <= 0:
+        raise ValueError(
+            f"target_n_final_files must be positive, got {target_n_final_files}"
+        )
+    if not file_infos:
+        return []
+
+    target_n_final_files = min(target_n_final_files, len(file_infos))
+    total_rows = sum(rows for _, rows in file_infos)
+    groups = []
+    current_group = []
+    current_rows = 0
+    remaining_rows = total_rows
+    remaining_groups = target_n_final_files
+
+    for idx, (path, rows) in enumerate(file_infos):
+        current_group.append((path, rows))
+        current_rows += rows
+        remaining_files = len(file_infos) - idx - 1
+
+        if remaining_groups == 1:
+            continue
+
+        target_rows = math.ceil(remaining_rows / remaining_groups)
+        if current_rows >= target_rows and remaining_files >= remaining_groups - 1:
+            groups.append(current_group)
+            current_group = []
+            remaining_rows -= current_rows
+            remaining_groups -= 1
+            current_rows = 0
+
+    if current_group:
+        groups.append(current_group)
+
+    return groups
+
+
+def write_compacted_group(idx, group_files, compacted_path):
+    group_rows = sum(rows for _, rows in group_files)
+    output_path = os.path.join(compacted_path, f"part{idx}.parquet")
+    logger.debug(
+        "Writing compacted part %s with %s input files and %s rows to %s",
+        idx,
+        len(group_files),
+        group_rows,
+        output_path,
+    )
+    arrays = [ak.from_parquet(path) for path, _ in group_files]
+    events = arrays[0] if len(arrays) == 1 else ak.concatenate(arrays)
+    ak.to_parquet(events, output_path)
+    return idx, len(group_files), group_rows, output_path
+
+
 def ensure_compacted(year, sample, input_path, compacted_path):
     logger.debug(f"year: {year}")
     logger.debug(f"samples: {sample}")
@@ -140,41 +195,50 @@ def ensure_compacted(year, sample, input_path, compacted_path):
             logger.warning(f"No rows found in parquet files under {orig_path}. Skipping.")
             return
 
-        inFile = dak.from_parquet(orig_path)
-
         if "vbf_powheg_dipole" in sample:
-            logger.warning(f"Sample {sample} is a VBF sample, so, using a smaller chunk size (100k) for repartitioning.")
-            target_chunksize = 100_000
+            logger.warning(f"Sample {sample} is a VBF sample, so, using a smaller maximum row count (100k) per compacted file.")
+            max_num_of_rows = 100_000
         else:
-            target_chunksize = 300_000
+            max_num_of_rows = 300_000
 
-        target_npartitions = min(
-            inFile.npartitions,
-            max(1, math.ceil(total_rows / target_chunksize)),
+        target_n_final_files = min(
+            len(parquet_files),
+            max(1, math.ceil(total_rows / max_num_of_rows)),
         )
-        # print(f"Target npartitions: {target_npartitions}")
-        # print(f"inFile number of rows: {ak.num(inFile, axis=0).compute()}")
         logger.info(
-            "Repartitioning %s rows from %s to %s partitions",
+            "Compacting %s rows from %s parquet files to %s final files",
             total_rows,
-            inFile.npartitions,
-            target_npartitions,
+            len(parquet_files),
+            target_n_final_files,
         )
-        if target_npartitions < inFile.npartitions:
-            repartitioned = inFile.repartition(npartitions=target_npartitions)
-            if repartitioned.npartitions <= 0:
-                logger.warning(
-                    "Repartition produced %s partitions for %s. Keeping original %s partitions.",
-                    repartitioned.npartitions,
-                    sample,
-                    inFile.npartitions,
+        file_infos = [
+            (path, pq.ParquetFile(path).metadata.num_rows)
+            for path in sorted(parquet_files)
+        ]
+        grouped_files = group_parquet_files(file_infos, target_n_final_files)
+
+        logger.info(
+            "Writing compacted dataset as %s parquet files",
+            len(grouped_files),
+        )
+        os.makedirs(compacted_path, exist_ok=True)
+        max_n_workers = 16
+        max_workers = min(len(grouped_files), os.cpu_count() or 1, max_n_workers)
+        logger.info("Writing compacted dataset with %s parallel workers", max_workers)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(write_compacted_group, idx, group_files, compacted_path)
+                for idx, group_files in enumerate(grouped_files)
+            ]
+            for future in as_completed(futures):
+                idx, n_files, n_rows, output_path = future.result()
+                logger.debug(
+                    "Finished compacted part %s with %s input files and %s rows at %s",
+                    idx,
+                    n_files,
+                    n_rows,
+                    output_path,
                 )
-
-            else:
-                inFile = repartitioned
-
-        logger.info("Writing compacted dataset")
-        inFile.to_parquet(compacted_path)
         logger.debug("Dataset successfully compacted.")
     else:
         logger.warning(f"Compacted dataset already exists at {compacted_path}")
@@ -387,7 +451,8 @@ if __name__ == "__main__":
         if not args.model_tag:
             raise ValueError("--model_tag is required when --add_dnn_score is used.")
 
-    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+    # client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+    client = get_dask_client(False) # FIXME: no using dask gateway for now, as it is not working on the cluster
 
     # append /stage1_output/2018/f1_0 to load path
     args.input_path = os.path.join(args.input_path, f"stage1_output/{args.year}/f1_0")
