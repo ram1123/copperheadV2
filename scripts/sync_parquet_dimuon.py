@@ -398,6 +398,9 @@ def load_dir_to_df(
     if not parquet_files:
         raise FileNotFoundError(f"No parquet files matched pattern '{pattern}'")
 
+    # Load channel column too (not in SYNCVARLIST) so we can filter mm-only
+    extra_cols = ["channel"] if "channel" in events_lazy.fields else []
+
     # Restrict to columns that actually exist
     available_fields = set(pq.ParquetFile(parquet_files[0]).schema.names)
     available = [c for c in cols if c in available_fields]
@@ -406,17 +409,23 @@ def load_dir_to_df(
     if missing:
         print(f"[WARNING] Missing columns in {directory}: {missing}")
 
-    if use_gateway:
-        from distributed import Client
+    events_lazy = events_lazy[available + extra_cols]
 
-        print("[INFO] Loading parquet in parallel with Dask workers using pyarrow")
-        client = Client.current()
-        futures = client.map(_load_parquet_file_to_df, parquet_files, columns=available)
-        parts = client.gather(futures)
-        df = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=available)
-    else:
-        parts = [_load_parquet_file_to_df(parquet_file, available) for parquet_file in parquet_files]
-        df = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=available)
+    # Materialize to awkward Array
+    events = events_lazy.compute()
+
+    # Convert to pandas (awkward v2: no ak.to_pandas)
+    df = pd.DataFrame(ak.to_list(events))
+
+    # Keep only mm (dimuon) events when channel column is present; this script
+    # is the H→µµ sync tool and reference files contain mm events only.
+    if "channel" in df.columns:
+        df = df[df["channel"] == 0].copy()
+        df.drop(columns=["channel"], inplace=True)
+
+    # Keep only our desired columns (those that exist)
+    keep_cols = [c for c in cols if c in df.columns]
+    df = df[keep_cols]
 
     print(f"[INFO] Loaded {len(df)} rows from {directory}\n")
     return df

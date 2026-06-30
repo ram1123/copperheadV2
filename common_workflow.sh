@@ -24,13 +24,14 @@ common_defaults() {
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
     do_vbf_filter_study="${DO_VBF_FILTER_STUDY:-0}"
+    analysis_type="HMuMu"
     chunksize="600000"
     max_file_len="900"
     save_root="/work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean"
 }
 
 parse_common_args() {
-    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:ksfzDV" opt; do
+    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:A:ksfzDV" opt; do
         case "${opt}" in
             h) usage ;;
             c) dataset_yaml="${OPTARG}" ;;
@@ -52,6 +53,7 @@ parse_common_args() {
             s) skip_bad_files="1" ;;
             f) debug_fraction="1" ;;
             z) is_sync="1" ;;
+            A) analysis_type="${OPTARG}" ;;
             D) compact_add_dnn_score="1" ;;
             V) do_vbf_filter_study="1" ;;
             *) usage ;;
@@ -206,6 +208,7 @@ append_stage1_args() {
     if [[ "${is_sync}" == "1" ]]; then
         printf '%s\n' "--sync" "--isCutflow"
     fi
+    printf '%s\n' "--analysis" "${analysis_type}"
 }
 
 stage2_bkg_groups() {
@@ -739,4 +742,5 @@ print_run_configuration() {
     echo "  Category: ${category}"
     echo "  VBF filter study: ${do_vbf_filter_study}"
     echo "  isMC: ${is_mc}"
+    echo "  Analysis: ${analysis_type}"
 }

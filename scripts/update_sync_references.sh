@@ -95,10 +95,10 @@ for year in "${years[@]}"; do
     cp "${year_root}/${year}_data_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_dy_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_vbf_eventKinematics.txt" "$reference_dir/"
-    cp "${f1_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
+    cp "$(ls "${f1_root}/${data_sample}/0/cutflow_${data_sample}_"*.json | head -1)" \
         "${reference_dir}/${year}_cutflow_${data_sample}_0.json"
-    cp "${f1_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
+    cp "$(ls "${f1_root}/${dy_sample}/0/cutflow_${dy_sample}_"*.json | head -1)" \
         "${reference_dir}/${year}_cutflow_${dy_sample}_0.json"
-    cp "${f1_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
+    cp "$(ls "${f1_root}/${vbf_sample}/0/cutflow_${vbf_sample}_"*.json | head -1)" \
         "${reference_dir}/${year}_cutflow_${vbf_sample}_0.json"
 done

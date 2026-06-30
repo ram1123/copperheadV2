@@ -329,6 +329,10 @@ if __name__ == "__main__":
     if isinstance(config, (DictConfig, ListConfig)):
         config = OmegaConf.to_container(config, resolve=True)
 
+    # CLI --analysis overrides the default set in get_parameters.py
+    config["analysis"] = args.analysis
+    logger.info(f"Analysis type: {config['analysis']}")
+
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
     config = absolutize_config(config, PROJECT_ROOT)
     logger.info("Resolved relative config paths to absolute against project root")
