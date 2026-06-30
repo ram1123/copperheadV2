@@ -802,9 +802,12 @@ class EventProcessor(processor.ProcessorABC):
         # Apply HLT to both Data and MC.
         # NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
+        hlt_fields = set(ak.fields(events.HLT))
         for HLT_str in self.config["hlt"]:
             logger.debug(f"HLT_str: {HLT_str}")
-            # HLT_filter = HLT_filter | events.HLT[HLT_str]
+            if HLT_str not in hlt_fields:
+                logger.warning(f"HLT path '{HLT_str}' not in NanoAOD fields, skipping")
+                continue
             HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
         self.selection.add("HLT_filter", HLT_filter)
         event_filter = event_filter & HLT_filter

@@ -46,25 +46,26 @@ hlt:
         - Photon165_R9Id90_HE10_IsoM
         - Photon300_NoHE
     "2017":
-        # DoubleMu (no Mass3p8 in Run-2)
+        # DoubleMu (Br 53, 54 in UL2017_NanoAODv15)
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
-        # SingleMu
+        # SingleMu (Br 38, 39, 41)
         - IsoMu20
         - IsoMu24
         - IsoMu27
-        # DoubleEle
+        # DoubleEle (Br 135, 132)
         - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
-        # SingleEle
-        - Ele32_WPTight_Gsf
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # SingleEle (Br 23, 20) — Ele32_WPTight_Gsf in 2017 needs L1DoubleEG suffix
+        - Ele32_WPTight_Gsf_L1DoubleEG
         - Ele35_WPTight_Gsf
-        # MuEG
+        # MuEG (Br 122, 134, 133)
         - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
         - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
         # Photon
         - Photon50_R9Id90_HE10_IsoM
         - Photon75_R9Id90_HE10_IsoM
-        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3
-        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3
         - Photon90_R9Id90_HE10_IsoM
         - Photon120_R9Id90_HE10_IsoM
         - Photon165_R9Id90_HE10_IsoM
@@ -86,8 +87,6 @@ hlt:
         # Photon
         - Photon50_R9Id90_HE10_IsoM
         - Photon75_R9Id90_HE10_IsoM
-        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3
-        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3
         - Photon90_R9Id90_HE10_IsoM
         - Photon120_R9Id90_HE10_IsoM
         - Photon165_R9Id90_HE10_IsoM

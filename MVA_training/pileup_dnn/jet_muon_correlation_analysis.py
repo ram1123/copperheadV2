@@ -49,7 +49,8 @@ print(f"coffea {coffea.__version__} loaded")
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # ── Config ──────────────────────────────────────────────────────────────────────
-GEN_JET_CUT = 0.5          # hasMatchedGenJet threshold: real if > cut
+GEN_JET_CUT   = 0.5        # hasMatchedGenJet threshold: real if > cut
+TRACKER_EDGE  = 2.7        # |η| boundary of CMS tracker acceptance
 
 MU_VARS  = ["mu1_pt", "mu1_eta", "mu1_phi"]   # extend as needed
 # Jet column bases — _nominal suffix resolved automatically at runtime
@@ -990,6 +991,110 @@ def plot_jet_id_vars(df: pd.DataFrame, outdir: str):
 
         plt.close(fig)
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Section 7 — 2D: jet η vs muonSubtrFactor  (real vs fake)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def plot_muonSubtrFactor_eta_2d(df: pd.DataFrame, outdir: str):
+    """
+    2D histogram of jet η vs muonSubtrFactor split by real/fake classification.
+
+    Two rows (MSF range) × two columns (real / fake):
+      row 0: full MSF range [0, 1]
+      row 1: zoomed MSF    [0, 0.01]
+
+    Jets from jet1 and jet2 are stacked.
+    Confirms Andrea's observation: MSF ≈ 0 outside tracker acceptance (|η| > 2.7).
+    """
+    # Gather eta and MSF for real/fake jets (jet1 + jet2 stacked)
+    eta_vals = {"real": [], "fake": []}
+    msf_vals = {"real": [], "fake": []}
+
+    for jidx in [1, 2]:
+        eta_col = resolve_col(df, f"jet{jidx}_eta_nominal")
+        msf_col = resolve_col(df, f"jet{jidx}_muonSubtrFactor_nominal")
+        pt_col  = resolve_col(df, f"jet{jidx}_pt_nominal")
+
+        if eta_col is None or msf_col is None:
+            if jidx == 1:
+                print("  Skipping 2D muonSubtrFactor plot (eta/MSF columns not found)")
+            continue
+
+        present = (df[pt_col].notna() & (df[pt_col] > 0)) if pt_col else pd.Series(True, index=df.index)
+
+        for jtype, flag_col in [("real", f"jet{jidx}_real"), ("fake", f"jet{jidx}_fake")]:
+            if flag_col not in df.columns:
+                continue
+            mask = df[flag_col] & present
+            sub  = df.loc[mask, [eta_col, msf_col]].dropna()
+            eta_vals[jtype].append(sub[eta_col].values.astype(float))
+            msf_vals[jtype].append(sub[msf_col].values.astype(float))
+
+    real_eta = np.concatenate(eta_vals["real"]) if eta_vals["real"] else np.array([])
+    real_msf = np.concatenate(msf_vals["real"]) if msf_vals["real"] else np.array([])
+    fake_eta = np.concatenate(eta_vals["fake"]) if eta_vals["fake"] else np.array([])
+    fake_msf = np.concatenate(msf_vals["fake"]) if msf_vals["fake"] else np.array([])
+
+    if len(real_eta) == 0 and len(fake_eta) == 0:
+        print("  Skipping 2D muonSubtrFactor plot (no jets found)")
+        return
+
+    # Print outside-tracker stats
+    for jtype, eta_a, msf_a in [("Real", real_eta, real_msf), ("Fake", fake_eta, fake_msf)]:
+        if len(eta_a) == 0:
+            continue
+        out = np.abs(eta_a) > TRACKER_EDGE
+        inside  = msf_a[~out]
+        outside = msf_a[ out]
+        frac = (outside > 1e-3).mean() * 100 if len(outside) > 0 else 0.0
+        print(f"  {jtype}: inside |η|≤{TRACKER_EDGE}: {len(inside):,} jets, MSF mean={inside.mean():.4f} | "
+              f"outside: {len(outside):,} jets, MSF mean={outside.mean():.2e}, frac>1e-3: {frac:.3f}%")
+
+    # ── Drawing helper ────────────────────────────────────────────────────────
+    def _draw(ax, eta, msf, title, msf_max, color):
+        if len(eta) == 0:
+            ax.text(0.5, 0.5, "No events", ha="center", va="center",
+                    transform=ax.transAxes)
+            ax.set_title(title, fontsize=11)
+            return
+        mask = np.isfinite(eta) & np.isfinite(msf) & (msf >= 0) & (msf <= msf_max)
+        h, xe, ye, img = ax.hist2d(
+            eta[mask], msf[mask],
+            bins=[100, 80],
+            range=[[-5, 5], [0, msf_max]],
+            norm=matplotlib.colors.LogNorm(),
+            cmap=color,
+        )
+        plt.colorbar(img, ax=ax, label="Count (log scale)")
+        for x in [-TRACKER_EDGE, TRACKER_EDGE]:
+            ax.axvline(x, color="red", ls="--", lw=1.5,
+                       label=f"|η|={TRACKER_EDGE}" if x > 0 else "_")
+        ax.set_xlabel("jet η", fontsize=11)
+        ax.set_ylabel("muonSubtrFactor", fontsize=11)
+        ax.set_title(title, fontsize=11)
+        ax.legend(fontsize=9, loc="upper right")
+
+    # ── Figure: 2 rows × 2 columns ───────────────────────────────────────────
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle(
+        f"jet η vs muonSubtrFactor — Real vs Fake jets (jet1+jet2 stacked, |η|={TRACKER_EDGE} tracker edge)",
+        fontsize=13, fontweight="bold",
+    )
+
+    _draw(axes[0, 0], real_eta, real_msf, "Real jets — MSF ∈ [0, 1]",    1.0,  "Blues")
+    _draw(axes[0, 1], fake_eta, fake_msf, "Fake jets — MSF ∈ [0, 1]",    1.0,  "Reds")
+    _draw(axes[1, 0], real_eta, real_msf, "Real jets — MSF ∈ [0, 0.01]", 0.01, "Blues")
+    _draw(axes[1, 1], fake_eta, fake_msf, "Fake jets — MSF ∈ [0, 0.01]", 0.01, "Reds")
+
+    plt.tight_layout()
+    save_fig(fig, outdir, "7_muonSubtrFactor_eta_2d")
+    save_panel(axes[0, 0], outdir, "7a_MSF_eta_real_full")
+    save_panel(axes[0, 1], outdir, "7b_MSF_eta_fake_full")
+    save_panel(axes[1, 0], outdir, "7c_MSF_eta_real_zoom")
+    save_panel(axes[1, 1], outdir, "7d_MSF_eta_fake_zoom")
+    plt.close(fig)
+
+
 # Print results table
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1078,9 +1183,13 @@ def main():
     df = compute_met_dphi(df)
     plot_met_dphi(df, args.output)
 
-    # ── Section 6 ─────────────────────────────────────────────────────────────────────────────
-    print("\n[6/6] Jet composition / ID variables...")
+    # ── Section 6 ─────────────────────────────────────────────────────────────
+    print("\n[6/7] Jet composition / ID variables...")
     plot_jet_id_vars(df, args.output)
+
+    # ── Section 7 ─────────────────────────────────────────────────────────────
+    print("\n[7/7] 2D jet η vs muonSubtrFactor (real vs fake)...")
+    plot_muonSubtrFactor_eta_2d(df, args.output)
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print_results(all_results)
