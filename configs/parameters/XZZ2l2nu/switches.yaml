@@ -1,0 +1,392 @@
+switches:
+    do_add_jet_ID_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    save_full_muon_detail:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    save_four_jets_kinematics:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    save_default_jet_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_getFatJet_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_trigger_match:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_roccor:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_fsr:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_geofit:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_beamConstraint:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_remove_dy_M100to200: # Not applicable for ZZ analysis
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_zpt: # Z-pT reweighting is HMuMu-only; always false for XZZ2l2nu
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    save_zpt_variations:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_HemVeto:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_HemVetoStudy:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jet_veto_maps_filterEvents:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_jet_veto_maps_filterJets:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jet_horn_ptcut:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jet_HE_nConstCut:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_use_pySR_score:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    add_pt_cut_for_HE_HF_jets:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    add_asymmetric_pt_cut_for_HE_HF_jets:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jet_horn_puid:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jec:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised.
+        # ---------------------------------------
+        # jer strat description
+        # ---------------------------------------
+        # -1 : apply no jer smearing.
+        # 0 : default hybrid jer. Apply scaling method for real jets. Apply stochastic method for fake jets (source: https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution)
+        # 1 : jer strat 1 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets if pT > 50. For fake jets with pT < 50 and passing tight PU Id, apply stochastic method. For fake jets with pT < 50 and failing tight PU Id, apply no jer smearing.
+        # 2 : jer strat 2 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets except fake jets with pT <= 50 and abseta > 2.5. For fake jets with pT <= 50 and abseta > 2.5, apply no jer smearing.
+        # 3 : our custom Run2 jer smearinig method for CHS jets. Source: https://indico.cern.ch/event/1499935/#175-update-from-purdue, slide 19
+        '2016preVFP': 0
+        '2016postVFP': 0
+        '2017': 0
+        '2018': 0
+        '2022preEE': -1
+        '2022postEE': -1
+        "2023": -1
+        "2023BPix": -1
+        "2024": -1
+    do_jec_unc:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_jer_unc:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_nnlops: # NNLOPS reweighting is HMuMu-only (ggH signal pT reweighting)
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_pdf:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_THU: # THU uncertainties are HMuMu-only (Higgs signal theory uncertainties)
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_pu_wgt:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_l1prefiring_wgts:
+        2016preVFP: true
+        2016postVFP: true
+        "2017": true
+        "2018": true
+        2016_RERECO: true
+        "2017_RERECO": true
+        "2018_RERECO": true
+        2022preEE: false
+        2022postEE: false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    apply_jet_PUID_wgt:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_qgl_wgt:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    do_btag_wgt:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    save_all_weight_variations:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+    save_muon_roccor_variations:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+    do_save_partial_weights:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true

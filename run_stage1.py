@@ -321,7 +321,7 @@ if __name__ == "__main__":
     else:
         yearForConfig = args.year
 
-    config = getParametersForYr("./configs/parameters/" , yearForConfig)
+    config = getParametersForYr("./configs/parameters/", yearForConfig, analysis=args.analysis)
     logger.debug(f"stage1 config: {config}")
 
     # Convert OmegaConf -> plain dict/list so the walker recurses correctly
@@ -329,7 +329,6 @@ if __name__ == "__main__":
     if isinstance(config, (DictConfig, ListConfig)):
         config = OmegaConf.to_container(config, resolve=True)
 
-    # CLI --analysis overrides the default set in get_parameters.py
     config["analysis"] = args.analysis
     logger.info(f"Analysis type: {config['analysis']}")
 

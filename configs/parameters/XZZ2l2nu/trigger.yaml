@@ -1,0 +1,28 @@
+hlt:
+    2016preVFP:
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL
+        - Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL
+    2016postVFP:
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL
+        - Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL
+    "2017":
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+    "2018":
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+    2016_RERECO:
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL
+        - Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL
+    "2017_RERECO":
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+    "2018_RERECO":
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+    2022preEE:
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+    2022postEE:
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+    "2023":
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+    "2023BPix":
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+    "2024":
+        - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8

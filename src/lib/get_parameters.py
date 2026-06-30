@@ -2,18 +2,22 @@ import glob
 from omegaconf import OmegaConf
 from rich import print
 
-def getParametersForYr(parameter_path: str, year: str) -> dict:
+def getParametersForYr(parameter_path: str, year: str, analysis: str = "HMuMu") -> dict:
     """
-    This is a simple python function that takes in all the parameters defined by the local yaml files, merges them and returns a dictionary of omegaconf variables (which are basically dictionaries) for a given year
-    If you would like to only accept certain yaml files, feel free to hard code the
-    filelist varaibles to contain the yaml files you want
+    Load and merge YAML parameter files for the given year and analysis.
+
+    Files are loaded from two subdirectories:
+      - {parameter_path}/common/   — shared across all analyses
+      - {parameter_path}/{analysis}/ — analysis-specific overrides
 
     Params:
-    parameter_path -> path where parameter yaml files are saved in
-        typically, the value is configs/parameters/
-    year -> Run era year in question
+    parameter_path -> root path, typically configs/parameters/
+    year -> Run era year, e.g. "2017", "2022preEE"
+    analysis -> analysis type: "HMuMu" (default) or "XZZ2l2nu"
     """
-    filelist = glob.glob(parameter_path + "*.yaml")
+    common_files = sorted(glob.glob(f"{parameter_path}/common/*.yaml"))
+    analysis_files = sorted(glob.glob(f"{parameter_path}/{analysis}/*.yaml"))
+    filelist = common_files + analysis_files
     # print(f"getParametersForYr filelist: {filelist}")
     params = [OmegaConf.load(f) for f in filelist]
     merged_param = OmegaConf.merge(*params)

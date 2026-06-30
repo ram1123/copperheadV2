@@ -1,0 +1,231 @@
+# ----------------------------------------------------------------
+# X -> ZZ -> 2l2nu analysis parameters
+# ----------------------------------------------------------------
+
+# ----------------------------------------------------------------
+# 2l2nu lepton selection (tighter than H->mumu, applied in both ee and mumu channels)
+# ----------------------------------------------------------------
+zz2l2nu_lep_pt_cut:
+    2016preVFP: 25.0
+    2016postVFP: 25.0
+    "2017": 25.0
+    "2018": 25.0
+    2016_RERECO: 25.0
+    "2017_RERECO": 25.0
+    "2018_RERECO": 25.0
+    2022preEE: 25.0
+    2022postEE: 25.0
+    "2023": 25.0
+    "2023BPix": 25.0
+    "2024": 25.0
+
+zz2l2nu_muon_eta_cut:
+    2016preVFP: 2.4
+    2016postVFP: 2.4
+    "2017": 2.4
+    "2018": 2.4
+    2016_RERECO: 2.4
+    "2017_RERECO": 2.4
+    "2018_RERECO": 2.4
+    2022preEE: 2.4
+    2022postEE: 2.4
+    "2023": 2.4
+    "2023BPix": 2.4
+    "2024": 2.4
+
+zz2l2nu_electron_eta_cut:
+    2016preVFP: 2.5
+    2016postVFP: 2.5
+    "2017": 2.5
+    "2018": 2.5
+    2016_RERECO: 2.5
+    "2017_RERECO": 2.5
+    "2018_RERECO": 2.5
+    2022preEE: 2.5
+    2022postEE: 2.5
+    "2023": 2.5
+    "2023BPix": 2.5
+    "2024": 2.5
+
+# Muon impact parameter cuts
+zz2l2nu_muon_dxy_cut:
+    2016preVFP: 0.045
+    2016postVFP: 0.045
+    "2017": 0.045
+    "2018": 0.045
+    2016_RERECO: 0.045
+    "2017_RERECO": 0.045
+    "2018_RERECO": 0.045
+    2022preEE: 0.045
+    2022postEE: 0.045
+    "2023": 0.045
+    "2023BPix": 0.045
+    "2024": 0.045
+
+zz2l2nu_muon_dz_cut:
+    2016preVFP: 0.2
+    2016postVFP: 0.2
+    "2017": 0.2
+    "2018": 0.2
+    2016_RERECO: 0.2
+    "2017_RERECO": 0.2
+    "2018_RERECO": 0.2
+    2022preEE: 0.2
+    2022postEE: 0.2
+    "2023": 0.2
+    "2023BPix": 0.2
+    "2024": 0.2
+
+# Electron impact parameter cuts (same as muon for 2l2nu)
+zz2l2nu_electron_dxy_cut:
+    2016preVFP: 0.045
+    2016postVFP: 0.045
+    "2017": 0.045
+    "2018": 0.045
+    2016_RERECO: 0.045
+    "2017_RERECO": 0.045
+    "2018_RERECO": 0.045
+    2022preEE: 0.045
+    2022postEE: 0.045
+    "2023": 0.045
+    "2023BPix": 0.045
+    "2024": 0.045
+
+zz2l2nu_electron_dz_cut:
+    2016preVFP: 0.2
+    2016postVFP: 0.2
+    "2017": 0.2
+    "2018": 0.2
+    2016_RERECO: 0.2
+    "2017_RERECO": 0.2
+    "2018_RERECO": 0.2
+    2022preEE: 0.2
+    2022postEE: 0.2
+    "2023": 0.2
+    "2023BPix": 0.2
+    "2024": 0.2
+
+# Muon isolation (pfRelIso03_all for 2l2nu, different from H->mumu which uses pfRelIso04_all)
+zz2l2nu_muon_iso_cut:
+    2016preVFP: 0.15
+    2016postVFP: 0.15
+    "2017": 0.15
+    "2018": 0.15
+    2016_RERECO: 0.15
+    "2017_RERECO": 0.15
+    "2018_RERECO": 0.15
+    2022preEE: 0.15
+    2022postEE: 0.15
+    "2023": 0.15
+    "2023BPix": 0.15
+    "2024": 0.15
+
+# ----------------------------------------------------------------
+# Z candidate requirements
+# |M_ll - 91| < 15 GeV  =>  76 < M_ll < 106
+# pT_ll > 55 GeV
+# ----------------------------------------------------------------
+zz2l2nu_z_mass_low:
+    2016preVFP: 76.0
+    2016postVFP: 76.0
+    "2017": 76.0
+    "2018": 76.0
+    2016_RERECO: 76.0
+    "2017_RERECO": 76.0
+    "2018_RERECO": 76.0
+    2022preEE: 76.0
+    2022postEE: 76.0
+    "2023": 76.0
+    "2023BPix": 76.0
+    "2024": 76.0
+
+zz2l2nu_z_mass_high:
+    2016preVFP: 106.0
+    2016postVFP: 106.0
+    "2017": 106.0
+    "2018": 106.0
+    2016_RERECO: 106.0
+    "2017_RERECO": 106.0
+    "2018_RERECO": 106.0
+    2022preEE: 106.0
+    2022postEE: 106.0
+    "2023": 106.0
+    "2023BPix": 106.0
+    "2024": 106.0
+
+zz2l2nu_z_pt_cut:
+    2016preVFP: 55.0
+    2016postVFP: 55.0
+    "2017": 55.0
+    "2018": 55.0
+    2016_RERECO: 55.0
+    "2017_RERECO": 55.0
+    "2018_RERECO": 55.0
+    2022preEE: 55.0
+    2022postEE: 55.0
+    "2023": 55.0
+    "2023BPix": 55.0
+    "2024": 55.0
+
+# ----------------------------------------------------------------
+# MET requirements
+# ----------------------------------------------------------------
+zz2l2nu_met_cut:
+    2016preVFP: 100.0
+    2016postVFP: 100.0
+    "2017": 100.0
+    "2018": 100.0
+    2016_RERECO: 100.0
+    "2017_RERECO": 100.0
+    "2018_RERECO": 100.0
+    2022preEE: 100.0
+    2022postEE: 100.0
+    "2023": 100.0
+    "2023BPix": 100.0
+    "2024": 100.0
+
+# Minimum delta-phi between any selected jet and MET
+zz2l2nu_dphi_jet_met_cut:
+    2016preVFP: 0.5
+    2016postVFP: 0.5
+    "2017": 0.5
+    "2018": 0.5
+    2016_RERECO: 0.5
+    "2017_RERECO": 0.5
+    "2018_RERECO": 0.5
+    2022preEE: 0.5
+    2022postEE: 0.5
+    "2023": 0.5
+    "2023BPix": 0.5
+    "2024": 0.5
+
+# ----------------------------------------------------------------
+# VBF category requirements for 2l2nu
+# ----------------------------------------------------------------
+zz2l2nu_vbf_deta_cut:
+    2016preVFP: 4.0
+    2016postVFP: 4.0
+    "2017": 4.0
+    "2018": 4.0
+    2016_RERECO: 4.0
+    "2017_RERECO": 4.0
+    "2018_RERECO": 4.0
+    2022preEE: 4.0
+    2022postEE: 4.0
+    "2023": 4.0
+    "2023BPix": 4.0
+    "2024": 4.0
+
+zz2l2nu_vbf_mjj_cut:
+    2016preVFP: 500.0
+    2016postVFP: 500.0
+    "2017": 500.0
+    "2018": 500.0
+    2016_RERECO: 500.0
+    "2017_RERECO": 500.0
+    "2018_RERECO": 500.0
+    2022preEE: 500.0
+    2022postEE: 500.0
+    "2023": 500.0
+    "2023BPix": 500.0
+    "2024": 500.0
