@@ -682,7 +682,12 @@ def getJecDataTag(run, jec_data_tags, NanoAODv=None):
     logger.debug(f"run: {run}")
     logger.debug(f"jec_data_tags: {jec_data_tags}")
     if (not isinstance(jec_data_tags, str)) and (NanoAODv is not None): # if it's a dictionary like
-        jec_data_tags = jec_data_tags[f"nanoAODv{NanoAODv}"]
+        # Run2 years nest data tags under nanoAODvNN keys (e.g. nanoAODv12/v15);
+        # Run3 years list the tags directly without that wrapper.
+        # Only unwrap when the version key is present to support both layouts.
+        key = f"nanoAODv{NanoAODv}"
+        if key in jec_data_tags:
+            jec_data_tags = jec_data_tags[key]
     logger.debug(f"jec_data_tags: {jec_data_tags}")
     for jec_tag, jec_run_l in jec_data_tags.items():
         for jec_run in jec_run_l:
