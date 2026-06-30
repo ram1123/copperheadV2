@@ -1,28 +1,250 @@
 hlt:
     2016preVFP:
+        # DoubleMu
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL
         - Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoTkMu24
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # SingleEle
+        - Ele27_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     2016postVFP:
+        # DoubleMu
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL
         - Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoTkMu24
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # SingleEle
+        - Ele27_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     "2017":
+        # DoubleMu (no Mass3p8 in Run-2)
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        # SingleEle
+        - Ele32_WPTight_Gsf
+        - Ele35_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3
+        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     "2018":
+        # DoubleMu (no Mass3p8 in Run-2)
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        # SingleEle
+        - Ele32_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ300_PFJetsMJJ400DEta3
+        - Photon75_R9Id90_HE10_IsoM_EBOnly_CaloMJJ400_PFJetsMJJ600DEta3
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     2016_RERECO:
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL
         - Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL
+        - IsoMu20
+        - IsoMu24
+        - IsoTkMu24
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - Ele27_WPTight_Gsf
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     "2017_RERECO":
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - Ele32_WPTight_Gsf
+        - Ele35_WPTight_Gsf
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     "2018_RERECO":
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ
+        - IsoMu20
+        - IsoMu24
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - Ele32_WPTight_Gsf
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     2022preEE:
+        # DoubleMu (Mass3p8 suffix added in Run-3)
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - DoubleEle25_CaloIdL_MW
+        # SingleEle
+        - Ele32_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     2022postEE:
+        # DoubleMu
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - DoubleEle25_CaloIdL_MW
+        # SingleEle
+        - Ele32_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     "2023":
+        # DoubleMu
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - DoubleEle25_CaloIdL_MW
+        # SingleEle
+        - Ele32_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     "2023BPix":
+        # DoubleMu
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - DoubleEle25_CaloIdL_MW
+        # SingleEle
+        - Ele32_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
     "2024":
+        # DoubleMu
         - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+        # SingleMu
+        - IsoMu20
+        - IsoMu24
+        - IsoMu27
+        # DoubleEle
+        - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+        - DoubleEle25_CaloIdL_MW
+        # SingleEle
+        - Ele32_WPTight_Gsf
+        # MuEG
+        - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+        - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+        # Photon
+        - Photon50_R9Id90_HE10_IsoM
+        - Photon75_R9Id90_HE10_IsoM
+        - Photon90_R9Id90_HE10_IsoM
+        - Photon120_R9Id90_HE10_IsoM
+        - Photon165_R9Id90_HE10_IsoM
+        - Photon300_NoHE
