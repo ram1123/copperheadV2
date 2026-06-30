@@ -398,9 +398,6 @@ def load_dir_to_df(
     if not parquet_files:
         raise FileNotFoundError(f"No parquet files matched pattern '{pattern}'")
 
-    # Load channel column too (not in SYNCVARLIST) so we can filter mm-only
-    extra_cols = ["channel"] if "channel" in events_lazy.fields else []
-
     # Restrict to columns that actually exist
     available_fields = set(pq.ParquetFile(parquet_files[0]).schema.names)
     available = [c for c in cols if c in available_fields]
@@ -409,13 +406,15 @@ def load_dir_to_df(
     if missing:
         print(f"[WARNING] Missing columns in {directory}: {missing}")
 
-    events_lazy = events_lazy[available + extra_cols]
+    # Load channel column too (not in SYNCVARLIST) so we can filter mm-only
+    extra_cols = ["channel"] if "channel" in available_fields else []
 
-    # Materialize to awkward Array
-    events = events_lazy.compute()
-
-    # Convert to pandas (awkward v2: no ak.to_pandas)
-    df = pd.DataFrame(ak.to_list(events))
+    # Load all parquet files and concatenate into a single DataFrame
+    dfs = []
+    for pf in parquet_files:
+        table = pq.read_table(pf, columns=available + extra_cols)
+        dfs.append(table.to_pandas())
+    df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame(columns=available + extra_cols)
 
     # Keep only mm (dimuon) events when channel column is present; this script
     # is the H→µµ sync tool and reference files contain mm events only.
