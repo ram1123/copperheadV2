@@ -118,8 +118,9 @@ def plot_base_for_year(year: str) -> str:
     return f"validation/figs/{era_tag}_nanoAODv{nano}"
 
 
-USE_GW = bool(config.get("use_gateway", False))
-CLIDX  = str(config.get("cluster_index", 0))
+USE_GW   = bool(config.get("use_gateway", False))
+CLIDX    = str(config.get("cluster_index", 0))
+ANALYSIS = config.get("analysis", "HMuMu")  # "HMuMu" or "XZZ2l2nu"
 
 ZPT = config["zpt"]
 ZPT_OUT = ZPT.get("outbase", "try_zpt_dnn")
@@ -197,7 +198,7 @@ rule all_stage1:
         # (1) stage1 for all years
         INITIAL_STAGE1_DONE,
         # (2) stage1Compact for all years
-        INITIAL_STAGE1_COMPACT_DONE,
+        # INITIAL_STAGE1_COMPACT_DONE,
         # (3) plotter (after stage1)
         PLOT_DONE,
         # f"{STATEDIR}/summary.done"
@@ -219,6 +220,7 @@ rule stage1:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
         summary=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
@@ -237,6 +239,7 @@ rule stage1:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -m 1 \
           {params.gw}  \
           > {log} 2>&1
@@ -290,6 +293,7 @@ rule stage1Compact:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
         outpath=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
@@ -306,6 +310,7 @@ rule stage1Compact:
             -v {params.nano} \
             -l {params.label} \
             -y "{wildcards.year}" \
+            -A {params.analysis} \
             -m compact \
             {params.gw} \
             > {log} 2>&1
@@ -411,6 +416,7 @@ rule zpt0:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
     resources:
         gateway=1,
     shell:
@@ -423,6 +429,7 @@ rule zpt0:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -m zpt_fit0 \
           {params.gw} \
           > {log} 2>&1
@@ -448,6 +455,7 @@ rule zpt1:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
     shell:
         r"""
         set -euo pipefail
@@ -458,6 +466,7 @@ rule zpt1:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -m zpt_fit1 \
           -n {wildcards.njets} \
           {params.gw} \
@@ -484,6 +493,7 @@ rule zpt2:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
     shell:
         r"""
         set -euo pipefail
@@ -494,6 +504,7 @@ rule zpt2:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -m zpt_fit2 \
           -n {wildcards.njets} \
           {params.gw} \
@@ -522,6 +533,7 @@ rule MassCalibrationMC:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
     resources:
         gateway=1,
     shell:
@@ -534,6 +546,7 @@ rule MassCalibrationMC:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -M 1 \
           -p "V1" \
           -m calib  \
@@ -558,6 +571,7 @@ rule MassCalibrationMCClosure:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
     resources:
         gateway=1,
     shell:
@@ -570,6 +584,7 @@ rule MassCalibrationMCClosure:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -M 1 \
           -p "V1" \
           -m calib_closure  \
@@ -596,6 +611,7 @@ rule MassCalibrationData:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
     resources:
         gateway=1,
     shell:
@@ -608,6 +624,7 @@ rule MassCalibrationData:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -M 0 \
           -p "V1" \
           -m calib \
@@ -632,6 +649,7 @@ rule MassCalibrationDataClosure:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        analysis=ANALYSIS,
     resources:
         gateway=1,
     shell:
@@ -644,6 +662,7 @@ rule MassCalibrationDataClosure:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
+          -A {params.analysis} \
           -M 0 \
           -p "V1" \
           -m calib_closure \

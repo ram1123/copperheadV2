@@ -1,9 +1,9 @@
 switches:
     do_add_jet_ID_vars:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -20,10 +20,10 @@ switches:
         "2023BPix": false
         "2024": false
     save_four_jets_kinematics:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -99,7 +99,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_remove_dy_M100to200: # Not applicable for ZZ analysis
+    do_remove_dy_M100to200: # Remove 100 to 200 mll region from inclusive DY.
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -109,7 +109,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_zpt: # Z-pT reweighting is HMuMu-only; always false for XZZ2l2nu
+    do_zpt:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -129,6 +129,16 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+    do_jet_PUID_cut:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_HemVeto:
         '2016preVFP': false
         '2016postVFP': false
@@ -139,7 +149,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_HemVetoStudy:
+    do_HemVetoStudy: # this should be true for obtaining the HemVeto_ratio value below. See documenation
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -149,7 +159,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_jet_veto_maps_filterEvents:
+    do_jet_veto_maps_filterEvents: # remove the events
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -159,7 +169,7 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
-    do_jet_veto_maps_filterJets:
+    do_jet_veto_maps_filterJets: # remove the jets not events
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -169,7 +179,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_jet_horn_ptcut:
+    do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
+        # Currently, updated the pT to 30 GeV
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -179,7 +190,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_jet_HE_nConstCut:
+    do_jet_HE_nConstCut: # For run-3 we scanned and noted that for nconstituents <= 3 its mostly fake jets.
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -189,7 +200,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_use_pySR_score:
+    do_use_pySR_score: # For run-3 reject the jets based on the pySR equeation.
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -210,6 +221,7 @@ switches:
         "2023BPix": false
         "2024": false
     add_asymmetric_pt_cut_for_HE_HF_jets:
+        # available options: [35.0, 30.0] or false
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -220,6 +232,8 @@ switches:
         "2023BPix": false
         "2024": false
     do_jet_horn_puid:
+        # For run-2 samples where we added strict PUID cut for the horn region
+        # For nanoAODv12, do_jet_horn_puid should be true
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -267,7 +281,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_jer_unc:
+    do_jer_unc: # FIXME: Not validated yet for Run-3
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -277,7 +291,7 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_nnlops: # NNLOPS reweighting is HMuMu-only (ggH signal pT reweighting)
+    do_nnlops:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -297,7 +311,7 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
-    do_THU: # THU uncertainties are HMuMu-only (Higgs signal theory uncertainties)
+    do_THU:
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -340,17 +354,18 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_qgl_wgt:
+    do_qgl_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
+        # Run-3: Recommendation does not exists, yet.
         '2022preEE': false
         '2022postEE': false
         "2023": false
         "2023BPix": false
         "2024": false
-    do_btag_wgt:
+    do_btag_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
