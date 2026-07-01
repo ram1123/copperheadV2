@@ -177,12 +177,16 @@ def ensure_compacted(year, sample, input_path, compacted_path, client=None):
             logger.warning(f"No rows found in parquet files under {orig_path}. Skipping.")
             return
 
-        # if ("vbf_powheg_dipole" in sample) or ("minnlo" in sample.lower()) or ("dy_VBF_filter" in sample):
-        if ("vbf_powheg_dipole" in sample):
-            logger.warning(f"Sample {sample} has high density (e.g. vbf signal), so, using a smaller maximum row count (100k) per compacted file.")
-            max_num_of_rows = 100_000
+        if ("vbf_powheg" in sample):
+            logger.warning(f"Sample {sample} has high density (e.g. vbf signal), so, using a smaller maximum row count (10k) per compacted file.")
+            # max_num_of_rows = 100_000
+            max_num_of_rows = 10_000
+        elif ("top" in sample.lower()):
+            logger.warning(f"Sample {sample} has high memory usage (e.g. st_tchannel_antitop), so, using a smaller maximum row count per compacted file.")
+            max_num_of_rows = 1_000
         else:
-            max_num_of_rows = 300_000
+            # max_num_of_rows = 300_000
+            max_num_of_rows = 30_000
 
         target_n_final_files = min(
             len(parquet_files),

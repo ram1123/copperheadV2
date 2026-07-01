@@ -31,6 +31,7 @@ from modules.utils import absolutize_config, get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
+from pathlib import Path
 
 dask.config.set(annotations={"retries": 5})
 dask.config.set({"distributed.scheduler.default-task-retries": 5})
@@ -171,7 +172,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     runner = coffea_processor_module.Runner(
         executor=coffea_processor_module.DaskExecutor(client=client),  # reuse existing client
         schema=NanoAODSchema,
-        chunksize=600_000,
+        chunksize=100_000,
         skipbadfiles=False,
     )
 
@@ -441,7 +442,11 @@ if __name__ == "__main__":
                             logger.debug(f"alt_sample['files']: {alt_sample['files']}")
 
                             # clean partial output from previous tries
-                            os.system(f"rm -rf '{save_path}'")
+                            save_dir_path = Path(save_path)
+                            if save_dir_path.is_dir():
+                                time.sleep(30) # NOTE: wait 30 seconds if removing directory. If immediately re-running run_stage1.py after crash, it may return `Directory not empty` error because there's still some parquet files being saved.
+                                os.system(f"rm -rf '{save_path}'") 
+                                logger.info(f"rm command executed for: {save_path}")
                             eos_mkdirs(save_path)
 
                             # rebuild the events/out collections for this attempt
