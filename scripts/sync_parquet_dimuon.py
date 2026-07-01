@@ -78,8 +78,8 @@ SYNCVARLIST: List[str] = [
     "separate_wgt_zpt",
     "separate_wgt_zpt_wgt",
     "separate_wgt_ones",
-    "zpt_wgt_reco",
-    "zpt_wgt_gen",
+    # "zpt_wgt_reco",
+    # "zpt_wgt_gen",
 ]
 
 TXT_COMPARE_EXCLUDED_VARS = {

@@ -73,7 +73,7 @@ jobs:
 
       - name: Apply CI-only switch overrides
         run: |
-          cp test/reference/switches.yaml configs/parameters/switches.yaml
+          cp test/reference/switches.yaml configs/parameters/HMuMu/switches.yaml
 
       # STEP-1: Get the stage-1 output
       - name: Run stage-1 sync sample
@@ -92,23 +92,63 @@ jobs:
               -S test/output
           '
 
+      - name: Check stage-1 status for failures
+        run: |
+          set -euo pipefail
+          summary="test/output/label_output/stage1_output/${{ matrix.year }}/_status/stage1_summary.json"
+          if [ ! -f "$summary" ]; then
+            echo "ERROR: stage-1 summary not found — stage-1 may have crashed before writing it." >&2
+            exit 1
+          fi
+          n_failed=$(python3 -c "import json; d=json.load(open('$summary')); print(d.get('n_failed', 0))")
+          n_done=$(python3 -c "import json; d=json.load(open('$summary')); print(d.get('n_done', 0))")
+          echo "Stage-1 status: ${n_done} done, ${n_failed} failed"
+          if [ "$n_failed" -gt 0 ]; then
+            echo "--- Failed jobs ---" >&2
+            python3 - "$summary" <<'PYEOF'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          for r in d.get("failed", []):
+              print(f"  FAILED {r['dataset']}[{r['idx']}]: {r['error']}", file=sys.stderr)
+          PYEOF
+            exit 1
+          fi
+
       - name: Produce sync text files
         run: |
           pixi run -e ci bash -lc '
             set -euo pipefail
             export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
-            python scripts/sync_parquet_dimuon.py \
-              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/data_*/ \
-              -o test/output/label_output/stage1_output/${{ matrix.year }}_data_eventKinematics.txt
+            year="${{ matrix.year }}"
+            out_root="test/output/label_output/stage1_output"
 
-            python scripts/sync_parquet_dimuon.py \
-              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/dy*/0/ \
-              -o test/output/label_output/stage1_output/${{ matrix.year }}_dy_eventKinematics.txt
+            echo "[debug] === Stage-1 output tree for ${year} ==="
+            find "${out_root}/${year}/f1_0" -maxdepth 3 | sort
 
+            echo "[debug] === Parquet files found ==="
+            find "${out_root}/${year}/f1_0" -name "*.parquet" | sort
+
+            echo "[debug] --- Running data sync ---"
+            echo "[debug] data glob: ${out_root}/${year}/f1_0/data_*/"
+            ls -ld "${out_root}/${year}/f1_0"/data_*/ 2>/dev/null || echo "[debug] no data_* directories found"
             python scripts/sync_parquet_dimuon.py \
-              test/output/label_output/stage1_output/${{ matrix.year }}/f1_0/vbf_powheg_dipole/0/ \
-              -o test/output/label_output/stage1_output/${{ matrix.year }}_vbf_eventKinematics.txt
+              "${out_root}/${year}/f1_0"/data_*/ \
+              -o "${out_root}/${year}_data_eventKinematics.txt"
+
+            echo "[debug] --- Running DY sync ---"
+            echo "[debug] dy glob: ${out_root}/${year}/f1_0/dy*/0/"
+            ls -ld "${out_root}/${year}/f1_0"/dy*/0/ 2>/dev/null || echo "[debug] no dy*/0/ directories found"
+            python scripts/sync_parquet_dimuon.py \
+              "${out_root}/${year}/f1_0"/dy*/0/ \
+              -o "${out_root}/${year}_dy_eventKinematics.txt"
+
+            echo "[debug] --- Running VBF sync ---"
+            echo "[debug] vbf path: ${out_root}/${year}/f1_0/vbf_powheg_dipole/0/"
+            ls -ld "${out_root}/${year}/f1_0/vbf_powheg_dipole/0/" 2>/dev/null || echo "[debug] vbf directory not found"
+            python scripts/sync_parquet_dimuon.py \
+              "${out_root}/${year}/f1_0/vbf_powheg_dipole/0/" \
+              -o "${out_root}/${year}_vbf_eventKinematics.txt"
           '
 
       - name: Compare cutflow JSON against references

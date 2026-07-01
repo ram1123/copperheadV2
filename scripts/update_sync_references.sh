@@ -22,7 +22,7 @@ nanoaodv="12"
 label="label_output"
 output_root="test/output"
 reference_dir="test/reference"
-switches_file="configs/parameters/switches.yaml"
+switches_file="configs/parameters/HMuMu/switches.yaml"
 switches_backup=""
 reference_switches_file="test/reference/switches.yaml"
 
@@ -68,7 +68,7 @@ for year in "${years[@]}"; do
 
     vbf_sample="vbf_powheg_dipole"
 
-    bash stage1_loop_Improved.sh \
+    bash run_analysis_pipeline.sh \
         -c "$dataset_yaml" \
         -v "$nanoaodv" \
         -l "$label" \
