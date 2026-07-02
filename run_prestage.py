@@ -481,16 +481,7 @@ if __name__ == "__main__":
         logger.info(f"Final selected dataset keys: {list(dataset.keys())}")
 
         fnames = ""
-        samples2keep = None 
-        # samples2keep = [ #FIXME hard coding on samples to re-run
-        #     # "dy_VBF_filter",
-        #     "dyTo2Mu_M-100to200_MiNNLO",
-        #     "dyTo2Mu_M-50_MiNNLO",
-        #     # "dyTo2L_M-50_aMCatNLO",
-        # ]
         for sample_name in tqdm.tqdm(dataset.keys()):
-            if (samples2keep is not None) and (sample_name not in samples2keep): # hard coding to skip samples if need be
-                continue
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
             logger.debug(f"dataset[sample_name]: {dataset[sample_name]}")
