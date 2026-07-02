@@ -46,7 +46,7 @@ Output location:
 Important details:
 
 1. The script looks in `stage1_output/<year>/compacted` first, then `stage1_output/<year>/f1_0`.
-2. It always divides out `separate_wgt_zpt_wgt` before deriving new weights, so the fit starts from the unweighted DY shape.
+2. It always divides out `separate_wgt_zpt` before deriving new weights, so the fit starts from the unweighted DY shape.
 3. It loops over `njet = 0, 1, >=2` internally.
 
 # Step 1: Run The F-test
@@ -107,7 +107,7 @@ The final YAML stores:
 
 # Step 3: Copy Or Register The Final YAML
 
-Once the final YAML looks good, copy or merge it into the repository location used by the analysis code for your production setup. That YAML is what [copperhead_processor.py](../src/copperhead_processor.py) reads when stage-1 computes `separate_wgt_zpt_wgt`.
+Once the final YAML looks good, copy or merge it into the repository location used by the analysis code for your production setup. That YAML is what [copperhead_processor.py](../src/copperhead_processor.py) reads when stage-1 computes `separate_wgt_zpt`.
 
 # Step 4: Validate The Weight
 
@@ -187,4 +187,4 @@ If the validation looks wrong, check these first:
 2. `zpt_fit_config.yaml` exists under `fTest_<save_postfix>/`.
 3. The final `zpt_rewgt_params_<dy_sample>.yaml` contains the target year and all three jet bins.
 4. The validation is reading the intended compacted or `f1_0` stage-1 directory.
-5. The `--remove_zpt_weights` plots are really dividing out `separate_wgt_zpt_wgt`.
+5. The `--remove_zpt_weights` plots are really dividing out `separate_wgt_zpt`.

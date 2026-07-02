@@ -579,9 +579,9 @@ def build_features_and_weights_dak(
         w_nom = np.abs(w_nom)
 
         # Remove ZpT reweighting
-        if "separate_wgt_zpt_wgt" in fields:
+        if "separate_wgt_zpt" in fields:
             w_zpt = dak_to_numpy_1d(
-                events_dak["separate_wgt_zpt_wgt"]
+                events_dak["separate_wgt_zpt"]
             ).reshape(-1).astype(np.float32)
 
             # Protect against bad values
@@ -592,11 +592,11 @@ def build_features_and_weights_dak(
             w = w_nom / w_zpt
 
             logger.info(
-                f"Removed ZpT weight: w = {wname} / separate_wgt_zpt_wgt"
+                f"Removed ZpT weight: w = {wname} / separate_wgt_zpt"
             )
         else:
             logger.warning(
-                "Field 'separate_wgt_zpt_wgt' not found — using nominal weight as-is."
+                "Field 'separate_wgt_zpt' not found — using nominal weight as-is."
             )
             w = w_nom
 
