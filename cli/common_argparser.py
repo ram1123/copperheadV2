@@ -163,7 +163,14 @@ def build_common_parser() -> argparse.ArgumentParser:
         default=False,
         action=argparse.BooleanOptionalAction,
         help="Enable the DY vs DY-VBF-filter study selection.",
-    )    
+    )
+    parser.add_argument(
+        "--analysis",
+        dest="analysis",
+        default="HMuMu",
+        choices=["HMuMu", "XZZ2l2nu"],
+        help="Analysis type; controls analysis-specific behaviour (e.g. Z-pT reweighting).",
+    )
     return parser
 
 

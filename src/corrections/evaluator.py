@@ -999,12 +999,13 @@ def qgl_weights_V2(jets, config, isHerwig, year):
     # print(f"isHerwig: {isHerwig}")
     # print(f"jets.qgl: {jets.qgl.compute()}")
 
-    # --- choose score and weight mask depending on year ---
-    score_field = "qgl"
-    if is_run2(year):  # Run 2: use QGL
+    # --- choose score and weight mask depending on available fields ---
+    # Run 2 NanoAODv12: Jet_qgl present → use QGL
+    # Run 2 NanoAODv15 (150X) and Run 3: Jet_qgl absent → use PNet QvG
+    if "qgl" in ak.fields(jets):
         wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2) & (jets.qgl > 0)
         score_field = "qgl"
-    else:  # Run 3: use PNet QvG
+    else:
         wgt_mask = (jets.partonFlavour != 0) & (abs(jets.eta) < 2.5) & (jets.btagPNetQvG > 0)
         score_field = "btagPNetQvG"
     lightOrGluon = (abs(jets.partonFlavour) < 4) | (jets.partonFlavour == 21)

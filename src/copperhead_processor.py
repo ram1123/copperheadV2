@@ -802,9 +802,12 @@ class EventProcessor(processor.ProcessorABC):
         # Apply HLT to both Data and MC.
         # NOTE: this would probably be superfluous if you already do trigger matching
         HLT_filter = ak.zeros_like(event_filter, dtype="bool")  # start with 1D of Falses
+        hlt_fields = set(ak.fields(events.HLT))
         for HLT_str in self.config["hlt"]:
             logger.debug(f"HLT_str: {HLT_str}")
-            # HLT_filter = HLT_filter | events.HLT[HLT_str]
+            if HLT_str not in hlt_fields:
+                logger.warning(f"HLT path '{HLT_str}' not in NanoAOD fields, skipping")
+                continue
             HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
         self.selection.add("HLT_filter", HLT_filter)
         event_filter = event_filter & HLT_filter
@@ -1137,12 +1140,27 @@ class EventProcessor(processor.ProcessorABC):
 
         pv_good = (events.PV.npvsGood > 0)
         self.selection.add("PV_npvsGood", pv_good)
-        event_filter = event_filter & (nmuons == 2)
-        self.selection.add("nmuons", nmuons==2)
 
-        event_filter = event_filter & (mm_charge == -1)
+        # mm channel: exactly 2 OS muons with electron veto
+        is_mm = (nmuons == 2) & (mm_charge == -1) & electron_veto
+        self.selection.add("is_mm", is_mm)
+        self.selection.add("nmuons", nmuons==2)
         self.selection.add("mm_charge", mm_charge==-1)
-        event_filter = event_filter & electron_veto
+
+        # em channel: exactly 1 muon + 1 OS selected electron (used for E-Mu CR)
+        muon_lead_ch = ak.fill_none(ak.firsts(muons.charge), 0)
+        elec_lead_ch = ak.fill_none(ak.firsts(events.Electron[electron_selection].charge), 0)
+        em_os = (muon_lead_ch * elec_lead_ch == -1)
+        is_em = (nmuons == 1) & (nelectrons == 1) & em_os
+        self.selection.add("is_em", is_em)
+
+        # ee channel: exactly 2 OS electrons, muon veto
+        ee_charge_sum = ak.fill_none(ak.sum(events.Electron[electron_selection].charge, axis=1), 0)
+        ee_os = (ee_charge_sum == 0)  # OS pair: +1 + (-1) = 0
+        is_ee = (nelectrons == 2) & ee_os & (nmuons == 0)
+        self.selection.add("is_ee", is_ee)
+
+        event_filter = event_filter & (is_mm | is_em | is_ee)
 
         t8 = time.perf_counter()
         logger.info(f"[timing] Electron selection filtering time: {t8 - t7:.2f} seconds")
@@ -1237,6 +1255,33 @@ class EventProcessor(processor.ProcessorABC):
         muons = muons[event_filter == True]
         nmuons = ak.to_packed(nmuons[event_filter == True])
 
+        # Propagate channel flags through event filter
+        is_mm = is_mm[event_filter == True]
+        is_em = is_em[event_filter == True]
+        is_ee = is_ee[event_filter == True]
+        channel = ak.where(is_mm, 0, ak.where(is_em, 1, 2))  # 0=mm, 1=em, 2=ee
+
+        # Recompute selected electrons on filtered events (used by em and ee channels)
+        ecal_gap_filt = (1.44 < abs(events.Electron.eta)) & (1.57 > abs(events.Electron.eta))
+        electron_sel_filt = (
+            (events.Electron.pt > self.config["electron_pt_cut"])
+            & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+            & events.Electron[electron_id]
+            & ~ecal_gap_filt
+        )
+        electrons_sel = events.Electron[electron_sel_filt]
+        nelectrons_filt = ak.num(electrons_sel, axis=1)  # 0=mm, 1=em, 2=ee
+
+        # em: leading selected electron (None for mm/ee)
+        el1 = ak.firsts(electrons_sel)
+
+        # ee pair: two leading selected electrons sorted by pT (sort before padding to avoid None in argsort)
+        electrons_pt_sorted = electrons_sel[ak.argsort(electrons_sel.pt, ascending=False)]
+        electrons_padded_ee = ak.pad_none(electrons_pt_sorted, target=2)
+        el1_ee = electrons_padded_ee[:, 0]   # leading electron (None for mm/em)
+        el2_ee = electrons_padded_ee[:, 1]   # subleading electron (None for mm/em and em)
+        ee_pair = el1_ee + el2_ee            # None for mm/em events
+
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter == True])
@@ -1258,13 +1303,31 @@ class EventProcessor(processor.ProcessorABC):
         sorted_args = ak.argsort(muons_padded.pt, ascending=False)
         muons_sorted = (muons_padded[sorted_args])
         mu1 = muons_sorted[:,0]
-        mu2 = muons_sorted[:,1]
+        mu2 = muons_sorted[:,1]  # None for em events (only 1 muon)
+
+        # em pair: the one muon + the one electron (None for mm/ee events)
+        em_pair = mu1 + el1
 
         dimuon_dR = mu1.delta_r(mu2)
         dimuon_dEta = abs(mu1.eta - mu2.eta)
         dimuon_dPhi = abs(mu1.delta_phi(mu2))
         acoplanarity = 1 - dimuon_dPhi/ np.pi  # acoplanarity = 1 - delta_phi/pi
-        dimuon = mu1+mu2
+        dimuon = mu1+mu2  # None for em events
+
+        # Unified dilepton candidate: mm → dimuon, em → em_pair, ee → ee_pair
+        dilepton_mass = ak.where(is_ee, ak.fill_none(ee_pair.mass, 0.0),
+                       ak.where(is_em, ak.fill_none(em_pair.mass, 0.0),
+                                       ak.fill_none(dimuon.mass,  0.0)))
+        dilepton_pt   = ak.where(is_ee, ak.fill_none(ee_pair.pt,  0.0),
+                       ak.where(is_em, ak.fill_none(em_pair.pt,   0.0),
+                                       ak.fill_none(dimuon.pt,    0.0)))
+        dilepton_phi  = ak.where(is_ee, ak.fill_none(ee_pair.phi, 0.0),
+                       ak.where(is_em, ak.fill_none(em_pair.phi,  0.0),
+                                       ak.fill_none(dimuon.phi,   0.0)))
+        dilepton_eta  = ak.where(is_ee, ak.fill_none(ee_pair.eta, 0.0),
+                       ak.where(is_em, ak.fill_none(em_pair.eta,  0.0),
+                                       ak.fill_none(dimuon.eta,   0.0)))
+        pass_z_mass_window = (dilepton_mass > 76.0) & (dilepton_mass < 106.0)
 
         uncalibrated_dimuon_ebe_mass_res, calibration = self.get_mass_resolution(dimuon, mu1, mu2, is_mc, test_mode=self.test_mode, doing_BS_correction=doing_BS_correction)
         dimuon_ebe_mass_res = uncalibrated_dimuon_ebe_mass_res * calibration
@@ -1371,6 +1434,21 @@ class EventProcessor(processor.ProcessorABC):
             jets = ensure_event_axis(jets, len(events), "jet-post-veto")
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
+
+        # ----------------------------------------------------------------
+        # MET-derived variables for X->ZZ->2l2nu
+        # ----------------------------------------------------------------
+        dphi_z_met = np.abs(dilepton_phi - PuppiMET.phi)
+        dphi_z_met = ak.where(dphi_z_met > np.pi, 2.0 * np.pi - dphi_z_met, dphi_z_met)
+
+        # min delta-phi between any central jet (pT>30, |eta|<4.7) and MET
+        jets_for_dphi = jets[(jets.pt > 30) & (abs(jets.eta) < 4.7)]
+        dphi_jets_met_raw = np.abs(jets_for_dphi.phi - PuppiMET.phi)
+        dphi_jets_met_raw = ak.where(dphi_jets_met_raw > np.pi, 2.0 * np.pi - dphi_jets_met_raw, dphi_jets_met_raw)
+        min_dphi_jet_met = ak.fill_none(ak.min(dphi_jets_met_raw, axis=1), np.pi)
+
+        # Transverse mass: M_T = sqrt(2 * pT_Z * MET * (1 - cos(Δφ(Z,MET))))
+        MT_ZZ = np.sqrt(2.0 * dilepton_pt * PuppiMET.pt * (1.0 - np.cos(dphi_z_met)))
 
         logger.info(f"jets type before pad_none: {jets.type}")
         logger.info(f"jets ndim: {jets.ndim}")
@@ -1858,6 +1936,31 @@ class EventProcessor(processor.ProcessorABC):
             "PuppiMET_sumEt": PuppiMET.sumEt,
         })
 
+        # X->ZZ->2l2nu: channel, lepton counts, unified dilepton, and MET-derived variables
+        _add_block(out_dict, {
+            "channel": channel,                    # 0=mm, 1=em, 2=ee
+            "nMuons": nmuons,
+            "nElectrons": nelectrons_filt,
+            "pass_z_mass_window": pass_z_mass_window,
+            "dilepton_mass": dilepton_mass,
+            "dilepton_pt": dilepton_pt,
+            "dilepton_phi": dilepton_phi,
+            "dilepton_eta": dilepton_eta,
+            "delta_phi_Z_MET": dphi_z_met,
+            "min_delta_phi_jet_MET": min_dphi_jet_met,
+            "MT_ZZ": MT_ZZ,
+            # leading electron: em→ the one electron, ee→ pT-sorted leading e, mm→ -999
+            "el1_pt":     ak.where(is_ee, ak.fill_none(el1_ee.pt,  -999.0), ak.fill_none(el1.pt,  -999.0)),
+            "el1_eta":    ak.where(is_ee, ak.fill_none(el1_ee.eta, -999.0), ak.fill_none(el1.eta, -999.0)),
+            "el1_phi":    ak.where(is_ee, ak.fill_none(el1_ee.phi, -999.0), ak.fill_none(el1.phi, -999.0)),
+            "el1_charge": ak.where(is_ee, ak.fill_none(el1_ee.charge, 0),  ak.fill_none(el1.charge, 0)),
+            # subleading electron: filled for ee only; -999 for mm/em
+            "el2_pt":     ak.fill_none(el2_ee.pt,     -999.0),
+            "el2_eta":    ak.fill_none(el2_ee.eta,    -999.0),
+            "el2_phi":    ak.fill_none(el2_ee.phi,    -999.0),
+            "el2_charge": ak.fill_none(el2_ee.charge, 0),
+        })
+
         # FatJet block
         if do_getFatJet_vars:
             _add_block(out_dict, {
@@ -2229,8 +2332,15 @@ class EventProcessor(processor.ProcessorABC):
         logger.info(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
 
         # do zpt weight at the very end
+        # Z-pT reweighting is only meaningful for H→µµ analysis (DY Z→µµ correction).
+        # Explicitly disabled for X→ZZ→2l2ν and any future analysis that is not HMuMu.
         dataset = events.metadata["dataset"]
-        do_zpt = ('dy' in dataset) and is_mc and self.config["switches"]["do_zpt"]
+        do_zpt = (
+            ('dy' in dataset)
+            and is_mc
+            and self.config["switches"]["do_zpt"]
+            and self.config.get("analysis", "HMuMu") == "HMuMu"
+        )
         if do_zpt:
             njets_reco = out_dict["njets_nominal"]
             njets_gen = n_genjets_pt30_eta47
@@ -2245,8 +2355,30 @@ class EventProcessor(processor.ProcessorABC):
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
 
-                zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv)
-                zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)
+                # Compute Z-pT weights on the mm-only slice to preserve bit-identical
+                # output vs the original mm-only code path. FP results differ if the
+                # array includes em/ee events due to SIMD non-associativity.
+                mm_mask_np = ak.to_numpy(is_mm).astype(bool)
+                n_total_zpt = len(is_mm)
+                # ak.to_packed normalises the indexed-option representation to a
+                # contiguous array, matching the original mm-only code's memory layout.
+                mm_dimuon_pt  = ak.to_packed(dimuon.pt[is_mm])
+                mm_njets_reco = ak.to_packed(njets_reco[is_mm])
+                mm_njets_gen  = ak.to_packed(njets_gen[is_mm])
+
+                def _scatter_zpt(mm_vals_ak, mm_mask, n_total):
+                    """Return full-length array: mm rows get computed weight, em/ee get 1.0."""
+                    vals_np = ak.to_numpy(ak.fill_none(mm_vals_ak, np.float32(1.0)))
+                    full = np.ones(n_total, dtype=vals_np.dtype)
+                    full[mm_mask] = vals_np
+                    return ak.Array(full)
+
+                zpt_wgt_reco = _scatter_zpt(
+                    getZptWgts_3region(mm_dimuon_pt, mm_njets_reco, "function", year, zpt_cfg, NanoAODv),
+                    mm_mask_np, n_total_zpt)
+                zpt_wgt_gen = _scatter_zpt(
+                    getZptWgts_3region(mm_dimuon_pt, mm_njets_gen, "function", year, zpt_cfg, NanoAODv),
+                    mm_mask_np, n_total_zpt)
 
                 # --- save both to parquet
                 zpt_block = {
@@ -2255,18 +2387,18 @@ class EventProcessor(processor.ProcessorABC):
                 }
 
                 if save_zpt_variations:
-                    zpt_wgt_reco_up = getZptWgts_3region(
-                        dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv, sigma_shift=1.0
-                    )
-                    zpt_wgt_reco_down = getZptWgts_3region(
-                        dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv, sigma_shift=-1.0
-                    )
-                    zpt_wgt_gen_up = getZptWgts_3region(
-                        dimuon.pt, njets_gen, "function", year, zpt_cfg, NanoAODv, sigma_shift=1.0
-                    )
-                    zpt_wgt_gen_down = getZptWgts_3region(
-                        dimuon.pt, njets_gen, "function", year, zpt_cfg, NanoAODv, sigma_shift=-1.0
-                    )
+                    zpt_wgt_reco_up = _scatter_zpt(getZptWgts_3region(
+                        mm_dimuon_pt, mm_njets_reco, "function", year, zpt_cfg, NanoAODv, sigma_shift=1.0
+                    ), mm_mask_np, n_total_zpt)
+                    zpt_wgt_reco_down = _scatter_zpt(getZptWgts_3region(
+                        mm_dimuon_pt, mm_njets_reco, "function", year, zpt_cfg, NanoAODv, sigma_shift=-1.0
+                    ), mm_mask_np, n_total_zpt)
+                    zpt_wgt_gen_up = _scatter_zpt(getZptWgts_3region(
+                        mm_dimuon_pt, mm_njets_gen, "function", year, zpt_cfg, NanoAODv, sigma_shift=1.0
+                    ), mm_mask_np, n_total_zpt)
+                    zpt_wgt_gen_down = _scatter_zpt(getZptWgts_3region(
+                        mm_dimuon_pt, mm_njets_gen, "function", year, zpt_cfg, NanoAODv, sigma_shift=-1.0
+                    ), mm_mask_np, n_total_zpt)
                     zpt_block.update(
                         {
                             "zpt_wgt_reco_up": zpt_wgt_reco_up,

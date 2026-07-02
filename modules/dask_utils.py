@@ -24,15 +24,6 @@ def get_dask_client(
         if not clusters:
             raise RuntimeError("No Dask Gateway clusters available")
         client = gateway.connect(clusters[cluster_index].name).get_client()
-        xrd_env = {
-            "XRD_REQUESTTIMEOUT": "900",
-            "XRD_STREAMTIMEOUT": "900",
-            "XRD_CONNECTIONRETRY": "16",
-            "XRD_REDIRECTLIMIT": "16",
-            "XRD_CONNECTIONWINDOW": "120",
-            "XRD_TIMEOUTRESOLUTION": "5",
-        }
-        client.run(lambda env=xrd_env: __import__("os").environ.update(env))
     else:
         from distributed import Client
         logger.info("Creating new local Dask client")

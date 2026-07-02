@@ -22,7 +22,7 @@ nanoaodv="12"
 label="label_output"
 output_root="test/output"
 reference_dir="test/reference"
-switches_file="configs/parameters/switches.yaml"
+switches_file="configs/parameters/HMuMu/switches.yaml"
 switches_backup=""
 reference_switches_file="test/reference/switches.yaml"
 
@@ -68,7 +68,7 @@ for year in "${years[@]}"; do
 
     vbf_sample="vbf_powheg_dipole"
 
-    bash stage1_loop_Improved.sh \
+    bash run_analysis_pipeline.sh \
         -c "$dataset_yaml" \
         -v "$nanoaodv" \
         -l "$label" \
@@ -95,10 +95,10 @@ for year in "${years[@]}"; do
     cp "${year_root}/${year}_data_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_dy_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_vbf_eventKinematics.txt" "$reference_dir/"
-    cp "${f1_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
+    cp "$(ls "${f1_root}/${data_sample}/0/cutflow_${data_sample}_"*.json | head -1)" \
         "${reference_dir}/${year}_cutflow_${data_sample}_0.json"
-    cp "${f1_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
+    cp "$(ls "${f1_root}/${dy_sample}/0/cutflow_${dy_sample}_"*.json | head -1)" \
         "${reference_dir}/${year}_cutflow_${dy_sample}_0.json"
-    cp "${f1_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
+    cp "$(ls "${f1_root}/${vbf_sample}/0/cutflow_${vbf_sample}_"*.json | head -1)" \
         "${reference_dir}/${year}_cutflow_${vbf_sample}_0.json"
 done

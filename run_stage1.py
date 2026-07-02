@@ -321,13 +321,16 @@ if __name__ == "__main__":
     else:
         yearForConfig = args.year
 
-    config = getParametersForYr("./configs/parameters/" , yearForConfig)
+    config = getParametersForYr("./configs/parameters/", yearForConfig, analysis=args.analysis)
     logger.debug(f"stage1 config: {config}")
 
     # Convert OmegaConf -> plain dict/list so the walker recurses correctly
     # and so the config is cleanly picklable for dask workers.
     if isinstance(config, (DictConfig, ListConfig)):
         config = OmegaConf.to_container(config, resolve=True)
+
+    config["analysis"] = args.analysis
+    logger.info(f"Analysis type: {config['analysis']}")
 
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
     config = absolutize_config(config, PROJECT_ROOT)

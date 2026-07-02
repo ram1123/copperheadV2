@@ -8,8 +8,13 @@ hmm_base: /work/projects/hmm
 #     f"{label_for_year_corr(wc.year)}/stage1_output/{wc.year}/f1_0"
 # )
 
+# analysis type: "HMuMu" (default) or "XZZ2l2nu"
+analysis: "HMuMu"
+# analysis: "XZZ2l2nu"
+
 # what to run
-years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+years: ["2016preVFP", "2016postVFP", "2017", "2018"]
 # years: ["2022preEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE"]
 # years: ["2022preEE"]
@@ -36,6 +41,7 @@ years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 
 
 run_tag: "FilterJets_May14_PySR07MayV2"
+# run_tag: "XZZ2l2nu_July01"
 
 # dask gateway
 use_gateway: true

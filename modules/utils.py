@@ -61,6 +61,7 @@ stream_handler = RichHandler(show_time=False, rich_tracebacks=True,tracebacks_wo
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 # logger.setLevel(logging.INFO)
+# logger.setLevel(logging.DEBUG)
 logger.setLevel(logging.WARNING)
 # logger.setLevel(logging.ERROR)
 
