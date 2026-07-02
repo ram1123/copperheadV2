@@ -49,29 +49,37 @@ group_dict = {
             # "dyTo2Mu_M-100to200_MiNNLO", 
             # "dy_M-100To200_MiNNLO",# run2 nanoV12
             # "dy_M-50_MiNNLO", # run2 nanoV12
-            "dy_M-50_aMCatNLO", # run2 nanoV12
-            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            # "dy_M-50_aMCatNLO", # run2 nanoV12
+            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
+            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
         ],
         "2016postVFP": [
             # "dyTo2Mu_M-100to200_MiNNLO", 
             # "dy_M-100To200_MiNNLO",# run2 nanoV12
             # "dy_M-50_MiNNLO", # run2 nanoV12
-            "dy_M-50_aMCatNLO", # run2 nanoV12
-            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            # "dy_M-50_aMCatNLO", # run2 nanoV12
+            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
+            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
         ],
         "2017": [
             # "dyTo2Mu_M-100to200_MiNNLO", 
             # "dy_M-100To200_MiNNLO",# run2 nanoV12
             # "dy_M-50_MiNNLO", # run2 nanoV12
-            "dy_M-50_aMCatNLO", # run2 nanoV12
-            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            # "dy_M-50_aMCatNLO", # run2 nanoV12
+            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
+            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
         ],
         "2018": [
             # "dyTo2Mu_M-100to200_MiNNLO", 
             # "dy_M-100To200_MiNNLO",# run2 nanoV12
             # "dy_M-50_MiNNLO", # run2 nanoV12
-            "dy_M-50_aMCatNLO", # run2 nanoV12
-            "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            # "dy_M-50_aMCatNLO", # run2 nanoV12
+            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
+            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
+            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
         ],
         "2022preEE": ["dyTo2L_M-50_incl"],
         "2022postEE": ["dyTo2L_M-50_incl"],
@@ -79,11 +87,35 @@ group_dict = {
         "2023BPix": ["dyTo2L_M-50_incl"],
         "2024": ["dyTo2Mu_M-50_aMCatNLO"],
 
+        # "2022preEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2022postEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2023": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2023BPix": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
+        # "2024": ["dyTo2Mu_M-50_aMCatNLO", "dy_VBF_filter"],
+
+
         # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],        
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
         # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+
+        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
+    },
+    "DYVBF": {
+        "2016preVFP": ["dy_VBF_filter"],
+        "2016postVFP": ["dy_VBF_filter"],
+        "2017": ["dy_VBF_filter"],
+        "2018": ["dy_VBF_filter"],
+        "2022preEE": ["dy_VBF_filter"],
+        "2022postEE": ["dy_VBF_filter"],
+        "2023": ["dy_VBF_filter"],
+        "2023BPix": ["dy_VBF_filter"],
+        "2024": ["dy_VBF_filter"],
     },
     "EWK": {
         "2016preVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
@@ -530,17 +562,17 @@ if __name__ == "__main__":
         if not is_data: # MC sample
             # fields2load += ["gjj_mass", "gjj_dR", "gjet1_pt", "gjet2_pt"]
             fields2load += ["gjj_mass"]
-            if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-                logger.debug("Append separate_wgt_zpt_wgt to fields2load!")
-                fields2load.append("separate_wgt_zpt_wgt")
+            if "separate_wgt_zpt" in events.fields and args.remove_zpt_weights:
+                logger.debug("Append separate_wgt_zpt to fields2load!")
+                fields2load.append("separate_wgt_zpt")
 
             elif (
                 "zpt_wgt_gen" in events.fields
-                and "separate_wgt_zpt_wgt" in events.fields
+                and "separate_wgt_zpt" in events.fields
                 and args.use_dnn_zpt_weights
             ):
-                logger.debug("Append separate_wgt_zpt_wgt and zpt_wgt_gen to fields2load!")
-                fields2load.append("separate_wgt_zpt_wgt")
+                logger.debug("Append separate_wgt_zpt and zpt_wgt_gen to fields2load!")
+                fields2load.append("separate_wgt_zpt")
                 fields2load.append("zpt_wgt_gen")
         # filter out redundant fields by using the set object
         fields2load = list(set(fields2load))
@@ -556,17 +588,17 @@ if __name__ == "__main__":
         # if "separate_wgt_qgl_wgt" in events.fields:
         #     logger.info("removing separate_wgt_qgl_wgt!")
         #     events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_qgl_wgt"] # remove zpt wgt
-        if "separate_wgt_zpt_wgt" in events.fields and args.remove_zpt_weights:
-            logger.warning("removing separate_wgt_zpt_wgt!")
-            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+        if "separate_wgt_zpt" in events.fields and args.remove_zpt_weights:
+            logger.warning("removing separate_wgt_zpt!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt"] # remove zpt wgt
 
         elif (
-            "separate_wgt_zpt_wgt" in events.fields
+            "separate_wgt_zpt" in events.fields
             and "zpt_wgt_gen" in events.fields
             and args.use_dnn_zpt_weights
             ):
-            logger.warning("removing separate_wgt_zpt_wgt and applying zpt_wgt_gen!")
-            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt_wgt"] # remove zpt wgt
+            logger.warning("removing separate_wgt_zpt and applying zpt_wgt_gen!")
+            events["wgt_nominal"] = events["wgt_nominal"] / events["separate_wgt_zpt"] # remove zpt wgt
             events["wgt_nominal"] = events["wgt_nominal"] * events["zpt_wgt_gen"] # apply the weights obtained from the DNN
         # if "dy" in process.lower():
         #     # scale the weights for DY samples by 3.0
@@ -700,7 +732,7 @@ if __name__ == "__main__":
                     args.do_vbf_filter_study,
                     jj_eta_region=args.jj_eta_region,
                     njets_selection=str(args.njets),
-                    # year=args.year,
+                    year=args.year,
                 )
 
                 #  FOR DEBUG PURPOSES
