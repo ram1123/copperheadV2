@@ -756,7 +756,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Step-2: Apply LHE cut to remove events with dilepton mass between 100 and 200 GeV for DY_M-50 sample
         # ------------------------------------------------------------#
-        if "dy_M-50" in dataset and self.config["switches"]["do_remove_dy_M100to200"]:
+        is_inclusive_dy_sample = dataset.startswith("dy") and "M-50" in dataset
+        if is_inclusive_dy_sample and self.config["switches"]["do_remove_dy_M100to200"]:
             # INFO: For run-2, for higher statistics, we are stiching DY_M-50 and DY_M-100to200 samples together.
             #            As the DY_M-50 sample is the inclusive sample, we need to remove the events in DY_M-50 that have
             #            dilepton mass between 100 and 200 GeV, to avoid double counting with DY_M-100to200 sample.
@@ -2375,10 +2376,11 @@ class EventProcessor(processor.ProcessorABC):
             for weight_type in list(weights.weightStatistics.keys()):
                 wgt_name = "separate_wgt_" + weight_type
                 weight_dict[wgt_name] = weights.partial_weight(include=[weight_type])
+                logger.debug(f"adding separate weight: {wgt_name}")
         else:
             if "zpt_wgt_reco" in locals():
                 _add_block(out_dict, {
-                    "separate_wgt_zpt_wgt": zpt_wgt_reco,
+                    "separate_wgt_zpt": zpt_wgt_reco,
                 })
 
         t21 = time.perf_counter()

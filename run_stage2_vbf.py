@@ -1,26 +1,26 @@
 import argparse
-import copy
 import glob
 import itertools
 import os
 import pickle
 import time
-from functools import reduce
 from pathlib import Path
 
 import awkward as ak
-import dask
-import dask_awkward as dak
-import hist.dask as hda
+import hist
 import numpy as np
 import torch
 from cli.common_argparser import build_common_parser
+from coffea import processor
 from coffea.ml_tools.torch_wrapper import torch_wrapper
+from coffea.nanoevents import BaseSchema
 from modules import selection
 from modules.dask_utils import get_dask_client
-from modules.utils import fillEventNans, get_compacted_path, logger
+from modules.utils import get_compacted_path, logger, fillEventNans
 from modules.sample_config import get_bkg_sig_dicts
-from tqdm import tqdm
+
+
+DATASET_SEPARATOR = "::"
 
 
 def get_variation(wgt_variation, sys_variation):
@@ -72,31 +72,76 @@ def discover_shape_systs(fields, prefixes=None):
                 break
     return sorted(suffixes)
 
+SHIFTED_SELECTION_VARIABLES = {
+    "njets",
+    "nBtagLoose",
+    "nBtagMedium",
+    "jj_mass",
+    "jj_dEta",
+    "jet1_pt",
+}
+
+NOMINAL_SELECTION_VARIABLES = {
+    "dimuon_mass",
+    "event",
+    "gjj_mass",
+    "nfatJets_drmuon",
+    "MET_pt",
+}
+
+
 def resolve_variation_field(base, variation, fields):
-    use_var = "nominal" if variation.startswith("wgt") else variation
-    candidates = [f"{base}_{use_var}", f"{base}_nominal", base]
-    for cand in candidates:
-        if cand in fields:
-            return cand
-    raise KeyError(
-        f"Selection/feature field '{base}' for variation '{variation}' is unavailable. Tried: {candidates}"
-    )
+    if base in NOMINAL_SELECTION_VARIABLES:
+        if base in fields:
+            return base
+        raise KeyError(f"Missing nominal selection field '{base}'")
+
+    if base in SHIFTED_SELECTION_VARIABLES:
+        use_var = "nominal" if variation == "nominal" or variation.startswith("wgt") else variation
+        candidate = f"{base}_{use_var}"
+        if candidate in fields:
+            return candidate
+        raise KeyError(
+            f"Selection field '{candidate}' for variation '{variation}' is unavailable."
+        )
+
+    raise KeyError(f"Unknown selection variable '{base}'")
 
 
-def columns_for_selection(category, variation, fields):
+# def columns_for_selection(category, variation, fields):
+#     # minimal columns for cuts; add here if your selection changes
+#     base_names = [
+#         "event",
+#         "dimuon_mass",
+#         "njets",
+#         "nBtagLoose",
+#         "nBtagMedium",
+#         "jj_mass",
+#         "jj_dEta",
+#         "jet1_pt",
+#         "gjj_mass",
+#         "nfatJets_drmuon",
+#         "MET_pt",
+#     ]
+#     return [resolve_variation_field(name, variation, fields) for name in base_names]
+
+def columns_for_selection(category, variation):
     # minimal columns for cuts; add here if your selection changes
-    base_names = [
+    use_var = "nominal" if variation.startswith("wgt") else variation
+    base = [
         "dimuon_mass",
-        "njets",
-        "nBtagLoose",
-        "nBtagMedium",
-        "jj_mass",
-        "jj_dEta",
-        "jet1_pt",
+        "event",
+        f"njets_{use_var}",
+        "gjj_mass",
+        f"nBtagLoose_{use_var}",
+        f"nBtagMedium_{use_var}",
+        f"jj_mass_{use_var}",
+        f"jj_dEta_{use_var}",
+        f"jet1_pt_{use_var}",
+        "nfatJets_drmuon",
+        "MET_pt",
     ]
-    cols = ["event", "gjj_mass", "nfatJets_drmuon", "MET_pt"]
-    cols.extend(resolve_variation_field(name, variation, fields) for name in base_names)
-    return cols
+    return base
 
 
 class DNNWrapper(torch_wrapper):
@@ -166,18 +211,32 @@ def prepare_features(events, features, variation="nominal"):
     return features_var
 
 
-def feature_name_for_variation(feat, variation, fields):
-    # For weight-only variations, features must stay at nominal.
-    # Also protect soft-drop features; fall back gracefully.
-    if variation.startswith("wgt"):
+def feature_name_for_variation(
+    feat,
+    variation,
+    fields,
+    allow_nominal_fallback=False,
+    nominal_only_features=None,
+):
+    """Resolve DNN inputs; default caller passes nominal to match sideHustle5."""
+    if variation == "nominal" or variation.startswith("wgt"):
+        use_var = "nominal"
+    elif "soft" in feat:
         use_var = "nominal"
     else:
-        use_var = "nominal" if "soft" in feat else variation
+        use_var = variation
+
     candidates = [f"{feat}_{use_var}", f"{feat}_nominal", feat]
     for c in candidates:
         if c in fields:
             return c
-    raise KeyError(f"Feature {feat} (var={variation}) not found in fields.")
+    if allow_nominal_fallback:
+        return feat
+    raise KeyError(
+        f"Feature {feat} (var={variation}) not found in fields. "
+        f"Tried: {candidates}. "
+        "DNN inputs are resolved to nominal fields for all variations."
+    )
 
 
 def getFoldFilter(events, fold_vals, nfolds):
@@ -186,6 +245,327 @@ def getFoldFilter(events, fold_vals, nfolds):
     for fold_value in fold_vals:
         fold_filter = fold_filter | ((events.event % nfolds) == fold_value)
     return fold_filter
+
+
+def dy_vbf_filter_is_available(stage1_path, year, sample_config):
+    """Return True when DY VBF-filter samples exist in config and on disk."""
+    direct_files = glob.glob(str(stage1_path / "dy_VBF_filter" / "*" / "*.parquet"))
+    if direct_files:
+        logger.info(
+            "Detected dy_VBF_filter with %d parquet files.",
+            len(direct_files),
+        )
+        return True
+
+    bkg_sample_dict, _, _ = get_bkg_sig_dicts(
+        yaml_path=sample_config,
+        year=year,
+    )
+    for sample in bkg_sample_dict.get("DYVBF", []):
+        files = glob.glob(str(stage1_path / sample / "*" / "*.parquet"))
+        if files:
+            logger.info(
+                "Detected DY VBF-filter sample %s with %d parquet files.",
+                sample,
+                len(files),
+            )
+            return True
+    return False
+
+
+def parse_years_option(year, years):
+    """Return ordered years from -y/--year or --years."""
+    raw_years = years if years != ["2018"] else [year]
+    parsed_years = []
+    for raw_year in raw_years:
+        for candidate in str(raw_year).split(","):
+            candidate = candidate.strip()
+            if candidate and candidate not in parsed_years:
+                parsed_years.append(candidate)
+    if not parsed_years:
+        raise ValueError("At least one year must be provided.")
+    return tuple(parsed_years)
+
+
+_MODEL_CACHE = {}
+
+
+def load_torchscript_model(model_path):
+    """Load each TorchScript model once per worker process."""
+    if model_path not in _MODEL_CACHE:
+        model = torch.jit.load(model_path, map_location="cpu")
+        model.eval()
+        _MODEL_CACHE[model_path] = model
+    return _MODEL_CACHE[model_path]
+
+
+class CoffeaStage2VBFProcessor(processor.ProcessorABC):
+    """Evaluate the trained VBF DNN and fill Stage-2-shaped histograms."""
+
+    def __init__(
+        self,
+        training_features,
+        scalers,
+        model_paths,
+        nfolds,
+        score_name,
+        no_variations=False,
+        do_vbf_filter_study=False,
+        allow_nominal_feature_fallback=True,
+        use_nominal_dnn_features_for_systs=True,
+    ):
+        NO_SCALE_FEATURES = {
+            "year",
+            "nsoftjets5_nominal",
+        }
+        self.training_features = training_features
+        self.scalers = scalers
+        self.model_paths = model_paths
+        self.nfolds = nfolds
+        self.score_name = score_name
+        self.no_variations = no_variations
+        self.do_vbf_filter_study = do_vbf_filter_study
+        self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
+        self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
+        self.no_scale_features = NO_SCALE_FEATURES
+
+    def evaluate_scores(self, events, variation):
+        fields = set(events.fields)
+        event_numbers = ak.to_numpy(ak.materialize(events.event))
+        n_events = len(events)
+        columns = {}
+        for feature in self.training_features:
+            source = feature_name_for_variation(
+                feature,
+                variation,
+                fields,
+                allow_nominal_fallback=self.allow_nominal_feature_fallback,
+                nominal_only_features=self.no_scale_features,
+            )
+            logger.debug(
+                "DNN feature mapping: variation=%s, feature=%s -> source=%s",
+                variation,
+                feature,
+                source,
+            )
+            values = ak.materialize(events[source])
+            fill_value = -10.0 if "phi" in feature else 0.0
+            values = ak.fill_none(values, fill_value)
+            columns[feature] = ak.to_numpy(values)
+
+        nan_val = -99.0
+        input_columns = {
+            feature: np.full(n_events, nan_val, dtype=np.float64)
+            for feature in self.training_features
+        }
+        for fold in range(self.nfolds):
+            fold_mask = (event_numbers % self.nfolds) == ((fold + 3) % self.nfolds)
+            scaler = self.scalers[fold]
+            missing_in_scaler = [
+                feature
+                for feature in self.training_features
+                if feature not in scaler and feature not in self.no_scale_features
+            ]
+            if missing_in_scaler:
+                raise ValueError(
+                    "Features "
+                    f"{missing_in_scaler} are missing in scaler and not in "
+                    "NO_SCALE_FEATURES!"
+                )
+
+            for feature in self.training_features:
+                values = columns[feature]
+                if feature in scaler and feature not in self.no_scale_features:
+                    mean, std = scaler[feature]
+                    values = (values - mean) / std
+                input_columns[feature][fold_mask] = values[fold_mask]
+
+        inputs = np.column_stack(
+            [input_columns[feature] for feature in self.training_features]
+        ).astype(np.float32)
+
+        logits = np.full(n_events, nan_val, dtype=np.float32)
+        torch.set_num_threads(1)
+        for fold in range(self.nfolds):
+            fold_mask = (event_numbers % self.nfolds) == ((fold + 3) % self.nfolds)
+            if not np.any(fold_mask):
+                continue
+
+            model = load_torchscript_model(self.model_paths[fold])
+            with torch.inference_mode():
+                fold_logits = model(torch.from_numpy(inputs)).reshape(-1).numpy()
+            logits[fold_mask] = fold_logits[fold_mask]
+
+            # has_non_finite = not np.isfinite(fold_logits).all()
+            # if has_non_finite:
+            #     nan_cols = np.isnan(inputs[~np.isfinite(fold_logits)]).any(axis=0)
+            #     # raise ValueError("Found non-finite values in fold_logits. This may indicate a problem with the model or input data.")
+            #     # raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and input {inputs[~np.isfinite(fold_logits)]}.")
+            #     # raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and input {nan_cols.shape}, {self.training_features}.")
+            #     from itertools import compress
+            #     # raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and input {list(compress(self.training_features, nan_cols))}.")
+            #     jj_dEta_nan_arr = input_columns["jj_dEta_nominal"][~np.isfinite(fold_logits)]
+            #     jj_dEta_variation_nan_arr = events[f"jj_dEta_{variation}"][~np.isfinite(fold_logits)]
+            #     raise ValueError(f"Found non-finite values in fold_logits for fold {fold}. with value {fold_logits[~np.isfinite(fold_logits)]} and jj_dEta nominal {jj_dEta_nan_arr} and jj_dEta {variation} {jj_dEta_variation_nan_arr}.")
+
+
+        # probabilities = torch.sigmoid(torch.from_numpy(logits)).numpy()
+        has_non_finite = not np.isfinite(logits).all()
+        # if has_non_finite:
+        #     raise ValueError("Found non-finite values in logits. This may indicate a problem with the model or input data.")
+        finite_mask = np.isfinite(logits)
+        logits = np.where(finite_mask, logits, nan_val)
+        dnn_score = sigmoid_ak(logits)
+        # valid_mask = logits != nan_val
+        # dnn_score = np.where(valid_mask, dnn_score, nan_val)
+        # dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
+        # dnn_score = np.where(valid_mask, dnn_score, nan_val)
+        # # return np.arctanh(np.clip(probabilities, 0.0, 0.999999))
+        # return dnn_score
+        return np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
+
+
+    def process(self, events):
+        dataset_key = events.metadata["dataset"]
+        sample_type = events.metadata.get("sample", dataset_key)
+        year = events.metadata["year"]
+        # events["MET_pt"] = events["PuppiMET_pt"]
+        fields = set(events.fields)
+
+        if "data" in sample_type:
+            wgt_variations = ["wgt_nominal"]
+        else:
+            wgt_variations = ["wgt_nominal"] + sorted(
+                w
+                for w in fields
+                if w.startswith("wgt_")
+                and (w.endswith("_up") or w.endswith("_down"))
+                and ("separate" not in w)
+            )
+            if self.no_variations:
+                wgt_variations = ["wgt_nominal"]
+
+        syst_variations = ["nominal"]
+        if not self.no_variations:
+            syst_variations += [
+                syst
+                for syst in discover_shape_systs(fields)
+                if not syst.startswith("log_")
+            ]
+
+        variations = []
+        for weight_variation, syst_variation in itertools.product(
+            wgt_variations,
+            syst_variations,
+        ):
+            variation = get_variation(weight_variation, syst_variation)
+            if variation:
+                variations.append(variation)
+
+        score_hist = (
+            hist.Hist.new.StrCat(["h-peak", "h-sidebands"], name="region")
+            .StrCat(["vbf"], name="channel")
+            .StrCat(["value", "sumw2"], name="val_sumw2")
+            .StrCat(variations, name="variation", growth=True)
+            .Var(selection.binning, name=self.score_name)
+            .Double()
+        )
+
+        selected_events = 0
+        for region, weight_variation, syst_variation in itertools.product(
+            ["h-peak", "h-sidebands"],
+            wgt_variations,
+            syst_variations,
+        ):
+            variation = get_variation(weight_variation, syst_variation)
+            if not variation:
+                continue
+            category= "vbf"
+            sel_cols = columns_for_selection(category, variation)
+            needed_cols = set(sel_cols + [weight_variation])
+
+            # ----------------------------------
+            for feature in self.training_features:
+                source = feature_name_for_variation(
+                    feature,
+                    variation,
+                    fields,
+                    allow_nominal_fallback=self.allow_nominal_feature_fallback,
+                    nominal_only_features=self.no_scale_features,
+                )
+                needed_cols.add(source)
+
+            needed_cols4print = sorted(needed_cols)
+            needed_cols = needed_cols & set(events.fields) # merge with existing fields
+            needed_cols = sorted(needed_cols)
+            # ----------------------------------
+            debug_variations = {
+                "Absolute_2017_up",
+                "Absolute_up",
+                "BBEC1_2017_up",
+                "BBEC1_up",
+                "EC2_2017_up",
+                "EC2_up",
+                "FlavorQCD_up",
+                "HF_up",
+                "RelativeBal_down",
+                "RelativeBal_up",
+                "RelativeSample_2017_down",
+                "RelativeSample_2017_up",
+                "Total_up",
+            }
+            # if variation in debug_variations:
+            feature_variation = (
+                "nominal" if self.use_nominal_dnn_features_for_systs else variation
+            )
+            filtered_events = events[needed_cols]
+            fields = filtered_events.fields
+            # if variation in debug_variations:
+            #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {fields}")
+            region_events = selection.applyRegionCatCuts(
+                filtered_events,
+                process=sample_type,
+                category=category,
+                region_name=region,
+                do_vbf_filter_study=self.do_vbf_filter_study,
+                variation=variation,
+                # year=year,
+            )
+            region_events = fillEventNans(region_events, category=category)
+            if region == "h-sidebands":
+                region_events = ak.with_field(
+                    region_events,
+                    125.0 * ak.ones_like(region_events.dimuon_mass),
+                    "dimuon_mass",
+                )
+            if variation == "nominal":
+                selected_events += len(region_events)
+
+            scores = self.evaluate_scores(region_events, feature_variation)
+            weights = ak.to_numpy(ak.materialize(region_events[weight_variation]))
+            fill_common = {
+                "region": region,
+                "channel": "vbf",
+                "variation": variation,
+                self.score_name: scores,
+            }
+            score_hist.fill(**fill_common, val_sumw2="value", weight=weights)
+            score_hist.fill(
+                **fill_common,
+                val_sumw2="sumw2",
+                weight=weights * weights,
+            )
+
+        return {
+            dataset_key: {
+                "events": processor.value_accumulator(int, selected_events),
+                "chunks": processor.value_accumulator(int, 1),
+                "score_hist": score_hist,
+            }
+        }
+
+    def postprocess(self, accumulator):
+        return accumulator
 
 
 def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samples=[], bkg_samples=[], do_vbf_filter_study=False):
@@ -304,6 +684,29 @@ if __name__ == "__main__":
         action="store",
         help="Number of folds for cross-validation (default: 4)",
     )
+    parser.add_argument(
+        "--allow_nominal_feature_fallback",
+        dest="allow_nominal_feature_fallback",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Allow shape variations to use nominal DNN input features when the "
+            "shifted feature branch is missing."
+        ),
+    )
+    parser.add_argument(
+        "--use_nominal_dnn_features_for_systs",
+        dest="use_nominal_dnn_features_for_systs",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Use nominal DNN input features for systematic variations while "
+            "still applying shifted event selection and weights. Enabled by "
+            "default to avoid DNN score migration from shifted input features. "
+            "Use --no-use_nominal_dnn_features_for_systs to try shifted DNN "
+            "feature branches first, with nominal/base fallback."
+        ),
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -317,18 +720,13 @@ if __name__ == "__main__":
     logger.info(f"[timing] Dask client creation time: {t2 - t1:.2f} seconds")
 
     base_path = Path(args.input_path)
+    years = parse_years_option(args.year, args.years)
+    logger.info(f"Years scheduled together: {years}")
 
     bkg_samples = args.bkg_samples
     sig_samples = args.sig_samples
     data_samples = args.data_samples
     logger.info(f"data_samples: {data_samples}")
-
-    stage1_path = base_path / "stage1_output" / args.year / "f1_0"
-    stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
-    logger.info(f"stage1 path: {stage1_path}")
-    if not os.path.exists(stage1_path):
-        logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
-        raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
     histDirName = f"score_{args.label}" if args.save_postfix == "" else f"score_{args.label}_{args.save_postfix}"
     if args.do_vbf_filter_study:
@@ -336,338 +734,137 @@ if __name__ == "__main__":
     if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
-    hist_save_path = base_path / "stage2_histograms" / histDirName / args.year
-    os.makedirs(hist_save_path, exist_ok=True)
-    logger.info(f"Histograms will be saved to: {hist_save_path}")
+    sample_dict_by_year = {}
+    for year in years:
+        stage1_path = base_path / "stage1_output" / year / "f1_0"
+        stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
+        logger.info(f"{year} stage1 path: {stage1_path}")
+        if not os.path.exists(stage1_path):
+            logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
+            raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
-    full_sample_dict = getStage1Samples(stage1_path, args.year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
+        # if dy_vbf_filter_is_available(stage1_path, year, args.sample_config):
+        #     if not args.do_vbf_filter_study:
+        #         logger.info(
+        #             "Setting do_vbf_filter_study=True because dy_VBF_filter "
+        #             "samples are available."
+        #         )
+        #     args.do_vbf_filter_study = True
 
-    logger.debug(f"full_sample_dict: {full_sample_dict}")
-    logger.info(f"full_sample_dict: {full_sample_dict.keys()}")
+        hist_save_path = base_path / "stage2_histograms" / histDirName / year
+        os.makedirs(hist_save_path, exist_ok=True)
+        logger.info(f"{year} histograms will be saved to: {hist_save_path}")
+
+        full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
+        # full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=[], sig_samples=["GGH"], bkg_samples=[], do_vbf_filter_study=args.do_vbf_filter_study)
+
+        sample_dict_by_year[year] = full_sample_dict
+        logger.debug(f"{year} full_sample_dict: {full_sample_dict}")
+        logger.info(f"{year} full_sample_dict: {full_sample_dict.keys()}")
     t3 = time.perf_counter()
     logger.info(f"[timing] sample dict processing time: {t3 - t2:.2f} seconds")
 
-    nfolds = args.nfolds  # Define nfolds once for all samples
-    for sample_type, sample_l in tqdm(full_sample_dict.items(), desc="Processing Samples"):
-        t4 = time.perf_counter()
+    model_trained_path = Path(args.model_path).resolve()
+    training_dir = (model_trained_path / args.model_tag).resolve()
+    feature_dir = model_trained_path
+    nfolds = args.nfolds
 
-        # if output pkl file already exists, skip
-        output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
-        if output_pkl_path.exists():
-            logger.warning(f"Output pkl file {output_pkl_path} already exists. Skipping {sample_type}.")
-            continue
+    missing = []
+    for fold in range(nfolds):
+        model_path = training_dir / f"fold{fold}" / "best_torchscript.pt"
+        scaler_path = model_trained_path / f"scalers_{fold}.npz"
+        if not model_path.is_file():
+            missing.append(f"missing model: {model_path}")
+        if not scaler_path.is_file():
+            missing.append(f"missing scaler: {scaler_path}")
+    if missing:
+        raise FileNotFoundError("\n".join(missing))
 
-        logger.info(f"Processing sample type: {sample_type}, number of files: {len(sample_l)}")
-        logger.info(f"Sample type: {sample_type}")
-        logger.debug(f"Sample list: {sample_l}")
-        if len(sample_l) == 0:
-            logger.critical(f"No files for {sample_type} is found! Skipping!")
-            continue
+    with open(feature_dir / "training_features.pkl", "rb") as feature_file:
+        training_features = pickle.load(feature_file)
+    logger.info(f"len training_features: {len(training_features)}")
 
-        events_schema = dak.from_parquet(sample_l)
-        fields = set(events_schema.fields)
-        logger.debug(f"fields: {fields}")
-
-        # Auto-discover JES/JER-like systematic suffixes from jet-related columns
-        jes_systs = discover_shape_systs(fields)
-        # if "log_" exists remove that element from jes_systs, as these are not variations. This log belongs to the log of a particular variable.
-        jes_systs = [sys for sys in jes_systs if not sys.startswith("log_")]
-        logger.info(f"Discovered JES/JER variations: {jes_systs}")
-
-        model_trained_path = Path(args.model_path).resolve()
-        training_dir = (model_trained_path / args.model_tag).resolve()
-        feature_dir = Path(model_trained_path).resolve()
-
-        missing = []
-        for fold in range(nfolds):
-            p = training_dir / f"fold{fold}" / "best_torchscript.pt"
-            s = model_trained_path / f"scalers_{fold}.npz"
-            if not p.is_file():
-                missing.append(f"missing model: {p}")
-            if not s.is_file():
-                missing.append(f"missing scaler: {s}")
-
-        if missing:
-            raise FileNotFoundError("\n".join(missing))
-
-        # Load training features once per sample_type
-        with open(feature_dir / "training_features.pkl", "rb") as f:
-            training_features = pickle.load(f)
-        logger.debug(f"training_features: {training_features}")
-        logger.info(f"len training_features: {len(training_features)}")
-
-        NO_SCALE_FEATURES = {
-            "year",
-            "nsoftjets5_nominal",
-        }
-
-        # cache scalers
-        scaler_cache = {}
-        for fold in range(nfolds):
-            sp = feature_dir / f"scalers_{fold}.npz"
-            with np.load(sp, allow_pickle=True) as f:
-                scaler_cache[fold] = {
-                    "mean": f["mean"].astype(np.float64),
-                    "std":  f["std"].astype(np.float64),
-                    "features": [str(x) for x in f["features"]],
-                }
-
-        # cache models (wrapper caches torchscript model lazily inside worker)
-        model_cache = {}
-        for fold in range(nfolds):
-            mp = training_dir / f"fold{fold}" / "best_torchscript.pt"
-            model_cache[fold] = DNNWrapper(mp.as_posix())
-        # ------------------------------------------
-        # Initialize sample histogram to save later
-        # ------------------------------------------
-        # logger.debug(f"fields: {events_stage1.fields}")
-        if "data" in sample_type:
-            wgt_variations = ["wgt_nominal"]
-        else:
-            # Collect nominal + _up/_down weight variations (exclude any 'separate' helpers)
-            wgt_variations = ["wgt_nominal"] + sorted([
-                w for w in fields
-                if w.startswith("wgt_") and (w.endswith("_up") or w.endswith("_down")) and ("separate" not in w)
-            ])
-
-            #     wgt_variations = ["wgt_nominal",
-            #                       'wgt_muIso_up', 'wgt_pu_wgt_up', 'wgt_muID_up', 'wgt_muTrig_up',
-            #                       'wgt_muIso_down', 'wgt_pu_wgt_down', 'wgt_muID_down', 'wgt_muTrig_down',
-            #                       'jet1_pt_jer6_up', 'jet1_pt_BBEC1_2018_up', 'jet1_pt_HF_up',
-            #                       'jet1_pt_jer6_down', 'jet1_pt_BBEC1_2018_down', 'jet1_pt_HF_down',
-
-            #                       ]  # FIXME: For debugging purpose.
-            # wgt_variations = ["wgt_nominal", "wgt_muIso_up", "wgt_muIso_down"]
-            logger.debug(f"wgt_variations: {wgt_variations}")
-            logger.debug(f"length of wgt_variations: {len(wgt_variations)}")
-
-            if args.no_variations:
-                logger.warning(f"No weight variations found for {sample_type}, using nominal only.")
-                wgt_variations = ["wgt_nominal"]
-
-        t5 = time.perf_counter()
-        logger.info(f"[timing] Weight variation processing time: {t5 - t4:.2f} seconds")
-        logger.info(f"wgt_variations: {wgt_variations}")
-        if args.no_variations:
-            syst_variations = ["nominal"]
-        else:
-            syst_variations = ["nominal"] + jes_systs
-        logger.info(f"syst_variations: {syst_variations}")
-        variations = []
-        for w in wgt_variations:
-            for v in syst_variations:
-                variation = get_variation(w, v)
-                if variation:
-                    variations.append(variation)
-        logger.info(f"variations: {variations}")
-
-        regions = ["h-peak", "h-sidebands"]  # full list of possible regions to loop over
-        channels = ["vbf"]  # full list of possible channels to loop over
-        score_hist = (
-            hda.Hist.new.StrCat(regions, name="region")
-            .StrCat(channels, name="channel")
-            .StrCat(["value", "sumw2"], name="val_sumw2")
+    scalers = []
+    model_paths = []
+    for fold in range(nfolds):
+        scaler_path = model_trained_path / f"scalers_{fold}.npz"
+        with np.load(scaler_path, allow_pickle=True) as scaler_file:
+            features = [str(feature) for feature in scaler_file["features"]]
+            means = scaler_file["mean"].astype(np.float64)
+            stds = scaler_file["std"].astype(np.float64)
+        scalers.append(dict(zip(features, zip(means, stds))))
+        model_paths.append(
+            (training_dir / f"fold{fold}" / "best_torchscript.pt").as_posix()
         )
-        # add axis for systematic variation
-        score_hist = score_hist.StrCat(variations, name="variation")
-        # add score category
-        bins = selection.binning  # use the binning from selection module
-        score_name = f"score_{args.label}"
-        score_hist = score_hist.Var(bins, name=score_name)
 
-        score_hist_empty = score_hist.Double()
-
-        # loop over configurations and fill the histogram
-        loop_args_dict = {
-            "region": regions,
-            "wgt_variation": wgt_variations,
-            "syst_variation": syst_variations,
-            "channel": channels,
-        }
-        loop_args = [
-            dict(zip(loop_args_dict.keys(), values))
-            for values in itertools.product(*loop_args_dict.values())
-        ]
-        logger.debug(f"loop_args: {loop_args}")
-
-        t6 = time.perf_counter()
-        logger.info(f"[timing] Empty histogram time: {t6 - t5:.2f} seconds")
-
-        score_hist_l = []
-        iteration_counter = 0
-        for count, loop_arg in enumerate(loop_args):
-            score_hist = copy.deepcopy(score_hist_empty)
-
-            region              = loop_arg["region"]
-            category          = loop_arg["channel"]
-            syst_variation = loop_arg["syst_variation"]
-            wgt_variation  = loop_arg["wgt_variation"]
-            variation          = get_variation(wgt_variation, syst_variation)
-            logger.debug(f"variation: {variation}")
-            if not variation:
-                logger.debug(f"skipping variation {variation} from {wgt_variation} and {syst_variation}")
+    fileset = {}
+    skipped_existing = []
+    for year, full_sample_dict in sample_dict_by_year.items():
+        hist_save_path = base_path / "stage2_histograms" / histDirName / year
+        for sample_type, sample_l in full_sample_dict.items():
+            output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
+            if output_pkl_path.exists():
+                logger.warning(
+                    f"Output pkl file {output_pkl_path} already exists. "
+                    f"Skipping {year} {sample_type}."
+                )
+                skipped_existing.append(f"{year}{DATASET_SEPARATOR}{sample_type}")
                 continue
-
-            sel_cols = columns_for_selection(category, variation, fields)
-            needed_cols = set(sel_cols + [wgt_variation])
-
-            logger.debug(f"sel_cols: {sel_cols}")
-            logger.debug(f"len(sel_cols): {len(sel_cols)}")
-
-            # Never decorate feature columns with weight-only variation suffixes
-            variation_for_features = "nominal" if variation.startswith("wgt") else variation
-
-            # Map base training feature name -> actual source column for this variation
-            feature_sources = {
-                f: feature_name_for_variation(f, variation_for_features, fields)
-                for f in training_features
+            if len(sample_l) == 0:
+                logger.critical(f"No files for {year} {sample_type} is found! Skipping!")
+                continue
+            dataset_key = f"{year}{DATASET_SEPARATOR}{sample_type}"
+            fileset[dataset_key] = {
+                "files": sample_l,
+                "treename": "Events",
+                "metadata": {"year": year, "sample": sample_type},
             }
-            logger.debug(f"feature_sources: {feature_sources}")
-            for src_name in feature_sources.values():
-                needed_cols.add(src_name)
-            needed_cols = sorted(needed_cols)
 
-            logger.debug(f"needed_cols: {needed_cols}")
-            logger.debug(f"len(needed_cols): {len(needed_cols)}")
-
-            # Re-open with column projection + row-group split
-            events_stage1 = dak.from_parquet(
-                sample_l,
-                columns=needed_cols,
-                # split_row_groups=True, # FIXME: This introduces some issue and number of entries does not remain same.
-                # ).persist()  # Persist to memory for faster access
-            )
-            events = selection.applyRegionCatCuts(
-                events_stage1,
-                process=sample_type,
-                category=category,
-                region_name=region,
+    logger.info(f"Samples skipped because outputs exist: {skipped_existing}")
+    if fileset:
+        runner = processor.Runner(
+            executor=processor.DaskExecutor(client=client),
+            schema=BaseSchema,
+            format="parquet",
+            chunksize=50_000,
+        )
+        t4 = time.perf_counter()
+        results = runner(
+            fileset,
+            processor_instance=CoffeaStage2VBFProcessor(
+                training_features=training_features,
+                scalers=scalers,
+                model_paths=model_paths,
+                nfolds=nfolds,
+                score_name=f"score_{args.label}",
+                no_variations=args.no_variations,
                 do_vbf_filter_study=args.do_vbf_filter_study,
-                variation=variation,
-                year=args.year,
+                allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
+                use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
+            ),
+        )
+        t5 = time.perf_counter()
+        logger.info(f"[timing] Coffea Runner time: {t5 - t4:.2f} seconds")
+
+        for dataset_key, output in results.items():
+            year, sample_type = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
+            hist_save_path = base_path / "stage2_histograms" / histDirName / year
+            output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
+            with open(output_pkl_path, "wb") as file:
+                pickle.dump(output["score_hist"], file)
+            logger.info(
+                f"{year} {sample_type} histogram on {output_pkl_path}; "
+                f"chunks={output['chunks'].value}; "
+                f"selected events={output['events'].value}"
             )
-            events = fillEventNans(events, category=category) # for vbf category, this may be unnecessary
-            # As DNN is trained in the h-peak region, so while evaluating for the h-sideband region
-            # we fix the dimuon mass to 125.0 GeV
-            if region == "h-sidebands":
-                try:
-                    events["dimuon_mass"] = 125.0 * ak.ones_like(events.dimuon_mass)
-                    logger.debug("[sidebands] Forced dimuon_mass=125.0 for DNN inputs")
-                except Exception as _e:
-                    logger.warning(f"[sidebands] Failed to fix dimuon_mass to 125.0: {_e}")
+    else:
+        logger.warning("No samples left to process after existing-output checks.")
 
-            nan_val = -99.0
-            input_arr_dict = {
-                feat: nan_val * ak.ones_like(events.event) for feat in training_features
-            }
-            logger.debug(f" input_arr_dict b4: {input_arr_dict}")
-            for fold in range(nfolds):
-                eval_folds = [(fold + f) % nfolds for f in [3]]
-                logger.debug(f" eval_folds: {eval_folds}")
-                eval_filter = getFoldFilter(events, eval_folds, nfolds)
-
-                scaler_info = scaler_cache[fold]
-                scalar_means = scaler_info["mean"].astype(np.float64)
-                scalar_stds = scaler_info["std"].astype(np.float64)
-                scaler_features = scaler_info["features"]
-
-                scaler_map = {feat: (scalar_means[i], scalar_stds[i]) for i, feat in enumerate(scaler_features)}
-
-                missing_in_scaler = [f for f in training_features if (f not in scaler_map and f not in NO_SCALE_FEATURES)]
-                if missing_in_scaler:
-                    raise ValueError(f"Features {missing_in_scaler} are missing in scaler and not in NO_SCALE_FEATURES!")
-
-                for ix, base_feat in enumerate(training_features):
-                    src_feat = feature_sources[base_feat]  # e.g. 'jet1_eta_jer6_down' for JES/JER
-                    logger.debug(f"Processing feature: {base_feat}, source feature: {src_feat}")
-                    input_arr_fold = input_arr_dict[base_feat]
-
-                    # scale from the *source* column, but keep the base key + index
-                    in_feat = events[src_feat]
-
-                    # Features not present in scaler_features are passthrough by construction
-                    # (in your case: nsoftjets5_nominal and year)
-                    if base_feat in scaler_map and base_feat not in NO_SCALE_FEATURES:
-                        mu, sigma = scaler_map[base_feat]
-                        in_feat = (in_feat - mu) / sigma
-                    else:
-                        logger.debug(f"Not scaling feature {base_feat} (either NO_SCALE or not in scaler_map)")
-                        in_feat = ak.values_astype(in_feat, "float32")
-                    input_arr_fold = ak.where(eval_filter, in_feat, input_arr_fold)
-                    input_arr_dict[base_feat] = input_arr_fold
-
-            # ---------------------------------------------------
-            # Now evaluate DNN score
-            # ---------------------------------------------------
-            input_arr = ak.concatenate(
-                [
-                    input_arr_dict[feat][:, np.newaxis] for feat in training_features
-                ],  # np.newaxis is added so that we can concat on axis=1
-                axis=1,
-            )
-            dnn_logit = nan_val * ak.ones_like(events.event)
-
-            for fold in range(nfolds):
-                eval_folds = [(fold + f) % nfolds for f in [3]]
-                eval_filter = getFoldFilter(events, eval_folds, nfolds)
-                dnnWrap = model_cache[fold]
-                dnn_score_fold = dnnWrap(input_arr)
-                dnn_score_fold = ak.flatten(dnn_score_fold, axis=None)
-
-                dnn_logit = ak.where(eval_filter, dnn_score_fold, dnn_logit)
-
-            dnn_score = sigmoid_ak(dnn_logit)
-            dnn_score = np.arctanh(clip_ak(dnn_score, 0.0, 0.999999))
-
-            # ---------------------------------------------------
-            # Now onto converting DNN score as histograms
-            # ---------------------------------------------------
-            to_fill = {
-                "region": region,
-                "channel": "vbf",
-                "variation": variation,
-                score_name: dnn_score
-            }
-            weight = events[wgt_variation]
-
-            to_fill_value = to_fill.copy()
-            to_fill_value["val_sumw2"] = "value"
-            score_hist.fill(**to_fill_value, weight=weight)
-
-            to_fill_sumw2 = to_fill.copy()
-            to_fill_sumw2["val_sumw2"] = "sumw2"
-            score_hist.fill(**to_fill_sumw2, weight=weight * weight)
-
-            logger.info(f"[{count:>4}]:score_hist is filled for {sample_type}, {region:>11}, {variation:<35} variation!")
-            score_hist_l.append(score_hist)
-
-        t7 = time.perf_counter()
-        logger.info(f"[timing] Variation loop time: {t7 - t6:.2f} seconds")
-        # ---------------------------------------------------
-        # done with variation loop, compute hist
-        # ---------------------------------------------------
-        logger.info(f"loop_args len: {len(loop_args)}")
-        logger.info(f"score_hist_l len: {len(score_hist_l)}")
-        score_hist_l = dask.compute(score_hist_l)[0]
-        logger.info(f"score_hist_l len after compute: {len(score_hist_l)}")
-        if not score_hist_l:
-            logger.warning(f"No histograms were filled for {sample_type}, skipping saving.")
-            continue  # skip to next sample_type
-        # Merge histograms from all loop configurations
-        score_hist = reduce(lambda a, b: a + b, score_hist_l)
-        logger.info("compute done!")
-        t8 = time.perf_counter()
-        logger.info(f"[timing] Dask compute time: {t8 - t7:.2f} seconds")
-
-        # ---------------------------------------------------
-        # Save Hist
-        # ---------------------------------------------------
-        with open(f"{output_pkl_path}", "wb") as file:
-            pickle.dump(score_hist, file)
-            logger.info(f"{sample_type} histogram on {output_pkl_path}")
-
-        t9 = time.perf_counter()
-        logger.info(f"[timing] Histogram saving time: {t9 - t8:.2f} seconds")
+    logger.info("Success!")
+    end_time = time.time()
+    execution_time = end_time - start_time
+    logger.info(f"Execution time : {execution_time:.4f} seconds")
+    raise SystemExit(0)
 
     logger.info("Success!")
     end_time = time.time()

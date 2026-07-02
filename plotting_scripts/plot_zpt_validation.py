@@ -97,7 +97,7 @@ def load_parquet_samples(processes, path, variables2plot_orig):
             "jet1_pt_nominal", "jj_dEta_nominal", "dimuon_pt", "njets_nominal"
         ]
         if "dy" in proc.lower():
-            fields.append("separate_wgt_zpt_wgt")
+            fields.append("separate_wgt_zpt")
         schema = pq.read_schema(paths[0])
         fields = list(set(fields).intersection(schema.names))
         events = events[fields]

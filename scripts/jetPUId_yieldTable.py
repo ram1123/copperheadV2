@@ -201,8 +201,8 @@ def compute_weighted_yields(samples: dict[str, str], region: str, year: str, wei
 
         # y = dak.sum(events[weight_field]).compute() 
         print(f"weight_field: {weight_field}")
-        if "separate_wgt_zpt_wgt" in events.fields:
-            y = dak.sum(events[weight_field]/events["separate_wgt_zpt_wgt"]).compute()
+        if "separate_wgt_zpt" in events.fields:
+            y = dak.sum(events[weight_field]/events["separate_wgt_zpt"]).compute()
         else:
             y = dak.sum(events[weight_field]).compute() 
             

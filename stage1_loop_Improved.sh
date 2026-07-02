@@ -204,6 +204,18 @@ echo "  Category: $category"
 echo "  isMC: $isMC"
 
 
+stage2_years_csv="$(join_by "," "${years[@]}")"
+stage2_data_l=""
+declare -A stage2_seen_data=()
+for stage2_year in "${years[@]}"; do
+    for era in ${data_l_dict[$stage2_year]:-}; do
+        if [[ -z "${stage2_seen_data[$era]:-}" ]]; then
+            stage2_data_l="${stage2_data_l:+$stage2_data_l }$era"
+            stage2_seen_data[$era]=1
+        fi
+    done
+done
+
 # ----------- Main loop -----------
 for year in "${years[@]}"; do
     data_l="${data_l_dict[$year]}"
@@ -254,14 +266,24 @@ for year in "${years[@]}"; do
 
     # ########## STAGE-2 command ##########
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    sig_l_stage2="ggH VBF"
     variation=false
+    sig_l_stage2="ggH VBF"
+    stage2_year_arg="$year"
+    stage2_data_arg="$data_l"
+    if [[ "$mode" == "2" ]]; then # this combines the years and data for stage2
+        stage2_year_arg="$stage2_years_csv"
+        stage2_data_arg="$stage2_data_l"
+    fi
+    echo "stage2_year_arg: $stage2_year_arg"
+    echo "stage2_data_arg: $stage2_data_arg"
+
     if ${variation}; then
-        command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}  "
+        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}"
+        echo "Running stage2 command: $command2"
         command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} "
         variation_tag=""
     else
-        command2="python run_stage2_vbf.py -y $year -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $data_l -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} --no_variations "
+        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} --no_variations "
         command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} --no_variations "
         variation_tag="_NoSyst"
     fi
@@ -346,7 +368,11 @@ for year in "${years[@]}"; do
             eval "$command1"
             ;;
         2)
-            log "Running stage2 for year $year..."
+            if [[ "$year" != "${years[0]}" ]]; then
+                log "Skipping duplicate stage2 launch for year $year; stage2 was submitted once for: $stage2_years_csv"
+                continue
+            fi
+            log "Running stage2 for years: $stage2_years_csv..."
             log "Command: $command2"
             eval "$command2"
             ;;

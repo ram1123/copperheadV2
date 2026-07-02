@@ -620,7 +620,7 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool, NanoAODv: int):
     """
     Apply HEM veto for 2018 UL as recommended on https://cms-talk.web.cern.ch/t/question-about-hem15-16-issue-in-2018-ultra-legacy/38654/5
     """
-    if hasattr(jets, "jetId") and is_run2(year):
+    if hasattr(jets, "jetId") and is_run2(config["year"]):
         jetId_bits = jets.jetId
     else:
         # synthesize bit-coded jetId from custom_jet_id

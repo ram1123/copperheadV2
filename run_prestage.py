@@ -1,7 +1,9 @@
 import argparse
 import copy
+from collections import defaultdict
 import glob
 import json
+import multiprocessing
 import os
 import re
 import shutil
@@ -29,6 +31,31 @@ from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize
 
 dask.config.set({'logging.distributed': 'error'})
 
+
+def _minnlo_genweight_metadata_for_file(args):
+    fname, uproot_options = args
+    with uproot.open(f"{fname}:Events", **uproot_options) as tree:
+        gen_wgt = tree["genWeight"].array()
+        return float(ak.sum(np.sign(gen_wgt))), len(gen_wgt)
+
+
+def merge_with_existing_json_dict(filename, updates):
+    if not os.path.exists(filename):
+        return updates
+
+    with open(filename) as file:
+        existing = json.load(file)
+
+    if not isinstance(existing, dict):
+        raise ValueError(f"Existing output JSON is not a dictionary: {filename}")
+
+    logger.info(
+        f"[prestage] merging {len(updates)} updated samples into existing JSON: {filename}"
+    )
+    existing.update(updates)
+    return existing
+
+
 def nanoevents_from_root_with_redirectors(
     file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
 ):
@@ -52,6 +79,59 @@ def nanoevents_from_root_with_redirectors(
         tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
         logger.warning(
             f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e} (tls_bad={tls_bad})"
+        )
+        raise
+
+
+def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, uproot_options):
+    """
+    Read MiNNLO genWeight metadata directly with uproot.
+
+    MiNNLO samples can have spurious genWeight magnitudes, so this keeps only
+    the signs while avoiding multi-file NanoEvents input in virtual mode.
+    """
+    sum_gen_wgts = 0.0
+    n_gen_evts = 0
+
+    try:
+        logger.info(f"[prestage] MiNNLO attempt {attempt} using redirector {host_prefix}")
+        normalized_fnames = normalize_paths(fnames, host_prefix)
+        if len(normalized_fnames) == 0:
+            logger.warning(f"[prestage] MiNNLO attempt {attempt} has no files to read")
+            return {
+                "sumGenWgts": sum_gen_wgts,
+                "nGenEvts": n_gen_evts,
+            }
+
+        min_n_workers = 20 # NOTE added as a soft limit for stability. But if high throughput is needed, we can increase this.
+        n_workers = min(len(normalized_fnames), multiprocessing.cpu_count(), min_n_workers)
+
+        logger.info(
+            f"[prestage] MiNNLO attempt {attempt} reading genWeight with {n_workers} workers"
+        )
+        worker_args = [(fname, uproot_options) for fname in normalized_fnames]
+        with multiprocessing.Pool(processes=n_workers) as pool:
+            for file_sum_gen_wgts, file_n_gen_evts in pool.imap_unordered(
+                _minnlo_genweight_metadata_for_file,
+                worker_args,
+            ):
+                sum_gen_wgts += file_sum_gen_wgts
+                n_gen_evts += file_n_gen_evts
+
+        logger.info(
+            f"[prestage] MiNNLO attempt {attempt} succeeded to read genWeight metadata with {host_prefix}"
+        )
+        return {
+            "sumGenWgts": sum_gen_wgts,
+            "nGenEvts": n_gen_evts,
+        }
+
+    except Exception as e:
+        msg = str(e)
+        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+        logger.warning(
+            f"[prestage] MiNNLO attempt {attempt} failed with {host_prefix}: "
+            f"{type(e).__name__}: {e} (tls_bad={tls_bad})"
         )
         raise
 
@@ -401,7 +481,6 @@ if __name__ == "__main__":
         logger.info(f"Final selected dataset keys: {list(dataset.keys())}")
 
         fnames = ""
-
         for sample_name in tqdm.tqdm(dataset.keys()):
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
@@ -543,19 +622,14 @@ if __name__ == "__main__":
                 for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
                     try:
                         if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
-                            file_input = {fname : {"object_path": "Events"} for fname in fnames}
-                            file_input = normalize_paths(file_input, host_prefix)
-                            events = nanoevents_from_root_with_redirectors(
-                                file_input=file_input,
+                            minnlo_metadata = minnlo_genweight_metadata_with_redirector(
+                                fnames=fnames,
                                 host_prefix=host_prefix,
                                 attempt=attempt,
-                                schemaclass=BaseSchema,
-                                metadata={},
                                 uproot_options={"timeout": 4 * 2400},
                             )
-                            gen_wgt = np.sign(events.genWeight) # extract signs only, not magntitude
-                            preprocess_metadata["sumGenWgts"] = float(ak.sum(gen_wgt))
-                            preprocess_metadata["nGenEvts"] = int(ak.num(gen_wgt, axis=0))
+                            preprocess_metadata["sumGenWgts"] = minnlo_metadata["sumGenWgts"]
+                            preprocess_metadata["nGenEvts"] = minnlo_metadata["nGenEvts"]
                             break  # stop trying once successful
                         else:
                             file_input = {fname: {"object_path": "Runs"} for fname in fnames}
@@ -679,6 +753,7 @@ if __name__ == "__main__":
             filename = filename.replace(".json", "_sync.json") # INFO: Hardcoded filename
         if not os.path.exists(directory):
             os.makedirs(directory)
+        big_sample_info = merge_with_existing_json_dict(filename, big_sample_info)
         with open(filename, "w") as file:
             json.dump(big_sample_info, file, indent=2, sort_keys=True)
 
