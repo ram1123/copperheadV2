@@ -414,10 +414,10 @@ if __name__ == "__main__":
 
         is_data = "data" in process.lower()
         if (not is_data) and ("dy" in process.lower()): # DY MC sample
-            fields2load.append("separate_wgt_zpt_wgt")
+            fields2load.append("separate_wgt_zpt")
             # if not zpt_on:
-            #      if "separate_wgt_zpt_wgt" in events.fields:
-            #          fields2load.append("separate_wgt_zpt_wgt")
+            #      if "separate_wgt_zpt" in events.fields:
+            #          fields2load.append("separate_wgt_zpt")
 
 
         # filter out redundant fields by using the set object
@@ -496,9 +496,9 @@ if __name__ == "__main__":
 
                 zpt_wgt_name = args.zpt_wgt_name
                 if zpt_wgt_name == "no_zpt":
-                   if "separate_wgt_zpt_wgt" in events.fields:
+                   if "separate_wgt_zpt" in events.fields:
                        logger.warning("removing Zpt rewgt!")
-                       weights = weights/events["separate_wgt_zpt_wgt"]
+                       weights = weights/events["separate_wgt_zpt"]
 
                 # logger.info(f"weights {process} b4 numpy: {weights}")
                 weights = ak.to_numpy(weights) # MC are already normalized by xsec*lumi

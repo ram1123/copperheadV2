@@ -46,7 +46,7 @@ from cli.common_argparser import build_common_parser
 V1_FIELDS_2COMPUTE: List[str] = [
     # "gjj_mass",  # handled dynamically
     "wgt_nominal",
-    "separate_wgt_zpt_wgt",
+    "separate_wgt_zpt",
     "nBtagLoose_nominal",
     "nBtagMedium_nominal",
     # "mu1_pt",
@@ -132,8 +132,8 @@ def weighted_yield_for_mask(events, mask, process: str) -> float:
         return float(ak.sum(ak.values_astype(mask, "int64")))
 
     wgts = ak.fill_none(events["wgt_nominal"], 0.0)
-    if "separate_wgt_zpt_wgt" in events.fields:
-        wgts = wgts / ak.fill_none(events["separate_wgt_zpt_wgt"], 1.0)
+    if "separate_wgt_zpt" in events.fields:
+        wgts = wgts / ak.fill_none(events["separate_wgt_zpt"], 1.0)
     return float(ak.sum(wgts[mask]))
 
 
@@ -280,8 +280,8 @@ def get_yield(
         wgts = ak.fill_none(events["wgt_nominal"], 0.0)
 
         # remove Zpt weight if you want "no-zpt"
-        if "separate_wgt_zpt_wgt" in events.fields:
-            wgts = wgts / ak.fill_none(events["separate_wgt_zpt_wgt"], 1.0)
+        if "separate_wgt_zpt" in events.fields:
+            wgts = wgts / ak.fill_none(events["separate_wgt_zpt"], 1.0)
 
         yield_ = float(ak.sum(wgts))
 
