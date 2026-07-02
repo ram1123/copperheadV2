@@ -148,6 +148,11 @@ def write_compacted_group(idx, group_files, compacted_path):
     ak.to_parquet(events, output_path)
     return idx, len(group_files), group_rows, output_path
 
+def _get_num_rows(path):
+    return pq.ParquetFile(path).metadata.num_rows
+
+def _get_file_info(path):
+    return path, pq.ParquetFile(path).metadata.num_rows
 
 def ensure_compacted(year, sample, input_path, compacted_path, client=None):
     logger.info(f"year: {year}")
@@ -172,7 +177,9 @@ def ensure_compacted(year, sample, input_path, compacted_path, client=None):
             logger.warning(f"No parquet files found under {orig_path}. Skipping.")
             return
 
-        total_rows = sum(pq.ParquetFile(path).metadata.num_rows for path in parquet_files)
+        futures = client.map(_get_num_rows, parquet_files)
+        total_rows = sum(client.gather(futures))
+
         if total_rows == 0:
             logger.warning(f"No rows found in parquet files under {orig_path}. Skipping.")
             return
@@ -181,7 +188,7 @@ def ensure_compacted(year, sample, input_path, compacted_path, client=None):
             logger.warning(f"Sample {sample} has high density (e.g. vbf signal), so, using a smaller maximum row count (10k) per compacted file.")
             # max_num_of_rows = 100_000
             max_num_of_rows = 10_000
-        elif ("top" in sample.lower()):
+        elif ("top" in sample.lower()) or ("ttjets" in sample.lower()):
             logger.warning(f"Sample {sample} has high memory usage (e.g. st_tchannel_antitop), so, using a smaller maximum row count per compacted file.")
             max_num_of_rows = 1_000
         else:
@@ -198,11 +205,10 @@ def ensure_compacted(year, sample, input_path, compacted_path, client=None):
             len(parquet_files),
             target_n_final_files,
         )
-        file_infos = [
-            (path, pq.ParquetFile(path).metadata.num_rows)
-            for path in sorted(parquet_files)
-        ]
-        grouped_files = group_parquet_files(file_infos, target_n_final_files) # FIXME: this function doesn't properly group to a list of length target_n_final_files. Needs to be fixed. For now, we will just use the function as it is.
+        parquet_files = sorted(parquet_files)
+        futures = client.map(_get_file_info, parquet_files) # TODO: merge _get_num_rows and _get_file_info, since they do the same thing.
+        file_infos = client.gather(futures)
+        grouped_files = group_parquet_files(file_infos, target_n_final_files)
         # print(f"Grouped files: {grouped_files}")
         logger.info(
             "Writing compacted dataset as %s parquet files",
@@ -452,7 +458,7 @@ if __name__ == "__main__":
             raise ValueError("--model_tag is required when --add_dnn_score is used.")
 
     client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
-    # client = get_dask_client(False) # FIXME: no using dask gateway for now, as it is not working on the cluster
+    # client = get_dask_client(False, n_workers=32) # FIXME: no using dask gateway for now, as it is not working on the cluster
 
     # append /stage1_output/2018/f1_0 to load path
     args.input_path = os.path.join(args.input_path, f"stage1_output/{args.year}/f1_0")
