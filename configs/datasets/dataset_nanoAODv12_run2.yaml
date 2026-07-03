@@ -1,7 +1,7 @@
 years:
   "2018PR":
     Data:
-      total_lumi_pb: 59830.0
+      total_lumi_pb: 59560.0
       data_A:
         skip_sample: False
         datasets:
@@ -56,7 +56,7 @@ years:
 
   "2018":
     Data:
-      total_lumi_pb: 59830.0
+      total_lumi_pb: 59560.0
       data_A:
         skip_sample: False
         datasets:
@@ -409,7 +409,7 @@ years:
 
   "2017":
     Data:
-      total_lumi_pb: 41480.0
+      total_lumi_pb: 42700.0
       data_B:
         skip_sample: False
         datasets:

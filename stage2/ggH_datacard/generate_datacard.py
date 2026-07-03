@@ -224,11 +224,15 @@ pdf_Higgs_qq     lnN     -            1.021        -
 """)# QCD and pdf Source table 2.1 from AN-19-124. Lumi source: https://twiki.cern.ch/twiki/bin/viewauth/CMS/LumiRecommendationsRun2
         
     if year == "2016":
-        lines.append("lumi_13TeV_2016       lnN     1.012       1.012       -")
+        lines.append("lumi_13TeV_2016       lnN     1.012       1.012       -") #FIXME: not following the official recommendation. This is just a placeholder
     elif year == "2017":
-        lines.append("lumi_13TeV_2017       lnN     1.023       1.023       -")
+        lines.append("lumi_13TeV_2017       lnN     1.023       1.0082       -") #FIXME: not following the official recommendation. This is just a placeholder
     elif year == "2018":
-        lines.append("lumi_13TeV_2018       lnN     1.025       1.025       -")
+        lines.append("lumi_13TeV_2018       lnN     1.025       1.0084       -") #FIXME: not following the official recommendation. This is just a placeholder
+    elif year == "run2": # all years in Run2: 2016preVFP, 2016postVFP, 2017, 2018
+        lines.append("lumi_13TeV_1516_l       lnN     1.0031      1.0031      -")
+        lines.append("lumi_13TeV_151617_l     lnN     1.0018      1.0018      -")
+        lines.append("lumi_13TeV_15161718_l   lnN     1.0064      1.0064      -")
     elif "2022" in year:
         lines.append("lumi_13p6TeV_Corr     lnN     1.0138      1.0138      -")
     elif "2023" in year:
@@ -238,7 +242,7 @@ pdf_Higgs_qq     lnN     -            1.021        -
         lines.append("lumi_13p6TeV_Corr     lnN     1.0020      1.0020      -")
         lines.append("lumi_13p6TeV_23_24    lnN     1.0068      1.0068      -")
         lines.append("lumi_13p6TeV_uncorr   lnN     1.0144      1.0144      -")
-    elif year == "all":
+    elif year == "run3": # all years in Run3: 2022preEE, 2022postEE, 2023, 2023BPix, 2024
         lines.append("lumi_13p6TeV_Corr     lnN     1.0020      1.0020      -")
         lines.append("lumi_13p6TeV_23_24    lnN     1.0068      1.0068      -")
         lines.append("lumi_13p6TeV_uncorr   lnN     1.0144      1.0144      -")
