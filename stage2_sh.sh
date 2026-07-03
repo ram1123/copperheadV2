@@ -427,6 +427,22 @@ if [[ "${step}" == "10" || "${step}" == "im" || "${step}" == "all" ]]; then
     done
 fi
 
+
+# -----------------------------------------------------
+# Step 11: SMF dof f-test
+# -----------------------------------------------------
+if [[ "${step}" == "11"]]; then
+    for year_i in "${years[@]}"; do
+        print_box "Step 11: do SMF f-test (${year_i})"
+        sample_l="data"
+        save_path="output/bdt_${model_name}_${model_trainYear}/ggH/categorization/plots/${year_i}"
+        region="h-sidebands"
+        mkdir -p "${save_path}"
+
+        python validation/ggH/categorization/getDoF4SMF.py -label $label -cat $stage2_label --samples $sample_l -y $year_i --region ${region} --base_path ${base_path} -save ${save_path}
+    done
+fi
+
 print_box "Done"
 echo "Finished at: $(date)"
 echo "Run log: ${RUN_LOG}"

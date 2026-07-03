@@ -175,7 +175,11 @@ if __name__ == "__main__":
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_data_*.parquet"
     print(f"load_path: {load_path}")
-    processed_eventsData = dak.from_parquet(load_path).compute()
+    fields2load = ["wgt_nominal", "subCategory_idx", "dimuon_mass"]
+    processed_eventsData = dak.from_parquet(load_path)
+    processed_eventsData = ak.zip({
+        field: processed_eventsData[field] for field in fields2load
+    }).compute()
     print(f"processed_eventsData length: {ak.num(processed_eventsData.dimuon_mass, axis=0)}")
     print("events loaded!")
 
@@ -233,7 +237,6 @@ if __name__ == "__main__":
 
 
     nSubCats = 5
-    # nSubCats = 1 #FIXME
     coreFunction_dict = {
         "BWZRedux" : [],
         "BwzGamma" : [],
@@ -480,8 +483,6 @@ if __name__ == "__main__":
     # print(f"all_params after fitting: {[param.Print() for param in all_params]}")
     print(f"coreFunction_dict: {coreFunction_dict}")
     
-    # print("Success!")
-    # raise ValueError
     
     # ---------------------------------------------------
     # Group the functions into one Envelope
@@ -519,7 +520,6 @@ if __name__ == "__main__":
     print(f"env_pdfs: {len(env_pdfs)}")
 
     print("Success!")
-    # raise ValueError
 
 
     # ---------------------------------------------------
@@ -527,13 +527,13 @@ if __name__ == "__main__":
     # ---------------------------------------------------
 
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_signalMC.parquet"
-    if args.year=="all":
-        load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_*.parquet"
-        # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS.parquet"
-    elif args.year=="2016only":
-        load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_ggh_*.parquet"
-    else:
-        load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh_*.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
+    # if args.year=="all":
+    #     load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_*.parquet"
+    #     # load_path = f"{args.load_path}/{category}/*/processed_events_sigMC_ggh_amcPS.parquet"
+    # elif args.year=="2016only":
+    #     load_path = f"{args.load_path}/{category}/2016*/processed_events_sigMC_ggh_*.parquet"
+    # else:
+    #     load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC_ggh_*.parquet" # Fig 6.15 was only with ggH process, though with all 2016, 2017 and 2018
     # load_path = f"{args.load_path}/{category}/{args.year}/processed_events_sigMC*.parquet"
     if args.year=="all":
         load_path = f"{args.load_path}/*/processed_events_sigMC_ggh_*.parquet"
@@ -542,9 +542,15 @@ if __name__ == "__main__":
         load_path = f"{args.load_path}/2016*/processed_events_sigMC_ggh_*.parquet"
     else:
         load_path = f"{args.load_path}/{args.year}/processed_events_sigMC_ggh_*.parquet"
-    processed_eventsSignalMC = dak.from_parquet(load_path).compute()
+    print(f"load_path: {load_path}")
+    load_path = glob.glob(load_path)
+    print(f"load_path: {load_path}")
+    processed_eventsSignalMC = dak.from_parquet(load_path)
+    processed_eventsSignalMC = ak.zip({
+        field: processed_eventsSignalMC[field] for field in fields2load
+    }).compute()
     print(f"ggH yield: {np.sum(processed_eventsSignalMC.wgt_nominal)}")
-    print("signal events loaded")
+    print("ggH signal events loaded")
     
     # ---------------------------------------------------
     # Define signal model's Doubcl Crystal Ball PDF
@@ -1026,11 +1032,13 @@ if __name__ == "__main__":
     print(load_path)
     load_path = glob.glob(load_path)
     
-    load_path = [s for s in load_path if "/2024" not in s] # FIXME : temporarily remove 2024 vbf parquet bc it's corrupt
     print(load_path)
-    processed_eventsSignalMC_vbf = dak.from_parquet(load_path).compute()
+    processed_eventsSignalMC_vbf = dak.from_parquet(load_path)
+    processed_eventsSignalMC_vbf = ak.zip({
+        field: processed_eventsSignalMC_vbf[field] for field in fields2load
+    }).compute()
     print(f"qqH yield: {np.sum(processed_eventsSignalMC_vbf.wgt_nominal)}")
-    print("signal events loaded")
+    print("VBF signal events loaded")
     
     # ---------------------------------------------------
     # Define vbf signal model's Doubcl Crystal Ball PDF
