@@ -27,8 +27,17 @@ time python MVA_training/pileup_dnn/train_pu_dnn.py \
     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet" \
     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
   --use-glob \
-  -o validation/pu_dnn/run2022postEE_dy_top_ewk_minAbsDEtaJetMuon_13June \
+  -o validation/pu_dnn/run2022postEE_dy_top_ewk_allvars_13June \
   --regions HEpos HEneg HFpos HFneg
+
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
+  -i \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ewk_*/*/*.parquet" \
+  --use-glob \
+  -o validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet \
+  --regions HEpos HEneg HFpos HFneg  
 """
 
 from __future__ import annotations
@@ -100,15 +109,17 @@ BASELINE_ALIASES = {
 
 MODEL_FEATURES = [
     # "logpt",
-    # "minDPhiMetJet",
-    # "maxDPhiMetJet",
+    "minDPhiMetJet",
+    "maxDPhiMetJet",
     # "absDPhiMetJet",
     # "minDRJetMuon",
-    "minAbsDEtaJetMuon",
+    # "minAbsDEtaJetMuon",
     # "dRJetOther",
     # "absDEtaJetOther",
     # "otherJetPt",
     # "jetPtOverOtherJetPt",
+
+    "puIdDisc",
 
     "chEmEF", "chHEF",
     "neEmEF", "neHEF",
@@ -118,7 +129,7 @@ MODEL_FEATURES = [
 
     "nConstituents", "nElectrons", "nMuons",
 
-    "muonSubtrFactor", "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
+    # "muonSubtrFactor", "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
 
     "hfadjacentEtaStripsSize", "hfcentralEtaStripSize",
     "hfsigmaEtaEta", "hfsigmaPhiPhi",
