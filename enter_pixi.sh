@@ -10,7 +10,7 @@ set -euo pipefail
 # User working repo
 # ============================================================
 WORKDIR="$(pwd)"
-PIXI_PROJECT="/cvmfs/cms-af.opensciencegrid.org/paf/pixi/copperheadV2_dev"
+PIXI_PROJECT="/cvmfs/cms-af.opensciencegrid.org/paf/pixi/copperheadV2"
 
 # Default environment
 PIXI_ENV="${1:-default}"
