@@ -76,6 +76,15 @@ DEFAULT_REGIONS = ("HE", "HF")
 REGION_CHOICES = ("HE", "HF", "HEpos", "HEneg", "HFpos", "HFneg")
 DEFAULT_PT_BINS = [25, 27, 30, 32.5, 35, 37.5, 40, 42.5, 45, 47.5, 50]
 
+# Finest usable |eta| binning for HE/HF review plots (calorimeter tower boundaries,
+# per reviewer comment). The stacked before/after |eta| plots use this list merged
+# 4-to-1 (see ETA_STACK_BINS) so the plotted bins are no finer than this granularity.
+ETA_RING_EDGES_FINE = [
+    2.500, 2.650, 2.853, 2.964, 3.139, 3.314, 3.489, 3.664,
+    3.839, 4.013, 4.191, 4.363, 4.538, 4.716, 4.889, 5.191,
+]
+ETA_STACK_BINS = np.array(ETA_RING_EDGES_FINE[::4] + [ETA_RING_EDGES_FINE[-1]], dtype=np.float64)
+
 # These are the only DNN input features. Branch-name aliases protect us from
 # drift between NanoAOD/stage-1 versions.
 FEATURE_ALIASES = {
@@ -1515,15 +1524,19 @@ def plot_stacked_before_after(
     xlabel: str,
     formats: list[str],
     bins: int = 50,
+    bin_edges: np.ndarray | None = None,
 ) -> None:
     values = np.asarray(values, dtype=np.float32)
     finite = np.isfinite(values)
     if finite.sum() == 0:
         return
-    lo, hi = np.nanpercentile(values[finite], [0.5, 99.5])
-    if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
-        return
-    hist_bins = np.linspace(lo, hi, bins + 1)
+    if bin_edges is not None:
+        hist_bins = np.asarray(bin_edges, dtype=np.float64)
+    else:
+        lo, hi = np.nanpercentile(values[finite], [0.5, 99.5])
+        if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
+            return
+        hist_bins = np.linspace(lo, hi, bins + 1)
     y = y.astype(bool)
 
     for suffix, mask, title in [
@@ -1588,6 +1601,84 @@ def plot_stacked_before_after(
         rax.set_xlabel(xlabel)
         rax.grid(alpha=0.3)
         save_plot(fig, outdir / f"stack_{name}_{region}_{suffix}", formats)
+
+
+SHOWER_SHAPE_2D_ZMAX = 10000.0
+
+
+def plot_shower_shape_2d_before_after(
+    pred_test: pd.DataFrame,
+    y: np.ndarray,
+    pass_mask: np.ndarray,
+    outdir: Path,
+    region: str,
+    formats: list[str],
+    bins: int = 50,
+    zmax: float = SHOWER_SHAPE_2D_ZMAX,
+) -> None:
+    """2D hfsigmaEtaEta vs hfsigmaPhiPhi, split by PU/HS and before/after the DNN cut.
+
+    Lets a reviewer see which part of the shower-shape phase space the DNN cut removes.
+    Drawn with ROOT (COLZ) on a shared, fixed Z-axis range so the four panels are
+    directly comparable.
+    """
+    import ROOT
+    from modules.root_2dColorProfile import set_gradient_style
+
+    ROOT.gROOT.SetBatch(True)
+    set_gradient_style()
+
+    x_all = pred_test["hfsigmaEtaEta"].to_numpy(dtype=np.float32)
+    y_all = pred_test["hfsigmaPhiPhi"].to_numpy(dtype=np.float32)
+    # hfsigmaEtaEta/hfsigmaPhiPhi are only defined for HF jets; NanoAOD fills
+    # them with a -1 sentinel for non-HF jets, so exclude that from the "finite" mask.
+    finite = np.isfinite(x_all) & np.isfinite(y_all) & (x_all > -1) & (y_all > -1)
+    if finite.sum() == 0:
+        return
+    y_hs = y.astype(bool)
+    pass_mask = pass_mask.astype(bool)
+
+    x_lo, x_hi = np.nanpercentile(x_all[finite], [0.00001, 99.99])
+    y_lo, y_hi = np.nanpercentile(y_all[finite], [0.00001, 99.99])
+    if not (np.isfinite(x_lo) and np.isfinite(x_hi) and x_lo < x_hi):
+        return
+    if not (np.isfinite(y_lo) and np.isfinite(y_hi) and y_lo < y_hi):
+        return
+
+    panels = [
+        ("HS", "before", np.ones(len(x_all), dtype=bool) & y_hs & finite),
+        ("HS", "after", pass_mask & y_hs & finite),
+        ("PU", "before", np.ones(len(x_all), dtype=bool) & ~y_hs & finite),
+        ("PU", "after", pass_mask & ~y_hs & finite),
+    ]
+
+    ROOT.gStyle.SetOptStat(0)
+
+    canvas = ROOT.TCanvas(f"c_shower_shape_2d_{region}", "", 1100, 900)
+    canvas.Divide(2, 2)
+
+    hists = []
+    for pad_idx, (label, suffix, mask) in enumerate(panels, start=1):
+        n = int(mask.sum())
+        h = ROOT.TH2F(
+            f"h_{region}_{label}_{suffix}",
+            f"{region} {label} {suffix} DNN cut (N={n});hfsigmaEtaEta;hfsigmaPhiPhi",
+            bins, x_lo, x_hi,
+            bins, y_lo, y_hi,
+        )
+        for xv, yv in zip(x_all[mask], y_all[mask]):
+            h.Fill(float(xv), float(yv))
+        h.SetMinimum(1.0)
+        h.SetMaximum(zmax)
+        hists.append(h)
+
+        pad = canvas.cd(pad_idx)
+        pad.SetLogz()
+        pad.SetRightMargin(0.15)
+        h.Draw("COLZ")
+
+    for fmt in formats:
+        canvas.SaveAs(str(outdir / f"shower_shape_2d_{region}.{fmt}"))
 
 
 def permutation_importance(
@@ -1798,7 +1889,10 @@ def make_validation_outputs(
                 name,
                 xlabel,
                 args.plot_format,
+                bin_edges=ETA_STACK_BINS if name == "aeta" else None,
             )
+        if region.startswith("HF") and "hfsigmaEtaEta" in pred_test.columns and "hfsigmaPhiPhi" in pred_test.columns:
+            plot_shower_shape_2d_before_after(pred_test, y, pass_mask, outdir, region, args.plot_format)
 
     importance = permutation_importance(model, scaler, pred_test, args)
     importance.to_csv(outdir / f"feature_importance_{region}.csv", index=False)
@@ -1900,7 +1994,10 @@ def replot_region_from_saved_outputs(output: Path, region: str, args: argparse.N
                 name,
                 xlabel,
                 args.plot_format,
+                bin_edges=ETA_STACK_BINS if name == "aeta" else None,
             )
+    if region.startswith("HF") and "hfsigmaEtaEta" in pred_test.columns and "hfsigmaPhiPhi" in pred_test.columns:
+        plot_shower_shape_2d_before_after(pred_test, y, pass_mask, outdir, region, args.plot_format)
     if "puIdDisc" in pred_test.columns:
         baseline_puid_plots(pred_test, outdir, region, args)
     return True
