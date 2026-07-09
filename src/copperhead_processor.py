@@ -56,6 +56,7 @@ from src.corrections.jet import (
     getJecDataTag,
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib
+from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
@@ -582,6 +583,23 @@ class EventProcessor(processor.ProcessorABC):
                     cfg["equation"], f"<pysr_{region}>", "eval"
                 )
                 self.pysr_all_features.update(cfg["features"])
+
+        self.pu_dnn_configs = {}
+        if self.config["switches"].get("do_use_pu_dnn_score", False):
+            if self.config["switches"].get("do_use_pySR_score", False):
+                raise ValueError(
+                    "do_use_pySR_score and do_use_pu_dnn_score are alternative "
+                    "forward-jet PU cleanup models; only one can be enabled at once."
+                )
+            pu_dnn_base_dir = self.config.get(
+                "pu_dnn_model_dir",
+                "validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July",
+            )
+            self.pu_dnn_configs = load_pu_dnn_configs(pu_dnn_base_dir)
+            if not self.pu_dnn_configs:
+                raise FileNotFoundError(
+                    f"PU DNN scoring is enabled, but no region models were found under {pu_dnn_base_dir}."
+                )
 
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
@@ -2812,6 +2830,12 @@ class EventProcessor(processor.ProcessorABC):
             jets = ensure_symbolic_features(jets, self.pysr_all_features)
             pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)
             jets = jets[pysr_dict["jet_pysr_pu_pass"]]
+
+        if_pu_dnn = self.config["switches"].get("do_use_pu_dnn_score", False)
+        if if_pu_dnn:
+            jets = add_dphi_met_jet_features(jets, events.PuppiMET.phi)
+            pu_dnn_out = eval_pu_dnn(jets, self.pu_dnn_configs)
+            jets = jets[pu_dnn_out["pu_dnn_pass"]]
 
         jets = ak.to_packed(jets)
 
