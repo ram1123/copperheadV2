@@ -498,4 +498,56 @@ binning_DNN_HIG19006 = np.array([
 # binning = binning_HPScan_13bins
 # binning = binning_HPScan_17bins
 # binning = binning_based_on_significanceScan
-binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
+# binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
+
+
+# binning = np.array([ #  Run2_NanoV15_Jul 05 50nTrialsFoldsAll_Max70bins
+#   0.000000,
+#   0.122955,
+#   0.245909,
+#   0.368864,
+#   0.491819,
+#   0.614774,
+#   0.737728,
+#   0.860683,
+#   0.983638,
+#   1.106593,
+#   1.229547,
+#   1.352502,
+#   1.598411,
+#   1.721366,
+#   1.844321,
+#   2.090230,
+#   2.213185,
+#   2.336140,
+#   2.459094,
+#   2.582049,
+#   2.705004,
+#   (7.254329+0.1),
+# ])
+
+
+binning = np.array([ #  Run2_NanoV15_Jul 11 100nTrialsFoldsAll_Max70bins
+  0.000000,
+  0.109914,
+  0.219828,
+  0.329742,
+  0.439656,
+  0.549570,
+  0.659484,
+  0.769398,
+  0.879313,
+  0.989227,
+  1.099141,
+  1.209055,
+  1.318969,
+  1.428883,
+  1.538797,
+  1.758625,
+  1.868539,
+  1.978453,
+  2.198281,
+  2.308195,
+  2.418110,
+  (7.254329+0.1),
+])

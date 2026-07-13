@@ -156,6 +156,7 @@ declare -A data_l_dict=(
 
 # bkg_l="DY TT ST VV EWK VVV"
 bkg_l="DY Top VV EWK VVV"
+# bkg_l="DY Top VV EWK"
 # bkg_l=""
 
 # sig_l="VBF"
@@ -216,6 +217,9 @@ for stage2_year in "${years[@]}"; do
     done
 done
 
+save_postfix="Jul11_2026_100nTrialsFoldsAll_Max70bins" # FIXME
+# save_postfix="Jul04_2026_50nTrialsFoldsAll_Max70bins" # FIXME
+
 # ----------- Main loop -----------
 for year in "${years[@]}"; do
     data_l="${data_l_dict[$year]}"
@@ -249,9 +253,12 @@ for year in "${years[@]}"; do
     training_fold=4
     model_label="${label}"
     # model_dir="${dnn_years_csv//,/-}_${region}_${category}"
-    model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-    training_tag="${dnn_train_label}"
-    model_trained_path="./dnn/trained_models/${label}/${model_dir}"
+    # model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
+    # training_tag="${dnn_train_label}"
+    # model_trained_path="./dnn/trained_models/${label}/${model_dir}"
+    model_trained_path="/work/users/yun79/sideHustle5/copperheadV2/dnn/trained_models/Run2_NanoV15_forVBFChannel_June26_2026_jetUnc/2018-2017-2016postVFP-2016preVFP_h-peak_vbf"
+    # training_tag="trained_best_optuna_50Trials_w_VBF_filterFoldAll"
+    training_tag="trained_best_optuna_100Trials_w_VBF_filterFoldAll"
 
     # ########## Compact command ##########
     # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path --model_tag $training_tag --add_dnn_score --fix_dimuon_mass --save_postfix $save_postfix "
@@ -266,7 +273,8 @@ for year in "${years[@]}"; do
 
     # ########## STAGE-2 command ##########
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    variation=false
+    # variation=false
+    variation=true
     sig_l_stage2="ggH VBF"
     stage2_year_arg="$year"
     stage2_data_arg="$data_l"
@@ -278,7 +286,7 @@ for year in "${years[@]}"; do
     echo "stage2_data_arg: $stage2_data_arg"
 
     if ${variation}; then
-        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}"
+        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} " 
         echo "Running stage2 command: $command2"
         command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} "
         variation_tag=""

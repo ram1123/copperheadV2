@@ -35607,5 +35607,360 @@
       "original_fraction": 1.0,
       "sumGenWgts": 149718.288925024
     }
+  },
+  "dy_VBF_filter": {
+    "files": {
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part1.root": {
+        "num_entries": 1100160,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            550080
+          ],
+          [
+            550080,
+            1100160
+          ]
+        ],
+        "uuid": "5483afb8-5be9-11f1-8d30-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part10.root": {
+        "num_entries": 1099577,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            549789
+          ],
+          [
+            549789,
+            1099577
+          ]
+        ],
+        "uuid": "5043ff06-5bef-11f1-ad4f-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part11.root": {
+        "num_entries": 1098220,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            549110
+          ],
+          [
+            549110,
+            1098220
+          ]
+        ],
+        "uuid": "cedc2e60-5bef-11f1-8f62-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part12.root": {
+        "num_entries": 1097500,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548750
+          ],
+          [
+            548750,
+            1097500
+          ]
+        ],
+        "uuid": "61f4060a-5bf0-11f1-8536-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part13.root": {
+        "num_entries": 1097004,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548502
+          ],
+          [
+            548502,
+            1097004
+          ]
+        ],
+        "uuid": "004bbcf8-5bf1-11f1-bfda-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part14.root": {
+        "num_entries": 1099441,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            549721
+          ],
+          [
+            549721,
+            1099441
+          ]
+        ],
+        "uuid": "862267aa-5bf1-11f1-94f8-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part15.root": {
+        "num_entries": 1097678,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548839
+          ],
+          [
+            548839,
+            1097678
+          ]
+        ],
+        "uuid": "1af0e76c-5bf2-11f1-8276-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part16.root": {
+        "num_entries": 1097386,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548693
+          ],
+          [
+            548693,
+            1097386
+          ]
+        ],
+        "uuid": "073a0bc6-5bf3-11f1-b4ee-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part17.root": {
+        "num_entries": 1097664,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548832
+          ],
+          [
+            548832,
+            1097664
+          ]
+        ],
+        "uuid": "5d46f446-5bf5-11f1-91b3-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part18.root": {
+        "num_entries": 1099296,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            549648
+          ],
+          [
+            549648,
+            1099296
+          ]
+        ],
+        "uuid": "b2f3a642-5c2b-11f1-8fb6-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part19.root": {
+        "num_entries": 1099903,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            549952
+          ],
+          [
+            549952,
+            1099903
+          ]
+        ],
+        "uuid": "b366a07c-5c2e-11f1-b685-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part2.root": {
+        "num_entries": 1095410,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            547705
+          ],
+          [
+            547705,
+            1095410
+          ]
+        ],
+        "uuid": "e913edaa-5be9-11f1-a503-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part20.root": {
+        "num_entries": 1097963,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548982
+          ],
+          [
+            548982,
+            1097963
+          ]
+        ],
+        "uuid": "29007d3e-5c30-11f1-8838-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part21.root": {
+        "num_entries": 1095719,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            547860
+          ],
+          [
+            547860,
+            1095719
+          ]
+        ],
+        "uuid": "4ee8b320-5c32-11f1-8603-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part22.root": {
+        "num_entries": 1093317,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            546659
+          ],
+          [
+            546659,
+            1093317
+          ]
+        ],
+        "uuid": "0f0d3e50-5c33-11f1-a188-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part23.root": {
+        "num_entries": 369939,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            369939
+          ]
+        ],
+        "uuid": "397d270e-5c33-11f1-b160-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part3.root": {
+        "num_entries": 1094446,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            547223
+          ],
+          [
+            547223,
+            1094446
+          ]
+        ],
+        "uuid": "606d6ff2-5bea-11f1-9a1c-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part4.root": {
+        "num_entries": 1091478,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            545739
+          ],
+          [
+            545739,
+            1091478
+          ]
+        ],
+        "uuid": "6d36649a-5beb-11f1-b7fd-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part5.root": {
+        "num_entries": 1093829,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            546915
+          ],
+          [
+            546915,
+            1093829
+          ]
+        ],
+        "uuid": "54789080-5bec-11f1-b43f-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part6.root": {
+        "num_entries": 1089012,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            544506
+          ],
+          [
+            544506,
+            1089012
+          ]
+        ],
+        "uuid": "e18cb65e-5bec-11f1-b6a4-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part7.root": {
+        "num_entries": 1093525,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            546763
+          ],
+          [
+            546763,
+            1093525
+          ]
+        ],
+        "uuid": "9d286e3a-5bed-11f1-aff0-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part8.root": {
+        "num_entries": 1097243,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548622
+          ],
+          [
+            548622,
+            1097243
+          ]
+        ],
+        "uuid": "2759f4de-5bee-11f1-8b1c-5b0a050abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/user/rasharma/customNanoAODv15/hadded/UL2018/DYJets_NanoAOD/DY_VBF_filter_part9.root": {
+        "num_entries": 1097225,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            548613
+          ],
+          [
+            548613,
+            1097225
+          ]
+        ],
+        "uuid": "ba2658d4-5bee-11f1-aa0e-5b0a050abeef"
+      }
+    },
+    "form": null,
+    "metadata": {
+      "data_entries": null,
+      "dataset": "dy_VBF_filter",
+      "fraction": 1.0,
+      "is_mc": true,
+      "nGenEvts": 24492935,
+      "original_fraction": 1.0,
+      "sumGenWgts": 2612199400.77502
+    }
   }
 }

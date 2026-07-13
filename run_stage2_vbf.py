@@ -98,50 +98,46 @@ def resolve_variation_field(base, variation, fields):
 
     if base in SHIFTED_SELECTION_VARIABLES:
         use_var = "nominal" if variation == "nominal" or variation.startswith("wgt") else variation
-        candidate = f"{base}_{use_var}"
-        if candidate in fields:
-            return candidate
+        candidates = [f"{base}_{use_var}"]
+        if use_var != "nominal":
+            candidates.append(f"{base}_nominal")
+        candidates.append(base)
+
+        for idx, candidate in enumerate(candidates):
+            if candidate in fields:
+                if idx > 0:
+                    logger.warning(
+                        f"[stage2] Selection field '{base}_{use_var}' unavailable for "
+                        f"variation '{variation}'; falling back to '{candidate}'."
+                    )
+                return candidate
+
         raise KeyError(
-            f"Selection field '{candidate}' for variation '{variation}' is unavailable."
+            f"Selection field '{base}_{use_var}' for variation '{variation}' is "
+            f"unavailable (tried: {candidates})."
         )
 
     raise KeyError(f"Unknown selection variable '{base}'")
 
 
-# def columns_for_selection(category, variation, fields):
-#     # minimal columns for cuts; add here if your selection changes
-#     base_names = [
-#         "event",
-#         "dimuon_mass",
-#         "njets",
-#         "nBtagLoose",
-#         "nBtagMedium",
-#         "jj_mass",
-#         "jj_dEta",
-#         "jet1_pt",
-#         "gjj_mass",
-#         "nfatJets_drmuon",
-#         "MET_pt",
-#     ]
-#     return [resolve_variation_field(name, variation, fields) for name in base_names]
-
-def columns_for_selection(category, variation):
-    # minimal columns for cuts; add here if your selection changes
-    use_var = "nominal" if variation.startswith("wgt") else variation
-    base = [
-        "dimuon_mass",
+def columns_for_selection(category, variation, fields):
+    # minimal columns for cuts; add here if your selection changes.
+    # NOMINAL_SELECTION_VARIABLES are only used behind switch-gated cuts (e.g.
+    # do_VH_veto) downstream, so they're kept optional here and left for the
+    # caller's `needed_cols & set(events.fields)` intersection to drop if absent,
+    # instead of being required via resolve_variation_field().
+    cols = [
         "event",
-        f"njets_{use_var}",
+        "dimuon_mass",
         "gjj_mass",
-        f"nBtagLoose_{use_var}",
-        f"nBtagMedium_{use_var}",
-        f"jj_mass_{use_var}",
-        f"jj_dEta_{use_var}",
-        f"jet1_pt_{use_var}",
         "nfatJets_drmuon",
         "MET_pt",
     ]
-    return base
+    cols += [
+        resolve_variation_field(name, variation, fields)
+        for name in sorted(SHIFTED_SELECTION_VARIABLES)
+    ]
+    return cols
 
 
 class DNNWrapper(torch_wrapper):
@@ -481,7 +477,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if not variation:
                 continue
             category= "vbf"
-            sel_cols = columns_for_selection(category, variation)
+            sel_cols = columns_for_selection(category, variation, events.fields)
             needed_cols = set(sel_cols + [weight_variation])
 
             # ----------------------------------
@@ -615,6 +611,7 @@ def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samp
     # work on bkg MC
     # ------------------------------------
     bkg_sample_l = []
+    # logger.info(f"bkg_samples: {bkg_samples}")
     for bkg_sample in bkg_samples:
         bkg_sample = bkg_sample.upper()
         if bkg_sample in bkg_sample_dict.keys():
@@ -629,7 +626,7 @@ def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samp
                 )
                 bkg_sample_l += bkg_sample_dict["DYVBF"]
     logger.info(f"bkg_sample_l: {bkg_sample_l}")
-
+    bkg_sample_l = sorted(list(set(bkg_sample_l)))# safeguard against repetitions of MC samples for whatever reason
     for sample in bkg_sample_l:
         if "dy_vbf_filter" in sample.lower() and not do_vbf_filter_study:
             logger.info(
@@ -639,6 +636,7 @@ def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samp
             continue
         sample_filelist = glob.glob(str(stage1_path / sample / "*" / "*.parquet"))
         logger.info(f"sample: {sample}, number of files: {len(sample_filelist)}")
+        logger.info(f"bkg_sample_l: {bkg_sample_l}")
         logger.debug(f"sample_filelist: {sample_filelist}")
         if len(sample_filelist) == 0:
             logger.debug(f"No {sample} files were found!")
@@ -743,20 +741,19 @@ if __name__ == "__main__":
             logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
             raise FileNotFoundError(f"Stage1 path {stage1_path} does not exist! Run the compaction script first.")
 
-        # if dy_vbf_filter_is_available(stage1_path, year, args.sample_config):
-        #     if not args.do_vbf_filter_study:
-        #         logger.info(
-        #             "Setting do_vbf_filter_study=True because dy_VBF_filter "
-        #             "samples are available."
-        #         )
-        #     args.do_vbf_filter_study = True
+        if dy_vbf_filter_is_available(stage1_path, year, args.sample_config):
+            if not args.do_vbf_filter_study:
+                logger.info(
+                    "Setting do_vbf_filter_study=True because dy_VBF_filter "
+                    "samples are available."
+                )
+            args.do_vbf_filter_study = True
 
         hist_save_path = base_path / "stage2_histograms" / histDirName / year
         os.makedirs(hist_save_path, exist_ok=True)
         logger.info(f"{year} histograms will be saved to: {hist_save_path}")
 
         full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
-        # full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=[], sig_samples=["GGH"], bkg_samples=[], do_vbf_filter_study=args.do_vbf_filter_study)
 
         sample_dict_by_year[year] = full_sample_dict
         logger.debug(f"{year} full_sample_dict: {full_sample_dict}")
