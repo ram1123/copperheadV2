@@ -66,10 +66,15 @@ def discover_shape_systs(fields, prefixes=None):
     for f in fields:
         if not (f.endswith("_up") or f.endswith("_down")):
             continue
-        for p in prefixes:
-            if f.startswith(p):
-                suffixes.add(f[len(p):])
-                break
+        # Use the longest (most specific) matching prefix, not the first one in
+        # list order, so e.g. "mu1_pt_over_mass_" wins over "mu1_pt_" for a field
+        # like "mu1_pt_over_mass_mu_roccor_up" regardless of how `prefixes` is
+        # ordered.
+        matching_prefixes = [p for p in prefixes if f.startswith(p)]
+        if not matching_prefixes:
+            continue
+        best_prefix = max(matching_prefixes, key=len)
+        suffixes.add(f[len(best_prefix):])
     return sorted(suffixes)
 
 SHIFTED_SELECTION_VARIABLES = {
@@ -93,6 +98,11 @@ NOMINAL_SELECTION_VARIABLES = {
 def resolve_variation_field(base, variation, fields):
     if base in NOMINAL_SELECTION_VARIABLES:
         if base in fields:
+            logger.debug(
+            # logger.warning(
+                f"[stage2][field-resolve] kind=selection variation={variation} "
+                f"var={base} resolved={base} fallback=False"
+            )
             return base
         raise KeyError(f"Missing nominal selection field '{base}'")
 
@@ -110,6 +120,11 @@ def resolve_variation_field(base, variation, fields):
                         f"[stage2] Selection field '{base}_{use_var}' unavailable for "
                         f"variation '{variation}'; falling back to '{candidate}'."
                     )
+                logger.debug(
+                # logger.warning(
+                    f"[stage2][field-resolve] kind=selection variation={variation} "
+                    f"var={base} resolved={candidate} fallback={idx > 0}"
+                )
                 return candidate
 
         raise KeyError(
@@ -215,6 +230,12 @@ def feature_name_for_variation(
     nominal_only_features=None,
 ):
     """Resolve DNN inputs; default caller passes nominal to match sideHustle5."""
+    # training_features often already carry a literal "_nominal" suffix
+    # (e.g. "jet1_phi_nominal") rather than a bare base name ("jet1_phi").
+    # Strip it so the shifted candidate below is built from the base name,
+    # not double-suffixed into something like "jet1_phi_nominal_nominal".
+    base = feat[: -len("_nominal")] if feat.endswith("_nominal") else feat
+
     if variation == "nominal" or variation.startswith("wgt"):
         use_var = "nominal"
     elif "soft" in feat:
@@ -222,11 +243,30 @@ def feature_name_for_variation(
     else:
         use_var = variation
 
-    candidates = [f"{feat}_{use_var}", f"{feat}_nominal", feat]
-    for c in candidates:
+    candidates = [f"{base}_{use_var}", f"{base}_nominal", feat]
+    for idx, c in enumerate(candidates):
         if c in fields:
+            if idx > 0:
+                logger.warning(
+                    f"[stage2] DNN feature '{base}_{use_var}' unavailable for "
+                    f"variation '{variation}'; falling back to '{c}'."
+                )
+            logger.debug(
+            # logger.warning(
+                f"[stage2][field-resolve] kind=dnn variation={variation} "
+                f"var={feat} resolved={c} fallback={idx > 0}"
+            )
             return c
     if allow_nominal_fallback:
+        logger.warning(
+            f"[stage2] DNN feature '{base}_{use_var}' (and nominal/base) unavailable "
+            f"for variation '{variation}'; falling back to unverified '{feat}'."
+        )
+        logger.debug(
+        # logger.warning(
+            f"[stage2][field-resolve] kind=dnn variation={variation} "
+            f"var={feat} resolved={feat} fallback=True"
+        )
         return feat
     raise KeyError(
         f"Feature {feat} (var={variation}) not found in fields. "
@@ -308,7 +348,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         no_variations=False,
         do_vbf_filter_study=False,
         allow_nominal_feature_fallback=True,
-        use_nominal_dnn_features_for_systs=True,
+        use_nominal_dnn_features_for_systs=False,
     ):
         NO_SCALE_FEATURES = {
             "year",
@@ -485,7 +525,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 source = feature_name_for_variation(
                     feature,
                     variation,
-                    fields,
+                    events.fields,
                     allow_nominal_fallback=self.allow_nominal_feature_fallback,
                     nominal_only_features=self.no_scale_features,
                 )
@@ -515,9 +555,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 "nominal" if self.use_nominal_dnn_features_for_systs else variation
             )
             filtered_events = events[needed_cols]
-            fields = filtered_events.fields
             # if variation in debug_variations:
-            #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {fields}")
+            #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {filtered_events.fields}")
             region_events = selection.applyRegionCatCuts(
                 filtered_events,
                 process=sample_type,
@@ -695,14 +734,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use_nominal_dnn_features_for_systs",
         dest="use_nominal_dnn_features_for_systs",
-        default=True,
+        default=False,
         action=argparse.BooleanOptionalAction,
         help=(
-            "Use nominal DNN input features for systematic variations while "
-            "still applying shifted event selection and weights. Enabled by "
-            "default to avoid DNN score migration from shifted input features. "
-            "Use --no-use_nominal_dnn_features_for_systs to try shifted DNN "
-            "feature branches first, with nominal/base fallback."
+            "Use nominal DNN input features for systematic variations instead "
+            "of shifted ones, even though shifted event selection and weights "
+            "are still applied. Disabled by default: DNN features use the "
+            "shifted branch for the current variation, falling back to "
+            "nominal/base when that branch doesn't exist. Pass "
+            "--use_nominal_dnn_features_for_systs to pin DNN inputs to nominal "
+            "for all variations instead."
         ),
     )
     args = parser.parse_args()
