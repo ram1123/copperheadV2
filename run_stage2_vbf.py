@@ -520,11 +520,19 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             sel_cols = columns_for_selection(category, variation, events.fields)
             needed_cols = set(sel_cols + [weight_variation])
 
+            # DNN inputs are evaluated with feature_variation (which may be pinned to
+            # "nominal" via use_nominal_dnn_features_for_systs), not the raw selection
+            # variation, so the columns fetched here must match what evaluate_scores()
+            # will actually look up below.
+            feature_variation = (
+                "nominal" if self.use_nominal_dnn_features_for_systs else variation
+            )
+
             # ----------------------------------
             for feature in self.training_features:
                 source = feature_name_for_variation(
                     feature,
-                    variation,
+                    feature_variation,
                     events.fields,
                     allow_nominal_fallback=self.allow_nominal_feature_fallback,
                     nominal_only_features=self.no_scale_features,
@@ -551,9 +559,6 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 "Total_up",
             }
             # if variation in debug_variations:
-            feature_variation = (
-                "nominal" if self.use_nominal_dnn_features_for_systs else variation
-            )
             filtered_events = events[needed_cols]
             # if variation in debug_variations:
             #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {filtered_events.fields}")
