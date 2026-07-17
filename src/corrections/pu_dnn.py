@@ -21,6 +21,11 @@ from modules.utils import logger
 
 REGIONS = ("HEpos", "HEneg", "HFpos", "HFneg")
 
+# Repo root, resolved from this file's own location so a relative base_dir
+# resolves correctly regardless of the caller's cwd (driver process vs. a
+# Dask worker started from a different working directory).
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 _PU_DNN_MODEL_CACHE: Dict[str, torch.jit.RecursiveScriptModule] = {}
 
 
@@ -54,6 +59,9 @@ class PUDnnRegionConfig:
 
 def load_pu_dnn_configs(base_dir: str) -> Dict[str, PUDnnRegionConfig]:
     """Load one PUDnnRegionConfig per region subdirectory found under base_dir."""
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.join(_PROJECT_ROOT, base_dir)
+
     configs: Dict[str, PUDnnRegionConfig] = {}
     for region in REGIONS:
         region_dir = os.path.join(base_dir, region)
