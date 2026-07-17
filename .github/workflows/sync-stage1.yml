@@ -14,7 +14,10 @@ on:
       - "modules/**"
       - "configs/**"
       - "scripts/sync_parquet_dimuon.py"
+      - "scripts/update_sync_references.sh"
+      - "stage1_loop_Improved.sh"
       - "run_analysis_pipeline.sh"
+      - "common_workflow.sh"
       - "pixi.toml"
       - "pixi.lock"
       - ".github/workflows/**"
@@ -26,7 +29,10 @@ on:
       - "modules/**"
       - "configs/**"
       - "scripts/sync_parquet_dimuon.py"
+      - "scripts/update_sync_references.sh"
+      - "stage1_loop_Improved.sh"
       - "run_analysis_pipeline.sh"
+      - "common_workflow.sh"
       - "pixi.toml"
       - "pixi.lock"
       - ".github/workflows/**"
@@ -114,7 +120,7 @@ jobs:
 
       - name: Compare cutflow JSON against references
         run: |
-          pixi run -e ci bash -l << 'BASH_EOF'
+          pixi run -e ci bash -lc '
             set -euo pipefail
             export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
@@ -211,20 +217,20 @@ jobs:
             echo "[debug] using script: scripts/sync_parquet_dimuon.py"
 
             python scripts/sync_parquet_dimuon.py \
-              "${data_cutflow_ref}" \
-              "${data_cutflow}" \
+              test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json \
+              "${year_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
               -o diff_cutflow_data_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              "${dy_cutflow_ref}" \
-              "${dy_cutflow}" \
+              test/reference/${{ matrix.year }}_cutflow_${dy_sample}_0.json \
+              "${year_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
               -o diff_cutflow_dy_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              "${vbf_cutflow_ref}" \
-              "${vbf_cutflow}" \
+              test/reference/${{ matrix.year }}_cutflow_${vbf_sample}_0.json \
+              "${year_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
               -o diff_cutflow_vbf_${{ matrix.year }}.csv
-          BASH_EOF
+          '
 
       - name: Compare against references
         run: |
