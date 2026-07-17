@@ -682,7 +682,12 @@ def getJecDataTag(run, jec_data_tags, NanoAODv=None):
     logger.debug(f"run: {run}")
     logger.debug(f"jec_data_tags: {jec_data_tags}")
     if (not isinstance(jec_data_tags, str)) and (NanoAODv is not None): # if it's a dictionary like
-        jec_data_tags = jec_data_tags[f"nanoAODv{NanoAODv}"]
+        nano_key = f"nanoAODv{NanoAODv}"
+        # Run2 years nest jec_data_tags by NanoAOD version; Run3 years (only one
+        # NanoAOD version supported so far) are a flat {tag: [runs]} dict. Only
+        # descend into the nano_key sub-dict if it's actually nested that way.
+        if nano_key in jec_data_tags:
+            jec_data_tags = jec_data_tags[nano_key]
     logger.debug(f"jec_data_tags: {jec_data_tags}")
     for jec_tag, jec_run_l in jec_data_tags.items():
         for jec_run in jec_run_l:

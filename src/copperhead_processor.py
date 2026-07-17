@@ -593,7 +593,8 @@ class EventProcessor(processor.ProcessorABC):
                 )
             pu_dnn_base_dir = self.config.get(
                 "pu_dnn_model_dir",
-                "validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July",
+                # "validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July",
+                "validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet",
             )
             self.pu_dnn_configs = load_pu_dnn_configs(pu_dnn_base_dir)
             if not self.pu_dnn_configs:

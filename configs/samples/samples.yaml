@@ -1,3 +1,20 @@
+data:
+    "2016preVFP": [data_B, data_C, data_D, data_E, data_F]
+    "2016postVFP": [data_F, data_G, data_H]
+    "2016": [data_B, data_C, data_D, data_E, data_F, data_G, data_H]
+    "2017": [data_B, data_C, data_D, data_E, data_F]
+    "2018": [data_A, data_B, data_C, data_D]
+    run2: [data_A, data_B, data_C, data_D, data_E, data_F, data_G, data_H]
+
+    "2022preEE": [data_C, data_D]
+    "2022postEE": [data_E, data_F, data_G]
+    "2023": [data_C]
+    "2023BPix": [data_D]
+    "2024": [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
+    run3: [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
+
+# --------------------------------------------------
+
 background:
     label: 0
 
@@ -9,13 +26,17 @@ background:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
                 2018:
-                    - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
                 2017:
-                    - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
                 2016postVFP:
-                    - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
                 2016preVFP:
-                    - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
         DYVBF:
             processes:
                 - dy_VBF_filter
@@ -58,12 +79,16 @@ background:
                     - ewk_mmjj_mll_105_160
                 2018:
                     - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
                 2017:
                     - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
                 2016postVFP:
                     - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
                 2016preVFP:
                     - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
         VV:
             processes:
                 - ww_2l2nu
@@ -73,7 +98,6 @@ background:
                 - zz_2l2nu
                 - zz_2l2q
                 - zz_4l
-                # - zz
             processes_per_year:
                 2018:
                     - ww_2l2nu

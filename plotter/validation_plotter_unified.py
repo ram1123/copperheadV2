@@ -6,6 +6,7 @@ import logging
 import os
 import time
 import sys
+from pathlib import Path
 
 import awkward as ak
 import dask
@@ -20,6 +21,7 @@ from modules import selection
 from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
+from modules.sample_config import get_bkg_sig_dicts, get_data_processes
 from configs.variables.variable_lists import get_all_vars
 from scripts.compact_parquet_data import ensure_compacted
 
@@ -28,158 +30,31 @@ from scripts.compact_parquet_data import ensure_compacted
 bkg_MC_order = ["VV", "EWK",  "TOP", "DY", "DYVBF"]
 
 
-group_dict = {
-    "DATA": {
-        "2016preVFP": ["data_B", "data_C", "data_D", "data_E", "data_F"],
-        "2016postVFP": ["data_F", "data_G", "data_H"],
-        "2016": ["data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
-        "2017": ["data_B", "data_C", "data_D", "data_E", "data_F"],
-        "2018": ["data_A", "data_B", "data_C", "data_D"],
-        "run2": ["data_A", "data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
+# DY/DYVBF/EWK/TOP/VV/ggH/VBF/DATA process lists all live in
+# configs/samples/samples.yaml (read via get_bkg_sig_dicts/get_data_processes in
+# build_group_dict_for_year below), so this script and scripts/get_yields.py can't
+# drift apart on what samples make up each group.
 
-        "2022preEE": ["data_C", "data_D"],
-        "2022postEE": ["data_E", "data_F", "data_G"],
-        "2023": ["data_C"],
-        "2023BPix": ["data_D"],
-        "2024": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
-        "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
-    },
-    "DY": {
-        "2016preVFP": [
-            # "dyTo2Mu_M-100to200_MiNNLO", 
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2016postVFP": [
-            # "dyTo2Mu_M-100to200_MiNNLO", 
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2017": [
-            # "dyTo2Mu_M-100to200_MiNNLO", 
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2018": [
-            # "dyTo2Mu_M-100to200_MiNNLO", 
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2022preEE": ["dyTo2L_M-50_incl"],
-        "2022postEE": ["dyTo2L_M-50_incl"],
-        "2023": ["dyTo2L_M-50_incl"],
-        "2023BPix": ["dyTo2L_M-50_incl"],
-        "2024": ["dyTo2Mu_M-50_aMCatNLO"],
-
-        # "2022preEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2022postEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023BPix": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2024": ["dyTo2Mu_M-50_aMCatNLO", "dy_VBF_filter"],
+# Group names used throughout this script -> group names as defined in samples.yaml
+# (identity mapping unless listed here).
+YAML_GROUP_ALIASES = {"TOP": "TT", "ggH": "GGH"}
 
 
-        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-
-        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-    },
-    "DYVBF": {
-        "2016preVFP": ["dy_VBF_filter"],
-        "2016postVFP": ["dy_VBF_filter"],
-        "2017": ["dy_VBF_filter"],
-        "2018": ["dy_VBF_filter"],
-        "2022preEE": ["dy_VBF_filter"],
-        "2022postEE": ["dy_VBF_filter"],
-        "2023": ["dy_VBF_filter"],
-        "2023BPix": ["dy_VBF_filter"],
-        "2024": ["dy_VBF_filter"],
-    },
-    "EWK": {
-        "2016preVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
-        "2016postVFP": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
-        "2017": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
-        "2018": ["ewk_zlljj", "ewk_lljj_mll50_mjj120"],
-        "2022preEE": ["ewk_mmjj_mll_105_160"],
-        "2022postEE": ["ewk_mmjj_mll_105_160"],
-        "2023": ["ewk_mmjj_mll_105_160"],
-        "2023BPix": ["ewk_mmjj_mll_105_160"],
-        "2024": ["ewk_mmjj_mll_105_160"],
-    },
-    "TOP": [
-        # "tt_inclusive",
-        "ttjets_dl",
-        "ttjets_sl",
-        # "ttjets_fh",
-        # "st_tw_top",
-        # "st_tw_antitop",
-        # "st_t_top",
-        # "st_t_antitop",
-    ],
-    "VV": [
-        "ww_2l2nu",
-        "wz_3lnu",
-        "wz_2l2q",
-        "wz_1l1nu2q",
-        "zz_2l2q",
-        "zz_2l2u",
-        "zz_2l2nu",
-        "zz_4l",
-    ],
-    # "OTHER": ["www", "wwz", "wzz", "zzz"],
-    "ggH": ["ggh_powhegPS"],
-    "VBF": {
-        "2016preVFP": ["vbf_powheg_dipole"],
-        "2016postVFP": ["vbf_powheg_dipole"],
-        "2017": ["vbf_powheg_dipole"],
-        "2018": ["vbf_powheg_dipole"],
-        "2022preEE": ["vbf_powheg_dipole"],
-        "2022postEE": ["vbf_powheg_dipole"],
-        "2023": ["vbf_powheg"],
-        "2023BPix": ["vbf_powheg"],
-        "2024": ["vbf_powheg"],
-    },
-}
-
-def parseGroupProcesses(group_dict, year: str):
+def build_group_dict_for_year(year: str, sample_config_path: str) -> dict:
     """
-    helper function that simplifies group_dict to be
-    specific to one year.
+    Resolve the process-group -> [process names] mapping for one year, reading
+    everything from samples.yaml: DATA via get_data_processes, and DY/DYVBF/EWK/
+    TOP/VV/ggH/VBF via get_bkg_sig_dicts (the same helper scripts/get_yields.py
+    uses).
     """
-    year_specific_group_dict = {}
-    for group_name, processes in group_dict.items():
-        logger.debug(f"Group '{group_name}' processes (original): {processes}")
-        if type(processes) is dict:
-            if year not in processes:
-                raise KeyError(
-                    f"Year '{year}' is not configured for process group '{group_name}'."
-                )
-            processes = processes[year]
-        year_specific_group_dict[group_name] = processes
-    logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
-    return year_specific_group_dict
+    resolved = {"DATA": get_data_processes(sample_config_path, year)}
+    _, _, combined = get_bkg_sig_dicts(sample_config_path, year)
+    for name in ("DY", "DYVBF", "EWK", "TOP", "VV", "ggH", "VBF"):
+        yaml_name = YAML_GROUP_ALIASES.get(name, name)
+        if yaml_name in combined:
+            resolved[name] = combined[yaml_name]
+    return resolved
+
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -213,6 +88,44 @@ def getPlotVar(var_param: str):
     else:
         plot_var = var_param
     return plot_var
+
+
+# ---------------------------------------------------------
+# Combined-year (Run-2 / Run-3) support
+# ---------------------------------------------------------
+RUN2_YEARS = ["2016preVFP", "2016postVFP", "2017", "2018"]
+RUN3_YEARS = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+YEAR_ALIASES = {"run2": RUN2_YEARS, "run3": RUN3_YEARS}
+
+
+def expand_years(years_arg: list) -> list:
+    """Expand 'run2'/'run3' aliases into their constituent years; dedupe, keep order."""
+    expanded = []
+    for y in years_arg:
+        expanded.extend(YEAR_ALIASES.get(y, [y]))
+    seen = set()
+    return [y for y in expanded if not (y in seen or seen.add(y))]
+
+
+def resolve_year_load_paths(base_load_path: str, years: list) -> dict:
+    """
+    For combined-year runs, resolve each year's stage1 parquet directory from a
+    common base path shaped like <base>/<year>/f1_0 (the standard stage1_output
+    layout used by run_analysis_pipeline.sh / run_plotter.py).
+    """
+    base = Path(base_load_path)
+    load_paths = {}
+    for year in years:
+        year_path = base / year / "f1_0"
+        if not year_path.is_dir():
+            raise FileNotFoundError(
+                f"Expected stage1 output for year '{year}' at {year_path}, but it "
+                "doesn't exist. For combined-year runs (--years), --load should point "
+                "at the common parent directory (e.g. .../stage1_output), not a "
+                "single year's f1_0 folder."
+            )
+        load_paths[year] = str(year_path)
+    return load_paths
 
 
 if __name__ == "__main__":
@@ -383,28 +296,44 @@ if __name__ == "__main__":
             "Use either --remove_zpt_weights or --use_dnn_zpt_weights, not both."
         )
 
-    group_dict = parseGroupProcesses(group_dict, args.year)
+    # ------------------------------------------------------------
+    # Resolve years to run: single --year (default), or combined --years
+    # (accepts explicit years and/or the "run2"/"run3" aliases).
+    # ------------------------------------------------------------
+    years_arg_explicit = any(
+        tok == "--years" or tok.startswith("--years=") for tok in sys.argv[1:]
+    )
+    years_to_run = expand_years(args.years) if years_arg_explicit else [args.year]
+    combined_mode = len(years_to_run) > 1
+    logger.info(f"years_to_run: {years_to_run} (combined_mode={combined_mode})")
 
-    if is_run3(args.year):
+    if len({"run3" if is_run3(y) else "run2" for y in years_to_run}) > 1:
+        raise ValueError(
+            f"Cannot combine Run-2 and Run-3 years in one plot: {years_to_run}"
+        )
+
+    group_dict_by_year = {y: build_group_dict_for_year(y, args.sample_config) for y in years_to_run}
+
+    if is_run3(years_to_run[0]):
         CM_energy = 13.6  # TeV
-    elif is_run2(args.year):
+    elif is_run2(years_to_run[0]):
         CM_energy = 13.0  # TeV
     else:
         raise ValueError(f"Unsupported year: {args.year}")
-
     if args.lumi == "":
-        # read lumi value from configs/parameters/lumi.yaml
+        # read lumi value(s) from configs/parameters/lumi.yaml, summing over
+        # years_to_run for combined-year runs
         infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
         import yaml
         with open(infile_lumi, "r") as f:
             lumi_config = yaml.safe_load(f)
         lumi_dict = lumi_config.get("integrated_lumis", {})
-        args.lumi = lumi_dict.get(args.year, 0.0)
-        # convert from pb to fb
-        args.lumi = round(args.lumi / 1000.0, 1)
-        if args.lumi == 0.0:
-            logger.error(f"lumi for year {args.year} is not defined!")
-            raise ValueError(f"lumi for year {args.year} is not defined!")
+        missing_lumi_years = [y for y in years_to_run if lumi_dict.get(y, 0.0) == 0.0]
+        if missing_lumi_years:
+            logger.error(f"lumi for year(s) {missing_lumi_years} is not defined!")
+            raise ValueError(f"lumi for year(s) {missing_lumi_years} is not defined!")
+        # convert from pb to fb, summed across years_to_run
+        args.lumi = round(sum(lumi_dict[y] for y in years_to_run) / 1000.0, 1)
 
     # FIXME: Later try to get the lumi from the copperhead_processor get_sample_info function
     # from modules.get_sample_info import get_sample_info
@@ -425,55 +354,60 @@ if __name__ == "__main__":
         else:
             logger.warning("z-peak region is not in the regions, nothing to remove!")
     else:
-        if "DYVBF" in group_dict:
-            logger.info("Removing DYVBF from the group_dict because --vbf_filter_study was not passed.")
-            del group_dict["DYVBF"]
+        for y in years_to_run:
+            if "DYVBF" in group_dict_by_year[y]:
+                logger.info(f"Removing DYVBF from the group_dict for {y} because --vbf_filter_study was not passed.")
+                del group_dict_by_year[y]["DYVBF"]
 
     # If the args.regions is empty, exit the program
     if len(args.regions) == 0:
         logger.error("No regions specified! Exiting the program.")
         raise ValueError("No regions specified!")
 
-    available_processes = []
+    available_processes = []  # list of (year, process) tuples
 
-    logger.info("group_dict: {group_dict}".format(group_dict=group_dict))
-    # take data
+    logger.info(f"group_dict_by_year: {group_dict_by_year}")
     data_samples = args.data_samples
-    if len(data_samples) > 0:
-        for data_letter in data_samples:
-            available_processes.append(f"data_{data_letter.upper()}")
-
-    # take bkg
     background_samples = args.background_samples
-    if len(background_samples) > 0:
-        for bkg_sample in background_samples:
-            bkg_sample_upper = bkg_sample.upper()
-            if bkg_sample_upper == "DYVBF" and not args.do_vbf_filter_study:
-                logger.info("Skipping DYVBF because --vbf_filter_study was not passed.")
-                continue
-            if bkg_sample_upper in group_dict:
-                available_processes.extend(group_dict[bkg_sample_upper])
-                if (
-                    args.do_vbf_filter_study
-                    and bkg_sample_upper == "DY"
-                    and "DYVBF" in group_dict
-                ):
-                    logger.info(
-                        "Adding DYVBF samples because --vbf_filter_study was passed."
-                    )
-                    available_processes.extend(group_dict["DYVBF"])
-            else:
-                logger.warning(f"unknown background {bkg_sample} was given!")
-
-    # take sig
     sig_samples = args.sig_samples
-    if len(sig_samples) > 0:
-        for sig_sample in sig_samples:
-            sig_sample_upper = sig_sample
-            if sig_sample_upper in group_dict:
-                available_processes.extend(group_dict[sig_sample_upper])
-            else:
-                logger.warning(f"unknown signal {sig_sample} was given!")
+
+    for y in years_to_run:
+        gd = group_dict_by_year[y]
+
+        # take data
+        if len(data_samples) > 0:
+            for data_letter in data_samples:
+                available_processes.append((y, f"data_{data_letter.upper()}"))
+
+        # take bkg
+        if len(background_samples) > 0:
+            for bkg_sample in background_samples:
+                bkg_sample_upper = bkg_sample.upper()
+                if bkg_sample_upper == "DYVBF" and not args.do_vbf_filter_study:
+                    logger.info("Skipping DYVBF because --vbf_filter_study was not passed.")
+                    continue
+                if bkg_sample_upper in gd:
+                    available_processes.extend((y, p) for p in gd[bkg_sample_upper])
+                    if (
+                        args.do_vbf_filter_study
+                        and bkg_sample_upper == "DY"
+                        and "DYVBF" in gd
+                    ):
+                        logger.info(
+                            f"Adding DYVBF samples for {y} because --vbf_filter_study was passed."
+                        )
+                        available_processes.extend((y, p) for p in gd["DYVBF"])
+                else:
+                    logger.warning(f"unknown background {bkg_sample} was given for year {y}!")
+
+        # take sig
+        if len(sig_samples) > 0:
+            for sig_sample in sig_samples:
+                sig_sample_upper = sig_sample
+                if sig_sample_upper in gd:
+                    available_processes.extend((y, p) for p in gd[sig_sample_upper])
+                else:
+                    logger.warning(f"unknown signal {sig_sample} was given for year {y}!")
 
     logger.info(f"available_processes: {available_processes}")
     # gather variables to plot:
@@ -508,25 +442,39 @@ if __name__ == "__main__":
     # record time
     time_step = time.time()
 
+    # ------------------------------------------------------------
+    # Resolve the parquet load path for each year. For a single year,
+    # args.load_path is used verbatim (unchanged behavior). For combined
+    # years, args.load_path must be the common parent directory
+    # (e.g. .../stage1_output) so each year's f1_0 dir can be auto-discovered.
+    # ------------------------------------------------------------
+    if combined_mode:
+        load_path_by_year = resolve_year_load_paths(args.load_path, years_to_run)
+    else:
+        load_path_by_year = {years_to_run[0]: args.load_path}
+
     # check if the compacted path exists
     if args.use_compacted != "":
-        # path name should contain the string "f1_0" which is the default load path, otherwise throw error
-        if "f1_0" not in args.load_path:
-            raise ValueError("The load path should contain the string 'f1_0' to use the compacted path! Exiting the program.")
+        for y in years_to_run:
+            year_load_path = load_path_by_year[y]
+            # path name should contain the string "f1_0" which is the default load path, otherwise throw error
+            if "f1_0" not in year_load_path:
+                raise ValueError(f"The load path for {y} should contain the string 'f1_0' to use the compacted path! Exiting the program.")
 
-        compacted_base_path = (args.load_path).replace("f1_0", args.use_compacted)
-        # run compact script for each process
-        for process in available_processes:
-            compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
-            ensure_compacted(args.year, process, args.load_path, compacted_path_DNN)
+            compacted_base_path = year_load_path.replace("f1_0", args.use_compacted)
+            # run compact script for each process of this year
+            processes_this_year = [p for (yy, p) in available_processes if yy == y]
+            for process in processes_this_year:
+                compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
+                ensure_compacted(y, process, year_load_path, compacted_path_DNN)
 
-        args.load_path = compacted_base_path
+            load_path_by_year[y] = compacted_base_path
 
-    logger.info(f"Using parquet files from {args.load_path}")
+    logger.info(f"Using parquet files from: {load_path_by_year}")
     # load saved parquet files. This increases memory use, but increases runtime significantly
-    loaded_events = {} # intialize dictionary containing all the arrays
-    for process in tqdm.tqdm(available_processes):
-        full_load_path = (args.load_path+f"/{process}/*/*.parquet").replace("//", "/")
+    loaded_events = {} # keyed by (year, process); contains all the loaded arrays
+    for year, process in tqdm.tqdm(available_processes):
+        full_load_path = (load_path_by_year[year]+f"/{process}/*/*.parquet").replace("//", "/")
         logger.info(f"length of files: {len(glob.glob(full_load_path))}")
         logger.info(f"full_load_path: {full_load_path}")
         try:
@@ -605,7 +553,7 @@ if __name__ == "__main__":
         #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
         #     events["wgt_nominal"] = events["wgt_nominal"] * (1997.0/2124.08)
 
-        loaded_events[process] = events
+        loaded_events[(year, process)] = events
     logger.info("finished loading parquet files!")
     # mplhep style starts here --------------------------------------
     logger.info("Using mplhep style for plotting!")
@@ -623,7 +571,7 @@ if __name__ == "__main__":
     regions = ["z-peak", "signal", "h-peak", "h-sidebands"] # full list of possible regions to loop over
     channels = ["nocat", "vbf", "ggh"] # full list of possible channels to loop over
     variations = ["nominal"]
-    sample_groups = list(group_dict.keys()) + ["other"]
+    sample_groups = list(group_dict_by_year[years_to_run[0]].keys()) + ["other"]
     logger.info(f"sample_groups: {sample_groups}")
     sample_hist = (
             hda.Hist.new.StrCat(regions, name="region")
@@ -702,17 +650,17 @@ if __name__ == "__main__":
         #     do_logscale = plot_settings[plot_var]["logscale"]
         logger.debug(f"do_logscale: {do_logscale} ")
 
-        for process in available_processes:
+        for year, process in available_processes:
             sample_hist = copy.deepcopy(sample_hist_empty)
-            logger.debug(f"process: {process}")
+            logger.debug(f"year: {year}, process: {process}")
             # logger.debug(f"sample_hist: {sample_hist}")
             logger.debug(f"regions: {args.regions}")
             for region_name in args.regions:
                 # for each process make new hist
                 try:
-                    events = loaded_events[process]
+                    events = loaded_events[(year, process)]
                 except:
-                    logger.debug(f"skipping {process}")
+                    logger.debug(f"skipping {year}/{process}")
                     continue
                 is_data = "data" in process.lower()
                 logger.debug(f"is_data: {is_data}")
@@ -732,7 +680,7 @@ if __name__ == "__main__":
                     args.do_vbf_filter_study,
                     jj_eta_region=args.jj_eta_region,
                     njets_selection=str(args.njets),
-                    year=args.year,
+                    year=year,
                 )
 
                 #  FOR DEBUG PURPOSES
@@ -788,10 +736,10 @@ if __name__ == "__main__":
                 #### TODO: Add overflow bins to the last bin
 
                 # MC samples are already normalized by their xsec*lumi, but data is not
-                if process in group_dict["DATA"]: # FIXME: Why weights with data?
+                if process in group_dict_by_year[year]["DATA"]: # FIXME: Why weights with data?
                     logger.debug(f"{process} is in data processes")
                     weights = weights*fraction_weight
-                group_name = find_group_name(process, group_dict)
+                group_name = find_group_name(process, group_dict_by_year[year])
                 to_fill_setting = {
                 "region" : region_name,
                 "channel" : args.category,
@@ -922,8 +870,9 @@ if __name__ == "__main__":
             if args.jj_eta_region != "all":
                 zpt_postfix += f"_{args.jj_eta_region}"
 
-            if args.year == "*":
-                full_save_path = args.save_path+f"/AllYear/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
+            if combined_mode:
+                year_tag = "Run2Combined" if is_run2(years_to_run[0]) else "Run3Combined"
+                full_save_path = args.save_path+f"/{year_tag}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             else:
                 full_save_path = args.save_path+f"/{args.year}/mplhep/Reg_{region_name}/Cat_{args.category}/njet_{args.njets}/{zpt_postfix}"
             logger.debug(f"full_save_path: {full_save_path}")
