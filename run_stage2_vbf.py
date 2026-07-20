@@ -1,6 +1,7 @@
 import argparse
 import glob
 import itertools
+import logging
 import os
 import pickle
 import time
@@ -9,6 +10,7 @@ from pathlib import Path
 import awkward as ak
 import hist
 import numpy as np
+import pandas as pd
 import torch
 from cli.common_argparser import build_common_parser
 from coffea import processor
@@ -351,7 +353,6 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         use_nominal_dnn_features_for_systs=False,
     ):
         NO_SCALE_FEATURES = {
-            "year",
             "nsoftjets5_nominal",
         }
         self.training_features = training_features
@@ -363,14 +364,38 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.do_vbf_filter_study = do_vbf_filter_study
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
-        self.no_scale_features = NO_SCALE_FEATURES
+        # One-hot year features (e.g. "year_2022preEE") don't exist as event
+        # fields; they're synthesized in evaluate_scores() from the dataset's
+        # metadata year string, so they're excluded from scaler lookup like
+        # any other passthrough feature.
+        self.year_onehot_features = {
+            f for f in training_features if f.startswith("year_")
+        }
+        self.no_scale_features = NO_SCALE_FEATURES | self.year_onehot_features
 
-    def evaluate_scores(self, events, variation):
+    def evaluate_scores(self, events, variation, year):
         fields = set(events.fields)
         event_numbers = ak.to_numpy(ak.materialize(events.event))
         n_events = len(events)
+
+        # Year is constant for the whole chunk and invariant across shape
+        # variations, so the one-hot columns are synthesized directly from
+        # dataset metadata rather than resolved from event fields.
+        expected_year_col = f"year_{year}"
+        if self.year_onehot_features and expected_year_col not in self.year_onehot_features:
+            raise ValueError(
+                f"Year '{year}' has no matching one-hot training feature. "
+                f"Expected one of: "
+                f"{sorted(f[len('year_'):] for f in self.year_onehot_features)}"
+            )
+
         columns = {}
         for feature in self.training_features:
+            if feature in self.year_onehot_features:
+                value = 1.0 if feature == expected_year_col else 0.0
+                columns[feature] = np.full(n_events, value, dtype=np.float64)
+                continue
+
             source = feature_name_for_variation(
                 feature,
                 variation,
@@ -388,6 +413,22 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             fill_value = -10.0 if "phi" in feature else 0.0
             values = ak.fill_none(values, fill_value)
             columns[feature] = ak.to_numpy(values)
+
+        if logger.isEnabledFor(logging.DEBUG):
+            n_preview = min(5, n_events)
+            preview_df = pd.DataFrame(
+                {feature: columns[feature][:n_preview] for feature in self.training_features}
+            )
+            preview_df.insert(0, "event", event_numbers[:n_preview])
+            with pd.option_context("display.max_columns", None, "display.width", 200):
+                logger.warning(
+                    "[evaluate_scores] variation=%s year=%s pre-scaling feature preview (%d/%d rows):\n%s",
+                    variation,
+                    year,
+                    n_preview,
+                    n_events,
+                    preview_df.to_string(index=False),
+                )
 
         nan_val = -99.0
         input_columns = {
@@ -530,6 +571,10 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
             # ----------------------------------
             for feature in self.training_features:
+                if feature in self.year_onehot_features:
+                    # Synthesized from dataset metadata in evaluate_scores();
+                    # no event field to fetch.
+                    continue
                 source = feature_name_for_variation(
                     feature,
                     feature_variation,
@@ -581,7 +626,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if variation == "nominal":
                 selected_events += len(region_events)
 
-            scores = self.evaluate_scores(region_events, feature_variation)
+            scores = self.evaluate_scores(region_events, feature_variation, year)
             weights = ak.to_numpy(ak.materialize(region_events[weight_variation]))
             fill_common = {
                 "region": region,
