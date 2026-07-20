@@ -421,7 +421,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             )
             preview_df.insert(0, "event", event_numbers[:n_preview])
             with pd.option_context("display.max_columns", None, "display.width", 200):
-                logger.warning(
+                logger.debug(
                     "[evaluate_scores] variation=%s year=%s pre-scaling feature preview (%d/%d rows):\n%s",
                     variation,
                     year,
