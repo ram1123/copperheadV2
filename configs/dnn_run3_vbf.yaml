@@ -88,8 +88,22 @@ features:
     - "ll_zstar_log_nominal"
     - "mmj_min_dEta_nominal"
     - "pt_centrality_nominal"
-    - "year"
-  do_not_scale_features: ["year", "nsoftjets5_nominal"]
+    - "year_2022preEE"
+    - "year_2022postEE"
+    - "year_2023"
+    - "year_2023BPix"
+    - "year_2024"
+    - "year_2025"
+    - "year_2026"  # NOTE: for future usage
+  do_not_scale_features:
+    - "nsoftjets5_nominal"
+    - "year_2022preEE"
+    - "year_2022postEE"
+    - "year_2023"
+    - "year_2023BPix"
+    - "year_2024"
+    - "year_2025"
+    - "year_2026"  # NOTE: for future usage
 
 preprocessing:
   scaler:

@@ -40,9 +40,8 @@ samples:
   background:
     label: 0
     groups:
-      DY:
-        # processes: ["dy_VBF_filter", "dy_M-100To200_MiNNLO", "dyTo2L_M-50_aMCatNLO"]
-        processes: ["dy_M-50_aMCatNLO", "dyTo2L_M-50_aMCatNLO", "dy_VBF_filter"] 
+      DY: 
+        processes: ["dyTo2Mu_M-50_MiNNLO", "dyTo2Mu_M-100to200_MiNNLO", "dy_VBF_filter"]  
         processes_per_year:
           2022preEE: ["dyTo2L_M-50_incl"]
           2022postEE: ["dyTo2L_M-50_incl"]
@@ -71,11 +70,11 @@ features:
     - "jet1_pt_nominal"
     - "jet1_eta_nominal"
     - "jet1_phi_nominal"
-    - "jet1_qgl_nominal"
+    - "jet1_btagUParTAK4QvG_nominal"
     - "jet2_pt_nominal"
     - "jet2_eta_nominal"
     - "jet2_phi_nominal"
-    - "jet2_qgl_nominal"
+    - "jet2_btagUParTAK4QvG_nominal"
     - "jj_mass_nominal"
     - "jj_mass_log_nominal"
     - "jj_dEta_nominal"
@@ -85,8 +84,30 @@ features:
     - "ll_zstar_log_nominal"
     - "mmj_min_dEta_nominal"
     - "pt_centrality_nominal"
-    - "year"
-  do_not_scale_features: ["year", "nsoftjets5_nominal"]
+    - "year_2016preVFP"
+    - "year_2016postVFP"
+    - "year_2017"
+    - "year_2018"
+    - "year_2022preEE"
+    - "year_2022postEE"
+    - "year_2023"
+    - "year_2023BPix"
+    - "year_2024"
+    - "year_2025"
+    - "year_2026"  # NOTE: for future usage
+  do_not_scale_features:
+    - "nsoftjets5_nominal"
+    - "year_2016preVFP"
+    - "year_2016postVFP"
+    - "year_2017"
+    - "year_2018"
+    - "year_2022preEE"
+    - "year_2022postEE"
+    - "year_2023"
+    - "year_2023BPix"
+    - "year_2024"
+    - "year_2025"
+    - "year_2026"  # NOTE: for future usage
 
 preprocessing:
   scaler:
