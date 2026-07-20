@@ -19,9 +19,12 @@ args = parser.parse_args()
 
 years = args.years if args.years else [args.year]
 
+# Use the exact year string (e.g. "2016preVFP", "2016postVFP") to resolve
+# sample groups, instead of collapsing to a bare "2016" that matches no
+# `processes_per_year` key in samples.yaml and silently falls back to
+# group defaults that may not exist on disk (e.g. DY's "dyTo2L_M-50_incl",
+# EWK's "ewk_mmjj_mll_105_160" for 2016preVFP/2016postVFP).
 year = years[0]
-if "2016" in year:
-    year = "2016"
 
 stage2_model_suffix = args.save_postfix if args.save_postfix else ""
 if args.do_vbf_filter_study:
