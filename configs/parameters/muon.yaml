@@ -11,6 +11,7 @@ muon_pt_cut:
     "2023": 20.0
     "2023BPix": 20.0
     "2024": 20.0
+    "2025": 20.0
 muon_eta_cut:
     2016preVFP: 2.4
     2016postVFP: 2.4
@@ -24,6 +25,7 @@ muon_eta_cut:
     "2023": 2.4
     "2023BPix": 2.4
     "2024": 2.4
+    "2025": 2.4
 muon_iso_cut:
     2016preVFP: 0.25
     2016postVFP: 0.25
@@ -37,6 +39,7 @@ muon_iso_cut:
     "2023": 0.25
     "2023BPix": 0.25
     "2024": 0.25
+    "2025": 0.25
 muon_id:
     2016preVFP: mediumId
     2016postVFP: mediumId
@@ -50,6 +53,7 @@ muon_id:
     "2023": mediumId
     "2023BPix": mediumId
     "2024": mediumId
+    "2025": mediumId
 muon_flags:
     2016preVFP: []
     2016postVFP: []
@@ -63,6 +67,7 @@ muon_flags:
     "2023": []
     "2023BPix": []
     "2024": []
+    "2025": []
 muon_leading_pt:
     2016preVFP: 26.0
     2016postVFP: 26.0
@@ -76,6 +81,7 @@ muon_leading_pt:
     "2023": 26.0
     "2023BPix": 26.0
     "2024": 26.0
+    "2025": 26.0
 muon_trigmatch_iso:
     2016preVFP: 0.15
     2016postVFP: 0.15
@@ -89,6 +95,7 @@ muon_trigmatch_iso:
     "2023": 0.15
     "2023BPix": 0.15
     "2024": 0.15
+    "2025": 0.15
 muon_trigmatch_dr:
     2016preVFP: 0.4 # 0.1
     2016postVFP: 0.4 # 0.1
@@ -102,6 +109,7 @@ muon_trigmatch_dr:
     "2023": 0.4 # 0.1
     "2023BPix": 0.4 # 0.1
     "2024": 0.4 # 0.1
+    "2025": 0.4 # 0.1
 muon_trigmatch_pt:
     2016preVFP: 24.0
     2016postVFP: 24.0
@@ -115,6 +123,7 @@ muon_trigmatch_pt:
     "2023": 24.0
     "2023BPix": 24.0
     "2024": 24.0
+    "2025": 24.0
 muon_trigmatch_id:
     2016preVFP: tightId
     2016postVFP: tightId
@@ -128,3 +137,4 @@ muon_trigmatch_id:
     "2023": tightId
     "2023BPix": tightId
     "2024": tightId
+    "2025": tightId

@@ -28,6 +28,7 @@ jec_parameters:
         "2023": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jet_jerc.json.gz
         2023BPix: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jet_jerc.json.gz
         "2024": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-12-02/jet_jerc.json.gz
+        "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-25Prompt-Summer24-NanoAODv15/2026-07-16/jet_jerc.json.gz
     jersmear_load_path:
         2016_RERECO: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
         "2017_RERECO": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
@@ -41,6 +42,7 @@ jec_parameters:
         "2023": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
         2023BPix: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
         "2024": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+        "2025": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
     jec_unc_to_consider:
         2016preVFP:
             - Absolute
@@ -186,6 +188,18 @@ jec_parameters:
             - RelativeBal
             - RelativeSample_2024
             - FlavorQCD
+        "2025":
+            - Absolute
+            - Absolute_2024
+            - BBEC1
+            - BBEC1_2024
+            - EC2
+            - EC2_2024
+            - HF
+            - HF_2024
+            - RelativeBal
+            - RelativeSample_2024
+            - FlavorQCD            
     jec_variations:
         2016preVFP:
             - Absolute_up
@@ -463,6 +477,29 @@ jec_parameters:
             - RelativeSample2024_down
             - FlavorQCD_up
             - FlavorQCD_down
+        "2025":
+            - Absolute_up
+            - Absolute_down
+            - Absolute2024_up
+            - Absolute2024_down
+            - BBEC1_up
+            - BBEC1_down
+            - BBEC12024_up
+            - BBEC12024_down
+            - EC2_up
+            - EC2_down
+            - EC22024_up
+            - EC22024_down
+            - HF_up
+            - HF_down
+            - HF2024_up
+            - HF2024_down
+            - RelativeBal_up
+            - RelativeBal_down
+            - RelativeSample2024_up
+            - RelativeSample2024_down
+            - FlavorQCD_up
+            - FlavorQCD_down            
     runs:
         2016preVFP:
             - B
@@ -524,6 +561,13 @@ jec_parameters:
             - G
             - H
             - I
+        "2025":
+            - B
+            - C
+            - D
+            - E
+            - F
+            - G
     jec_levels_mc:
         2016preVFP:
             - L1FastJet
@@ -570,6 +614,10 @@ jec_parameters:
             - L2Relative
             - L3Absolute
         "2024":
+            - L1FastJet
+            - L2Relative
+            - L3Absolute
+        "2025":
             - L1FastJet
             - L2Relative
             - L3Absolute
@@ -634,6 +682,11 @@ jec_parameters:
             - L2Relative
             - L3Absolute
             - L2L3Residual
+        "2025":
+            - L1FastJet
+            - L2Relative
+            - L3Absolute
+            - L2L3Residual
     jec_tags:
         2016preVFP: 
             nanoAODv12:
@@ -663,6 +716,7 @@ jec_parameters:
         "2023": Summer23Prompt23_V2_MC
         2023BPix: Summer23BPixPrompt23_V3_MC
         "2024": Summer24Prompt24_V2_MC
+        "2025": Summer24Prompt25_V3_MC
     jer_tags:
         2016preVFP: Summer20UL16APV_JRV3_MC
         2016postVFP: Summer20UL16_JRV3_MC
@@ -676,6 +730,7 @@ jec_parameters:
         "2023": Summer23Prompt23_RunCv1234_JRV1_MC
         2023BPix: Summer23BPixPrompt23_RunD_JRV1_MC
         "2024": Summer24Prompt24_V2_MC
+        "2025": Summer24Prompt25_V3_MC
     jec_data_tags:
         2016preVFP:
             nanoAODv12:
@@ -798,6 +853,13 @@ jec_parameters:
                 - G
                 - H
                 - I
+        "2025":
+            Summer24Prompt25_V3_DATA:
+                - C
+                - D
+                - E
+                - F
+                - G
     jer_variations:
         2016preVFP:
             - jer1_up
@@ -943,6 +1005,19 @@ jec_parameters:
             - jer6_up
             - jer6_down
         "2024":
+            - jer1_up
+            - jer1_down
+            - jer2_up
+            - jer2_down
+            - jer3_up
+            - jer3_down
+            - jer4_up
+            - jer4_down
+            - jer5_up
+            - jer5_down
+            - jer6_up
+            - jer6_down
+        "2025":
             - jer1_up
             - jer1_down
             - jer2_up
