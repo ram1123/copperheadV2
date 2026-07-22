@@ -12,6 +12,8 @@ roccor_file:
   2023BPix: data/roch_corr/2023_Summer23BPix.json
   # "2024":  /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_scalesmearing.json.gz
   "2024": data/roch_corr/2024_Summer24.json # From Hyeon (Copied from GitLab)
+  # "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing_VXBS.json.gz
+  "2025": data/roch_corr/2025_muon_scalesmearing_VXBS.json
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json
@@ -41,5 +43,9 @@ BS_res_calib_path:
     MC: data/res_calib/res_calib_BS_correction_2023BPix_MC_nanoAODv12.json
     Data: data/res_calib/res_calib_BS_correction_2023BPix_Data_nanoAODv12.json
   "2024": # EBE/BS calibration derived from data; same JSON used for MC and Data
+    MC: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
+    Data: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
+  "2025": 
+    # Copied from 2024 until the EBE mass-resolution calibration pipeline is rerun
     MC: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
     Data: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
