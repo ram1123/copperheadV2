@@ -618,11 +618,24 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             )
             region_events = fillEventNans(region_events, category=category)
             if region == "h-sidebands":
-                region_events = ak.with_field(
-                    region_events,
-                    125.0 * ak.ones_like(region_events.dimuon_mass),
-                    "dimuon_mass",
-                )
+                # Pin dimuon_mass to 125 GeV for every event in h-sidebands so DNN
+                # scoring there matches the signal-region mass hypothesis. This must
+                # also cover any systematic-shifted sibling column of dimuon_mass
+                # (e.g. dimuon_mass_mu_roccor_up/down) that survived column
+                # filtering above -- feature_name_for_variation() prefers a
+                # variation-suffixed column over the base "dimuon_mass" field, so
+                # leaving a sibling un-pinned lets the real (non-125) shifted mass
+                # leak into DNN scoring for that one variation while every other
+                # variation correctly uses the pinned value.
+                dimuon_mass_fields = [
+                    f for f in region_events.fields if f.startswith("dimuon_mass")
+                ]
+                for f in dimuon_mass_fields:
+                    region_events = ak.with_field(
+                        region_events,
+                        125.0 * ak.ones_like(region_events[f]),
+                        f,
+                    )
             if variation == "nominal":
                 selected_events += len(region_events)
 

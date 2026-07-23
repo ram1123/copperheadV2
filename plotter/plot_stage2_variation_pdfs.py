@@ -21,7 +21,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from stage2_vbf_hist_validation import (  # noqa: E402
     RUN2_YEARS,
     extract_arrays,
@@ -31,7 +31,8 @@ from stage2_vbf_hist_validation import (  # noqa: E402
     variation_names,
 )
 # save_postfix = "Jul14_2026_100nTrialsFoldsAll_Max70bins_systFix" 
-save_postfix = "Jul15_2026_100nTrialsFoldsAll_Max70bins_nominal_dnn_features_for_systs" 
+save_postfix = "Jul23_2026_aiAgentSystemTest" 
+
 DEFAULT_HIST_PATH = Path(
     "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/"
     "Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/"
