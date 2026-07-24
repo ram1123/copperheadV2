@@ -234,6 +234,20 @@ def events_to_dataframe(
     df["process"] = str(process)
     df["process_group"] = str(group)
 
+    # One-hot year encoding: `year` is exact for every row built in this call,
+    # so it's set directly from the loop variable rather than round-tripped
+    # through any per-event column.
+    year_onehot_cols = [f for f in cfg.training_features if f.startswith("year_")]
+    if year_onehot_cols:
+        matching_col = f"year_{year}"
+        if matching_col not in year_onehot_cols:
+            raise ValueError(
+                f"Year '{year}' has no matching one-hot training feature. "
+                f"Expected one of: {sorted(c[len('year_'):] for c in year_onehot_cols)}"
+            )
+        for col in year_onehot_cols:
+            df[col] = 1.0 if col == matching_col else 0.0
+
     # Ensure event exists for deterministic folds
     if "event" not in df.columns:
         raise KeyError(
@@ -347,8 +361,13 @@ def preprocess(
     if not years_list:
         raise ValueError("No years provided.")
 
-    # columns to load
-    features2load = list(cfg.training_features) + ["event", cfg.weight_col]
+    # columns to load. One-hot year columns (e.g. "year_2022preEE") don't exist
+    # in the stage1 parquet -- they're synthesized per-sample in
+    # events_to_dataframe() from the known `year` loop variable below.
+    physical_training_features = [
+        f for f in cfg.training_features if not f.startswith("year_")
+    ]
+    features2load = physical_training_features + ["event", cfg.weight_col]
 
     logger.info("[preprocess] years: %s", years_list)
     logger.info("[preprocess] base_path: %s", base_path)
