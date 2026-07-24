@@ -345,12 +345,16 @@ def plotDataMC_compare(
     plt.close(fig)
 
     # Save the raw event number, yield  for each MC and data to the text file along with the data/mc ratio value
+    sig_hist_by_name = {
+        sig_mc_sample: sig_mc_sample_arrs["hist_arr"]
+        for sig_mc_sample, sig_mc_sample_arrs in sig_MC_dict.items()
+    }
     with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
         f.write(f"Data: {np.sum(data_hist)}\n")
         for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
             f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist):.2f}\n")
-        if len(sig_MC_dict.keys()) > 0:
-            f.write(f"{sig_mc_sample}: {np.sum(sig_MC_hist):.2f}\n")
+        for sig_mc_sample, sig_hist in sig_hist_by_name.items():
+            f.write(f"{sig_mc_sample}: {np.sum(sig_hist):.2f}\n")
         if plot_ratio:
             f.write(
                 f"Data/MC ratio (Sum ratio_hist): {np.sum(ratio_hist)}\n"
@@ -358,6 +362,30 @@ def plotDataMC_compare(
             f.write(
                 f"Data/MC ratio (Sum ratio_hist then divide by number of bins): {np.sum(ratio_hist) / len(binning):.2f}\n"
             )
+
+        # -----------------------------------------
+        # Bin-by-bin values, in their own section for readability
+        # -----------------------------------------
+        col_width = 16
+
+        def _fmt_row(cells):
+            return "".join(f"{str(c):>{col_width}}" for c in cells)
+
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("Bin-by-bin values: Data, MC sample groups, Data/MC ratio\n")
+        f.write("=" * 80 + "\n")
+        header = ["bin_low", "bin_high", "Data"] + bkg_mc_sample_names + list(sig_hist_by_name.keys())
+        if plot_ratio:
+            header += ["Data/MC"]
+        f.write(_fmt_row(header) + "\n")
+        for i in range(len(binning) - 1):
+            row = [f"{binning[i]:.4g}", f"{binning[i+1]:.4g}", f"{data_hist[i]:.4g}"]
+            row += [f"{bkg_mc_hist[i]:.4g}" for bkg_mc_hist in bkg_MC_hist_l]
+            row += [f"{sig_hist[i]:.4g}" for sig_hist in sig_hist_by_name.values()]
+            if plot_ratio:
+                ratio_val = ratio_hist[i]
+                row.append(f"{ratio_val:.4g}" if np.isfinite(ratio_val) else "nan")
+            f.write(_fmt_row(row) + "\n")
     # logger.debug(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 

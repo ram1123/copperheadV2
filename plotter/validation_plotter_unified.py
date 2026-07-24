@@ -1,11 +1,13 @@
 import argparse
 import copy
 import glob
+import itertools
 import json
 import logging
 import os
 import time
 import sys
+from pathlib import Path
 
 import awkward as ak
 import hist
@@ -38,7 +40,7 @@ DATASET_SEPARATOR = "::"
 # `regions` list passed to the processor, and by which single `category` a
 # caller asks for).
 FULL_REGIONS = ["z-peak", "signal", "h-peak", "h-sidebands"]
-FULL_CHANNELS = ["nocat", "vbf", "ggh"]
+FULL_CHANNELS = ["nocat", "vbf", "ggh", "bJetVeto"]
 VARIATIONS = ["nominal"]
 
 ZPT_POSTFIX_BY_OPTION = {
@@ -585,9 +587,9 @@ def generate_combo_plots(
     bkg_MC_dict = {}
     sig_MC_dict = {}
 
-    sample_hist = sample_hist_lookup[year][category][var]
+    sample_hist = sample_hist_lookup[year][category][njets][var]
     if sample_hist is None:
-        logger.debug(f"no histograms found for {year} {category} {var}, skipping!")
+        logger.debug(f"no histograms found for {year} {category} {njets} {var}, skipping!")
         return None
 
     for group_name in sample_groups:
@@ -728,6 +730,288 @@ def generate_combo_plots(
         plot_ratio_range="default",  # options: "default" or "auto" or list with format [0.8, 1.2]
     )
     return full_save_path
+
+
+def _derive_zpt_options(remove_zpt_weights_options, add_dnn_zpt_weights_options):
+    """Map (remove_zpt_weights, use_dnn_zpt_weights) boolean-list config into the
+    "default"/"no_zpt"/"dnn_zpt" enum ValidationHistProcessor expects."""
+    zpt_options = []
+    if False in remove_zpt_weights_options and False in add_dnn_zpt_weights_options:
+        zpt_options.append("default")
+    if True in remove_zpt_weights_options:
+        zpt_options.append("no_zpt")
+    if True in add_dnn_zpt_weights_options:
+        zpt_options.append("dnn_zpt")
+    if not zpt_options:
+        raise ValueError("No valid zpt_option combination derived from the given config.")
+    return zpt_options
+
+
+def _run_validation_scope(
+    jj_eta_region,
+    do_vbf_filter_study,
+    region_list,
+    client,
+    years,
+    categories,
+    njets_options,
+    remove_zpt_weights_options,
+    add_dnn_zpt_weights_options,
+    min_set_of_vars,
+    load_path_template,
+    save_root,
+    background_samples,
+    sig_samples,
+    data_samples,
+    status,
+    linear_scale,
+    use_compacted,
+    dry_run,
+):
+    """
+    Run one consolidated Dask pass (year x category x njets x zpt_option, all
+    computed together) for a single fixed (jj_eta_region, vbf_filter_study,
+    region_list) scope. `client` is None during a dry run.
+    """
+    # if vbf_filter_study: remove z-peak from region (same rule as before)
+    fill_regions = [r for r in region_list if not (do_vbf_filter_study and r == "z-peak")]
+    if len(fill_regions) == 0:
+        logger.warning(
+            f"No regions left to fill for jj_eta_region={jj_eta_region} "
+            f"vbf_filter_study={do_vbf_filter_study} after z-peak removal; skipping this scope."
+        )
+        return
+
+    zpt_options = _derive_zpt_options(remove_zpt_weights_options, add_dnn_zpt_weights_options)
+
+    save_path = save_root / f"VBFfilter_{do_vbf_filter_study}"
+    save_path.mkdir(parents=True, exist_ok=True)
+
+    logger.info("\n" + "=" * 80)
+    logger.info(
+        f"Combo matrix: years={years} categories={categories} njets={njets_options} "
+        f"zpt_options={zpt_options} regions={fill_regions} jj_eta_region={jj_eta_region} "
+        f"vbf_filter_study={do_vbf_filter_study}"
+    )
+
+    variables2plot = get_all_vars(min_set_of_vars)
+    if "jj_mass_nominal" in variables2plot:
+        variables2plot += ["jj_mass_nominal_range2"]
+    if "dimuon_mass" in variables2plot:
+        variables2plot += ["dimuon_mass_zpeak"]
+    logger.info(f"variables2plot: {variables2plot}")
+
+    sample_groups = list(group_dict.keys()) + ["other"]
+    if not do_vbf_filter_study and "DYVBF" in sample_groups:
+        sample_groups.remove("DYVBF")
+    logger.info(f"sample_groups: {sample_groups}")
+
+    plot_settings_by_category = {cat: load_plot_settings(cat) for cat in categories}
+    hist_templates_by_category = {
+        cat: build_hist_templates(
+            variables2plot, plot_settings_by_category[cat], sample_groups, njets_options, zpt_options
+        )
+        for cat in categories
+    }
+
+    if dry_run:
+        logger.info(
+            f"[dry-run] would build fileset for years={years} and run one Dask pass over "
+            f"{len(categories)} categories x {len(njets_options)} njets x {len(zpt_options)} "
+            "zpt_options; no data read."
+        )
+        return
+
+    group_dict_by_year = {}
+    lumi_by_year = {}
+    CM_energy_by_year = {}
+    fileset = {}
+    for year in years:
+        load_path = Path(str(load_path_template).format(year=year))
+        year_ctx = resolve_year_context(
+            year, background_samples, sig_samples, data_samples, do_vbf_filter_study, lumi_override=""
+        )
+        group_dict_by_year[year] = year_ctx["group_dict"]
+        lumi_by_year[year] = year_ctx["lumi"]
+        CM_energy_by_year[year] = year_ctx["CM_energy"]
+        logger.info(f"{year} available_processes: {year_ctx['available_processes']}")
+
+        year_fileset = build_fileset_for_year(
+            year, load_path, year_ctx["available_processes"], use_compacted
+        )
+        for process, entry in year_fileset.items():
+            fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
+    logger.info(f"finished building fileset! ({len(fileset)} datasets across {len(years)} year(s))")
+
+    logger.info("{style}Filling histograms.{style}".format(
+        style="\n" + "=" * 50 + "\n",))
+    # Reduce eagerly as each dataset's result comes back (running total per
+    # (year, category, njets, var), not a growing list summed at plot time) --
+    # otherwise every process's histogram from every (category, njets) sub-pass
+    # stays live in memory simultaneously until the plotting loop finally sums
+    # them all at the end, which is its own (separate, driver-side) memory
+    # blowup on top of the per-Runner-call one below.
+    #
+    # Keyed by njets too (not just year/category/var): each (category, njets)
+    # sub-pass below builds its own scoped_templates with a njets axis
+    # containing only that one njets value, so histograms from different njets
+    # sub-passes have different axis shapes and cannot be `+=`-merged together
+    # (boost-histogram raises "axes not mergable"). Only ever accumulate across
+    # results that came from the same sub-pass (same njets key).
+    sample_hist_lookup = {
+        year: {
+            cat: {njets: {var: None for var in hist_templates_by_category[cat]} for njets in njets_options}
+            for cat in categories
+        }
+        for year in years
+    }
+    # Run one Runner pass per (category, njets) pair -- each pass still consolidates
+    # every year and zpt_option together, but category and njets are the two axes
+    # that multiply the size of every histogram returned per chunk (category needs
+    # its own Hist templates since binning differs; njets is an axis on top of that).
+    # Folding all of them into a single pass made the per-chunk/per-merge payload
+    # ~(len(categories) x len(njets_options)) times larger than a single combo's
+    # baseline, which was overflowing worker memory during the tree-reduction
+    # coffea's Runner does to accumulate results across chunks. Splitting by
+    # (category, njets) bounds that back down (at the cost of re-reading the
+    # fileset once per (category, njets) pair instead of once total) while still
+    # keeping the year- and zpt_option-consolidation wins, which don't inflate
+    # per-chunk memory the way category/njets do.
+    for category in categories:
+        plot_settings = plot_settings_by_category[category]
+        for njets in njets_options:
+            if category == "vbf" and njets != "inclusive":
+                continue
+            logger.info(
+                f"Filling histograms for category={category} njets={njets} "
+                f"(years={years}, zpt_options={zpt_options})..."
+            )
+            scoped_templates = build_hist_templates(
+                variables2plot, plot_settings, sample_groups, [njets], zpt_options
+            )
+            processor_instance = ValidationHistProcessor(
+                hist_templates_by_category={category: scoped_templates},
+                categories=[category],
+                njets_options=[njets],
+                zpt_options=zpt_options,
+                regions=fill_regions,
+                do_vbf_filter_study=do_vbf_filter_study,
+                jj_eta_region=jj_eta_region,
+                group_dict_by_year=group_dict_by_year,
+            )
+            results = run_validation_runner(fileset, processor_instance, client)
+            for dataset_key, output in results.items():
+                result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
+                for var, h in output["hist_by_category_var"][category].items():
+                    slot = sample_hist_lookup[result_year][category][njets]
+                    if slot[var] is None:
+                        slot[var] = h
+                    else:
+                        slot[var] += h
+
+    logger.info("\n" + "=" * 80)
+    logger.info("Generating plots for all combos...")
+    job_idx = 0
+    for year in years:
+        for category in categories:
+            plot_settings = plot_settings_by_category[category]
+            for njets in njets_options:
+                # skip meaningless combos
+                if category == "vbf" and njets != "inclusive":
+                    logger.debug(f"Skipping vbf with njets={njets} (not meaningful)")
+                    continue
+                for zpt_option in zpt_options:
+                    job_idx += 1
+                    logger.info(f"[{job_idx:04d}] {year} {category} njets={njets} zpt_option={zpt_option}")
+                    for region_name in fill_regions:
+                        for var in hist_templates_by_category[category]:
+                            generate_combo_plots(
+                                year,
+                                category,
+                                njets,
+                                zpt_option,
+                                region_name,
+                                var,
+                                sample_hist_lookup,
+                                sample_groups,
+                                plot_settings,
+                                str(save_path),
+                                lumi_by_year[year],
+                                status,
+                                CM_energy_by_year[year],
+                                not linear_scale,
+                                do_vbf_filter_study,
+                                jj_eta_region,
+                            )
+    logger.info(f"Generated plots for {job_idx} (year, category, njets, zpt_option) combos.")
+
+
+def run_bulk_validation(
+    years,
+    categories,
+    njets_options,
+    jj_eta_regions,
+    vbf_filter_study_options,
+    remove_zpt_weights_options,
+    add_dnn_zpt_weights_options,
+    region_options,
+    min_set_of_vars,
+    load_path_template,
+    save_root,
+    background_samples,
+    sig_samples,
+    data_samples,
+    status="Preliminary",
+    linear_scale=False,
+    use_gateway=True,
+    cluster_index=0,
+    use_compacted="compacted",
+    dry_run=False,
+):
+    """
+    Run the full validation-plot sweep: every (jj_eta_region, vbf_filter_study,
+    region_list) scope, sharing one Dask client across all of them. Within each
+    scope, year x category x njets x zpt_option are all computed together in as
+    few coffea Runner passes as possible (see _run_validation_scope and
+    ValidationHistProcessor above).
+
+    This is the single entry point run_plotter.py calls -- all the orchestration
+    complexity (Dask client lifecycle, fileset construction, the Runner passes,
+    plot generation) lives here so run_plotter.py can stay a thin config wrapper.
+    """
+    scopes = list(itertools.product(jj_eta_regions, vbf_filter_study_options, region_options))
+    logger.info(f"Running {len(scopes)} (jj_eta_region, vbf_filter_study, region_list) scope(s).")
+
+    client = None
+    if not dry_run:
+        client = get_dask_client(use_gateway, cluster_index=cluster_index)
+        logger.info(f"client: {client}")
+
+    for jj_eta_region, do_vbf_filter_study, region_list in scopes:
+        _run_validation_scope(
+            jj_eta_region,
+            do_vbf_filter_study,
+            region_list,
+            client,
+            years,
+            categories,
+            njets_options,
+            remove_zpt_weights_options,
+            add_dnn_zpt_weights_options,
+            min_set_of_vars,
+            load_path_template,
+            save_root,
+            background_samples,
+            sig_samples,
+            data_samples,
+            status,
+            linear_scale,
+            use_compacted,
+            dry_run,
+        )
+
+    if not dry_run:
+        close_dask_client()
 
 
 if __name__ == "__main__":
@@ -1004,20 +1288,29 @@ if __name__ == "__main__":
     results = run_validation_runner(fileset, processor_instance, client)
 
     # Reduce eagerly as each dataset's result comes back (running total per
-    # (year, category, var), not a growing list summed at plot time) so memory
-    # stays bounded by the number of distinct keys, not the number of processes.
+    # (year, category, njets, var), not a growing list summed at plot time) so
+    # memory stays bounded by the number of distinct keys, not the number of
+    # processes. Keyed by njets to match generate_combo_plots()'s shared lookup
+    # shape with run_bulk_validation() -- here there's only ever one njets value
+    # (categories/njets_options are both size-1 for this single-combo CLI path),
+    # so it's just a trivial single-key level, not a merge-compatibility concern.
     sample_hist_lookup = {
-        year: {cat: {var: None for var in hist_templates_by_category[cat]} for cat in categories}
+        year: {
+            cat: {njets: {var: None for var in hist_templates_by_category[cat]} for njets in njets_options}
+            for cat in categories
+        }
         for year in years
     }
     for dataset_key, output in results.items():
         result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
         for cat, var_hists in output["hist_by_category_var"].items():
             for var, h in var_hists.items():
-                if sample_hist_lookup[result_year][cat][var] is None:
-                    sample_hist_lookup[result_year][cat][var] = h
-                else:
-                    sample_hist_lookup[result_year][cat][var] += h
+                for njets in njets_options:
+                    slot = sample_hist_lookup[result_year][cat][njets]
+                    if slot[var] is None:
+                        slot[var] = h
+                    else:
+                        slot[var] += h
 
     logger.info("{style}Generating plots.{style}".format(
         style="\n" + "="*50 + "\n",))
