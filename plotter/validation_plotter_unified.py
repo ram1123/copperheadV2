@@ -22,6 +22,7 @@ import mplhep as hep
 
 from cli.common_argparser import build_common_parser
 from modules.dask_utils import close_dask_client, get_dask_client
+from modules.job_status import JobStatus
 from modules import selection
 from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
@@ -582,12 +583,17 @@ def generate_combo_plots(
     Project the accumulated histograms for one (year, category, njets, zpt_option,
     region, var) combo into Data/bkg-MC/sig-MC arrays and save the PDF+txt pair.
     Returns the save directory on success, or None if there was nothing to plot.
+
+    sample_hist_lookup is keyed as sample_hist_lookup[year][var] -> hist.Hist,
+    already scoped by the caller to the current (category, njets) -- category and
+    njets are only needed here for the projection/file-naming below, not as
+    additional lookup levels.
     """
     data_dict = {}
     bkg_MC_dict = {}
     sig_MC_dict = {}
 
-    sample_hist = sample_hist_lookup[year][category][njets][var]
+    sample_hist = sample_hist_lookup[year][var]
     if sample_hist is None:
         logger.debug(f"no histograms found for {year} {category} {njets} {var}, skipping!")
         return None
@@ -767,11 +773,17 @@ def _run_validation_scope(
     linear_scale,
     use_compacted,
     dry_run,
+    force_rerun=False,
 ):
     """
     Run one consolidated Dask pass (year x category x njets x zpt_option, all
     computed together) for a single fixed (jj_eta_region, vbf_filter_study,
     region_list) scope. `client` is None during a dry run.
+
+    force_rerun bypasses the `_status` done markers (mirrors run_stage1.py's
+    --rerun): useful when the underlying samples/config changed since a
+    (category, njets) sub-pass was last marked done, since done-marker checks
+    are purely file-existence-based and won't detect that on their own.
     """
     # if vbf_filter_study: remove z-peak from region (same rule as before)
     fill_regions = [r for r in region_list if not (do_vbf_filter_study and r == "z-peak")]
@@ -807,12 +819,6 @@ def _run_validation_scope(
     logger.info(f"sample_groups: {sample_groups}")
 
     plot_settings_by_category = {cat: load_plot_settings(cat) for cat in categories}
-    hist_templates_by_category = {
-        cat: build_hist_templates(
-            variables2plot, plot_settings_by_category[cat], sample_groups, njets_options, zpt_options
-        )
-        for cat in categories
-    }
 
     if dry_run:
         logger.info(
@@ -843,28 +849,24 @@ def _run_validation_scope(
             fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
     logger.info(f"finished building fileset! ({len(fileset)} datasets across {len(years)} year(s))")
 
-    logger.info("{style}Filling histograms.{style}".format(
+    # Resumability: each (category, njets) sub-pass below is its own coffea Runner
+    # call (potentially the most expensive single step -- a full pass over the
+    # fileset). Plot immediately after each sub-pass completes -- rather than
+    # deferring all plotting to one big loop after every sub-pass has run -- and
+    # only mark it done once its PDFs/txt files actually exist on disk. That way
+    # the deliverable itself is the checkpoint (no separate intermediate payload
+    # to persist or clean up under `_status/`), and a crash partway through only
+    # loses/redoes the one sub-pass that never finished, not everything before
+    # it. Mirrors stage1_output's resumability convention
+    # (modules/job_status.py::JobStatus: <key>.running/.done/.fail marker files +
+    # an append-only JSONL ledger, status dir under `_status/`) at the label
+    # level (save_root, shared across every vbf_filter_study/jj_eta_region scope).
+    status_dir = save_root / "_status"
+    jobstat = JobStatus(status_dir=str(status_dir))
+    scope_key = f"vbf_filter_study={do_vbf_filter_study}__jj_eta_region={jj_eta_region}"
+
+    logger.info("{style}Filling histograms and generating plots.{style}".format(
         style="\n" + "=" * 50 + "\n",))
-    # Reduce eagerly as each dataset's result comes back (running total per
-    # (year, category, njets, var), not a growing list summed at plot time) --
-    # otherwise every process's histogram from every (category, njets) sub-pass
-    # stays live in memory simultaneously until the plotting loop finally sums
-    # them all at the end, which is its own (separate, driver-side) memory
-    # blowup on top of the per-Runner-call one below.
-    #
-    # Keyed by njets too (not just year/category/var): each (category, njets)
-    # sub-pass below builds its own scoped_templates with a njets axis
-    # containing only that one njets value, so histograms from different njets
-    # sub-passes have different axis shapes and cannot be `+=`-merged together
-    # (boost-histogram raises "axes not mergable"). Only ever accumulate across
-    # results that came from the same sub-pass (same njets key).
-    sample_hist_lookup = {
-        year: {
-            cat: {njets: {var: None for var in hist_templates_by_category[cat]} for njets in njets_options}
-            for cat in categories
-        }
-        for year in years
-    }
     # Run one Runner pass per (category, njets) pair -- each pass still consolidates
     # every year and zpt_option together, but category and njets are the two axes
     # that multiply the size of every histogram returned per chunk (category needs
@@ -877,73 +879,87 @@ def _run_validation_scope(
     # fileset once per (category, njets) pair instead of once total) while still
     # keeping the year- and zpt_option-consolidation wins, which don't inflate
     # per-chunk memory the way category/njets do.
+    total_plots = 0
     for category in categories:
         plot_settings = plot_settings_by_category[category]
         for njets in njets_options:
             if category == "vbf" and njets != "inclusive":
                 continue
+
+            job_key = f"{scope_key}__category={category}__njets={njets}"
+
+            if not force_rerun and not jobstat.should_run(job_key, 0):
+                logger.info(f"[resume] skip {job_key} (done marker present); plots already on disk")
+                continue
+
             logger.info(
                 f"Filling histograms for category={category} njets={njets} "
                 f"(years={years}, zpt_options={zpt_options})..."
             )
-            scoped_templates = build_hist_templates(
-                variables2plot, plot_settings, sample_groups, [njets], zpt_options
-            )
-            processor_instance = ValidationHistProcessor(
-                hist_templates_by_category={category: scoped_templates},
-                categories=[category],
-                njets_options=[njets],
-                zpt_options=zpt_options,
-                regions=fill_regions,
-                do_vbf_filter_study=do_vbf_filter_study,
-                jj_eta_region=jj_eta_region,
-                group_dict_by_year=group_dict_by_year,
-            )
-            results = run_validation_runner(fileset, processor_instance, client)
-            for dataset_key, output in results.items():
-                result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
-                for var, h in output["hist_by_category_var"][category].items():
-                    slot = sample_hist_lookup[result_year][category][njets]
-                    if slot[var] is None:
-                        slot[var] = h
-                    else:
-                        slot[var] += h
+            jobstat.mark_running(job_key, 0)
+            sub_pass_plots = 0
+            try:
+                scoped_templates = build_hist_templates(
+                    variables2plot, plot_settings, sample_groups, [njets], zpt_options
+                )
+                processor_instance = ValidationHistProcessor(
+                    hist_templates_by_category={category: scoped_templates},
+                    categories=[category],
+                    njets_options=[njets],
+                    zpt_options=zpt_options,
+                    regions=fill_regions,
+                    do_vbf_filter_study=do_vbf_filter_study,
+                    jj_eta_region=jj_eta_region,
+                    group_dict_by_year=group_dict_by_year,
+                )
+                results = run_validation_runner(fileset, processor_instance, client)
 
-    logger.info("\n" + "=" * 80)
-    logger.info("Generating plots for all combos...")
-    job_idx = 0
-    for year in years:
-        for category in categories:
-            plot_settings = plot_settings_by_category[category]
-            for njets in njets_options:
-                # skip meaningless combos
-                if category == "vbf" and njets != "inclusive":
-                    logger.debug(f"Skipping vbf with njets={njets} (not meaningful)")
-                    continue
-                for zpt_option in zpt_options:
-                    job_idx += 1
-                    logger.info(f"[{job_idx:04d}] {year} {category} njets={njets} zpt_option={zpt_option}")
-                    for region_name in fill_regions:
-                        for var in hist_templates_by_category[category]:
-                            generate_combo_plots(
-                                year,
-                                category,
-                                njets,
-                                zpt_option,
-                                region_name,
-                                var,
-                                sample_hist_lookup,
-                                sample_groups,
-                                plot_settings,
-                                str(save_path),
-                                lumi_by_year[year],
-                                status,
-                                CM_energy_by_year[year],
-                                not linear_scale,
-                                do_vbf_filter_study,
-                                jj_eta_region,
-                            )
-    logger.info(f"Generated plots for {job_idx} (year, category, njets, zpt_option) combos.")
+                # Reduce eagerly across processes into one running total per
+                # (year, var), scoped to this sub-pass only -- discarded once its
+                # plots are generated below, not kept around for the whole scope.
+                sub_pass_hist_lookup = {year: {var: None for var in scoped_templates} for year in years}
+                for dataset_key, output in results.items():
+                    result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
+                    for var, h in output["hist_by_category_var"][category].items():
+                        slot = sub_pass_hist_lookup[result_year]
+                        if slot[var] is None:
+                            slot[var] = h
+                        else:
+                            slot[var] += h
+
+                logger.info(f"Generating plots for category={category} njets={njets}...")
+                for year in years:
+                    for zpt_option in zpt_options:
+                        for region_name in fill_regions:
+                            for var in scoped_templates:
+                                sub_pass_plots += 1
+                                generate_combo_plots(
+                                    year,
+                                    category,
+                                    njets,
+                                    zpt_option,
+                                    region_name,
+                                    var,
+                                    sub_pass_hist_lookup,
+                                    sample_groups,
+                                    plot_settings,
+                                    str(save_path),
+                                    lumi_by_year[year],
+                                    status,
+                                    CM_energy_by_year[year],
+                                    not linear_scale,
+                                    do_vbf_filter_study,
+                                    jj_eta_region,
+                                )
+            except Exception as exc:
+                jobstat.mark_failed(job_key, 0, exc)
+                raise
+
+            jobstat.mark_done(job_key, 0, meta={"n_plots": sub_pass_plots})
+            total_plots += sub_pass_plots
+            logger.info(f"Generated {sub_pass_plots} plots for {job_key}.")
+
+    logger.info(f"Generated plots for {total_plots} (year, category, njets, zpt_option, region, var) combos in this scope.")
 
 
 def run_bulk_validation(
@@ -967,6 +983,7 @@ def run_bulk_validation(
     cluster_index=0,
     use_compacted="compacted",
     dry_run=False,
+    force_rerun=False,
 ):
     """
     Run the full validation-plot sweep: every (jj_eta_region, vbf_filter_study,
@@ -978,6 +995,12 @@ def run_bulk_validation(
     This is the single entry point run_plotter.py calls -- all the orchestration
     complexity (Dask client lifecycle, fileset construction, the Runner passes,
     plot generation) lives here so run_plotter.py can stay a thin config wrapper.
+
+    Each (category, njets) sub-pass within a scope is checkpointed under
+    `save_root/_status/` (mirrors stage1_output's resumability convention) so a
+    crash partway through doesn't lose already-completed Dask compute on rerun.
+    Pass force_rerun=True (e.g. from --force) to bypass those done markers, such
+    as after adding new samples to an already-"done" combo.
     """
     scopes = list(itertools.product(jj_eta_regions, vbf_filter_study_options, region_options))
     logger.info(f"Running {len(scopes)} (jj_eta_region, vbf_filter_study, region_list) scope(s).")
@@ -1008,6 +1031,7 @@ def run_bulk_validation(
             linear_scale,
             use_compacted,
             dry_run,
+            force_rerun=force_rerun,
         )
 
     if not dry_run:
@@ -1288,29 +1312,24 @@ if __name__ == "__main__":
     results = run_validation_runner(fileset, processor_instance, client)
 
     # Reduce eagerly as each dataset's result comes back (running total per
-    # (year, category, njets, var), not a growing list summed at plot time) so
-    # memory stays bounded by the number of distinct keys, not the number of
-    # processes. Keyed by njets to match generate_combo_plots()'s shared lookup
-    # shape with run_bulk_validation() -- here there's only ever one njets value
-    # (categories/njets_options are both size-1 for this single-combo CLI path),
-    # so it's just a trivial single-key level, not a merge-compatibility concern.
+    # (year, var), not a growing list summed at plot time) so memory stays
+    # bounded by the number of distinct keys, not the number of processes.
+    # categories/njets_options are both size-1 for this single-combo CLI path,
+    # so generate_combo_plots()'s [year][var] lookup only ever needs to hold
+    # this one category's histograms -- no per-category/per-njets nesting.
+    category = categories[0]
     sample_hist_lookup = {
-        year: {
-            cat: {njets: {var: None for var in hist_templates_by_category[cat]} for njets in njets_options}
-            for cat in categories
-        }
+        year: {var: None for var in hist_templates_by_category[category]}
         for year in years
     }
     for dataset_key, output in results.items():
         result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
-        for cat, var_hists in output["hist_by_category_var"].items():
-            for var, h in var_hists.items():
-                for njets in njets_options:
-                    slot = sample_hist_lookup[result_year][cat][njets]
-                    if slot[var] is None:
-                        slot[var] = h
-                    else:
-                        slot[var] += h
+        for var, h in output["hist_by_category_var"][category].items():
+            slot = sample_hist_lookup[result_year]
+            if slot[var] is None:
+                slot[var] = h
+            else:
+                slot[var] += h
 
     logger.info("{style}Generating plots.{style}".format(
         style="\n" + "="*50 + "\n",))

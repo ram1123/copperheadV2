@@ -13,6 +13,10 @@ logger.setLevel(logging.INFO)
 # -----------------------------------------------------------------------------
 ARGS = set(sys.argv[1:])
 DRY_RUN = "--dry-run" in ARGS
+# Bypass the `_status` done markers under SAVE_ROOT/_status/ and recompute every
+# (category, njets) sub-pass from scratch, e.g. after adding new samples to an
+# already-"done" combo (the done markers are file-existence-based and can't
+# detect that on their own -- mirrors run_stage1.py's --rerun).
 FORCE = "--force" in ARGS
 DEBUG = "--debug" in ARGS
 
@@ -22,11 +26,7 @@ if DEBUG:
 # -----------------------------------------------------------------------------
 # User config
 # -----------------------------------------------------------------------------
-# stage1_dir = Path(get_stage1_path())  # default = "current"
-# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_June25PR_test/stage1_output")  # default = "current"
-# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_June28Compact_test/stage1_output")  # default = "current"
-# stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_June26_2026_jetUnc/stage1_output")  # default = "current"
-stage1_dir = Path("/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/stage1_output")  # default = "current"
+stage1_dir = Path(get_stage1_path())  # default = "current"
 
 LOAD_PATH = stage1_dir / "{year}" / "f1_0"
 logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
@@ -44,27 +44,11 @@ SAVE_TAG = "incDY"
 SAVE_ROOT = Path("./validation/figs") / outputDir / f"{stage1_name}_{SAVE_TAG}"
 logger.info(f"Using SAVE_ROOT: {SAVE_ROOT}")
 
-# # Prevent overwriting
-# if SAVE_ROOT.exists() and not FORCE:
-#     raise RuntimeError(f"SAVE_ROOT exists: {SAVE_ROOT} (use --force to proceed)")
+# years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"] # Run3 years
+years = ["2018", "2017", "2016postVFP", "2016preVFP"] # Run2 years
 
-# years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
-# years = ["2022preEE"]
-# years = ["2018"]
-# years = ["2016preVFP"]
-# years = ["2016postVFP", "2016preVFP"]
-# years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-years = ["2017"]
-# years = ["2023"]
-# years = ["2023BPix"]
-# years = ["2024"]
+categories = ["nocat", "vbf", "ggh", "bJetVeto"]
 
-# categories = ["nocat", "vbf", "ggh"]
-# categories = ["nocat", "vbf", "ggh", "bJetVeto"]
-# categories = ["nocat", "ggh"]
-# categories = ["ggh"]
-# categories = ["vbf"]
-categories = ["nocat"]
 
 # year x category x njets x zpt_option are computed together in ONE Dask pass per
 # (jj_eta_region, vbf_filter_study, region_list) "scope" -- see run_bulk_validation()
@@ -89,22 +73,15 @@ JJ_ETA_REGIONS = [
 
 # Boolean flags
 vbf_filter_study_options = [False, True]  # True/False list
-# vbf_filter_study_options = [False]  # True/False list
 remove_zpt_weights_options = [False, True]  # True/False list
 add_dnn_zpt_weights_options = [False]  # True/False list
 min_set_of_vars = False  # minimal set of vars
 
 region_options = [
     ["h-sidebands", "z-peak"],
-    # ["z-peak"],
-    # ["h-sidebands"],
 ]
 
-# njets_options = ["inclusive"]
-njets_options = ["inclusive", "0"]
-# njets_options = ["inclusive", "0", "1", "2"]
-# njets_options = ["inclusive", "0", "1", "2"]
-# njets_options = [ "2"]
+njets_options = ["inclusive", "0", "1", "2"]
 
 # background/signal/data shorthand lists match validation_plotter_unified.py's
 # own CLI defaults -- run_plotter.py never overrode these via subprocess flags.
@@ -141,4 +118,5 @@ if __name__ == "__main__":
         cluster_index=CLUSTER_INDEX,
         use_compacted=USE_COMPACTED,
         dry_run=DRY_RUN,
+        force_rerun=FORCE,
     )
