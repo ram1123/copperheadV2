@@ -5,7 +5,6 @@ import math
 from pathlib import Path
 
 import awkward as ak
-import dask_awkward as dak
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
@@ -255,11 +254,6 @@ def add_dnn_score(events_partition,
                 training_features,
                 model_cache,
                 nfolds, fix_dimuon_mass, year):
-    if getattr(events_partition.layout.backend, "name", None) == "typetracer":
-        out = ak.with_field(events_partition, np.empty(0, np.float32), "dnn_vbf_score")
-        out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_score_atanh")
-        out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_logit")
-        return out
     # One-hot year features (e.g. "year_2022preEE") don't exist as event
     # fields; synthesize them from the partition's dataset year, matching
     # run_stage2_vbf.py's CoffeaStage2VBFProcessor.evaluate_scores().
@@ -375,6 +369,29 @@ def add_dnn_score(events_partition,
     events_partition = ak.with_field(events_partition, dnn_vbf_logit, "dnn_vbf_logit")
     return events_partition
 
+def add_dnn_score_to_file(
+    input_path,
+    output_path,
+    model_trained_path,
+    training_features,
+    model_cache,
+    nfolds,
+    fix_dimuon_mass,
+    year,
+):
+    events = ak.from_parquet(input_path)
+    events = add_dnn_score(
+        events,
+        model_trained_path=model_trained_path,
+        training_features=training_features,
+        model_cache=model_cache,
+        nfolds=nfolds,
+        fix_dimuon_mass=fix_dimuon_mass,
+        year=year,
+    )
+    ak.to_parquet(events, output_path)
+    return output_path
+
 def compact_and_add_dnn_score(
     year,
     sample,
@@ -407,9 +424,11 @@ def compact_and_add_dnn_score(
     if not os.path.exists(compacted_path):
         logger.warning(f"Compacted dataset missing at {compacted_path}. Skipping DNN score addition.")
         return
-    # Load the compacted dataset
-    logger.debug(f"Loading compacted dataset from {compacted_path}")
-    events = dak.from_parquet(compacted_path)
+    # List the compacted parquet files
+    parquet_files = sorted(glob.glob(os.path.join(compacted_path, "*.parquet")))
+    if not parquet_files:
+        logger.warning(f"No parquet files found under {compacted_path}. Skipping DNN score addition.")
+        return
 
     # Load the DNN model
     logger.debug(f"Loading DNN model from {model_path}")
@@ -438,23 +457,40 @@ def compact_and_add_dnn_score(
         model_cache[fold] = DNNWrapper(model_load_path)
         logger.debug(f"Loaded model for fold {fold} from {model_load_path}")
 
-    meta = ak.with_field(events._meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score")
-    meta = ak.with_field(meta, np.zeros(0, dtype=np.float32), "dnn_vbf_score_atanh")
-    meta = ak.with_field(meta, np.zeros(0, dtype=np.float32), "dnn_vbf_logit")
-    events = dak.map_partitions(
-        add_dnn_score,
-        events,
-        model_trained_path=str(feature_dir),
-        training_features=training_features,
-        model_cache=model_cache,
-        nfolds=nfolds,
-        fix_dimuon_mass=fix_dimuon_mass,
-        year=year,
-        meta=meta,
-    )
+    os.makedirs(compacted_path_DNN, exist_ok=True)
 
-    # Save the updated events with DNN score to the compacted dataset
-    events.to_parquet(compacted_path_DNN)
+    if client is None:
+        logger.warning("No Dask client provided; adding DNN score sequentially")
+        for input_file in parquet_files:
+            output_file = os.path.join(compacted_path_DNN, os.path.basename(input_file))
+            add_dnn_score_to_file(
+                input_file,
+                output_file,
+                str(feature_dir),
+                training_features,
+                model_cache,
+                nfolds,
+                fix_dimuon_mass,
+                year,
+            )
+    else:
+        futures = [
+            client.submit(
+                add_dnn_score_to_file,
+                input_file,
+                os.path.join(compacted_path_DNN, os.path.basename(input_file)),
+                str(feature_dir),
+                training_features,
+                model_cache,
+                nfolds,
+                fix_dimuon_mass,
+                year,
+                pure=False,  # performs I/O; do not optimize away as a reusable pure computation.
+            )
+            for input_file in parquet_files
+        ]
+        client.gather(futures)
+
     logger.info(f"Updated dataset with DNN score saved to {compacted_path_DNN}")
 
 
