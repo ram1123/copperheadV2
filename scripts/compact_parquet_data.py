@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle
 import math
@@ -6,6 +7,7 @@ from pathlib import Path
 import awkward as ak
 import dask_awkward as dak
 import numpy as np
+import pandas as pd
 import pyarrow.parquet as pq
 from cli.common_argparser import build_common_parser
 from modules.dask_utils import close_dask_client, get_dask_client
@@ -252,18 +254,31 @@ def add_dnn_score(events_partition,
                 model_trained_path,
                 training_features,
                 model_cache,
-                nfolds, fix_dimuon_mass):
+                nfolds, fix_dimuon_mass, year):
     if getattr(events_partition.layout.backend, "name", None) == "typetracer":
         out = ak.with_field(events_partition, np.empty(0, np.float32), "dnn_vbf_score")
         out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_score_atanh")
         out = ak.with_field(out, np.empty(0, np.float32), "dnn_vbf_logit")
         return out
+    # One-hot year features (e.g. "year_2022preEE") don't exist as event
+    # fields; synthesize them from the partition's dataset year, matching
+    # run_stage2_vbf.py's CoffeaStage2VBFProcessor.evaluate_scores().
+    year_onehot_features = {f for f in training_features if f.startswith("year_")}
+    expected_year_col = f"year_{year}"
+    if year_onehot_features and expected_year_col not in year_onehot_features:
+        raise ValueError(
+            f"Year '{year}' has no matching one-hot training feature. "
+            f"Expected one of: "
+            f"{sorted(f[len('year_'):] for f in year_onehot_features)}"
+        )
     # Prepare features for this partition
-    features_to_use = prepare_features(events_partition, training_features)
+    features_to_use = prepare_features(
+        events_partition, training_features, year_onehot_features=year_onehot_features
+    )
     no_scale_features = {
         "year",
         "nsoftjets5_nominal",
-    }
+    } | year_onehot_features
     nan_val = -999.0
     input_arr_dict = {}
     for feat in features_to_use:
@@ -307,7 +322,10 @@ def add_dnn_score(events_partition,
             input_arr_fold = input_arr_dict[feat]
 
             # scale the events feature
-            if feat == "dimuon_mass" and fix_dimuon_mass:
+            if feat in year_onehot_features:
+                year_value = 1.0 if feat == expected_year_col else 0.0
+                in_feat = year_value * ak.ones_like(events_partition.event)
+            elif feat == "dimuon_mass" and fix_dimuon_mass:
                 in_feat = 125.0 * ak.ones_like(events_partition.event)
             else:
                 in_feat = events_partition[feat]
@@ -322,6 +340,17 @@ def add_dnn_score(events_partition,
     input_arr = ak.concatenate(
         [input_arr_dict[feat][:, np.newaxis] for feat in features_to_use], axis=1
     )
+
+    if logger.isEnabledFor(logging.DEBUG):
+        n_preview = min(10, len(events_partition))
+        event_numbers = ak.to_numpy(ak.materialize(events_partition.event))[:n_preview]
+        preview_arr = ak.to_numpy(input_arr[:n_preview])
+        preview_df = pd.DataFrame(preview_arr, columns=features_to_use)
+        preview_df.insert(0, "event", event_numbers)
+        with pd.option_context("display.max_columns", None, "display.width", 200):
+            logger.debug(f"DNN input features (first {n_preview} events):\n{preview_df}")
+    
+
     dnn_vbf_logit = nan_val * ak.ones_like(events_partition.event)
     for fold in range(nfolds):
         # eval_folds = [(fold + f) % nfolds for f in [3]]
@@ -420,6 +449,7 @@ def compact_and_add_dnn_score(
         model_cache=model_cache,
         nfolds=nfolds,
         fix_dimuon_mass=fix_dimuon_mass,
+        year=year,
         meta=meta,
     )
 
@@ -458,7 +488,6 @@ if __name__ == "__main__":
             raise ValueError("--model_tag is required when --add_dnn_score is used.")
 
     client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
-    # client = get_dask_client(False, n_workers=32) # FIXME: no using dask gateway for now, as it is not working on the cluster
 
     # append /stage1_output/2018/f1_0 to load path
     args.input_path = os.path.join(args.input_path, f"stage1_output/{args.year}/f1_0")
