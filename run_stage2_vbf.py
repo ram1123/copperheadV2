@@ -193,11 +193,18 @@ def clip_ak(x, min_value, max_value):
     return ak.where(x < min_value, min_value, ak.where(x > max_value, max_value, x))
 
 
-def prepare_features(events, features, variation="nominal"):
+def prepare_features(events, features, variation="nominal", year_onehot_features=None):
     features_var = []
     missing_features = []
+    year_onehot_features = year_onehot_features or set()
 
     for feat in features:
+        # One-hot year features (e.g. "year_2022preEE") don't exist as event
+        # fields; the caller synthesizes their values separately.
+        if feat in year_onehot_features:
+            features_var.append(feat)
+            continue
+
         # Protect soft drop features (don't apply variation)
         variation_current = "nominal" if "soft" in feat else variation
         feat_name = None
@@ -211,7 +218,7 @@ def prepare_features(events, features, variation="nominal"):
         if feat_name in events.fields:
             features_var.append(feat_name)
         else:
-            missing_features.append(feat_name)
+            missing_features.append(feat)
 
     if missing_features:
         logger.warning(f"Missing features in events: {missing_features}")
