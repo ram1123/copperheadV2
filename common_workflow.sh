@@ -147,6 +147,7 @@ load_year_maps() {
         [2023]="C"
         [2023BPix]="D"
         [2024]="C D E F G H I"
+        [2025]="B C D E F G"
         [run2]="A B C D E F G H"
         [run3]="C D E F G H I"
     )
