@@ -57,6 +57,7 @@ from src.corrections.jet import (
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
+from src.corrections.met_xy_correction import apply_puppi_met_xy_correction
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
 ak_array = TypeVar('ak_array')
@@ -1365,6 +1366,22 @@ class EventProcessor(processor.ProcessorABC):
         jets = ensure_event_axis(jets, len(events), "jet")
 
         PuppiMET = events.PuppiMET
+        if self.config["switches"].get("do_met_xy_correction", False):
+            logger.info("Applying PuppiMET xy-shift correction!")
+            # xy_n_unmatched (data only) is a lazy per-chunk count of events whose
+            # run number matched no known UL2016 era (should be ~0); left uncomputed
+            # here to avoid forcing per-chunk graph materialization -- validate via
+            # the "run"/"PuppiMET_phi" output branches post-hoc instead.
+            xy_met_pt, xy_met_phi, xy_n_unmatched = apply_puppi_met_xy_correction(
+                PuppiMET.pt,
+                PuppiMET.phi,
+                events.PV.npvs,
+                events.run,
+                year,
+                is_mc,
+            )
+            PuppiMET["pt"] = xy_met_pt
+            PuppiMET["phi"] = xy_met_phi
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
             jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
