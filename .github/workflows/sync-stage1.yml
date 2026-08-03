@@ -175,19 +175,19 @@ jobs:
 
               if [ "${#matches[@]}" -ne 1 ]; then
                 echo "Expected exactly one cutflow JSON for ${sample_name} in ${sample_dir}, found ${#matches[@]}" >&2
-                printf '%s\n' "${matches[@]}" >&2
+                printf "%s\n" "${matches[@]}" >&2
                 exit 1
               fi
 
               echo "[debug] selected cutflow for ${sample_name}: ${matches[0]}" >&2
-              printf '%s\n' "${matches[0]}"
+              printf "%s\n" "${matches[0]}"
             }
 
             normalize_existing_path() {
               local raw_path="$1"
               local cleaned_path
 
-              cleaned_path=$(printf '%s' "${raw_path}" | tr -d '\r\n')
+              cleaned_path=$(printf "%s" "${raw_path}" | tr -d "\r\n")
               if [ ! -e "${cleaned_path}" ] && [[ "${cleaned_path}" == *.jsonn ]] && [ -e "${cleaned_path%n}" ]; then
                 echo "[debug] repairing suspicious .jsonn suffix: ${cleaned_path} -> ${cleaned_path%n}" >&2
                 cleaned_path="${cleaned_path%n}"
