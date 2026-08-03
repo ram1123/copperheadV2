@@ -220,18 +220,18 @@ jobs:
             echo "[debug] using script: scripts/sync_parquet_dimuon.py"
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/${{ matrix.year }}_cutflow_${data_sample}_0.json \
-              "${year_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
+              "${data_cutflow_ref}" \
+              "${data_cutflow}" \
               -o diff_cutflow_data_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/${{ matrix.year }}_cutflow_${dy_sample}_0.json \
-              "${year_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
+              "${dy_cutflow_ref}" \
+              "${dy_cutflow}" \
               -o diff_cutflow_dy_${{ matrix.year }}.csv
 
             python scripts/sync_parquet_dimuon.py \
-              test/reference/${{ matrix.year }}_cutflow_${vbf_sample}_0.json \
-              "${year_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
+              "${vbf_cutflow_ref}" \
+              "${vbf_cutflow}" \
               -o diff_cutflow_vbf_${{ matrix.year }}.csv
           '
 
