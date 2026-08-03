@@ -7,17 +7,28 @@ stage-1 jet collection using the same feature list and scaling convention used
 at training time (see ``Scaler.transform`` and ``flatten_jets`` in that script).
 """
 
+from __future__ import annotations
+
 import json
 import os
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 import awkward as ak
 import dask_awkward as dak
 import numpy as np
-import torch
 
 from modules.utils import logger
+
+if TYPE_CHECKING:
+    import torch
+
+# torch is only needed for the two functions that actually run model inference
+# (_load_torchscript_cached, _eval_pu_dnn_one_partition), which are only ever
+# called when a switches.yaml year has do_use_pu_dnn_score enabled and configs
+# were successfully loaded. Importing it lazily there (rather than at module
+# scope) keeps this module importable in environments without pytorch, e.g.
+# the `ci`/`ci-legacy` pixi envs used by the sync-stage1 CI check.
 
 REGIONS = ("HEpos", "HEneg", "HFpos", "HFneg")
 
@@ -26,7 +37,7 @@ REGIONS = ("HEpos", "HEneg", "HFpos", "HFneg")
 # Dask worker started from a different working directory).
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-_PU_DNN_MODEL_CACHE: Dict[str, torch.jit.RecursiveScriptModule] = {}
+_PU_DNN_MODEL_CACHE: Dict[str, "torch.jit.RecursiveScriptModule"] = {}
 
 
 def region_mask_eta(eta, region: str):
@@ -132,7 +143,9 @@ def add_dphi_met_jet_features(jets: ak.Array, met_phi: ak.Array) -> ak.Array:
     return jets
 
 
-def _load_torchscript_cached(model_path: str, device: torch.device):
+def _load_torchscript_cached(model_path: str, device: "torch.device"):
+    import torch
+
     key = f"{model_path}::{device}"
     if key not in _PU_DNN_MODEL_CACHE:
         model = torch.jit.load(model_path, map_location=device)
@@ -160,6 +173,8 @@ def _eval_pu_dnn_one_partition(
         pass_dummy = ak.values_astype(ak.ones_like(feat_rec["pt"]), bool)
         score_dummy = ak.values_astype(ak.ones_like(feat_rec["pt"]), np.float32)
         return ak.zip({"pu_dnn_pass": pass_dummy, "pu_dnn_score": score_dummy})
+
+    import torch
 
     counts = ak.num(feat_rec, axis=1)
     flat = ak.flatten(feat_rec, axis=1)
