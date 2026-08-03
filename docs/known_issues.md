@@ -15,9 +15,18 @@ Error:   × Cannot install environment 'default'
   help:  You can mock the virtual package by overriding the environment variable, e.g.: '`CONDA_OVERRIDE_CUDA=12.0`'
 ```
 
-To fix this, set the environment variable `CONDA_OVERRIDE_CUDA=12.0` before running the `pixi shell` command.
+This only happens for environments that include the `cuda` feature (currently `default` and
+`default-legacy` — the day-to-day analysis environments with ROOT/ML/symbolic-regression). Fix:
+set `CONDA_OVERRIDE_CUDA` before running `pixi shell`, to a value >= the `cuda` entry on the
+`linux-64-cuda` platform in `pixi.toml`'s `[workspace] platforms` list (currently `12.4`; check
+that file if this stops working again after a version bump there).
 
 ```bash
-export CONDA_OVERRIDE_CUDA=12.0
+export CONDA_OVERRIDE_CUDA=12.4
 pixi shell
 ```
+
+Environments that don't include the `cuda` feature (`ci`, `ci-legacy`, `combine`,
+`combine-legacy`) resolve on GPU-less machines without any override — the CUDA requirement is
+scoped per-feature via a named platform variant (`linux-64-cuda`) rather than applied
+workspace-wide, so plain `pixi shell -e ci` (etc.) just works.
