@@ -1,6 +1,6 @@
 # Smoke Test Report
 
-Generated: `2026-08-05T16:15:41Z`
+Generated: `2026-08-05T16:58:00Z`
 
 - Events loaded: `29685`
 - Device: `cuda`
@@ -20,17 +20,17 @@ Generated: `2026-08-05T16:15:41Z`
 - Physical batch size: `256`
 - Gradient accumulation steps: `1`
 - Effective batch size: `256`
-- Trainable parameters: `1062671`
+- Trainable parameters: `1062663`
 - Best checkpoint: `/work/users/yun79/sideHustle2/copperheadV2/new_features/transformer_3class_study/outputs/checkpoints/best_model.pt`
 - Final checkpoint: `/work/users/yun79/sideHustle2/copperheadV2/new_features/transformer_3class_study/outputs/checkpoints/final_model.pt`
 - CUDA memory summary: `/work/users/yun79/sideHustle2/copperheadV2/new_features/transformer_3class_study/outputs/metrics/cuda_memory_summary.yaml`
-- Test accuracy: `0.6356693620844565`
+- Test accuracy: `0.6415094339622641`
 - Max softmax sum deviation: `1.1920928955078125e-07`
 
 ## Per-Class Test Summary
 
-- `ggH`: n=1500, acc=0.5906666666666667, mean_p_true=0.4570537805557251
-- `VBF`: n=1500, acc=0.778, mean_p_true=0.6474733352661133
-- `bkg`: n=1452, acc=0.5351239669421488, mean_p_true=0.4519728124141693
+- `ggH`: n=1500, acc=0.5866666666666667, mean_p_true=0.4567616879940033
+- `VBF`: n=1500, acc=0.7806666666666666, mean_p_true=0.6490616798400879
+- `bkg`: n=1452, acc=0.5544077134986226, mean_p_true=0.4603968560695648
 
 This is a 2-epoch smoke run and is not a production performance statement.

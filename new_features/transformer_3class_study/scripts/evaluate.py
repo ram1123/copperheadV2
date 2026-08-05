@@ -88,6 +88,14 @@ def main() -> None:
     device, device_info = select_device(device_name, cuda_limit)
     model = build_model(checkpoint.get('model_config') or checkpoint_cfg.get('model', {})).to(device)
     model.load_state_dict(checkpoint['model_state_dict'])
+    # The pair standardization lives in FixedStandardize buffers, so load_state_dict
+    # restores it with the weights. Fail loudly rather than silently scoring with the
+    # identity transform if the checkpoint predates the fitted statistics.
+    if not model.pair_normalization_fitted:
+        raise RuntimeError(
+            'Checkpoint has unfitted pair normalization buffers; it predates the '
+            'valid-pair-only pair standardization and cannot be evaluated with this code.'
+        )
     model.eval()
 
     max_files = args.max_files_per_sample if args.max_files_per_sample is not None else limits.get('max_files_per_sample')
@@ -125,6 +133,8 @@ def main() -> None:
     metrics = {
         'generated_at': utc_now(),
         'checkpoint': str(checkpoint_path),
+        'pair_normalization': checkpoint.get('pair_normalization'),
+        'disco': checkpoint.get('disco'),
         'split': args.split,
         'device': device_info,
         'limits': {'max_files_per_sample': max_files, 'max_events_per_sample': max_sample, 'max_events_per_class': max_class, 'batch_size': batch_size},

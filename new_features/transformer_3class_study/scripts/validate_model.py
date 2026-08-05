@@ -16,7 +16,7 @@ if str(STUDY_ROOT) not in sys.path:
 
 from src.amp_health import probe_amp_health
 from src.data import DEFAULT_STANDARDIZED_CLIP, build_loaders, load_events, preprocessing_diagnostics
-from src.losses import inverse_sqrt_class_weights, weighted_cross_entropy
+from src.losses import inverse_sqrt_class_weights, total_objective, weighted_cross_entropy
 from src.model import build_model, masked_attention_bias_value
 from src.schedule import build_lr_scheduler, sample_schedule
 from src.utils import (
@@ -105,6 +105,10 @@ def main() -> None:
     diagnostics = preprocessing_diagnostics(bundles, normalization)
 
     model = build_model(cfg.get('model', {})).to(device)
+    pair_stats = normalization.get('pair_normalization')
+    if not pair_stats:
+        raise RuntimeError("normalization is missing 'pair_normalization'")
+    model.set_pair_normalization(pair_stats['pair_feature_mean'], pair_stats['pair_feature_std'])
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=float(training_cfg.get('learning_rate', 1.0e-4)),
@@ -143,12 +147,13 @@ def main() -> None:
     lr_at_construction = float(optimizer.param_groups[0]['lr'])
 
     batch = next(iter(loaders['train']))
-    objects, global_features, mask, labels, weights, _ = batch
+    objects, global_features, mask, labels, weights, dimuon_mass, _ = batch
     objects = objects.to(device)
     global_features = global_features.to(device)
     mask = mask.to(device)
     labels = labels.to(device)
     weights = weights.to(device)
+    dimuon_mass = dimuon_mass.to(device)
     before = [param.detach().cpu().clone() for param in model.parameters() if param.requires_grad]
 
     cuda_cleanup()
@@ -159,10 +164,25 @@ def main() -> None:
     # gradients on step 0 rejects healthy float16 training. See src/amp_health.py.
     logits_holder: dict[str, torch.Tensor] = {}
 
+    mass_window = training_cfg.get('disco_mass_window')
+    disco_config = {
+        'disco_lambda': float(training_cfg.get('disco_lambda', 0.0)),
+        'disco_score_mode': str(training_cfg.get('disco_score', 'signal_sum')),
+        'disco_target_class': int(training_cfg.get('disco_target_class', 2)),
+        'disco_mass_window': tuple(mass_window) if mass_window else None,
+        'disco_monitor': bool(training_cfg.get('disco_monitor', True)),
+    }
+    loss_info_holder: dict[str, Any] = {}
+
     def forward_loss() -> torch.Tensor:
         out = model(objects, global_features, mask)
         logits_holder['logits'] = out
-        return weighted_cross_entropy(out, labels, weights, class_weight=class_weight)
+        loss, info = total_objective(
+            out, labels, weights, class_weight=class_weight,
+            dimuon_mass=dimuon_mass, **disco_config,
+        )
+        loss_info_holder.update(info)
+        return loss
 
     amp_health = probe_amp_health(
         model,
@@ -212,6 +232,14 @@ def main() -> None:
         'loss_finite': bool(torch.isfinite(loss).detach().cpu()),
         'gradients_finite': gradients_finite,
         'amp_health': amp_health,
+        'disco': disco_config,
+        'disco_loss_info': loss_info_holder,
+        'pair_normalization': pair_stats,
+        'pair_normalization_fitted': bool(model.pair_normalization_fitted),
+        'mass_leak_check': diagnostics.get('mass_leak_check'),
+        'mass_absent_from_features': all(
+            not row['mass_present_in_features'] for row in (diagnostics.get('mass_leak_check') or {}).values()
+        ),
         'parameters_updated': parameters_updated,
         'class_balance_strategy': class_balance,
         'preprocessing_diagnostics': diagnostics,
@@ -245,6 +273,10 @@ def main() -> None:
         failures.append(f'AMP health probe failed: {amp_health.get("diagnosis")}')
     if not summary['parameters_updated']:
         failures.append('parameters did not update')
+    if not summary['mass_absent_from_features']:
+        failures.append(f"m_mumu leaked into the model input features: {summary['mass_leak_check']}")
+    if not summary['pair_normalization_fitted']:
+        failures.append('pair normalization buffers were not fitted')
     if not summary['clip_respected_all_splits']:
         failures.append(f"standardized features exceed the clip bound {standardized_clip}")
     if not summary['class_weight_sums_equalized']:

@@ -87,6 +87,22 @@ training:
   # previously. The probe runs several steps and only counts steps the scaler applied.
   amp_probe_steps: 4
   amp_init_scale: null
+  # DisCo mass-decorrelation penalty: total = weighted_CE + lambda * dCorr^2(score, m_mumu),
+  # evaluated on background events only (sculpting the BACKGROUND mass spectrum is what
+  # breaks a bump hunt; signal is supposed to peak).
+  #
+  # DEFAULT 0.0 - the penalty is not constructed at all, so it contributes exactly nothing
+  # to the loss or to any gradient. Raise it to switch decorrelation on; it needs a lambda
+  # scan, and it is strictly weaker than removing m_mumu from the inputs via a
+  # Collins-Soper basis change.
+  disco_lambda: 0.0
+  # Which scalar to decorrelate: signal_sum (p_ggH + p_VBF), p_bkg, p_ggH or p_VBF.
+  disco_score: signal_sum
+  disco_target_class: 2          # 2 = bkg
+  disco_mass_window: null        # e.g. [110.0, 150.0] to restrict to the fit region
+  # Report dCorr even when lambda is 0, so the correlation is observable without training
+  # against it. Computed under no_grad.
+  disco_monitor: true
   max_events_per_class: 10000
   max_files_per_sample: 1
 

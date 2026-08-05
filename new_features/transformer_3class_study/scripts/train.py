@@ -20,7 +20,7 @@ if str(STUDY_ROOT) not in sys.path:
 from src.amp_health import probe_amp_health
 from src.data import DEFAULT_STANDARDIZED_CLIP, build_loaders, class_counts, load_events, preprocessing_diagnostics
 from src.features import INDEX_TO_CLASS, OUTPUT_COLUMNS, describe_feature_contract
-from src.losses import inverse_sqrt_class_weights, weighted_cross_entropy
+from src.losses import inverse_sqrt_class_weights, total_objective, weighted_cross_entropy
 from src.model import build_model, masked_attention_bias_value
 from src.schedule import build_lr_scheduler, sample_schedule
 from src.utils import (
@@ -60,13 +60,14 @@ def parse_args() -> argparse.Namespace:
 
 
 def batch_to_device(batch, device: torch.device):
-    objects, global_features, mask, labels, weights, row_indices = batch
+    objects, global_features, mask, labels, weights, dimuon_mass, row_indices = batch
     return (
         objects.to(device, non_blocking=True),
         global_features.to(device, non_blocking=True),
         mask.to(device, non_blocking=True),
         labels.to(device, non_blocking=True),
         weights.to(device, non_blocking=True),
+        dimuon_mass.to(device, non_blocking=True),
         row_indices,
     )
 
@@ -88,6 +89,7 @@ def run_epoch(
     grad_scaler=None,
     gradient_accumulation_steps: int = 1,
     scheduler=None,
+    disco_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     train = optimizer is not None
     model.train(train)
@@ -97,16 +99,24 @@ def run_epoch(
     total = 0
     confusion = torch.zeros(3, 3, dtype=torch.long)
     learning_rates: list[float] = []
+    dcorr_values: list[float] = []
+    disco_penalties: list[float] = []
     if train:
         optimizer.zero_grad(set_to_none=True)
     n_batches = len(loader)
     accumulation = max(int(gradient_accumulation_steps), 1)
     for batch_idx, batch in enumerate(loader, start=1):
-        objects, global_features, mask, labels, weights, _ = batch_to_device(batch, device)
+        objects, global_features, mask, labels, weights, dimuon_mass, _ = batch_to_device(batch, device)
         with torch.set_grad_enabled(train):
             with autocast_context(device, use_amp):
                 logits = model(objects, global_features, mask)
-                loss = weighted_cross_entropy(logits, labels, weights, class_weight=class_weight)
+                loss, loss_info = total_objective(
+                    logits, labels, weights, class_weight=class_weight,
+                    dimuon_mass=dimuon_mass, **(disco_config or {}),
+                )
+            if loss_info.get('disco_dcorr') is not None:
+                dcorr_values.append(float(loss_info['disco_dcorr']))
+                disco_penalties.append(float(loss_info['disco_penalty']))
             if not torch.isfinite(loss):
                 raise RuntimeError(f'Non-finite loss encountered: {loss.detach().cpu().item()}')
         if train:
@@ -147,6 +157,11 @@ def run_epoch(
         'n_events': total,
         'confusion': confusion.tolist(),
     }
+    if dcorr_values:
+        metrics['disco_dcorr_mean'] = float(np.mean(dcorr_values))
+        metrics['disco_dcorr_max'] = float(np.max(dcorr_values))
+        metrics['disco_dcorr_batches'] = len(dcorr_values)
+        metrics['disco_penalty_mean'] = float(np.mean(disco_penalties))
     if train:
         metrics['optimizer_steps'] = len(learning_rates)
         metrics['learning_rate_first'] = learning_rates[0] if learning_rates else None
@@ -162,7 +177,7 @@ def predict(model, loader, device) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     rows_all = []
     with torch.inference_mode():
         for batch in loader:
-            objects, global_features, mask, labels, _, row_indices = batch_to_device(batch, device)
+            objects, global_features, mask, labels, _, _, row_indices = batch_to_device(batch, device)
             probs = torch.softmax(model(objects, global_features, mask), dim=1)
             probs_all.append(probs.cpu().numpy())
             labels_all.append(labels.cpu().numpy())
@@ -224,6 +239,20 @@ def maybe_plot(history: list[dict[str, Any]], outdir: Path) -> None:
     fig.tight_layout()
     fig.savefig(outdir / 'loss_curve.png', dpi=150)
     plt.close(fig)
+
+
+def install_pair_normalization(model, normalization: dict[str, Any], logger=None) -> None:
+    """Install the valid-pair-only statistics into the model's FixedStandardize buffers.
+
+    They live in the state_dict, so evaluation restores them with the weights.
+    """
+    stats = (normalization or {}).get('pair_normalization')
+    if not stats:
+        raise ValueError("normalization is missing 'pair_normalization'; refit with fit=True")
+    model.set_pair_normalization(stats['pair_feature_mean'], stats['pair_feature_std'])
+    if logger is not None:
+        logger.info('pair normalization (valid pairs only): mean=%s std=%s degenerate_fraction=%.4f',
+                    stats['pair_feature_mean'], stats['pair_feature_std'], stats['degenerate_pair_fraction'])
 
 
 def resolve_class_weight(training_cfg: dict[str, Any], labels, device, logger=None):
@@ -372,6 +401,7 @@ def checkpoint_payload(
         'preprocessing_statistics': normalization,
         'weight_normalization': normalization.get('weight_normalization'),
         'standardized_clip': normalization.get('standardized_clip'),
+        'pair_normalization': normalization.get('pair_normalization'),
         'lr_schedule': schedule_summary or {},
         'preprocessing_diagnostics': preprocessing_summary or {},
         'padding_conventions': {
@@ -483,6 +513,7 @@ def main() -> None:
     logger.info('standardized clip: %s', standardized_clip)
 
     model = build_model(cfg.get('model', {})).to(device)
+    install_pair_normalization(model, normalization, logger)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(training_cfg.get('learning_rate', 1.0e-4)), weight_decay=float(training_cfg.get('weight_decay', 0.01)))
     n_parameters = int(sum(param.numel() for param in model.parameters() if param.requires_grad))
     logger.info('trainable parameters: %s', n_parameters)
@@ -515,6 +546,7 @@ def main() -> None:
         logger.warning('%s', amp_summary['amp_disable_reason'])
         cuda_cleanup()
         model = build_model(cfg.get('model', {})).to(device)
+        install_pair_normalization(model, normalization)
         optimizer = torch.optim.AdamW(model.parameters(), lr=float(training_cfg.get('learning_rate', 1.0e-4)), weight_decay=float(training_cfg.get('weight_decay', 0.01)))
         rep_summary = representative_memory_test(
             model,
@@ -547,6 +579,7 @@ def main() -> None:
         class_weight = resolve_class_weight(training_cfg, bundles['train'].labels, device)
     cuda_cleanup()
     model = build_model(cfg.get('model', {})).to(device)
+    install_pair_normalization(model, normalization, logger)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(training_cfg.get('learning_rate', 1.0e-4)), weight_decay=float(training_cfg.get('weight_decay', 0.01)))
     grad_scaler = make_grad_scaler(use_amp)
 
@@ -569,6 +602,16 @@ def main() -> None:
         min_lr_ratio=float(training_cfg.get('min_lr_ratio', 0.01)),
     )
     logger.info('lr schedule: %s', {key: value for key, value in schedule_summary.items() if key != 'curve'})
+
+    mass_window = training_cfg.get('disco_mass_window')
+    disco_config = {
+        'disco_lambda': float(training_cfg.get('disco_lambda', 0.0)),
+        'disco_score_mode': str(training_cfg.get('disco_score', 'signal_sum')),
+        'disco_target_class': int(training_cfg.get('disco_target_class', 2)),
+        'disco_mass_window': tuple(mass_window) if mass_window else None,
+        'disco_monitor': bool(training_cfg.get('disco_monitor', True)),
+    }
+    logger.info('disco config: %s', disco_config)
 
     diagnostics = preprocessing_diagnostics(bundles, normalization)
     logger.info('preprocessing diagnostics: %s', diagnostics['per_split']['train'])
@@ -601,9 +644,10 @@ def main() -> None:
             grad_scaler=grad_scaler,
             gradient_accumulation_steps=gradient_accumulation_steps,
             scheduler=scheduler,
+            disco_config=disco_config,
         )
         train_memory = cuda_memory_snapshot(device)
-        val_metrics = run_epoch(model, loaders['val'], device, optimizer=None, class_weight=class_weight, use_amp=use_amp)
+        val_metrics = run_epoch(model, loaders['val'], device, optimizer=None, class_weight=class_weight, use_amp=use_amp, disco_config=disco_config)
         val_memory = cuda_memory_snapshot(device)
         row = {'epoch': epoch, 'train': train_metrics, 'val': val_metrics, 'cuda_memory': val_memory, 'train_cuda_memory': train_memory}
         history.append(row)
@@ -669,6 +713,8 @@ def main() -> None:
         'split_counts': split_df.groupby(['split', 'true_class']).size().reset_index(name='n').to_dict(orient='records'),
         'lr_schedule': schedule_summary,
         'preprocessing_diagnostics': diagnostics,
+        'disco': disco_config,
+        'pair_normalization': normalization.get('pair_normalization'),
         'class_balance_strategy': str(training_cfg.get('class_balance', 'none') or 'none'),
         'history': history,
         'test': test_metrics,

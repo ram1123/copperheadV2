@@ -6,6 +6,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from .disco import disco_penalty
+
 
 def weighted_cross_entropy(
     logits: torch.Tensor,
@@ -19,6 +21,78 @@ def weighted_cross_entropy(
     weights = torch.clamp(event_weight.float(), min=0.0)
     denom = torch.clamp(weights.sum(), min=1.0)
     return (loss * weights).sum() / denom
+
+
+def total_objective(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    event_weight: torch.Tensor | None = None,
+    class_weight: torch.Tensor | None = None,
+    dimuon_mass: torch.Tensor | None = None,
+    disco_lambda: float = 0.0,
+    disco_score_mode: str = 'signal_sum',
+    disco_target_class: int = 2,
+    disco_mass_window: tuple[float, float] | None = None,
+    disco_monitor: bool = True,
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Weighted cross-entropy plus an optional lambda * dCorr^2 decorrelation penalty.
+
+    `disco_lambda` defaults to 0.0. At exactly 0 the penalty term is never constructed, so
+    it contributes nothing to the loss value and adds no node to the autograd graph -- the
+    gradients are bit-identical to running without decorrelation at all. When monitoring is
+    on the dCorr is still evaluated, but under no_grad, so it is observable without
+    influencing training.
+    """
+    classification = weighted_cross_entropy(logits, target, event_weight, class_weight)
+    info: dict[str, Any] = {
+        'classification_loss': float(classification.detach().cpu()),
+        'disco_lambda': float(disco_lambda),
+        'disco_enabled': bool(disco_lambda > 0.0),
+        'disco_applied': False,
+        'disco_dcorr': None,
+        'disco_penalty': 0.0,
+        'disco_n_selected': 0,
+        'disco_skip_reason': None,
+    }
+
+    if disco_lambda > 0.0:
+        dcorr, disco_info = disco_penalty(
+            logits, target, dimuon_mass, event_weight,
+            target_class_index=disco_target_class,
+            score_mode=disco_score_mode,
+            mass_window=disco_mass_window,
+        )
+        penalty = disco_lambda * dcorr * dcorr
+        total = classification + penalty
+        info.update({
+            'disco_applied': bool(disco_info['applied']),
+            'disco_dcorr': disco_info.get('dcorr'),
+            'disco_penalty': float(penalty.detach().cpu()),
+            'disco_n_selected': disco_info['n_selected'],
+            'disco_skip_reason': disco_info['skip_reason'],
+        })
+        info['total_loss'] = float(total.detach().cpu())
+        return total, info
+
+    if disco_monitor and dimuon_mass is not None:
+        # Observation only: no_grad keeps this entirely out of the autograd graph.
+        with torch.no_grad():
+            _, disco_info = disco_penalty(
+                logits.detach(), target, dimuon_mass, event_weight,
+                target_class_index=disco_target_class,
+                score_mode=disco_score_mode,
+                mass_window=disco_mass_window,
+            )
+        info.update({
+            'disco_applied': False,
+            'disco_dcorr': disco_info.get('dcorr'),
+            'disco_n_selected': disco_info['n_selected'],
+            'disco_skip_reason': disco_info['skip_reason'],
+            'disco_monitored': True,
+        })
+
+    info['total_loss'] = float(classification.detach().cpu())
+    return classification, info
 
 
 def inverse_sqrt_class_weights(labels: torch.Tensor, num_classes: int = 3) -> torch.Tensor:

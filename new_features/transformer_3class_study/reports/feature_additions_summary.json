@@ -1,0 +1,362 @@
+{
+  "generated_at": "2026-08-05T16:58:39Z",
+  "task_id": "transformer-3class-disco-and-pair-mask-2017",
+  "continuation_of": "transformer-3class-preprocessing-fixes-2017",
+  "study": "transformer_3class_study_2017",
+  "year": 2017,
+  "evidence_sample": {
+    "events_used": 11997,
+    "train_events": 8398,
+    "max_files_per_sample": 1,
+    "max_events_per_class": 4000
+  },
+  "features": {
+    "DISCO-mass-decorrelation": {
+      "title": "DisCo decorrelation penalty against m_mumu",
+      "problem": "The transformer receives both muon four-vectors, so m_mumu is recoverable from the mu1/mu2 tokens and from the (mu1, mu2) pairwise invariant mass. Setting the dimuon token mass to 0 hides nothing. A score that learns m_mumu sculpts the background mass spectrum, which is fatal for a bump hunt at 125 GeV.",
+      "change": "total_loss = weighted_cross_entropy + lambda * dCorr^2(score, m_mumu), evaluated on background events per batch with the per-event training weights. lambda defaults to 0.0.",
+      "files": [
+        "src/disco.py",
+        "src/losses.py",
+        "src/features.py",
+        "src/data.py",
+        "scripts/train.py",
+        "scripts/validate_model.py",
+        "configs/study_config.yaml"
+      ],
+      "default_lambda": 0.0,
+      "score_mode": "signal_sum",
+      "target_class_index": 2,
+      "monitor_when_disabled": true,
+      "evidence": {
+        "mass_recoverable_from_inputs": {
+          "n_background_events": 2000,
+          "dcorr_mass_vs_mu1mu2_pair_mass_feature": 0.9576212167739868,
+          "dcorr_mass_vs_dimuon_token_energy": 0.20202220976352692,
+          "note": "The (mu1, mu2) pairwise invariant-mass feature reproduces m_mumu almost exactly, which is why setting the dimuon token mass to 0 does not decorrelate anything and why a penalty (or an input-basis change) is required."
+        },
+        "mass_leak_check": {
+          "train": {
+            "mass_present_in_features": false,
+            "matching_columns": [],
+            "closest_column": "object[1][9]",
+            "closest_max_abs_difference": 627.8432464599609,
+            "tolerance": 0.001,
+            "n_events": 8398
+          },
+          "val": {
+            "mass_present_in_features": false,
+            "matching_columns": [],
+            "closest_column": "object[1][6]",
+            "closest_max_abs_difference": 341.0376739501953,
+            "tolerance": 0.001,
+            "n_events": 1800
+          },
+          "test": {
+            "mass_present_in_features": false,
+            "matching_columns": [],
+            "closest_column": "object[1][9]",
+            "closest_max_abs_difference": 615.2276153564453,
+            "tolerance": 0.001,
+            "n_events": 1799
+          }
+        },
+        "lambda_scan": [
+          {
+            "disco_lambda": 0.0,
+            "test_accuracy": 0.6575875282287598,
+            "held_out_background_dcorr": 0.40168705582618713,
+            "epochs": 4,
+            "batch_size": 256,
+            "n_train": 8398,
+            "n_test_background": 599
+          },
+          {
+            "disco_lambda": 1.0,
+            "test_accuracy": 0.6042245626449585,
+            "held_out_background_dcorr": 0.14207874238491058,
+            "epochs": 4,
+            "batch_size": 256,
+            "n_train": 8398,
+            "n_test_background": 599
+          },
+          {
+            "disco_lambda": 5.0,
+            "test_accuracy": 0.49861031770706177,
+            "held_out_background_dcorr": 0.16376245021820068,
+            "epochs": 4,
+            "batch_size": 256,
+            "n_train": 8398,
+            "n_test_background": 599
+          },
+          {
+            "disco_lambda": 20.0,
+            "test_accuracy": 0.4480266869068146,
+            "held_out_background_dcorr": 0.08927632868289948,
+            "epochs": 4,
+            "batch_size": 256,
+            "n_train": 8398,
+            "n_test_background": 599
+          }
+        ],
+        "lambda_scan_note": "4-epoch runs on 8398 train events, identical seed and initialization per lambda; indicative of the trade-off only.",
+        "training_disco_config": {
+          "disco_lambda": 0.0,
+          "disco_score_mode": "signal_sum",
+          "disco_target_class": 2,
+          "disco_mass_window": null,
+          "disco_monitor": true
+        },
+        "training_dcorr_per_epoch": [
+          {
+            "epoch": 1,
+            "train_dcorr_mean": 0.36498434241951966,
+            "val_dcorr_mean": 0.4072666508810861
+          },
+          {
+            "epoch": 2,
+            "train_dcorr_mean": 0.4131734516562485,
+            "val_dcorr_mean": 0.41820073979241507
+          }
+        ],
+        "validation_disco_loss_info": {
+          "classification_loss": 0.992972195148468,
+          "disco_lambda": 0.0,
+          "disco_enabled": false,
+          "disco_applied": false,
+          "disco_dcorr": 0.7958258390426636,
+          "disco_penalty": 0.0,
+          "disco_n_selected": 18,
+          "disco_skip_reason": null,
+          "disco_monitored": true,
+          "total_loss": 0.992972195148468
+        }
+      },
+      "caveats": [
+        "A soft constraint: strictly weaker than removing m_mumu from the inputs.",
+        "Requires a lambda scan; the right value is analysis-dependent.",
+        "Only constrains the distribution it was trained on, and can degrade under shift.",
+        "Applied to background only on purpose - signal is expected to peak in m_mumu."
+      ]
+    },
+    "PAIR-feature-masking": {
+      "title": "Mask pair features before the PairEmbed normalization",
+      "problem": "The study dropped the source's trailing \"* mask\" factor, so a pair involving a padded token carried the real object's eta, phi and mass measured against a fictitious zero four-vector. Those values sit in the same range as genuine pairs and set the BatchNorm running statistics, which were then applied to the real pairs.",
+      "change": "(a) restore the source-style validity mask so degenerate pairs are exactly zero; (b) fit pair-feature mean/std on VALID PAIRS ONLY from the train split and replace the PairEmbed input BatchNorm1d with that fixed standardization, persisted in the checkpoint.",
+      "files": [
+        "src/model.py",
+        "src/data.py",
+        "scripts/train.py",
+        "scripts/validate_model.py",
+        "scripts/evaluate.py"
+      ],
+      "evidence": {
+        "recomputed": {
+          "n_events": 8398,
+          "pad_fraction_per_token": {
+            "mu1": 0.0,
+            "mu2": 0.0,
+            "jet1": 0.26982614398002625,
+            "jet2": 0.5833531618118286,
+            "dimuon": 0.0
+          },
+          "total_pair_entries": 209950,
+          "valid_pair_entries": 149997,
+          "degenerate_pair_fraction": 0.28555846214294434,
+          "mean_valid_tokens_per_event": 4.146820545196533,
+          "degenerate_pairs_exactly_zero_after_mask": true,
+          "valid_pairs_unchanged_by_mask": true,
+          "features": {
+            "delta_r": {
+              "unmasked_all_pairs": {
+                "mean": 1.9219424724578857,
+                "std": 1.4635634422302246
+              },
+              "masked_all_pairs": {
+                "mean": 1.3900929689407349,
+                "std": 1.5628869533538818
+              },
+              "valid_pairs_only": {
+                "mean": 1.945705533027649,
+                "std": 1.5290050506591797
+              },
+              "degenerate_pairs_unmasked": {
+                "mean": 1.8624889850616455,
+                "std": 1.2834057807922363
+              },
+              "valid_pair_offset_under_all_pair_stats": 0.0162364412099123,
+              "valid_pair_scale_under_all_pair_stats": 1.0447138547897339
+            },
+            "abs_delta_eta": {
+              "unmasked_all_pairs": {
+                "mean": 1.1528376340866089,
+                "std": 1.2313807010650635
+              },
+              "masked_all_pairs": {
+                "mean": 0.8250347375869751,
+                "std": 1.2066487073898315
+              },
+              "valid_pairs_only": {
+                "mean": 1.1547967195510864,
+                "std": 1.2873034477233887
+              },
+              "degenerate_pairs_unmasked": {
+                "mean": 1.1479359865188599,
+                "std": 1.0788365602493286
+              },
+              "valid_pair_offset_under_all_pair_stats": 0.0015909664798527956,
+              "valid_pair_scale_under_all_pair_stats": 1.045414686203003
+            },
+            "cos_delta_phi": {
+              "unmasked_all_pairs": {
+                "mean": 0.1389463245868683,
+                "std": 0.7939800024032593
+              },
+              "masked_all_pairs": {
+                "mean": 0.08180934190750122,
+                "std": 0.6867197155952454
+              },
+              "valid_pairs_only": {
+                "mean": 0.11450808495283127,
+                "std": 0.8101422786712646
+              },
+              "degenerate_pairs_unmasked": {
+                "mean": 0.20008857548236847,
+                "std": 0.7485426664352417
+              },
+              "valid_pair_offset_under_all_pair_stats": -0.030779413878917694,
+              "valid_pair_scale_under_all_pair_stats": 1.0203560590744019
+            },
+            "log1p_mass_squared": {
+              "unmasked_all_pairs": {
+                "mean": 5.667165756225586,
+                "std": 4.756368637084961
+              },
+              "masked_all_pairs": {
+                "mean": 5.565468788146973,
+                "std": 4.8313422203063965
+              },
+              "valid_pairs_only": {
+                "mean": 7.789957523345947,
+                "std": 3.9169845581054688
+              },
+              "degenerate_pairs_unmasked": {
+                "mean": 0.35613495111465454,
+                "std": 1.1645900011062622
+              },
+              "valid_pair_offset_under_all_pair_stats": 0.44630512595176697,
+              "valid_pair_scale_under_all_pair_stats": 0.8235241770744324
+            }
+          }
+        },
+        "fitted_pair_normalization": {
+          "pair_feature_names": [
+            "delta_r",
+            "abs_delta_eta",
+            "cos_delta_phi",
+            "log1p_mass_squared"
+          ],
+          "pair_feature_mean": [
+            1.945705771446228,
+            1.154796838760376,
+            0.11450808495283127,
+            7.789957523345947
+          ],
+          "pair_feature_std": [
+            1.528999924659729,
+            1.2872990369796753,
+            0.810139536857605,
+            3.9169716835021973
+          ],
+          "fitted_on": "train",
+          "fitted_over": "valid_pairs_only",
+          "valid_pair_entries": 149997,
+          "total_pair_entries": 209950,
+          "degenerate_pair_fraction": 0.2855584663015004
+        },
+        "training_pair_normalization": {
+          "pair_feature_names": [
+            "delta_r",
+            "abs_delta_eta",
+            "cos_delta_phi",
+            "log1p_mass_squared"
+          ],
+          "pair_feature_mean": [
+            1.9508389234542847,
+            1.1604686975479126,
+            0.11276593804359436,
+            7.802181720733643
+          ],
+          "pair_feature_std": [
+            1.5299934148788452,
+            1.288221836090088,
+            0.8105530738830566,
+            3.919445037841797
+          ],
+          "fitted_on": "train",
+          "fitted_over": "valid_pairs_only",
+          "valid_pair_entries": 371549,
+          "total_pair_entries": 519500,
+          "degenerate_pair_fraction": 0.2847949951876805
+        },
+        "evaluation_pair_normalization": {
+          "pair_feature_names": [
+            "delta_r",
+            "abs_delta_eta",
+            "cos_delta_phi",
+            "log1p_mass_squared"
+          ],
+          "pair_feature_mean": [
+            1.9508389234542847,
+            1.1604686975479126,
+            0.11276593804359436,
+            7.802181720733643
+          ],
+          "pair_feature_std": [
+            1.5299934148788452,
+            1.288221836090088,
+            0.8105530738830566,
+            3.919445037841797
+          ],
+          "fitted_on": "train",
+          "fitted_over": "valid_pairs_only",
+          "valid_pair_entries": 371549,
+          "total_pair_entries": 519500,
+          "degenerate_pair_fraction": 0.2847949951876805
+        },
+        "validation_pair_normalization_fitted": true
+      }
+    }
+  },
+  "downstream_metrics": {
+    "smoke_test_accuracy": 0.6415094339622641,
+    "smoke_test_events": 4452,
+    "smoke_per_class": {
+      "ggH": {
+        "n_events": 1500,
+        "accuracy": 0.5866666666666667,
+        "mean_assigned_probability": 0.4567616879940033
+      },
+      "VBF": {
+        "n_events": 1500,
+        "accuracy": 0.7806666666666666,
+        "mean_assigned_probability": 0.6490616798400879
+      },
+      "bkg": {
+        "n_events": 1452,
+        "accuracy": 0.5544077134986226,
+        "mean_assigned_probability": 0.4603968560695648
+      }
+    },
+    "evaluation_accuracy": 0.6415094339622641,
+    "evaluation_events": 4452,
+    "note": "Smoke-scale run only; not a production performance statement."
+  },
+  "known_issues_remaining": [
+    "The deeper BatchNorm1d(hidden) layers inside PairEmbed still see degenerate entries; with the input masked those collapse to a constant (the conv bias) rather than a kinematics-dependent signal. Fully masked statistics throughout PairEmbed were out of scope.",
+    "InputProcess applies RMSNorm across the 5-dim feature axis, partially undoing the per-feature standardization.",
+    "m_mumu is still reconstructible from the inputs; the DisCo term penalizes using it rather than removing it. A Collins-Soper input-basis change would remove it outright.",
+    "Normalization statistics are pooled across the heterogeneous token types.",
+    "checkpoint_payload in scripts/train.py has unreachable plotting code after its return."
+  ]
+}

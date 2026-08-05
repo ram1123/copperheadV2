@@ -13,6 +13,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from .features import (
+    finite_array,
     CLASS_TO_INDEX,
     OUTPUT_COLUMNS,
     build_event_weights,
@@ -23,6 +24,7 @@ from .features import (
     resolve_columns,
 )
 from .losses import apply_class_weight_scales, class_weight_sums, fit_class_weight_scales
+from .model import PAIR_FEATURE_NAMES, pairwise_hmumu_features
 from .utils import load_yaml, resolve_path
 
 ALIASES_BY_SAMPLE = {
@@ -54,6 +56,7 @@ class TensorBundle:
     event_weights: np.ndarray
     train_weights: np.ndarray
     raw_train_weights: np.ndarray
+    dimuon_mass: np.ndarray
     row_indices: np.ndarray
     metadata: pd.DataFrame
 
@@ -65,6 +68,8 @@ class HmumuTensorDataset(Dataset):
         self.padding_mask = torch.from_numpy(bundle.padding_mask.astype(bool))
         self.labels = torch.from_numpy(bundle.labels.astype(np.int64))
         self.weights = torch.from_numpy(bundle.train_weights.astype(np.float32))
+        # Metadata for the DisCo penalty. Kept in the batch, never in `objects`/`global`.
+        self.dimuon_mass = torch.from_numpy(bundle.dimuon_mass.astype(np.float32))
         self.row_indices = torch.from_numpy(bundle.row_indices.astype(np.int64))
 
     def __len__(self) -> int:
@@ -77,6 +82,7 @@ class HmumuTensorDataset(Dataset):
             self.padding_mask[idx],
             self.labels[idx],
             self.weights[idx],
+            self.dimuon_mass[idx],
             self.row_indices[idx],
         )
 
@@ -316,6 +322,42 @@ def assign_splits(df: pd.DataFrame, train_fraction: float, val_fraction: float, 
 DEFAULT_STANDARDIZED_CLIP = 5.0
 
 
+def fit_pair_normalization(objects: np.ndarray, padding_mask: np.ndarray) -> dict[str, Any]:
+    """Mean/std of the four pair features over VALID PAIRS ONLY.
+
+    Fitting over the whole pair grid is what the replaced BatchNorm did, and it is wrong:
+    the degenerate entries form a spike far outside the real distribution, concentrated in
+    log1p(m^2). Restricting to pairs where both tokens are real gives the statistics that
+    actually describe the data the model is meant to reason about.
+    """
+    fourvec = torch.from_numpy(np.ascontiguousarray(objects[:, :, 6:10]))
+    pair = pairwise_hmumu_features(fourvec, apply_mask=True).numpy()
+    valid_token = ~padding_mask
+    valid_pair = valid_token[:, :, None] & valid_token[:, None, :]
+    n_valid = int(valid_pair.sum())
+    if n_valid == 0:
+        raise RuntimeError('No valid object pairs available to fit pair normalization.')
+
+    means, stds = [], []
+    for index in range(pair.shape[1]):
+        values = pair[:, index][valid_pair]
+        means.append(float(values.mean()))
+        stds.append(float(values.std()))
+    stds = [value if value > 1.0e-6 else 1.0 for value in stds]
+
+    grid_total = int(valid_pair.size)
+    return {
+        'pair_feature_names': list(PAIR_FEATURE_NAMES),
+        'pair_feature_mean': means,
+        'pair_feature_std': stds,
+        'fitted_on': 'train',
+        'fitted_over': 'valid_pairs_only',
+        'valid_pair_entries': n_valid,
+        'total_pair_entries': grid_total,
+        'degenerate_pair_fraction': float(1.0 - n_valid / grid_total) if grid_total else 0.0,
+    }
+
+
 def fit_normalization(
     objects: np.ndarray,
     global_features: np.ndarray,
@@ -340,6 +382,10 @@ def fit_normalization(
         # Carried with the statistics so evaluate.py, which restores `normalization`
         # straight from the checkpoint, reproduces the training-time clipping exactly.
         'standardized_clip': None if standardized_clip is None else float(standardized_clip),
+        # Raw (pre-standardization) pair features are what PairEmbed consumes, so these
+        # are fitted on the raw four-vector slots and installed into the model's
+        # FixedStandardize buffers rather than applied here.
+        'pair_normalization': fit_pair_normalization(objects, padding_mask),
     }
 
 
@@ -394,9 +440,11 @@ def build_bundle(
     metadata['source_file'] = metadata['_source_file'] if '_source_file' in metadata else ''
     metadata['source_row'] = metadata['_source_row'] if '_source_row' in metadata else -1
     metadata['data_split'] = metadata['split'] if 'split' in metadata else ''
+    dimuon_mass = finite_array(df['dimuon_mass']) if 'dimuon_mass' in df else np.zeros(len(df), dtype=np.float32)
     metadata['event_weight'] = event_weights
     metadata['train_weight'] = train_weights
     metadata['raw_train_weight'] = raw_train_weights
+    metadata['dimuon_mass'] = dimuon_mass
     bundle = TensorBundle(
         objects=objects,
         global_features=global_features,
@@ -405,6 +453,7 @@ def build_bundle(
         event_weights=event_weights,
         train_weights=train_weights,
         raw_train_weights=raw_train_weights,
+        dimuon_mass=dimuon_mass,
         row_indices=np.arange(len(df), dtype=np.int64),
         metadata=metadata,
     )
@@ -465,6 +514,46 @@ def weight_summary(df: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def assert_mass_not_in_features(
+    bundle: TensorBundle,
+    tolerance: float = 1.0e-3,
+) -> dict[str, Any]:
+    """Check that m_mumu is nowhere in the tensors handed to the transformer.
+
+    The decorrelation penalty is pointless if the mass is also an input. The dimuon token
+    is built with mass=0 on purpose, so its energy is pt*cosh(eta) and no feature slot
+    should reproduce m_mumu. Compares every object and global feature column against the
+    mass and reports the closest match.
+    """
+    mass = np.asarray(bundle.dimuon_mass, dtype=np.float64)
+    worst_name, worst_diff = None, float('inf')
+    checks: list[dict[str, Any]] = []
+    if mass.size:
+        columns: list[tuple[str, np.ndarray]] = []
+        for token_index in range(bundle.objects.shape[1]):
+            for feature_index in range(bundle.objects.shape[2]):
+                columns.append((
+                    f'object[{token_index}][{feature_index}]',
+                    bundle.objects[:, token_index, feature_index].astype(np.float64),
+                ))
+        for feature_index in range(bundle.global_features.shape[1]):
+            columns.append((f'global[{feature_index}]', bundle.global_features[:, feature_index].astype(np.float64)))
+        for name, values in columns:
+            diff = float(np.max(np.abs(values - mass))) if values.size else float('inf')
+            if diff < worst_diff:
+                worst_diff, worst_name = diff, name
+            if diff <= tolerance:
+                checks.append({'column': name, 'max_abs_difference': diff})
+    return {
+        'mass_present_in_features': bool(checks),
+        'matching_columns': checks,
+        'closest_column': worst_name,
+        'closest_max_abs_difference': None if worst_diff == float('inf') else worst_diff,
+        'tolerance': tolerance,
+        'n_events': int(mass.size),
+    }
+
+
 def preprocessing_diagnostics(
     bundles: dict[str, TensorBundle],
     normalization: dict[str, Any],
@@ -508,6 +597,10 @@ def preprocessing_diagnostics(
     return {
         'standardized_clip': clip,
         'weight_normalization': normalization.get('weight_normalization'),
+        'pair_normalization': normalization.get('pair_normalization'),
+        'mass_leak_check': {
+            split: assert_mass_not_in_features(bundle) for split, bundle in bundles.items()
+        },
         'per_split': per_split,
     }
 

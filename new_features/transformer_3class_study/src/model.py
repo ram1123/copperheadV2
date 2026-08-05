@@ -19,6 +19,7 @@ class ModelConfig:
     num_object_ids: int = 7
     use_swiglu: bool = True
     use_object_id_embedding: bool = True
+    mask_pair_features: bool = True
 
 
 class RMSNorm(nn.Module):
@@ -64,7 +65,30 @@ class InputProcess(nn.Module):
         return self.net(x)
 
 
-def pairwise_hmumu_features(fourvec: torch.Tensor) -> torch.Tensor:
+PAIR_FEATURE_NAMES = ['delta_r', 'abs_delta_eta', 'cos_delta_phi', 'log1p_mass_squared']
+
+
+def pair_validity_mask(fourvec: torch.Tensor) -> torch.Tensor:
+    """(B, T, T) mask that is 1 only where BOTH tokens of the pair are real.
+
+    Matches the source's `mask = (pt_i != 0) * (pt_j != 0)`.
+    """
+    present = (fourvec[..., 0] > 0.0).to(fourvec.dtype)
+    return present[:, :, None] * present[:, None, :]
+
+
+def pairwise_hmumu_features(fourvec: torch.Tensor, apply_mask: bool = True) -> torch.Tensor:
+    """Pairwise features for the attention bias, zeroed on pairs involving a padded token.
+
+    The trailing mask matters. A padded token is zeroed to (pt, eta, phi, E) = 0, so
+    pairing it with a real object does NOT give zeros -- it gives that object's own
+    kinematics measured against a fictitious massless object at the origin of (eta, phi):
+    deta = -eta_j, dphi = -phi_j, dr = sqrt(eta_j^2 + phi_j^2), and m^2 = m_j^2. Those
+    values sit in the same numeric range as genuine pairs, so without the mask single-object
+    kinematics leak into a channel that is supposed to describe pair relationships, and they
+    set the downstream normalization statistics. On the 2017 train split 28.4% of the 5x5
+    grid is degenerate.
+    """
     pt = fourvec[..., 0].clamp_min(0.0)
     eta = fourvec[..., 1].clamp(min=-10.0, max=10.0)
     phi = fourvec[..., 2]
@@ -80,7 +104,46 @@ def pairwise_hmumu_features(fourvec: torch.Tensor) -> torch.Tensor:
     pyij = py[:, :, None] + py[:, None, :]
     pzij = pz[:, :, None] + pz[:, None, :]
     mass2 = torch.clamp(eij.pow(2) - pxij.pow(2) - pyij.pow(2) - pzij.pow(2), min=0.0)
-    return torch.stack([dr, torch.abs(deta), torch.cos(dphi), torch.log1p(mass2)], dim=1)
+    out = torch.stack([dr, torch.abs(deta), torch.cos(dphi), torch.log1p(mass2)], dim=1)
+    if apply_mask:
+        out = out * pair_validity_mask(fourvec).unsqueeze(1)
+    return out
+
+
+class FixedStandardize(nn.Module):
+    """Standardization with statistics fitted offline, held in buffers.
+
+    Replaces the input BatchNorm1d of PairEmbed. BatchNorm would accumulate running
+    statistics over every entry of the pair grid, including the ~28% that are degenerate,
+    and then apply those statistics to the real pairs. Masking the degenerate entries to
+    zero does not fix that -- it just replaces varying garbage with a spike at 0 that is
+    still outside the real distribution. Fitting on valid pairs only, offline, does.
+
+    Buffers are part of the state_dict, so evaluation restores them with the weights,
+    matching how the object and global feature statistics already travel.
+    """
+
+    def __init__(self, num_features: int) -> None:
+        super().__init__()
+        self.register_buffer('mean', torch.zeros(num_features))
+        self.register_buffer('std', torch.ones(num_features))
+        self.register_buffer('fitted', torch.zeros(1))
+
+    def set_statistics(self, mean, std, eps: float = 1.0e-6) -> None:
+        with torch.no_grad():
+            mean_tensor = torch.as_tensor(mean, dtype=self.mean.dtype).reshape(-1)
+            std_tensor = torch.as_tensor(std, dtype=self.std.dtype).reshape(-1)
+            std_tensor = torch.where(std_tensor > eps, std_tensor, torch.ones_like(std_tensor))
+            self.mean.copy_(mean_tensor)
+            self.std.copy_(std_tensor)
+            self.fitted.fill_(1.0)
+
+    @property
+    def is_fitted(self) -> bool:
+        return bool(self.fitted.item() > 0.0)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return (x - self.mean.to(x.dtype)[None, :, None]) / self.std.to(x.dtype)[None, :, None]
 
 
 def masked_attention_bias_value(dtype: torch.dtype) -> float:
@@ -100,12 +163,17 @@ def masked_attention_bias_value(dtype: torch.dtype) -> float:
 
 
 class PairEmbed(nn.Module):
-    def __init__(self, input_dim: int, num_heads: int) -> None:
+    def __init__(self, input_dim: int, num_heads: int, mask_pair_features: bool = True) -> None:
         super().__init__()
         hidden = 3 * num_heads
         self.num_heads = num_heads
+        self.mask_pair_features = mask_pair_features
+        # Input normalization is a fixed, offline-fitted standardization rather than a
+        # BatchNorm; see FixedStandardize. The deeper BatchNorms still see the degenerate
+        # entries, but once the input is masked those collapse to a constant (the conv
+        # bias) instead of a jet-kinematics-dependent signal.
+        self.input_norm = FixedStandardize(input_dim)
         self.net = nn.Sequential(
-            nn.BatchNorm1d(input_dim),
             nn.SiLU(),
             nn.Conv1d(input_dim, hidden, kernel_size=1),
             nn.BatchNorm1d(hidden),
@@ -117,9 +185,10 @@ class PairEmbed(nn.Module):
         )
 
     def forward(self, fourvec: torch.Tensor, padding_mask: torch.Tensor | None = None) -> torch.Tensor:
-        pair = pairwise_hmumu_features(fourvec)
+        pair = pairwise_hmumu_features(fourvec, apply_mask=self.mask_pair_features)
         batch, _, seq, _ = pair.shape
-        out = self.net(pair.reshape(batch, pair.shape[1], seq * seq))
+        flat = pair.reshape(batch, pair.shape[1], seq * seq)
+        out = self.net(self.input_norm(flat))
         out = out.reshape(batch, self.num_heads, seq, seq)
         if padding_mask is not None:
             invalid = padding_mask[:, None, None, :].expand(-1, self.num_heads, seq, -1)
@@ -178,7 +247,7 @@ class MinimalHMuMuTransformer(nn.Module):
         self.global_input = InputProcess(7, config.embed_dim)
         self.object_id_embedding = nn.Embedding(config.num_object_ids, config.embed_dim, padding_idx=0)
         self.use_object_id_embedding = config.use_object_id_embedding
-        self.pair_embed = PairEmbed(config.pair_input_dim, config.num_heads)
+        self.pair_embed = PairEmbed(config.pair_input_dim, config.num_heads, config.mask_pair_features)
         self.object_layers = nn.ModuleList([
             ObjectEncoderLayer(config.embed_dim, config.num_heads, config.dropout, config.use_swiglu)
             for _ in range(config.num_object_encoder_layers)
@@ -196,6 +265,14 @@ class MinimalHMuMuTransformer(nn.Module):
         nn.init.trunc_normal_(self.cls_token, std=0.02)
         nn.init.xavier_uniform_(self.head.weight)
         nn.init.zeros_(self.head.bias)
+
+    def set_pair_normalization(self, mean, std) -> None:
+        """Install the valid-pair-only standardization statistics fitted on the train split."""
+        self.pair_embed.input_norm.set_statistics(mean, std)
+
+    @property
+    def pair_normalization_fitted(self) -> bool:
+        return self.pair_embed.input_norm.is_fitted
 
     def forward(self, object_features: torch.Tensor, global_features: torch.Tensor, padding_mask: torch.Tensor | None = None) -> torch.Tensor:
         continuous = object_features[:, :, :5]

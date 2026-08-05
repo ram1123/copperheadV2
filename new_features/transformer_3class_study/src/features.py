@@ -85,6 +85,10 @@ COLUMN_ALIASES: dict[str, list[str]] = {
     'dimuon_pt': ['dimuon_pt'],
     'dimuon_eta': ['dimuon_eta', 'dimuon_rapidity'],
     'dimuon_phi': ['dimuon_phi'],
+    # Metadata only. Read so the DisCo penalty can decorrelate the score from it, and
+    # deliberately absent from OBJECT_FEATURES and GLOBAL_FEATURES: it must never be fed
+    # to the transformer. The dimuon token is still built with mass=0.
+    'dimuon_mass': ['dimuon_mass'],
     'htsoft2': ['htsoft2_nominal', 'htsoft2'],
     'htsoft5': ['htsoft5_nominal', 'htsoft5'],
     'met_pt': ['PuppiMET_pt', 'MET_pt_nominal', 'MET_pt'],
