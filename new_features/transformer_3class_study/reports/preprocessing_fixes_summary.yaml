@@ -1,0 +1,412 @@
+generated_at: '2026-08-05T16:17:29Z'
+study: transformer_3class_study_2017
+year: 2017
+task_id: transformer-3class-preprocessing-fixes-2017
+continuation_of: transformer-3class-study-2017
+evidence_sample:
+  events_used: 11997
+  train_events_used: 8398
+  max_files_per_sample: 1
+  max_events_per_class: 4000
+fixes:
+  FIX-1-weights:
+    title: Per-class training-weight normalization
+    problem: The loss is sum(loss_i * w_i) / sum(w_i), so a class contributes in proportion to its summed weight. Raw absolute
+      MC weights span ~7e4 between samples, so the signal classes contributed ~1e-5 of the gradient. The count-based inverse_sqrt_frequency
+      factor could not help because max_events_per_class had already equalized the counts.
+    change: Fit per-class scales on the train split that equalize each class total weight; disable class_balance.
+    files:
+    - src/losses.py
+    - src/data.py
+    - scripts/train.py
+    - configs/study_config.yaml
+    evidence:
+      weight_normalization:
+        strategy: per_class_equal_sum
+        fitted_on: train
+        num_classes: 3
+        class_weight_scales:
+        - 112.45502707071898
+        - 3017.2345407247367
+        - 0.334361368939888
+        raw_class_weight_sums:
+        - 2.9812569388741395
+        - 0.11111410970568159
+        - 1002.6796182490007
+        class_event_counts:
+        - 7000
+        - 7000
+        - 6780
+        target_weight_sum_per_class: 335.25732976586016
+        raw_max_over_min_class_weight_sum: 9023.87303381085
+      train_raw_class_weight_sums:
+      - 2.9812569388741395
+      - 0.11111410970568159
+      - 1002.6796182490007
+      train_normalized_class_weight_sums:
+      - 335.2573296856135
+      - 335.25732977082953
+      - 335.2573299478115
+      train_raw_ratio: 9023.87303381085
+      train_normalized_ratio: 1.0000000007820797
+      class_weight_sums_equalized: true
+      class_balance_strategy: none
+  FIX-2-log1p:
+    title: log1p for non-negative global magnitudes
+    problem: ln(clip(x, 1e-6)) mapped a physical zero to -13.8. htsoft5 is zero in a large fraction of events, so that spike
+      dominated the standardization mean and std.
+    change: Use log1p for htsoft2, htsoft5, MET pt, and MET sumEt; record the transform in the checkpoint.
+    files:
+    - src/features.py
+    - configs/study_config.yaml
+    evidence:
+      features:
+        global_ln_htsoft2:
+          raw_branch: htsoft2
+          transform: log1p(max(htsoft2, 0))
+          zero_valued_fraction: 0.0447725648964039
+          zero_valued_events: 376
+          old_ln_clip:
+            value_at_zero: -13.815510749816895
+            mean: 2.132075309753418
+            std: 3.7938296794891357
+            min: -13.815510749816895
+          new_log1p:
+            value_at_zero: 0.0
+            mean: 2.937098264694214
+            std: 1.1865090131759644
+            min: 0.0
+          old_zero_spike_distance_in_std: 4.4005842208862305
+          new_zero_spike_distance_in_std: 2.5914368629455566
+        global_ln_htsoft5:
+          raw_branch: htsoft5
+          transform: log1p(max(htsoft5, 0))
+          zero_valued_fraction: 0.21624196237199333
+          zero_valued_events: 1816
+          old_ln_clip:
+            value_at_zero: -13.815510749816895
+            mean: -1.874479055404663
+            std: 6.855065822601318
+            min: -13.815510749816895
+          new_log1p:
+            value_at_zero: 0.0
+            mean: 1.8617408275604248
+            std: 1.5442090034484863
+            min: 0.0
+          old_zero_spike_distance_in_std: 2.2225329875946045
+          new_zero_spike_distance_in_std: 1.5382648706436157
+        global_MET_ln_pt:
+          raw_branch: met_pt
+          transform: log1p(max(MET_pt, 0))
+          zero_valued_fraction: 0.0
+          zero_valued_events: 0
+          old_ln_clip:
+            value_at_zero: null
+            mean: 3.238213062286377
+            std: 0.8318367004394531
+            min: -2.194031000137329
+          new_log1p:
+            value_at_zero: null
+            mean: 3.292833089828491
+            std: 0.7796361446380615
+            min: 0.10568033903837204
+        global_MET_ln_e:
+          raw_branch: met_e
+          transform: log1p(max(PuppiMET_sumEt, 0))
+          zero_valued_fraction: 0.0
+          zero_valued_events: 0
+          old_ln_clip:
+            value_at_zero: null
+            mean: 5.753575325012207
+            std: 0.43677422404289246
+            min: 4.095905780792236
+          new_log1p:
+            value_at_zero: null
+            mean: 5.757046699523926
+            std: 0.43532678484916687
+            min: 4.112409591674805
+  FIX-3-amp:
+    title: 'AMP re-enabled: GradScaler-aware health check, plus a finite fp16 mask sentinel'
+    problem: 'AMP was disabled with the note "float16 attention produced non-finite gradients". The observation was real but
+      misattributed: GradScaler intentionally starts at an optimistic loss scale, overflows the first backward, skips that
+      step, and halves the scale. The validation asserted finite gradients on that first step, so it could only ever see the
+      designed transient.'
+    change: Judge AMP over several steps, counting only steps the scaler applied (src/amp_health.py). Separately, replace
+      the float16 attention-mask sentinel finfo.min with a finite -1e4 to remove a genuine overflow hazard.
+    hypothesis_tested_and_rejected: 'The review originally attributed the AMP failure to the finfo.min sentinel. Tested directly
+      on real 2017 events: with the OLD sentinel, float16 forward/backward produced finite gradients on every applied step,
+      both at initialization and over 120 training steps. The sentinel was therefore not the cause; it is retained as hardening
+      only.'
+    files:
+    - src/amp_health.py
+    - src/utils.py
+    - src/model.py
+    - scripts/train.py
+    - scripts/validate_model.py
+    evidence:
+      amp:
+        sentinel_hardening:
+          old_sentinel_float16: -65504.0
+          new_sentinel_float16: -10000.0
+          new_sentinel_float32: -1000000000.0
+          old_sentinel_overflow_threshold_delta: -16.0
+          old_sentinel_overflow_note: torch.finfo(float16).min (-65504.0) becomes -inf once an additional score below -16.0
+            is added, which is a real hazard but was NOT the observed failure.
+          new_sentinel_stays_finite: true
+          masked_key_attention_weight: 0.0
+          masked_key_attention_is_zero: true
+        root_cause:
+          summary: GradScaler starts at an optimistic loss scale and lets the first backward overflow float16 on purpose,
+            then halves the scale and retries. The previous validation asserted finite gradients on that first step, so it
+            reported the scaler working as designed as a model defect and disabled AMP permanently.
+          gradscaler_default_init_scale: 65536.0
+          fix: probe_amp_health runs several steps and judges only the steps the scaler actually applied.
+          reproduction: 'Reproduced directly at batch size 256 on real 2017 events: 8 of 67 gradient tensors were non-finite
+            at step 0 with loss scale 65536; the scaler halved to 32768 and every step from step 1 onward had finite gradients.
+            Whether step 0 overflows is configuration-dependent (batch size, weighting, first-batch composition), which is
+            why a single-step assertion is the wrong test regardless of whether it happens to pass.'
+      validation_amp:
+        amp_enabled: true
+        amp_dtype: float16
+        gradient_scaler_enabled: true
+        amp_requested: true
+        masked_attention_bias_float16: -10000.0
+        masked_attention_bias_float32: -1000000000.0
+        full_precision_required: null
+      validation_amp_health:
+        amp_used: true
+        steps_run: 4
+        steps_applied: 4
+        steps_skipped_by_scaler: 0
+        applied_steps_with_finite_gradients: 4
+        first_step_gradients_finite: true
+        initial_loss_scale: 65536.0
+        final_loss_scale: 65536.0
+        records:
+        - step: 0
+          loss: 1.188434362411499
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        - step: 1
+          loss: 1.2170681953430176
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        - step: 2
+          loss: 1.2000941038131714
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        - step: 3
+          loss: 0.9841289520263672
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        healthy: true
+        diagnosis: null
+      validation_loss_finite: true
+      validation_gradients_finite: true
+      validation_parameters_updated: true
+      training_amp:
+        amp_enabled: true
+        amp_dtype: float16
+        gradient_scaler_enabled: true
+        amp_requested: true
+        full_precision_required: null
+        masked_attention_bias_float16: -10000.0
+        masked_attention_bias_float32: -1000000000.0
+        amp_disable_reason: null
+        amp_validated_gradients_finite: true
+      training_amp_health:
+        amp_used: true
+        steps_run: 4
+        steps_applied: 4
+        steps_skipped_by_scaler: 0
+        applied_steps_with_finite_gradients: 4
+        first_step_gradients_finite: true
+        initial_loss_scale: 65536.0
+        final_loss_scale: 65536.0
+        records:
+        - step: 0
+          loss: 0.8459617495536804
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        - step: 1
+          loss: 0.0878295972943306
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        - step: 2
+          loss: 0.014503608457744122
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        - step: 3
+          loss: 0.005192660726606846
+          loss_finite: true
+          gradients_finite: true
+          loss_scale_before: 65536.0
+          loss_scale_after: 65536.0
+          step_skipped_by_scaler: false
+        healthy: true
+        diagnosis: null
+  FIX-4-lr-schedule:
+    title: Linear warmup into cosine decay
+    problem: Plain AdamW at a constant LR; pre-norm transformers are unstable without warmup.
+    change: 'LambdaLR stepped per optimizer step: linear warmup, then cosine decay to a floor.'
+    files:
+    - src/schedule.py
+    - scripts/train.py
+    - scripts/validate_model.py
+    - configs/study_config.yaml
+    evidence:
+      schedule:
+        schedule: cosine
+        total_steps: 164
+        warmup_steps: 8
+        warmup_fraction_requested: 0.05
+        min_lr_ratio: 0.01
+        base_learning_rates:
+        - 0.0001
+        enabled: true
+        peak_multiplier: 1.0
+        final_multiplier: 0.010100371652499187
+        steps_per_epoch: 82
+        epochs: 2
+      curve:
+      - step: 0
+        lr_multiplier: 0.125
+      - step: 7
+        lr_multiplier: 1.0
+      - step: 8
+        lr_multiplier: 1.0
+      - step: 15
+        lr_multiplier: 0.9950897623407762
+      - step: 30
+        lr_multiplier: 0.9522079651321392
+      - step: 44
+        lr_multiplier: 0.875512820344695
+      - step: 59
+        lr_multiplier: 0.7610822180179401
+      - step: 74
+        lr_multiplier: 0.6234612538223411
+      - step: 89
+        lr_multiplier: 0.47511264377596835
+      - step: 104
+        lr_multiplier: 0.3294705809139448
+      - step: 119
+        lr_multiplier: 0.19972415804887117
+      - step: 133
+        lr_multiplier: 0.10336796991449632
+      - step: 148
+        lr_multiplier: 0.035474461236162984
+      - step: 163
+        lr_multiplier: 0.010100371652499187
+      validation_lr_base: 0.0001
+      validation_lr_at_construction: 5.0e-05
+      validation_lr_after_one_step: 0.0001
+      validation_warmup_applied: true
+      per_epoch_learning_rates:
+      - epoch: 1
+        optimizer_steps: 82
+        lr_first: 1.25e-05
+        lr_max: 0.0001
+        lr_last: 5.5475839368058104e-05
+      - epoch: 2
+        optimizer_steps: 82
+        lr_first: 5.4483095151477944e-05
+        lr_max: 5.4483095151477944e-05
+        lr_last: 1.0100371652499187e-06
+  FIX-5-input-clip:
+    title: Clipping of standardized inputs
+    problem: Standardized features had unbounded tails; ParT-style pipelines clip them.
+    change: Clip standardized object and global features to a symmetric bound persisted with the normalization statistics.
+    files:
+    - src/data.py
+    - scripts/train.py
+    - scripts/validate_model.py
+    - configs/study_config.yaml
+    evidence:
+      recomputed:
+        standardized_clip: 5.0
+        n_standardized_values: 232911
+        values_beyond_clip_before: 36
+        fraction_beyond_clip_before: 0.00015456547780053325
+        max_abs_object_before: 7.772290229797363
+        max_abs_object_after: 5.0
+        max_abs_global_before: 5.315924644470215
+        max_abs_global_after: 5.0
+        padded_tokens_still_zero: true
+      per_split:
+        train:
+          max_abs_standardized_object_feature: 5.0
+          max_abs_standardized_global_feature: 5.0
+          clip_bound_respected: true
+        val:
+          max_abs_standardized_object_feature: 5.0
+          max_abs_standardized_global_feature: 5.0
+          clip_bound_respected: true
+        test:
+          max_abs_standardized_object_feature: 5.0
+          max_abs_standardized_global_feature: 4.707637786865234
+          clip_bound_respected: true
+      clip_respected_all_splits: true
+out_of_scope_known_issues:
+- Pair features are not masked before the PairEmbed BatchNorm, so degenerate pad pairs still set its running statistics.
+- InputProcess applies RMSNorm across the 5-dim feature axis, which partially undoes the per-feature standardization.
+- The dimuon mass is still reconstructible from the mu1/mu2 tokens and their pairwise invariant mass.
+- Normalization statistics are pooled across the heterogeneous token types.
+- checkpoint_payload in scripts/train.py has unreachable plotting code after its return statement; the accuracy curve is therefore
+  never regenerated.
+downstream_metrics:
+  smoke_test_accuracy: 0.6356693620844565
+  smoke_test_events: 4452
+  smoke_per_class:
+    ggH:
+      n_events: 1500
+      accuracy: 0.5906666666666667
+      mean_assigned_probability: 0.4570537805557251
+    VBF:
+      n_events: 1500
+      accuracy: 0.778
+      mean_assigned_probability: 0.6474733352661133
+    bkg:
+      n_events: 1452
+      accuracy: 0.5351239669421488
+      mean_assigned_probability: 0.4519728124141693
+  evaluation_accuracy: 0.6356693620844565
+  evaluation_events: 4452
+  evaluation_per_class:
+    ggH:
+      n_events: 1500
+      accuracy: 0.5906666666666667
+      mean_assigned_probability: 0.4570537805557251
+    VBF:
+      n_events: 1500
+      accuracy: 0.778
+      mean_assigned_probability: 0.6474733352661133
+    bkg:
+      n_events: 1452
+      accuracy: 0.5351239669421488
+      mean_assigned_probability: 0.4519728124141693
+  note: Smoke-scale run only; not a production performance statement.
+source_artifacts:
+  model_validation: /work/users/yun79/sideHustle2/copperheadV2/new_features/transformer_3class_study/outputs/metrics/model_validation.yaml
+  smoke_train_metrics: /work/users/yun79/sideHustle2/copperheadV2/new_features/transformer_3class_study/outputs/metrics/smoke_train_metrics.yaml
+  eval_test_metrics: /work/users/yun79/sideHustle2/copperheadV2/new_features/transformer_3class_study/outputs/metrics/eval_test_metrics.yaml

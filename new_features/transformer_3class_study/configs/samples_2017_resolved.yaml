@@ -1,0 +1,285 @@
+year: 2017
+stage1_root: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017
+dataset_subdir: compacted
+class_mapping:
+  ggH: 0
+  VBF: 1
+  bkg: 2
+sample_resolution_notes:
+- Parsed from configs/samples/samples.yaml for the requested year.
+- Data samples are excluded.
+- dy_VBF_filter is excluded as a DY overlap guard.
+- Historical ST and zz aliases are resolved to existing Stage1 directory names when needed.
+- For DY samples, train_wgt is wgt_nominal divided by separate_wgt_zpt when that branch exists and is nonzero.
+samples:
+- name: ggh_powhegPS
+  class_name: ggH
+  class_index: 0
+  source_group: signal/GGH
+  yaml_name: ggh_powhegPS
+  n_files: 10
+  sample_name: ggh_powhegPS
+  original_yaml_entry: ggh_powhegPS
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/ggh_powhegPS
+  assigned_class: ggH
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: vbf_powheg_dipole
+  class_name: VBF
+  class_index: 1
+  source_group: signal/VBF
+  yaml_name: vbf_powheg_dipole
+  n_files: 20
+  sample_name: vbf_powheg_dipole
+  original_yaml_entry: vbf_powheg_dipole
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/vbf_powheg_dipole
+  assigned_class: VBF
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: dyTo2Mu_M-50_MiNNLO
+  class_name: bkg
+  class_index: 2
+  source_group: background/DY
+  yaml_name: dyTo2Mu_M-50_MiNNLO
+  n_files: 1551
+  sample_name: dyTo2Mu_M-50_MiNNLO
+  original_yaml_entry: dyTo2Mu_M-50_MiNNLO
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/dyTo2Mu_M-50_MiNNLO
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: dyTo2Mu_M-100to200_MiNNLO
+  class_name: bkg
+  class_index: 2
+  source_group: background/DY
+  yaml_name: dyTo2Mu_M-100to200_MiNNLO
+  n_files: 34
+  sample_name: dyTo2Mu_M-100to200_MiNNLO
+  original_yaml_entry: dyTo2Mu_M-100to200_MiNNLO
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/dyTo2Mu_M-100to200_MiNNLO
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: ttjets_dl
+  class_name: bkg
+  class_index: 2
+  source_group: background/TT
+  yaml_name: ttjets_dl
+  n_files: 1037
+  sample_name: ttjets_dl
+  original_yaml_entry: ttjets_dl
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/ttjets_dl
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: ttjets_sl
+  class_name: bkg
+  class_index: 2
+  source_group: background/TT
+  yaml_name: ttjets_sl
+  n_files: 206
+  sample_name: ttjets_sl
+  original_yaml_entry: ttjets_sl
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/ttjets_sl
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: st_tW_top
+  class_name: bkg
+  class_index: 2
+  source_group: background/ST
+  yaml_name: st_tw_top
+  n_files: 42
+  sample_name: st_tW_top
+  original_yaml_entry: st_tw_top
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/st_tW_top
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: st_tW_antitop
+  class_name: bkg
+  class_index: 2
+  source_group: background/ST
+  yaml_name: st_tw_antitop
+  n_files: 42
+  sample_name: st_tW_antitop
+  original_yaml_entry: st_tw_antitop
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/st_tW_antitop
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: st_tchannel_top
+  class_name: bkg
+  class_index: 2
+  source_group: background/ST
+  yaml_name: st_t_top
+  n_files: 23
+  sample_name: st_tchannel_top
+  original_yaml_entry: st_t_top
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/st_tchannel_top
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: st_tchannel_antitop
+  class_name: bkg
+  class_index: 2
+  source_group: background/ST
+  yaml_name: st_t_antitop
+  n_files: 13
+  sample_name: st_tchannel_antitop
+  original_yaml_entry: st_t_antitop
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/st_tchannel_antitop
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: ewk_zlljj
+  class_name: bkg
+  class_index: 2
+  source_group: background/EWK
+  yaml_name: ewk_zlljj
+  n_files: 3
+  sample_name: ewk_zlljj
+  original_yaml_entry: ewk_zlljj
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/ewk_zlljj
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: ww_2l2nu
+  class_name: bkg
+  class_index: 2
+  source_group: background/VV
+  yaml_name: ww_2l2nu
+  n_files: 12
+  sample_name: ww_2l2nu
+  original_yaml_entry: ww_2l2nu
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/ww_2l2nu
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: wz_1l1nu2q
+  class_name: bkg
+  class_index: 2
+  source_group: background/VV
+  yaml_name: wz_1l1nu2q
+  n_files: 1
+  sample_name: wz_1l1nu2q
+  original_yaml_entry: wz_1l1nu2q
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/wz_1l1nu2q
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: wz_2l2q
+  class_name: bkg
+  class_index: 2
+  source_group: background/VV
+  yaml_name: wz_2l2q
+  n_files: 87
+  sample_name: wz_2l2q
+  original_yaml_entry: wz_2l2q
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/wz_2l2q
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: wz_3lnu
+  class_name: bkg
+  class_index: 2
+  source_group: background/VV
+  yaml_name: wz_3lnu
+  n_files: 15
+  sample_name: wz_3lnu
+  original_yaml_entry: wz_3lnu
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/wz_3lnu
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: zz_2l2q
+  class_name: bkg
+  class_index: 2
+  source_group: background/VV
+  yaml_name: zz
+  n_files: 99
+  sample_name: zz_2l2q
+  original_yaml_entry: zz
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/zz_2l2q
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: zz_4l
+  class_name: bkg
+  class_index: 2
+  source_group: background/VV
+  yaml_name: zz
+  n_files: 207
+  sample_name: zz_4l
+  original_yaml_entry: zz
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/zz_4l
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: www
+  class_name: bkg
+  class_index: 2
+  source_group: background/VVV
+  yaml_name: www
+  n_files: 4
+  sample_name: www
+  original_yaml_entry: www
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/www
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: wwz
+  class_name: bkg
+  class_index: 2
+  source_group: background/VVV
+  yaml_name: wwz
+  n_files: 7
+  sample_name: wwz
+  original_yaml_entry: wwz
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/wwz
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: wzz
+  class_name: bkg
+  class_index: 2
+  source_group: background/VVV
+  yaml_name: wzz
+  n_files: 10
+  sample_name: wzz
+  original_yaml_entry: wzz
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/wzz
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+- name: zzz
+  class_name: bkg
+  class_index: 2
+  source_group: background/VVV
+  yaml_name: zzz
+  n_files: 15
+  sample_name: zzz
+  original_yaml_entry: zzz
+  resolved_stage1_path: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017/compacted/zzz
+  assigned_class: bkg
+  status: included
+  reason: resolved from 2017 samples.yaml and present in Stage1 compacted directory
+excluded:
+- yaml_name: dy_VBF_filter
+  source_group: background/DYVBF
+  reason: excluded overlap sample for this inclusive-DY smoke study
+- yaml_name: data_B
+  source_group: data
+  reason: data excluded from supervised MC training
+- yaml_name: data_C
+  source_group: data
+  reason: data excluded from supervised MC training
+- yaml_name: data_D
+  source_group: data
+  reason: data excluded from supervised MC training
+- yaml_name: data_E
+  source_group: data
+  reason: data excluded from supervised MC training
+- yaml_name: data_F
+  source_group: data
+  reason: data excluded from supervised MC training

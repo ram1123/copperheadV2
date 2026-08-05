@@ -1,0 +1,106 @@
+study:
+  name: transformer_3class_study_2017
+  year: 2017
+  seed: 12345
+  stage1_root: /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_METphiXYCorr_Jul26_2026/stage1_output/2017
+  dataset_subdir: compacted
+  source_transformer_repo: /work/users/hu1027/b-hive-h-mu-mu
+  source_model_config: /work/users/hu1027/b-hive-h-mu-mu/config/HMuMu_ParT_12Apr2026.yml
+  source_model_file: /work/users/hu1027/b-hive-h-mu-mu/utils/models/particletransformer2.py
+  source_model_name: ParticleTransformer_HMuMu
+  copperhead_samples_yaml: configs/samples/samples.yaml
+  resolved_samples_yaml: new_features/transformer_3class_study/configs/samples_2017_resolved.yaml
+  output_dir: new_features/transformer_3class_study/outputs
+  reports_dir: new_features/transformer_3class_study/reports
+  logs_dir: new_features/transformer_3class_study/logs
+
+classes:
+  - name: ggH
+    index: 0
+    output: p_ggH
+  - name: VBF
+    index: 1
+    output: p_VBF
+  - name: bkg
+    index: 2
+    output: p_bkg
+
+features:
+  object_order: [mu1, mu2, jet1, jet2, dimuon]
+  object_features: [physObj_ln_pt, physObj_ln_e, physObj_eta, physObj_sin_phi, physObj_cos_phi, physObj_id, physObj_pt_4v, physObj_eta_4v, physObj_phi_4v, physObj_energy_4v]
+  global_features: [global_ln_htsoft2, global_ln_htsoft5, global_MET_ln_pt, global_MET_ln_e, global_MET_sin_phi, global_MET_cos_phi, global_n_jets]
+  training_weight_feature: train_wgt
+  event_weight_feature: event_wgt
+  nominal_systematic_suffix: nominal
+  met_energy_proxy: PuppiMET_sumEt
+  # Non-negative magnitudes (htsoft2, htsoft5, MET pt, MET sumEt) use log1p rather than
+  # ln(clip(x, 1e-6)): htsoft5 is zero in 17-29% of 2017 events, and the ln floor put
+  # those at -13.8, which then dominated the standardization statistics.
+  global_magnitude_transform: log1p
+  # Symmetric bound applied to standardized object and global features. Persisted with
+  # the normalization statistics so evaluate.py reproduces it from the checkpoint.
+  standardized_clip: 5.0
+
+model:
+  embed_dim: 128
+  num_heads: 8
+  num_object_encoder_layers: 3
+  num_cls_layers: 1
+  dropout: 0.1
+  pair_input_dim: 4
+  num_classes: 3
+  num_object_ids: 7
+  use_swiglu: true
+  use_object_id_embedding: true
+
+training:
+  seed: 12345
+  epochs: 2
+  batch_size: 256
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  num_workers: 0
+  train_fraction: 0.70
+  val_fraction: 0.15
+  test_fraction: 0.15
+  weight_strategy: absolute_event_weight
+  evaluation_weight_strategy: signed_nominal
+  gradient_accumulation_steps: 1
+  gradient_clip_norm: 5.0
+  # Disabled on purpose. Per-class training-weight normalization (weight_normalization
+  # below) already equalizes each class's contribution to the loss; the count-based
+  # inverse_sqrt_frequency factor would correct the same imbalance a second time, and
+  # with max_events_per_class set it collapses to ~1 anyway.
+  class_balance: none
+  # The loss is sum(loss_i * w_i) / sum(w_i), so a class contributes in proportion to its
+  # SUMMED weight. Raw absolute MC weights span ~7e4 between samples, which left the
+  # signal classes numerically absent from the objective.
+  weight_normalization: per_class_equal_sum
+  # Linear warmup into cosine decay, stepped per optimizer step.
+  lr_schedule: cosine
+  warmup_fraction: 0.05
+  warmup_steps: null
+  min_lr_ratio: 0.01
+  # GradScaler starts at an optimistic loss scale (65536) and deliberately lets the first
+  # backward overflow float16 before halving. Judging AMP on a single step therefore
+  # reports the scaler's designed warm-up as a model failure -- that is what disabled AMP
+  # previously. The probe runs several steps and only counts steps the scaler applied.
+  amp_probe_steps: 4
+  amp_init_scale: null
+  max_events_per_class: 10000
+  max_files_per_sample: 1
+
+runtime:
+  device: auto
+  require_cuda_when_available: true
+  cuda:
+    max_memory_gib: 5.0
+    target_peak_allocated_gib: 4.5
+    automatic_mixed_precision: true
+    select_device_by_free_memory: true
+    allow_silent_cpu_fallback: false
+    empty_cache_between_phases: true
+
+device:
+  default: auto
+  cuda_memory_limit_gib: 5

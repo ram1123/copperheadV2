@@ -1,0 +1,388 @@
+generated_at: '2026-08-03T21:43:33Z'
+source_repo:
+  path: /work/users/hu1027/b-hive-h-mu-mu
+  branch: dev_may26_binary
+  commit: a64b79cf5ddc1ade41dbdb071347108e11f6463e
+  status_short: "M commands.md\n M pixi.lock\n M pixi.toml\n M run_score_multiple_models.sh\n?? .gitattributes\n?? b_hive_environment.yaml\n\
+    ?? vbf_dnn_note_model_spec.md"
+source_model_file: /work/users/hu1027/b-hive-h-mu-mu/utils/models/particletransformer2.py
+source_model_config: /work/users/hu1027/b-hive-h-mu-mu/config/HMuMu_ParT_12Apr2026.yml
+source_model_name: ParticleTransformer_HMuMu
+classes_found:
+- CLS_TransformerEncoder
+- CLS_TransformerEncoderLayer
+- HF_TransformerEncoder
+- HF_TransformerEncoderLayer
+- PairEmbed
+- ParticleTransformer2
+- ParticleTransformer2_JetClass
+- ParticleTransformer_HMuMu
+- ParticleTransformer_HMuMu_GgHVsVBF_w_wgt
+- ParticleTransformer_HMuMu_w_wgt
+- RMSNorm
+- SwiGLU
+source_truth_order:
+- is_bkg
+- is_ggH
+- is_VBF
+source_global_features:
+- global_ln_htsoft2
+- global_ln_htsoft5
+- global_MET_ln_pt
+- global_MET_ln_e
+- global_MET_sin_phi
+- global_MET_cos_phi
+- global_n_jets
+- train_wgt
+- event_wgt
+source_cpf_candidates:
+- physObj_ln_pt
+- physObj_ln_e
+- physObj_eta
+- physObj_sin_phi
+- physObj_cos_phi
+- physObj_id
+- physObj_pt_4v
+- physObj_eta_4v
+- physObj_phi_4v
+- physObj_energy_4v
+source_n_cpf_candidates: 5
+source_training_weight_feature: train_wgt
+source_related_training_files:
+- utils/models/base_model.py
+source_related_evaluation_files:
+- scripts/score_parquet_with_hmumu_model.py
+- scripts/plot_attention_maps.py
+source_related_preprocessing_files:
+- utils/dataset/structured_arrays.py
+- utils/coffea_processors/pf_candidate_and_vertex.py
+source_git_history_evidence:
+- ff2f6dc Improve the writting scores back
+- 07bc4e6 Fix plotting for ablation test, and add scoring feature for binary model
+- 5e72a86 Repair the scoring script
+- 7cd5f5e Repair the score writing back script
+- 5d718be "Add binary classier"
+- 62f1702 Fix weighted inference
+- b25642c Add weighted train and modify preprocess
+- 3c9f000 Modify the pairwise features
+- 8a70efb Add Ablation Feature
+- 2e3c5d0 Add early stop
+- 51ea5a2 Fix some errors
+- 'b8a1a48 Add feature: compact and add score to parquet files.'
+- 77f0d28 Remove unnecessary files and dependencies.
+- e9c3e65 Update preprocessing and model token definitions
+- b803d66 Add attention map plots & Stop tracking data directory
+- 760705b Added preprocessing of H->MuMu for paraticle transformer + weighted training
+source_selected_class_line: 1124
+alternate_transformers_considered:
+- name: ParticleTransformer_HMuMu_w_wgt
+  line: 856
+  reason_not_selected: Weighted source variant uses the same HMuMu architecture but extracts train_wgt from the input for
+    loss weighting; the study implements external absolute event weights explicitly.
+- name: ParticleTransformer_HMuMu_GgHVsVBF_w_wgt
+  line: 1068
+  reason_not_selected: Binary ggH-vs-VBF specialization cannot provide the requested three output probabilities including
+    background.
+- name: ParticleTransformer2_JetClass
+  line: 757
+  reason_not_selected: JetClass entry point is a generic/non-HMuMu architecture and does not match the Hmumu object/global-token
+    contract.
+source_architecture:
+  selected_class: ParticleTransformer_HMuMu
+  num_classes: 3
+  num_object_encoder_layers: 3
+  num_attention_heads: 8
+  embedding_dimension: 128
+  dropout: 0.1
+  feed_forward: SwiGLU FFN with 4x hidden width after gating
+  normalization: RMSNorm pre-normalization
+  pooling: learned class token with class-token attention over object tokens plus a global token
+  pairwise_bias: PairEmbed over pt/eta/phi/energy-derived pairwise features
+  selected_model_line: 1124
+study_feature_contract:
+  classes:
+    ggH: 0
+    VBF: 1
+    bkg: 2
+  source_class_order:
+  - bkg
+  - ggH
+  - VBF
+  study_class_order:
+  - ggH
+  - VBF
+  - bkg
+  object_order:
+  - mu1
+  - mu2
+  - jet1
+  - jet2
+  - dimuon
+  object_features:
+  - physObj_ln_pt
+  - physObj_ln_e
+  - physObj_eta
+  - physObj_sin_phi
+  - physObj_cos_phi
+  - physObj_id
+  - physObj_pt_4v
+  - physObj_eta_4v
+  - physObj_phi_4v
+  - physObj_energy_4v
+  global_features:
+  - global_ln_htsoft2
+  - global_ln_htsoft5
+  - global_MET_ln_pt
+  - global_MET_ln_e
+  - global_MET_sin_phi
+  - global_MET_cos_phi
+  - global_n_jets
+  column_aliases:
+    event:
+    - event
+    run:
+    - run
+    luminosityBlock:
+    - luminosityBlock
+    year:
+    - year
+    wgt_nominal:
+    - wgt_nominal
+    separate_wgt_zpt:
+    - separate_wgt_zpt
+    mu1_pt:
+    - mu1_pt
+    mu1_eta:
+    - mu1_eta
+    mu1_phi:
+    - mu1_phi
+    mu2_pt:
+    - mu2_pt
+    mu2_eta:
+    - mu2_eta
+    mu2_phi:
+    - mu2_phi
+    jet1_pt:
+    - jet1_pt_nominal
+    - jet1_pt
+    jet1_eta:
+    - jet1_eta_nominal
+    - jet1_eta
+    jet1_phi:
+    - jet1_phi_nominal
+    - jet1_phi
+    jet1_mass:
+    - jet1_mass_nominal
+    - jet1_mass
+    jet2_pt:
+    - jet2_pt_nominal
+    - jet2_pt
+    jet2_eta:
+    - jet2_eta_nominal
+    - jet2_eta
+    jet2_phi:
+    - jet2_phi_nominal
+    - jet2_phi
+    jet2_mass:
+    - jet2_mass_nominal
+    - jet2_mass
+    dimuon_pt:
+    - dimuon_pt
+    dimuon_eta:
+    - dimuon_eta
+    - dimuon_rapidity
+    dimuon_phi:
+    - dimuon_phi
+    htsoft2:
+    - htsoft2_nominal
+    - htsoft2
+    htsoft5:
+    - htsoft5_nominal
+    - htsoft5
+    met_pt:
+    - PuppiMET_pt
+    - MET_pt_nominal
+    - MET_pt
+    met_phi:
+    - PuppiMET_phi
+    - MET_phi_nominal
+    - MET_phi
+    met_e:
+    - PuppiMET_sumEt
+    - MET_sumEt
+    - MET_e
+    - MET_E
+    n_jets:
+    - njets_nominal
+    - n_jets
+    - n_jets_nominal
+  notes:
+  - Pairwise attention uses raw pt, eta, phi, energy from object feature slots 6:10.
+  - Continuous object slots 0:5 and all global features are normalized from the training split.
+  - PuppiMET_sumEt is used as the available Copperhead proxy for the source global_MET_ln_e branch.
+implementation_notes:
+- This study mirrors the source HMuMu variant at architecture level instead of importing it, to keep the smoke study isolated.
+- The source class order is bkg/ggH/VBF; the study output order is ggH/VBF/bkg by task request.
+- The source code uses five object tokens and a seven-feature global token with a class-token attention stage.
+- The source code masks padded objects by zero pt_4v.
+source_shape_hits:
+- line: 236
+  text: 'class PairEmbed(nn.Module):'
+- line: 285
+  text: 'elements = self.embed(x)  # (batch, embed_dim, num_elements)'
+- line: 332
+  text: 'def __init__(self, cpf_dim, npf_dim, vtx_dim, embed_dim, **kwargs):'
+- line: 336
+  text: 'print(f"InputProcess embed_dim: {embed_dim}")'
+- line: 337
+  text: self.cpf_conv1 = InputConv(cpf_dim, embed_dim)
+- line: 338
+  text: self.cpf_conv3 = InputConv(embed_dim * 1, embed_dim)
+- line: 340
+  text: self.npf_conv1 = InputConv(npf_dim, embed_dim)
+- line: 341
+  text: self.npf_conv3 = InputConv(embed_dim * 1, embed_dim)
+- line: 343
+  text: self.vtx_conv1 = InputConv(vtx_dim, embed_dim)
+- line: 344
+  text: self.vtx_conv3 = InputConv(embed_dim * 1, embed_dim)
+- line: 363
+  text: 'def __init__(self, cpf_dim, embed_dim, **kwargs):'
+- line: 366
+  text: self.cpf_conv1 = InputConv(cpf_dim, embed_dim)
+- line: 367
+  text: self.cpf_conv3 = InputConv(embed_dim * 1, embed_dim)
+- line: 435
+  text: 'def forward(self, src, mask, padding_mask):'
+- line: 440
+  text: 'src_key_padding_mask: the mask for the src keys per batch (optional).'
+- line: 446
+  text: '#merged_mask = self.self_attn.merge_masks(mask, padding_mask, src)[0]'
+- line: 486
+  text: 'def forward(self, src, mask, padding_mask):'
+- line: 491
+  text: 'src_key_padding_mask: the mask for the src keys per batch (optional).'
+- line: 497
+  text: padding_mask = padding_mask
+- line: 500
+  text: output = mod(output, mask, padding_mask)
+- line: 543
+  text: 'def forward(self, cls_token, x, padding_mask):'
+- line: 548
+  text: 'src_key_padding_mask: the mask for the src keys per batch (optional).'
+- line: 555
+  text: padding_mask = torch.cat((torch.zeros_like(padding_mask[:, :1]), padding_mask), dim=1)
+- line: 563
+  text: key_padding_mask=padding_mask,
+- line: 604
+  text: 'src_key_padding_mask: the mask for the src keys per batch (optional).'
+- line: 672
+  text: num_head=8,
+- line: 673
+  text: embed_dim=128,
+- line: 684
+  text: self.num_head = num_head
+- line: 693
+  text: self.InputProcess = InputProcess(cpf_dim, npf_dim, vtx_dim, embed_dim)
+- line: 694
+  text: self.Linear = nn.Linear(embed_dim, num_classes)
+- line: 696
+  text: self.pair_embed = PairEmbed(4, [3*num_head,]*2 + [num_head], for_onnx=for_inference)
+- line: 697
+  text: self.cls_norm = RMSNorm(embed_dim)
+- line: 700
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 705
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 709
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 712
+  text: self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim), requires_grad=True)
+- line: 725
+  text: padding_mask = torch.cat((cpf_4v[:, :, :1], npf_4v[:, :, :1], vtx_4v[:, :, :1]), dim=1)
+- line: 726
+  text: padding_mask = torch.eq(padding_mask[:, :, 0], 0.0)
+- line: 727
+  text: pad = (padding_mask.unsqueeze(1) + padding_mask.unsqueeze(2)).to(cpf.dtype) * torch.finfo(self.dtype).min
+- line: 741
+  text: enc = self.Encoder(enc, attn_mask.reshape(-1, v.size(-1), v.size(-1)), padding_mask)
+- line: 744
+  text: cls_tokens = self.CLS_EncoderLayer1(cls_tokens, enc, padding_mask)
+- line: 746
+  text: cls_tokens = self.CLS_EncoderLayer2(cls_tokens, enc, padding_mask)
+- line: 777
+  text: num_head=8,
+- line: 778
+  text: embed_dim=128,
+- line: 789
+  text: self.num_head = num_head
+- line: 798
+  text: self.InputProcess = InputProcess_JC(cpf_dim, embed_dim)
+- line: 799
+  text: self.Linear = nn.Linear(embed_dim, num_classes)
+- line: 801
+  text: self.pair_embed = PairEmbed(4, [3*num_head,]*2 + [num_head], for_onnx=for_inference)
+- line: 802
+  text: self.cls_norm = RMSNorm(embed_dim)
+- line: 805
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 810
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 814
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 817
+  text: self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim), requires_grad=True)
+- line: 826
+  text: padding_mask = cpf_4v[:, :, :1]
+- line: 827
+  text: padding_mask = torch.eq(padding_mask[:, :, 0], 0.0)
+- line: 828
+  text: pad = (padding_mask.unsqueeze(1) + padding_mask.unsqueeze(2)).to(cpf.dtype) * torch.finfo(self.dtype).min
+- line: 840
+  text: enc = self.Encoder(enc, attn_mask.reshape(-1, v.size(-1), v.size(-1)), padding_mask)
+- line: 843
+  text: cls_tokens = self.CLS_EncoderLayer1(cls_tokens, enc, padding_mask)
+- line: 845
+  text: cls_tokens = self.CLS_EncoderLayer2(cls_tokens, enc, padding_mask)
+- line: 886
+  text: num_head=8,
+- line: 887
+  text: embed_dim=128,
+- line: 898
+  text: self.num_head = num_head
+- line: 907
+  text: 'self.global_token_dim = 7  # [log(htsoft2), log(htsoft5), log(MET_pt), log(MET_E), sin(MET_phi), cos(MET_phi), n_jets]'
+- line: 916
+  text: '# self.InputProcess = InputProcess(cpf_dim, npf_dim, vtx_dim, embed_dim)'
+- line: 917
+  text: self.InputProcess = InputProcess_JC(cpf_continuous_dim, embed_dim)
+- line: 918
+  text: self.ObjectIDEmbedding = nn.Embedding(7, embed_dim, padding_idx=0)
+- line: 919
+  text: self.GlobalInputProcess = InputProcess_JC(self.global_token_dim, embed_dim)
+- line: 920
+  text: self.Linear = nn.Linear(embed_dim, num_classes)
+- line: 923
+  text: self.pair_embed = PairEmbed(
+- line: 925
+  text: '[3*num_head,]*2 + [num_head],'
+- line: 929
+  text: self.cls_norm = RMSNorm(embed_dim)
+- line: 932
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 937
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 941
+  text: d_model=embed_dim, nhead=num_head, dropout=0.1, swiglu=swiglu,
+- line: 944
+  text: self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim), requires_grad=True)
+- line: 985
+  text: padding_mask = cpf_4v[:, :, :1]
+- line: 986
+  text: 'padding_mask = torch.eq(padding_mask[:, :, 0], 0.0) # 0.0 is the nan value'
+- line: 987
+  text: pad = (padding_mask.unsqueeze(1) + padding_mask.unsqueeze(2)).to(cpf.dtype) * torch.finfo(self.dtype).min
+- line: 996
+  text: object_id_embedding = self.ObjectIDEmbedding(object_id)
+- line: 1006
+  text: attn_mask = pad.unsqueeze(dim=1).expand(-1, self.num_head, -1, -1)
