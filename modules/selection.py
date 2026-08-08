@@ -1,7 +1,14 @@
+from pathlib import Path
+
 import numpy as np
 import awkward as ak
 import pandas as pd
+import yaml
 from modules.classify_year import is_run3
+
+# repo_root/modules/selection.py -> repo_root
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DNN_BINNING_YAML = REPO_ROOT / "configs" / "MVA" / "VBF" / "dnn_binning.yaml"
 
 
 def filterRegion(events, region="h-peak"):
@@ -494,60 +501,39 @@ binning_DNN_HIG19006 = np.array([
     2.8,
 ])
 
-# binning = binning_HPScan_21bins
-# binning = binning_HPScan_13bins
-# binning = binning_HPScan_17bins
-# binning = binning_based_on_significanceScan
-# binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
+
+# ------------------------------------------------------------------
+# Active DNN binning.
+# Derived by MVA_training/VBF_run3/scan_bins_for_dnn.py and persisted to
+# configs/MVA/VBF/dnn_binning.yaml, so re-running the significance scan
+# updates the binning here without editing this file. The overhead on the
+# upper-most edge is already baked into the YAML.
+# ------------------------------------------------------------------
+def load_dnn_binning(path=DNN_BINNING_YAML):
+    """
+    Load the VBF DNN bin edges from the YAML config.
+
+    Parameters:
+    - path: YAML file holding an `edges` list (see scan_bins_for_dnn.py)
+    Returns:
+    - edges: np.ndarray of strictly increasing bin edges
+    """
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"DNN binning config not found: {path}. "
+            "Generate it by running MVA_training/VBF_run3/scan_bins_for_dnn.py."
+        )
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+
+    edges = cfg.get("edges")
+    if edges is None or len(edges) < 2:
+        raise ValueError(f"'edges' is missing or has fewer than 2 entries in {path}")
+    edges = np.asarray(edges, dtype=float)
+    if np.any(np.diff(edges) <= 0):
+        raise ValueError(f"'edges' in {path} must be strictly increasing: {edges}")
+    return edges
 
 
-# binning = np.array([ #  Run2_NanoV15_Jul 05 50nTrialsFoldsAll_Max70bins
-#   0.000000,
-#   0.122955,
-#   0.245909,
-#   0.368864,
-#   0.491819,
-#   0.614774,
-#   0.737728,
-#   0.860683,
-#   0.983638,
-#   1.106593,
-#   1.229547,
-#   1.352502,
-#   1.598411,
-#   1.721366,
-#   1.844321,
-#   2.090230,
-#   2.213185,
-#   2.336140,
-#   2.459094,
-#   2.582049,
-#   2.705004,
-#   (7.254329+0.1),
-# ])
-
-
-binning = np.array([ #  Run2_NanoV15_Jul 11 100nTrialsFoldsAll_Max70bins
-  0.000000,
-  0.109914,
-  0.219828,
-  0.329742,
-  0.439656,
-  0.549570,
-  0.659484,
-  0.769398,
-  0.879313,
-  0.989227,
-  1.099141,
-  1.209055,
-  1.318969,
-  1.428883,
-  1.538797,
-  1.758625,
-  1.868539,
-  1.978453,
-  2.198281,
-  2.308195,
-  2.418110,
-  (7.254329+0.1),
-])
+binning = load_dnn_binning()

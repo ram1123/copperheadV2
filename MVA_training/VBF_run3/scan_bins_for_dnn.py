@@ -1,4 +1,8 @@
+from datetime import datetime
+from pathlib import Path
+
 import numpy as np
+import yaml
 
 # from rich import print
 # from scipy.special import logit
@@ -8,6 +12,15 @@ import logging
 logger = logging.getLogger(__name__)
 # logger.setLevel(logging.INFO)
 logger.setLevel(logging.DEBUG)
+
+# repo_root/MVA_training/VBF_run3/scan_bins_for_dnn.py -> repo_root
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DNN_BINNING_YAML = REPO_ROOT / "configs" / "MVA" / "VBF" / "dnn_binning.yaml"
+# every artefact of a scan (yaml, txt summary, scan plots) lands here
+OUTPUT_DIR = DNN_BINNING_YAML.parent
+# padding added to the upper-most edge so that events sitting exactly at (or
+# slightly above) the observed score maximum still land inside the last bin
+LAST_EDGE_OVERHEAD = 0.05
 
 
 # ------------------------------
@@ -324,11 +337,15 @@ def scan_nbins_for_best_edges(
     min_signal_per_bin=0.3,  # CMS H→μμ-style guard: S >= this
     clamp_edges=True,  # clamp first/last edges to [0,1]
     frac_tol=0.01,  # allow merge if local Z² drop <= 1%
+    output_dir=OUTPUT_DIR,  # where the scan plots are written
 ):
     """
     Scan multiple nbins and return the one with the highest total Asimov Z.
     See make_significance_binning() for parameter details.
     """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     best_Z = -np.inf
     best_result = (None, None, None, None, None, None, None)
     nb_list = []
@@ -340,7 +357,11 @@ def scan_nbins_for_best_edges(
     print(f"nbins_list: {nbins_list}")
     # raise ValueError
     for nb in nbins_list:
-        outfile = f"binning_scan_{nb}_vs_Ztot_{str(frac_tol).replace('.', 'p')}_log.pdf"
+        # str (not Path) so the ".pdf" -> ".root"/"_root.pdf" swaps below still work
+        outfile = str(
+            output_dir
+            / f"binning_scan_{nb}_vs_Ztot_{str(frac_tol).replace('.', 'p')}_log.pdf"
+        )
         edges, S_bins, B_bins, S_NoWgt_bins, B_NoWgt_bins, Z_bins, Z_tot = (
             # make_significance_binning_uniform(
             make_significance_binning(
@@ -398,6 +419,105 @@ def scan_nbins_for_best_edges(
     if best_Z < 0.0:
         raise RuntimeError("Failed to find a valid binning configuration.")
     return best_result
+
+
+# ------------------------------------
+# Persist the chosen binning
+# ------------------------------------
+def format_binning_report(
+    nb, edges, S_bins, S_NoWgt_bins, B_bins, B_NoWgt_bins, Z_bins, Ztot
+):
+    """
+    Build the human-readable summary of the best binning as a list of lines.
+
+    Shared by the `.txt` dump and the commented metadata block of the YAML
+    config, so both always describe the same scan.
+    """
+    lines = [f"# Best binning with {nb} bins, total Asimov Z = {Ztot:.3f}"]
+    lines.append("edges = np.array([")
+    lines.extend(f"  {e:.6f}," for e in edges)
+    lines.append("])")
+    lines.append("# Per-bin (S, B, Z):")
+    for i, (S_norm, S, B_norm, B, Z) in enumerate(
+        zip(S_bins, S_NoWgt_bins, B_bins, B_NoWgt_bins, Z_bins)
+    ):
+        lines.append(
+            f"#   bin {i:2}: "
+            f"({edges[i]:6.3f},{edges[i+1]:6.3f})  "
+            f"S={S_norm:8.3f} ({S:9.0f})  "
+            f"B={B_norm:10.3f} ({B:9.0f})  "
+            f"Z={Z:5.3f}"
+        )
+    return lines
+
+
+def save_edges_to_yaml(
+    edges,
+    output_path=DNN_BINNING_YAML,
+    last_edge_overhead=LAST_EDGE_OVERHEAD,
+    ndigits=6,
+    metadata=None,
+    report_lines=None,
+):
+    """
+    Write the scanned DNN bin edges to a YAML config.
+
+    The last edge is padded by `last_edge_overhead` so that events at (or just
+    beyond) the score maximum seen during the scan still fall inside the final
+    bin. The unpadded value is kept under `metadata` for bookkeeping.
+
+    Parameters:
+    - edges: sequence of bin edges (length nbins+1)
+    - output_path: destination YAML file (parent dirs are created if missing)
+    - last_edge_overhead: value added to the last edge
+    - ndigits: rounding applied to the stored edges
+    - metadata: optional mapping of extra provenance info to store
+    - report_lines: optional lines (e.g. from format_binning_report()) appended
+      as commented-out YAML, mirroring the `.txt` dump
+    Returns:
+    - output_path: the Path that was written
+    """
+    edges = np.asarray(edges, dtype=float)
+    if edges.ndim != 1 or edges.size < 2:
+        raise ValueError("edges must be a 1D sequence with at least two entries")
+
+    raw_last_edge = float(edges[-1])
+    padded_edges = edges.copy()
+    padded_edges[-1] = raw_last_edge + last_edge_overhead
+    edge_list = [round(float(e), ndigits) for e in padded_edges]
+
+    payload = {
+        "n_bins": len(edge_list) - 1,
+        "edges": edge_list,
+        "metadata": {
+            "generated_by": str(Path(__file__).resolve().relative_to(REPO_ROOT)),
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "score": "dnn_vbf_score_atanh",
+            "last_edge_overhead": last_edge_overhead,
+            "last_edge_before_overhead": round(raw_last_edge, ndigits),
+            **(metadata or {}),
+        },
+    }
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        f.write("# Auto-generated by scan_bins_for_dnn.py -- do not edit by hand.\n")
+        f.write(
+            f"# The last edge includes an extra +{last_edge_overhead} of overhead.\n"
+        )
+        yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
+
+        if report_lines:
+            f.write("\n# --- scan report (same content as best_binning_*.txt) ---\n")
+            f.write("# NOTE: edges below are the raw scan output, i.e. WITHOUT the\n")
+            f.write(f"#       +{last_edge_overhead} overhead applied to `edges` above.\n")
+            for line in report_lines:
+                line = line.rstrip("\n")
+                f.write(f"{line}\n" if line.startswith("#") else f"# {line}\n")
+
+    logger.info(f"Saved DNN binning to {output_path}")
+    return output_path
 
 
 # ------------------------------------
@@ -732,23 +852,34 @@ if __name__ == "__main__":
     # ------------------------------------
     # Save best binning to a text file
     # ------------------------------------
-    with open(
-        f"best_binning_{max_nbins}bins_{str(frac_tol).replace('.', 'p')}.txt", "w"
-    ) as f:
-        f.write(f"# Best binning with {nb} bins, total Asimov Z = {Ztot:.3f}\n")
-        f.write("edges = np.array([\n")
-        for e in edges:
-            f.write(f"  {e:.6f},\n")
-        f.write("])\n")
-        f.write("# Per-bin (S, B, Z):\n")
-        for i, (S_norm, S, B_norm, B, Z) in enumerate(
-            zip(S_bins, S_NoWgt_bins, B_bins, B_NoWgt_bins, Z_bins)
-        ):
-            f.write(
-                f"#   bin {i:2}: "
-                f"({edges[i]:6.3f},{edges[i+1]:6.3f})  "
-                f"S={S_norm:8.3f} ({S:9.0f})  "
-                f"B={B_norm:10.3f} ({B:9.0f})  "
-                f"Z={Z:5.3f}\n"
-            )
-    logger.info("Saved best binning to file.")
+    report_lines = format_binning_report(
+        nb, edges, S_bins, S_NoWgt_bins, B_bins, B_NoWgt_bins, Z_bins, Ztot
+    )
+    txt_path = (
+        OUTPUT_DIR
+        / f"best_binning_{max_nbins}bins_{str(frac_tol).replace('.', 'p')}.txt"
+    )
+    txt_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(txt_path, "w") as f:
+        f.write("\n".join(report_lines) + "\n")
+    logger.info(f"Saved best binning to {txt_path}")
+
+    # ------------------------------------
+    # Save best binning to the YAML config consumed downstream
+    # ------------------------------------
+    save_edges_to_yaml(
+        edges,
+        metadata={
+            "best_nbins_from_scan": int(nb),
+            "max_nbins_scanned": max_nbins,
+            "total_asimov_Z": round(float(Ztot), 4),
+            "frac_tol": frac_tol,
+            "min_total_events_per_bin": min_total_events_per_bin,
+            "min_signal_per_bin": 0.05,
+            "score_min": round(score_min, 6),
+            "score_max": round(score_upper, 6),
+            "stage1_path": stage1_path,
+            "compacted_tag": compacted_tag,
+        },
+        report_lines=report_lines,
+    )
