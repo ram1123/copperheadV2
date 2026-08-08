@@ -1,13 +1,13 @@
-import glob
-
 import numpy as np
 
-from rich import print
+# from rich import print
+# from scipy.special import logit
 
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 # ------------------------------
@@ -208,6 +208,8 @@ def make_significance_binning(
 
     # -------- fine prebinning --------
     fine_edges = np.linspace(score_min, score_max, int(fine_bins) + 1)
+    print(f"fine_edges: {fine_edges}")
+    
     S_hist, _ = np.histogram(sig_score, bins=fine_edges, weights=sig_w)
     B_hist, _ = np.histogram(bkg_score, bins=fine_edges, weights=bkg_w)
     S_hist_nw, _ = np.histogram(sig_score, bins=fine_edges)
@@ -275,6 +277,11 @@ def make_significance_binning(
     # -------- edges & summaries --------
     edges_idx = [bins_idx[0][0]] + [b for (_, b) in bins_idx]
     edges = fine_edges[edges_idx]
+    print(f"edges: {edges}")
+    print(f"edges_idx: {edges_idx}")
+    print(f"fine_edges: {fine_edges}")
+    print(f"fine_bins: {fine_bins}")
+    # raise ValueError
 
     if clamp_edges:
         edges[0] = max(edges[0], score_min)
@@ -328,6 +335,10 @@ def scan_nbins_for_best_edges(
     Z_tot_list = []
     S_NoWgt_bins_list = []
     B_NoWgt_bins_list = []
+    # nbins_list = reversed(nbins_list)
+    logger.info(f"nbins_list: {nbins_list}")
+    print(f"nbins_list: {nbins_list}")
+    # raise ValueError
     for nb in nbins_list:
         outfile = f"binning_scan_{nb}_vs_Ztot_{str(frac_tol).replace('.', 'p')}_log.pdf"
         edges, S_bins, B_bins, S_NoWgt_bins, B_NoWgt_bins, Z_bins, Z_tot = (
@@ -351,14 +362,14 @@ def scan_nbins_for_best_edges(
         Z_tot_list.append(Z_tot if Z_tot is not None else -np.inf)
         S_NoWgt_bins_list.append(S_NoWgt_bins[-1])
         B_NoWgt_bins_list.append(B_NoWgt_bins[-1])
-        logger.info(
+        print(
             f"nbins={nb:>3}: Z_tot = {Z_tot:<2.2f}, produced bins = {produced_bins}"
         )
-        logger.info(f"         S_bins (NoWgt) = {S_NoWgt_bins}")
-        logger.info(f"         B_bins (NoWgt) = {B_NoWgt_bins}")
-        logger.info(f"         S_bins               = {S_bins}")
-        logger.info(f"         B_bins               = {B_bins}")
-        logger.info(f"         Edges = {edges}")
+        print(f"         S_bins (NoWgt) = {S_NoWgt_bins}")
+        print(f"         B_bins (NoWgt) = {B_NoWgt_bins}")
+        print(f"         S_bins               = {S_bins}")
+        print(f"         B_bins               = {B_bins}")
+        print(f"         Edges = {edges}")
         if Z_tot is not None and Z_tot > best_Z:
             best_Z = Z_tot
             best_result = (
@@ -549,21 +560,17 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
             ) from exc
 
     scores, weights = [], []
-    do_vbf_filter_study = False
+    # do_vbf_filter_study = False
+    do_vbf_filter_study = True
     for name, globpath in items:
-        if "dy_" in name:
-            do_vbf_filter_study = False
-        else:
-            do_vbf_filter_study = False
+        # if "dy_" in name:
+        #     do_vbf_filter_study = True
+        # else:
+        #     do_vbf_filter_study = False
         print(
             f"Processing {name} from {globpath} (do_vbf_filter_study={do_vbf_filter_study})"
         )
-
-        files = sorted(glob.glob(globpath, recursive=True))
-        if not files:
-            raise FileNotFoundError(f"No parquet files matched: {globpath}")
-        ev = dak.from_parquet(files)
-
+        ev = dak.from_parquet(globpath)
         ev = selection.applyRegionCatCuts(
             ev,
             category=category,
@@ -572,6 +579,16 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
             variation="nominal",
             do_vbf_filter_study=do_vbf_filter_study,
         )
+        # print(f"ev.fields: {ev.fields}")
+        # print(f"ev.fields: {dak.max(ev.dnn_vbf_score).compute()}")
+        # print(f"ev.fields: {dak.min(ev.dnn_vbf_score).compute()}")
+        # raise ValueError 
+        # dnn_score = ev["dnn_vbf_score"].compute().to_numpy()
+        # dnn_score = np.atanh(logit(dnn_score))
+        # print(dnn_score.max())
+        # print(dnn_score.min())
+        # raise ValueError 
+        # scores.append(dnn_score)
         scores.append(ev["dnn_vbf_score_atanh"].compute().to_numpy())
         weights.append(ev["wgt_nominal"].compute().to_numpy())
     return np.concatenate(scores), np.concatenate(weights)
@@ -596,37 +613,90 @@ if __name__ == "__main__":
         n_workers=64, threads_per_worker=1, processes=True, memory_limit="2 GiB"
     )
     print("Local scale Client created")
+    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
+    # compacted_tag="May08_2026_FixDimuonMass"
+    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc"
+    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc"
+    stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
+    # compacted_tag="Jun01_2026_FixDimuonMass"
+    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
+    # compacted_tag="May08_2026_FixDimuonMass"
+    # compacted_tag="Jun05_2026_RamMay2025Binning_FixDimuonMass"
+    # compacted_tag="Jun07_2026_50nTrialsFoldsAll_FixDimuonMass"
+    # compacted_tag="Jun08_2026_20nTrialsFoldsAll_FixDimuonMass"
+    # compacted_tag="Jun08_2026_50nTrialsFoldsAll_FixDimuonMass"
+    # compacted_tag="Jul04_2026_50nTrialsFoldsAll_FixDimuonMass"
+    # compacted_tag="Jul11_2026_100nTrialsFoldsAll_Max70bins_FixDimuonMass"
+    compacted_tag="Jul24_2026_dnnCompact_test_FixDimuonMass"
+    
+    year="*"
     sig_globs = {
-        "vbf_powheg_dipole": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/vbf_powheg_dipole/0/*.parquet",
-        # "ggh_powhegPS": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ggh_powhegPS/0/*.parquet",
+        "vbf_powheg_dipole": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/vbf_powheg_dipole/**/*.parquet",
+        # "ggh_powhegPS": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ggh_powhegPS/**/*.parquet",
     }
+    # sig_globs = {
+    #     "vbf_powheg_dipole": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
+    #     # "ggh_powhegPS": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ggh_powhegPS/**/*.parquet",
+    # }
     sig_score, sig_w = collect_scores(sig_globs, selection)
 
     bkg_globs = {
-        # "dy_VBF_filter": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/dy_VBF_filter/0/*.parquet",
-        "dy_M-50_aMCatNLO": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/dyTo2L_M-50_incl/0/*.parquet",
-        "dy_M-50_aMCatNLO_24": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/dyTo2Mu_M-50_aMCatNLO/0/*.parquet",
-        "ewk_lljj_mll50_mjj120": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ewk_mmjj_mll_105_160/0/*.parquet",
-        "ttjets_dl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ttjets_dl/0/*.parquet",
-        "ttjets_sl": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ttjets_sl/0/*.parquet",
-        "zz_4l": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/zz_4l/0/*.parquet",
-        "zz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/zz_2l2q/0/*.parquet",
-        "zz_2l2u": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/zz_2l2u/0/*.parquet",
-        "ww_2l2nu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/ww_2l2nu/0/*.parquet",
-        "wz_1l1nu2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/wz_1l1nu2q/0/*.parquet",
-        "wz_2l2q": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/wz_2l2q/0/*.parquet",
-        "wz_3lnu": "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/*/compacted_May07_2026_FixDimuonMass/wz_3lnu/0/*.parquet",
+        "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
+        # "dy_M-100To200_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-100To200_MiNNLO/**/*.parquet",
+        "dy_M-Incl_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*MiNNLO/**/*.parquet",
+        # "dyInclM-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*M-50_aMCatNLO/**/*.parquet",
+        # "dy_M-50_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-50_MiNNLO/**/*.parquet",
+        "ewk_incl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk*/**/*.parquet",
+        # "ewk_lljj_mll50_mjj120": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_lljj_mll50_mjj120/**/*.parquet",
+        # "ewk_zlljj": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_zlljj/**/*.parquet",
+        "ttjets_dl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_dl/**/*.parquet",
+        "ttjets_sl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_sl/**/*.parquet",
+        "zz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/zz*/**/*.parquet",
+        # "ww": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ww_*/**/*.parquet",
+        # "wz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/wz_*/**/*.parquet",
     }
+
+    # bkg_globs = {
+    #     "dy_VBF_filter": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_VBF_filter/**/*.parquet",
+    #     "dy_M-50_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-50_aMCatNLO/**/*.parquet",
+    #     "dy_M-100To200_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-100To200_aMCatNLO/**/*.parquet",
+    #     "ewk_lljj_mll50_mjj120": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ewk_lljj_mll50_mjj120/**/*.parquet",
+    #     "ttjets_dl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_dl/**/*.parquet",
+    #     "ttjets_sl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_sl/**/*.parquet",
+    #     "zz": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/zz/**/*.parquet",
+    # }
+    
     bkg_score, bkg_w = collect_scores(bkg_globs, selection)
 
     score_min = float(min(sig_score.min(), bkg_score.min()))
     score_upper = float(max(sig_score.max(), bkg_score.max()))
-    logger.info(
+    print(f"compacted path: {stage1_path}/stage1_output/{year}/compacted_{compacted_tag}")
+    print(f"score_min: {score_min}")
+    print(f"score_upper: {score_upper}")
+    print(
         f"Derived dnn_vbf_score_atanh range: [{score_min:.6f}, {score_upper:.6f}]"
     )
 
-    frac_tol = 0.005  # allow merge if local Z² drop <= 1%
-    max_nbins = 15  # max number of bins to try
+    # frac_tol = 0.005  # allow merge if local Z² drop <= 1%
+    frac_tol = 0.01  # recommended
+    # max_nbins = 15  # max number of bins to try
+    # max_nbins = 50  # max number of bins to try
+    # max_nbins = 25  # max number of bins to try
+    # max_nbins = 30  # max number of bins to try
+    # max_nbins = 65  # max number of bins to try
+    # max_nbins = 70  # max number of bins to try
+    # max_nbins = 57  # max     number of bins to try
+    # max_nbins = 25  # max number of bins to try
+    # max_nbins = 25  # max number of bins to try
+    # max_nbins = 40  # max number of bins to try
+    # max_nbins = 24  # max number of bins to try
+    # max_nbins = 23  # max number of bins to try
+    max_nbins = 70  # max number of bins to try
+    # max_nbins = 80  # max number of bins to try
+    # max_nbins = 100  # max number of bins to try
+    #------------------------------
+    # min_total_events_per_bin=5.0
+    min_total_events_per_bin= 15
     nb, edges, S_NoWgt_bins, S_bins, B_NoWgt_bins, B_bins, Z_bins, Ztot = (
         scan_nbins_for_best_edges(
             sig_score,
@@ -636,13 +706,14 @@ if __name__ == "__main__":
             nbins_list=range(3, max_nbins + 1),
             score_min=score_min,
             score_max=score_upper,
-            min_total_events_per_bin=5.0,
+            min_total_events_per_bin=min_total_events_per_bin,
             min_signal_per_bin=0.05,
             clamp_edges=True,
             frac_tol=frac_tol,  # allow merge if local Z² drop <= 1%
         )
     )
 
+    print(f"max xbins: {max_nbins}")
     print(f"Best nbins = {nb}, total Asimov Z = {Ztot:.3f}")
     print("edges = np.array([")
     for e in edges:
