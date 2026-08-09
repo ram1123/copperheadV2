@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 from pathlib import Path
 
@@ -722,6 +723,54 @@ def collect_bkg(process_globs, selection, category="vbf", region_name="h-peak"):
 
 
 # -----------------------
+# Command line interface
+# -----------------------
+# Previously used inputs, kept for reference -- pass any of them with
+# --stage1-path / --compacted-tag instead of editing this file:
+#   stage1_path: .../Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc
+#                .../Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc
+#                .../Run2_NanoV12_forVBFChannel_May15_2026_jetUnc
+#   compacted_tag: May08_2026_FixDimuonMass
+#                  Jun01_2026_FixDimuonMass
+#                  Jun05_2026_RamMay2025Binning_FixDimuonMass
+#                  Jun07_2026_50nTrialsFoldsAll_FixDimuonMass
+#                  Jun08_2026_20nTrialsFoldsAll_FixDimuonMass
+#                  Jun08_2026_50nTrialsFoldsAll_FixDimuonMass
+#                  Jul04_2026_50nTrialsFoldsAll_FixDimuonMass
+#                  Jul11_2026_100nTrialsFoldsAll_Max70bins_FixDimuonMass
+DEFAULT_STAGE1_PATH = "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
+DEFAULT_COMPACTED_TAG = "Jul24_2026_dnnCompact_test_FixDimuonMass"
+DEFAULT_YEAR = "*"
+
+
+def parse_args(argv=None):
+    """Parse the stage1 inputs that select which samples the scan runs over."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "Scan DNN score binnings for the best total Asimov Z and write the "
+            f"winning edges to {DNN_BINNING_YAML}."
+        ),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--stage1-path",
+        default=DEFAULT_STAGE1_PATH,
+        help="Base stage1 ntuple directory (holds stage1_output/<year>/...).",
+    )
+    parser.add_argument(
+        "--compacted-tag",
+        default=DEFAULT_COMPACTED_TAG,
+        help="Tag of the compacted_<tag> directory to read the DNN scores from.",
+    )
+    parser.add_argument(
+        "--year",
+        default=DEFAULT_YEAR,
+        help="Year subdirectory to glob; '*' runs over all years.",
+    )
+    return parser.parse_args(argv)
+
+
+# -----------------------
 # Example driver snippet
 # -----------------------
 if __name__ == "__main__":
@@ -729,27 +778,15 @@ if __name__ == "__main__":
 
     from distributed import Client
 
+    args = parse_args()
+    stage1_path = args.stage1_path
+    compacted_tag = args.compacted_tag
+    year = args.year
+
     client = Client(
         n_workers=64, threads_per_worker=1, processes=True, memory_limit="2 GiB"
     )
     print("Local scale Client created")
-    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
-    # compacted_tag="May08_2026_FixDimuonMass"
-    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc"
-    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_May15_2026_jetUnc"
-    stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
-    # compacted_tag="Jun01_2026_FixDimuonMass"
-    # stage1_path="/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc"
-    # compacted_tag="May08_2026_FixDimuonMass"
-    # compacted_tag="Jun05_2026_RamMay2025Binning_FixDimuonMass"
-    # compacted_tag="Jun07_2026_50nTrialsFoldsAll_FixDimuonMass"
-    # compacted_tag="Jun08_2026_20nTrialsFoldsAll_FixDimuonMass"
-    # compacted_tag="Jun08_2026_50nTrialsFoldsAll_FixDimuonMass"
-    # compacted_tag="Jul04_2026_50nTrialsFoldsAll_FixDimuonMass"
-    # compacted_tag="Jul11_2026_100nTrialsFoldsAll_Max70bins_FixDimuonMass"
-    compacted_tag="Jul24_2026_dnnCompact_test_FixDimuonMass"
-    
-    year="*"
     sig_globs = {
         "vbf_powheg_dipole": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/vbf_powheg_dipole/**/*.parquet",
         # "ggh_powhegPS": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ggh_powhegPS/**/*.parquet",

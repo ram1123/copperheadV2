@@ -349,7 +349,12 @@ def plotDataMC_compare(
         sig_mc_sample: sig_mc_sample_arrs["hist_arr"]
         for sig_mc_sample, sig_mc_sample_arrs in sig_MC_dict.items()
     }
+    bin_edges = np.asarray(binning, dtype=float)
     with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
+        # record the exact bin edges used, so the yields below can be traced back
+        # to (and the binning re-used from) the histogram that produced them
+        f.write(f"Binning ({len(bin_edges) - 1} bins): ")
+        f.write("[" + ", ".join(f"{edge:.6g}" for edge in bin_edges) + "]\n")
         f.write(f"Data: {np.sum(data_hist)}\n")
         for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
             f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist):.2f}\n")
@@ -360,7 +365,7 @@ def plotDataMC_compare(
                 f"Data/MC ratio (Sum ratio_hist): {np.sum(ratio_hist)}\n"
             )
             f.write(
-                f"Data/MC ratio (Sum ratio_hist then divide by number of bins): {np.sum(ratio_hist) / len(binning):.2f}\n"
+                f"Data/MC ratio (Sum ratio_hist then divide by number of bins): {np.sum(ratio_hist) / (len(bin_edges) - 1):.2f}\n"
             )
 
         # -----------------------------------------
