@@ -46,6 +46,121 @@ def z2_asimov(S, B, eps=1e-9):
     return out if out.ndim else out.item()
 
 
+# ------------------------------------------------------------------
+# Per-bin population guards ((S+B) and S thresholds)
+# ------------------------------------------------------------------
+class BinGuard:
+    """
+    Evaluate the `min_total_events_per_bin` / `min_signal_per_bin` thresholds on
+    an arbitrary slice of the fine binning.
+
+    Combined mode (default) keeps a single group holding every event, i.e. the
+    thresholds are applied to the years summed together. With
+    `enforce_min_per_year=True` the events are split by their `year` value and
+    one histogram is kept per data-taking year, so a bin only passes when
+    *every* year satisfies both thresholds on its own.
+
+    Parameters:
+    - fine_edges: fine bin edges the guards are evaluated on
+    - sig_score, sig_w, bkg_score, bkg_w: scores/weights, already cleaned
+    - min_total_events_per_bin: minimum raw (unweighted) S+B per bin
+    - min_signal_per_bin: minimum weighted S per bin
+    - sig_years, bkg_years: per-event year labels, required when
+      `enforce_min_per_year` is True
+    - enforce_min_per_year: enforce the thresholds per year instead of combined
+    """
+
+    def __init__(
+        self,
+        fine_edges,
+        sig_score,
+        sig_w,
+        bkg_score,
+        bkg_w,
+        min_total_events_per_bin=0.0,
+        min_signal_per_bin=0.0,
+        sig_years=None,
+        bkg_years=None,
+        enforce_min_per_year=False,
+    ):
+        self.min_total_events_per_bin = min_total_events_per_bin
+        self.min_signal_per_bin = min_signal_per_bin
+        self.enforce_min_per_year = enforce_min_per_year
+
+        if enforce_min_per_year:
+            if sig_years is None or bkg_years is None:
+                raise ValueError(
+                    "enforce_min_per_year=True requires per-event year labels for "
+                    "both signal and background (no 'year' column in the inputs?)."
+                )
+            sig_years = np.asarray(sig_years, dtype=float)
+            bkg_years = np.asarray(bkg_years, dtype=float)
+            if sig_years.shape != sig_score.shape or bkg_years.shape != bkg_score.shape:
+                raise ValueError("year arrays must match their score arrays in shape")
+            self.labels = np.unique(np.concatenate([sig_years, bkg_years]))
+            groups = [(sig_years == y, bkg_years == y) for y in self.labels]
+        else:
+            self.labels = np.array([np.nan])  # single "all years" group
+            groups = [
+                (
+                    np.ones(sig_score.shape, dtype=bool),
+                    np.ones(bkg_score.shape, dtype=bool),
+                )
+            ]
+
+        n_fine = len(fine_edges) - 1
+        # weighted signal and raw (unweighted) S+B, one row per group
+        self.S_wgt = np.zeros((len(groups), n_fine), dtype=float)
+        self.N_raw = np.zeros((len(groups), n_fine), dtype=float)
+        for i, (sig_mask, bkg_mask) in enumerate(groups):
+            self.S_wgt[i], _ = np.histogram(
+                sig_score[sig_mask], bins=fine_edges, weights=sig_w[sig_mask]
+            )
+            S_raw, _ = np.histogram(sig_score[sig_mask], bins=fine_edges)
+            B_raw, _ = np.histogram(bkg_score[bkg_mask], bins=fine_edges)
+            self.N_raw[i] = S_raw + B_raw
+
+        if enforce_min_per_year:
+            logger.info(
+                "Enforcing per-bin guards separately for years: %s",
+                self.describe_labels(),
+            )
+
+    def describe_labels(self):
+        """Human-readable group names ('2016.5' is 2016postVFP in stage1 output)."""
+        if not self.enforce_min_per_year:
+            return "all years combined"
+        return ", ".join(f"{label:g}" for label in self.labels)
+
+    def totals(self, a, b):
+        """Per-group (weighted S, raw S+B) for the fine-bin slice [a, b)."""
+        return self.S_wgt[:, a:b].sum(axis=1), self.N_raw[:, a:b].sum(axis=1)
+
+    def ok(self, a, b):
+        """True when every group in the fine-bin slice [a, b) clears both thresholds."""
+        S, N = self.totals(a, b)
+        return bool(
+            np.all(S >= self.min_signal_per_bin)
+            and np.all(N >= self.min_total_events_per_bin)
+        )
+
+    def failure_reason(self, a, b):
+        """Describe which group/threshold fails on [a, b), for debug logging."""
+        S, N = self.totals(a, b)
+        reasons = []
+        for i, label in enumerate(self.labels):
+            name = "all years" if not self.enforce_min_per_year else f"{label:g}"
+            if N[i] < self.min_total_events_per_bin:
+                reasons.append(
+                    f"{name}: raw events={N[i]:g} < {self.min_total_events_per_bin}"
+                )
+            if S[i] < self.min_signal_per_bin:
+                reasons.append(
+                    f"{name}: weighted signal={S[i]:g} < {self.min_signal_per_bin}"
+                )
+        return "; ".join(reasons) if reasons else "guards satisfied"
+
+
 # -----------------------------------------------------
 # Significance-optimized using uniform binning
 # -----------------------------------------------------
@@ -60,6 +175,9 @@ def make_significance_binning_uniform(
     min_total_events_per_bin=0.0,  # stability: (S+B) >= this
     min_signal_per_bin=0.3,  # CMS H→μμ-style guard: S >= this
     clamp_edges=True,  # clamp first/last edges to [0,1]
+    sig_years=None,
+    bkg_years=None,
+    enforce_min_per_year=False,
 ):
     """
     Create simple uniform binning with fine_bins with the condition min_total_events_per_bin
@@ -74,6 +192,9 @@ def make_significance_binning_uniform(
     - min_total_events_per_bin: minimum (S+B) per bin for stability
     - min_signal_per_bin: minimum S per bin (CMS H→μμ-style guard)
     - clamp_edges: if True, clamp the first/last edges to [0,1
+    - sig_years, bkg_years: per-event year labels, needed for enforce_min_per_year
+    - enforce_min_per_year: apply the two thresholds above to each data-taking
+      year separately instead of to the years summed together
     Returns:
     - edges: array of bin edges (length fine_bins+1)
     - S_bins: array of signal counts per bin (length fine_bins)
@@ -117,28 +238,31 @@ def make_significance_binning_uniform(
     # print histograms for debugging
     logger.debug(f"S_NoWgt_hist: {S_NoWgt_hist}")
     logger.debug(f"B_NoWgt_hist: {B_NoWgt_hist}")
+
+    guard = BinGuard(
+        fine_edges,
+        sig_score,
+        sig_w,
+        bkg_score,
+        bkg_w,
+        min_total_events_per_bin=min_total_events_per_bin,
+        min_signal_per_bin=min_signal_per_bin,
+        sig_years=sig_years,
+        bkg_years=bkg_years,
+        enforce_min_per_year=enforce_min_per_year,
+    )
+
     # Compute the significance for each fine bin, then obtain the total significance
     total_Z2 = 0.0
     Z_hist = []
     for bin_i in range(fine_bins):
         S_bin = S_hist[bin_i]
         B_bin = B_hist[bin_i]
-        S_bin_nw = S_NoWgt_hist[bin_i]
-        B_bin_nw = B_NoWgt_hist[bin_i]
-        if (S_bin_nw + B_bin_nw) < min_total_events_per_bin:
+        if not guard.ok(bin_i, bin_i + 1):
             logger.debug(
-                "Rejecting uniform bin %s: raw events=%s below threshold=%s",
+                "Rejecting uniform bin %s: %s",
                 bin_i,
-                S_bin_nw + B_bin_nw,
-                min_total_events_per_bin,
-            )
-            return None, None, None, None, None, None, None
-        if S_bin < min_signal_per_bin:
-            logger.debug(
-                "Rejecting uniform bin %s: weighted signal=%s below threshold=%s",
-                bin_i,
-                S_bin,
-                min_signal_per_bin,
+                guard.failure_reason(bin_i, bin_i + 1),
             )
             return None, None, None, None, None, None, None
         significance = z2_asimov(S_bin, B_bin)
@@ -178,13 +302,18 @@ def make_significance_binning(
     min_signal_per_bin=0.3,  # require S >= this
     tol_frac=0.01,  # allow merge if local Z² drop <= 5%
     clamp_edges=True,
+    sig_years=None,
+    bkg_years=None,
+    enforce_min_per_year=False,
 ):
     """
     Greedy R->L merging with a 5% loss veto:
       - Merge neighboring fine bins from the right as long as merging causes
         at most `tol_frac` fractional loss in local Z².
       - If the accumulator fails S or (S+B) guards, keep merging regardless of loss
-        until guards are satisfied.
+        until guards are satisfied. With `enforce_min_per_year=True` those guards
+        must hold for every data-taking year separately (year labels come from
+        `sig_years`/`bkg_years`), not just for the years summed together.
       - No cap on the final number of bins.
     Returns:
         edges, S_bins, B_bins, S_bins_nw, B_bins_nw, Z_bins, Z_tot
@@ -195,12 +324,12 @@ def make_significance_binning(
     sig_w = np.ones_like(sig_score) if sig_w is None else np.asarray(sig_w, float)
     bkg_w = np.ones_like(bkg_score) if bkg_w is None else np.asarray(bkg_w, float)
 
-    def _clean(x, w):
+    def _clean(x, w, y):
         m = np.isfinite(x) & np.isfinite(w)
-        return x[m], w[m]
+        return x[m], w[m], (None if y is None else np.asarray(y, float)[m])
 
-    sig_score, sig_w = _clean(sig_score, sig_w)
-    bkg_score, bkg_w = _clean(bkg_score, bkg_w)
+    sig_score, sig_w, sig_years = _clean(sig_score, sig_w, sig_years)
+    bkg_score, bkg_w, bkg_years = _clean(bkg_score, bkg_w, bkg_years)
     if sig_score.size == 0 or bkg_score.size == 0:
         raise ValueError("Empty signal or background arrays after cleaning.")
 
@@ -236,6 +365,19 @@ def make_significance_binning(
     def SBnw(a, b):
         return S_hist_nw[a:b].sum(), B_hist_nw[a:b].sum()
 
+    guard = BinGuard(
+        fine_edges,
+        sig_score,
+        sig_w,
+        bkg_score,
+        bkg_w,
+        min_total_events_per_bin=min_total_events_per_bin,
+        min_signal_per_bin=min_signal_per_bin,
+        sig_years=sig_years,
+        bkg_years=bkg_years,
+        enforce_min_per_year=enforce_min_per_year,
+    )
+
     # -------- greedy merge from right --------
     bins_idx = []  # list of (i_start, i_end) for final bins
     acc_l = nF - 1
@@ -246,10 +388,8 @@ def make_significance_binning(
     i = acc_l - 1
     while True:
         can_merge = i >= 0
-        # force-merge if guards not satisfied
-        need_guard_merge = (S_acc < min_signal_per_bin) or (
-            (S_acc_nw + B_acc_nw) < min_total_events_per_bin
-        )
+        # force-merge if guards not satisfied (per year when requested)
+        need_guard_merge = not guard.ok(acc_l, acc_r)
 
         if can_merge:
             # local separate vs merged Z²
@@ -339,6 +479,9 @@ def scan_nbins_for_best_edges(
     clamp_edges=True,  # clamp first/last edges to [0,1]
     frac_tol=0.01,  # allow merge if local Z² drop <= 1%
     output_dir=OUTPUT_DIR,  # where the scan plots are written
+    sig_years=None,  # per-event year labels, for enforce_min_per_year
+    bkg_years=None,
+    enforce_min_per_year=False,  # apply the min_* guards per year, not combined
 ):
     """
     Scan multiple nbins and return the one with the highest total Asimov Z.
@@ -377,6 +520,9 @@ def scan_nbins_for_best_edges(
                 min_signal_per_bin=min_signal_per_bin,
                 clamp_edges=clamp_edges,
                 tol_frac=frac_tol,  # allow merge if local Z² drop <= 1% (only for non-uniform binning)
+                sig_years=sig_years,
+                bkg_years=bkg_years,
+                enforce_min_per_year=enforce_min_per_year,
             )
         )
         produced_bins = len(edges) - 1
@@ -664,9 +810,14 @@ def plot_binning_scan_root(
 # ------------------------------------
 def collect_scores(process_globs, selection, category="vbf", region_name="h-peak"):
     """
-    Build score and weight arrays by concatenating any set of processes.
+    Build score, weight and year arrays by concatenating any set of processes.
     - process_globs: mapping or iterable of (process_name, parquet_glob)
     - selection: your modules.selection (needs applyRegionCatCuts)
+
+    Returns (scores, weights, years). `years` is the per-event stage1 `year`
+    column (2016.0 = 2016preVFP, 2016.5 = 2016postVFP, 2017.0, 2018.0, ...), or
+    None when the inputs carry no such column -- it is only needed by the
+    per-year bin guards (see BinGuard / enforce_min_per_year).
     """
     import dask_awkward as dak
 
@@ -680,7 +831,7 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
                 "process_globs must be a mapping or iterable of (name, glob) pairs."
             ) from exc
 
-    scores, weights = [], []
+    scores, weights, years = [], [], []
     # do_vbf_filter_study = False
     do_vbf_filter_study = True
     for name, globpath in items:
@@ -712,7 +863,20 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
         # scores.append(dnn_score)
         scores.append(ev["dnn_vbf_score_atanh"].compute().to_numpy())
         weights.append(ev["wgt_nominal"].compute().to_numpy())
-    return np.concatenate(scores), np.concatenate(weights)
+        if "year" in ev.fields:
+            years.append(ev["year"].compute().to_numpy().astype(float))
+        else:
+            logger.warning(
+                f"No 'year' column in {name}; per-year bin guards are unavailable."
+            )
+            years.append(None)
+
+    year_arr = (
+        None
+        if any(y is None for y in years)
+        else np.concatenate(years)
+    )
+    return np.concatenate(scores), np.concatenate(weights), year_arr
 
 
 def collect_bkg(process_globs, selection, category="vbf", region_name="h-peak"):
@@ -767,6 +931,17 @@ def parse_args(argv=None):
         default=DEFAULT_YEAR,
         help="Year subdirectory to glob; '*' runs over all years.",
     )
+    parser.add_argument(
+        "--enforce-min-per-year",
+        dest="enforce_min_per_year",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Require min_total_events_per_bin and min_signal_per_bin to be met by "
+            "every data-taking year separately instead of by the years summed "
+            "together. Needs a 'year' column in the input parquet."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -795,7 +970,7 @@ if __name__ == "__main__":
     #     "vbf_powheg_dipole": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
     #     # "ggh_powhegPS": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ggh_powhegPS/**/*.parquet",
     # }
-    sig_score, sig_w = collect_scores(sig_globs, selection)
+    sig_score, sig_w, sig_years = collect_scores(sig_globs, selection)
 
     bkg_globs = {
         "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
@@ -823,7 +998,17 @@ if __name__ == "__main__":
     #     "zz": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/zz/**/*.parquet",
     # }
     
-    bkg_score, bkg_w = collect_scores(bkg_globs, selection)
+    bkg_score, bkg_w, bkg_years = collect_scores(bkg_globs, selection)
+
+    enforce_min_per_year = args.enforce_min_per_year
+    if enforce_min_per_year and (sig_years is None or bkg_years is None):
+        raise ValueError(
+            "--enforce-min-per-year was requested but the inputs carry no 'year' "
+            "column; re-run without it or use ntuples that store the year."
+        )
+    if enforce_min_per_year:
+        years_found = np.unique(np.concatenate([sig_years, bkg_years]))
+        print(f"Enforcing per-bin guards per year, years found: {years_found}")
 
     score_min = float(min(sig_score.min(), bkg_score.min()))
     score_upper = float(max(sig_score.max(), bkg_score.max()))
@@ -867,6 +1052,9 @@ if __name__ == "__main__":
             min_signal_per_bin=0.05,
             clamp_edges=True,
             frac_tol=frac_tol,  # allow merge if local Z² drop <= 1%
+            sig_years=sig_years,
+            bkg_years=bkg_years,
+            enforce_min_per_year=enforce_min_per_year,
         )
     )
 
@@ -913,6 +1101,7 @@ if __name__ == "__main__":
             "frac_tol": frac_tol,
             "min_total_events_per_bin": min_total_events_per_bin,
             "min_signal_per_bin": 0.05,
+            "enforce_min_per_year": enforce_min_per_year,
             "score_min": round(score_min, 6),
             "score_max": round(score_upper, 6),
             "stage1_path": stage1_path,
