@@ -51,20 +51,26 @@ def z2_asimov(S, B, eps=1e-9):
 # ------------------------------------------------------------------
 class BinGuard:
     """
-    Evaluate the `min_total_events_per_bin` / `min_signal_per_bin` thresholds on
-    an arbitrary slice of the fine binning.
+    Evaluate the `min_total_events_per_bin` / `min_signal_per_bin` /
+    `min_background_per_bin` thresholds on an arbitrary slice of the fine binning.
 
     Combined mode (default) keeps a single group holding every event, i.e. the
     thresholds are applied to the years summed together. With
     `enforce_min_per_year=True` the events are split by their `year` value and
     one histogram is kept per data-taking year, so a bin only passes when
-    *every* year satisfies both thresholds on its own.
+    *every* year satisfies all thresholds on its own.
 
     Parameters:
     - fine_edges: fine bin edges the guards are evaluated on
     - sig_score, sig_w, bkg_score, bkg_w: scores/weights, already cleaned
     - min_total_events_per_bin: minimum raw (unweighted) S+B per bin
     - min_signal_per_bin: minimum weighted S per bin
+    - min_background_per_bin: minimum weighted B per bin. The raw-count guard
+      above is dominated by the (heavily populated, tiny-weight) signal MC, so
+      it happily accepts bins with no background left in them; this one bounds
+      the background yield directly. The default of 0.0 also rejects bins whose
+      yield is driven negative by negative-weight MC, for which the Asimov Z is
+      meaningless.
     - sig_years, bkg_years: per-event year labels, required when
       `enforce_min_per_year` is True
     - enforce_min_per_year: enforce the thresholds per year instead of combined
@@ -79,12 +85,14 @@ class BinGuard:
         bkg_w,
         min_total_events_per_bin=0.0,
         min_signal_per_bin=0.0,
+        min_background_per_bin=0.0,
         sig_years=None,
         bkg_years=None,
         enforce_min_per_year=False,
     ):
         self.min_total_events_per_bin = min_total_events_per_bin
         self.min_signal_per_bin = min_signal_per_bin
+        self.min_background_per_bin = min_background_per_bin
         self.enforce_min_per_year = enforce_min_per_year
 
         if enforce_min_per_year:
@@ -109,12 +117,17 @@ class BinGuard:
             ]
 
         n_fine = len(fine_edges) - 1
-        # weighted signal and raw (unweighted) S+B, one row per group
+        # weighted signal, weighted background and raw (unweighted) S+B,
+        # one row per group
         self.S_wgt = np.zeros((len(groups), n_fine), dtype=float)
+        self.B_wgt = np.zeros((len(groups), n_fine), dtype=float)
         self.N_raw = np.zeros((len(groups), n_fine), dtype=float)
         for i, (sig_mask, bkg_mask) in enumerate(groups):
             self.S_wgt[i], _ = np.histogram(
                 sig_score[sig_mask], bins=fine_edges, weights=sig_w[sig_mask]
+            )
+            self.B_wgt[i], _ = np.histogram(
+                bkg_score[bkg_mask], bins=fine_edges, weights=bkg_w[bkg_mask]
             )
             S_raw, _ = np.histogram(sig_score[sig_mask], bins=fine_edges)
             B_raw, _ = np.histogram(bkg_score[bkg_mask], bins=fine_edges)
@@ -133,20 +146,25 @@ class BinGuard:
         return ", ".join(f"{label:g}" for label in self.labels)
 
     def totals(self, a, b):
-        """Per-group (weighted S, raw S+B) for the fine-bin slice [a, b)."""
-        return self.S_wgt[:, a:b].sum(axis=1), self.N_raw[:, a:b].sum(axis=1)
+        """Per-group (weighted S, weighted B, raw S+B) for the slice [a, b)."""
+        return (
+            self.S_wgt[:, a:b].sum(axis=1),
+            self.B_wgt[:, a:b].sum(axis=1),
+            self.N_raw[:, a:b].sum(axis=1),
+        )
 
     def ok(self, a, b):
-        """True when every group in the fine-bin slice [a, b) clears both thresholds."""
-        S, N = self.totals(a, b)
+        """True when every group in the fine-bin slice [a, b) clears all thresholds."""
+        S, B, N = self.totals(a, b)
         return bool(
             np.all(S >= self.min_signal_per_bin)
+            and np.all(B >= self.min_background_per_bin)
             and np.all(N >= self.min_total_events_per_bin)
         )
 
     def failure_reason(self, a, b):
         """Describe which group/threshold fails on [a, b), for debug logging."""
-        S, N = self.totals(a, b)
+        S, B, N = self.totals(a, b)
         reasons = []
         for i, label in enumerate(self.labels):
             name = "all years" if not self.enforce_min_per_year else f"{label:g}"
@@ -157,6 +175,10 @@ class BinGuard:
             if S[i] < self.min_signal_per_bin:
                 reasons.append(
                     f"{name}: weighted signal={S[i]:g} < {self.min_signal_per_bin}"
+                )
+            if B[i] < self.min_background_per_bin:
+                reasons.append(
+                    f"{name}: weighted background={B[i]:g} < {self.min_background_per_bin}"
                 )
         return "; ".join(reasons) if reasons else "guards satisfied"
 
@@ -174,6 +196,7 @@ def make_significance_binning_uniform(
     score_max=None,
     min_total_events_per_bin=0.0,  # stability: (S+B) >= this
     min_signal_per_bin=0.3,  # CMS H→μμ-style guard: S >= this
+    min_background_per_bin=0.0,  # require weighted B >= this
     clamp_edges=True,  # clamp first/last edges to [0,1]
     sig_years=None,
     bkg_years=None,
@@ -191,6 +214,8 @@ def make_significance_binning_uniform(
     - score_min, score_max: optional min/max score values to consider
     - min_total_events_per_bin: minimum (S+B) per bin for stability
     - min_signal_per_bin: minimum S per bin (CMS H→μμ-style guard)
+    - min_background_per_bin: minimum weighted B per bin, so bins are not left
+      background-free (or negative) at high score
     - clamp_edges: if True, clamp the first/last edges to [0,1
     - sig_years, bkg_years: per-event year labels, needed for enforce_min_per_year
     - enforce_min_per_year: apply the two thresholds above to each data-taking
@@ -247,6 +272,7 @@ def make_significance_binning_uniform(
         bkg_w,
         min_total_events_per_bin=min_total_events_per_bin,
         min_signal_per_bin=min_signal_per_bin,
+        min_background_per_bin=min_background_per_bin,
         sig_years=sig_years,
         bkg_years=bkg_years,
         enforce_min_per_year=enforce_min_per_year,
@@ -300,6 +326,7 @@ def make_significance_binning(
     score_max=None,
     min_total_events_per_bin=0.0,  # require (S+B) >= this
     min_signal_per_bin=0.3,  # require S >= this
+    min_background_per_bin=0.0,  # require weighted B >= this
     tol_frac=0.01,  # allow merge if local Z² drop <= 5%
     clamp_edges=True,
     sig_years=None,
@@ -310,8 +337,8 @@ def make_significance_binning(
     Greedy R->L merging with a 5% loss veto:
       - Merge neighboring fine bins from the right as long as merging causes
         at most `tol_frac` fractional loss in local Z².
-      - If the accumulator fails S or (S+B) guards, keep merging regardless of loss
-        until guards are satisfied. With `enforce_min_per_year=True` those guards
+      - If the accumulator fails the S, B or (S+B) guards, keep merging regardless
+        of loss until guards are satisfied. With `enforce_min_per_year=True` those guards
         must hold for every data-taking year separately (year labels come from
         `sig_years`/`bkg_years`), not just for the years summed together.
       - No cap on the final number of bins.
@@ -373,6 +400,7 @@ def make_significance_binning(
         bkg_w,
         min_total_events_per_bin=min_total_events_per_bin,
         min_signal_per_bin=min_signal_per_bin,
+        min_background_per_bin=min_background_per_bin,
         sig_years=sig_years,
         bkg_years=bkg_years,
         enforce_min_per_year=enforce_min_per_year,
@@ -476,6 +504,7 @@ def scan_nbins_for_best_edges(
     score_max=None,
     min_total_events_per_bin=0.0,  # stability: (S+B) >= this
     min_signal_per_bin=0.3,  # CMS H→μμ-style guard: S >= this
+    min_background_per_bin=0.0,  # require weighted B >= this
     clamp_edges=True,  # clamp first/last edges to [0,1]
     frac_tol=0.01,  # allow merge if local Z² drop <= 1%
     output_dir=OUTPUT_DIR,  # where the scan plots are written
@@ -518,6 +547,7 @@ def scan_nbins_for_best_edges(
                 score_max=score_max,
                 min_total_events_per_bin=min_total_events_per_bin,
                 min_signal_per_bin=min_signal_per_bin,
+                min_background_per_bin=min_background_per_bin,
                 clamp_edges=clamp_edges,
                 tol_frac=frac_tol,  # allow merge if local Z² drop <= 1% (only for non-uniform binning)
                 sig_years=sig_years,
@@ -937,9 +967,20 @@ def parse_args(argv=None):
         default=False,
         action=argparse.BooleanOptionalAction,
         help=(
-            "Require min_total_events_per_bin and min_signal_per_bin to be met by "
-            "every data-taking year separately instead of by the years summed "
-            "together. Needs a 'year' column in the input parquet."
+            "Require the per-bin minima to be met by every data-taking year "
+            "separately instead of by the years summed together. Needs a 'year' "
+            "column in the input parquet."
+        ),
+    )
+    parser.add_argument(
+        "--min-background-per-bin",
+        dest="min_background_per_bin",
+        type=float,
+        default=0.05,
+        help=(
+            "Minimum weighted background yield per bin. The raw-count guard is "
+            "dominated by signal MC, so without this the high-score bins can end "
+            "up with (nearly) no background; 0.0 still rejects negative yields."
         ),
     )
     return parser.parse_args(argv)
@@ -1039,6 +1080,8 @@ if __name__ == "__main__":
     #------------------------------
     # min_total_events_per_bin=5.0
     min_total_events_per_bin= 15
+    min_background_per_bin = args.min_background_per_bin
+    
     nb, edges, S_NoWgt_bins, S_bins, B_NoWgt_bins, B_bins, Z_bins, Ztot = (
         scan_nbins_for_best_edges(
             sig_score,
@@ -1050,6 +1093,7 @@ if __name__ == "__main__":
             score_max=score_upper,
             min_total_events_per_bin=min_total_events_per_bin,
             min_signal_per_bin=0.05,
+            min_background_per_bin=min_background_per_bin,
             clamp_edges=True,
             frac_tol=frac_tol,  # allow merge if local Z² drop <= 1%
             sig_years=sig_years,
@@ -1101,6 +1145,7 @@ if __name__ == "__main__":
             "frac_tol": frac_tol,
             "min_total_events_per_bin": min_total_events_per_bin,
             "min_signal_per_bin": 0.05,
+            "min_background_per_bin": min_background_per_bin,
             "enforce_min_per_year": enforce_min_per_year,
             "score_min": round(score_min, 6),
             "score_max": round(score_upper, 6),
