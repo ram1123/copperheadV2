@@ -32,11 +32,21 @@ time python MVA_training/pileup_dnn/train_pu_dnn.py \
 
 time python MVA_training/pileup_dnn/train_pu_dnn.py \
   -i \
-    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" \
-    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ttjets_*/*/*.parquet" \
-    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ewk_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ewk_*/*/*.parquet" \
   --use-glob \
-  -o validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet \
+  -o validation/pu_dnn/run2024_dy_top_ewk_OnlyIDVars_NopuIdDisc \
+  --regions HEpos HEneg HFpos HFneg  
+
+
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
+  -i \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ewk_*/*/*.parquet" \
+  --use-glob \
+  -o validation/pu_dnn/run2024_dy_top_ewk_OnlyIDVarsAndOthersNopTrelated_NopuIdDisc \
   --regions HEpos HEneg HFpos HFneg  
 """
 
@@ -45,11 +55,15 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import random
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from glob import glob
 from pathlib import Path
 from typing import Iterable
+
+import tqdm
 
 import matplotlib
 
@@ -120,23 +134,24 @@ MODEL_FEATURES = [
     # "logpt",
     "minDPhiMetJet",
     "maxDPhiMetJet",
-    # "absDPhiMetJet",
-    # "minDRJetMuon",
-    # "minAbsDEtaJetMuon",
-    # "dRJetOther",
-    # "absDEtaJetOther",
+    "absDPhiMetJet",
+    "minDRJetMuon",
+    "minAbsDEtaJetMuon",
+    "dRJetOther",
+    "absDEtaJetOther",
     # "otherJetPt",
     # "jetPtOverOtherJetPt",
 
-    "puIdDisc",
+    # "puIdDisc",
 
     "chEmEF", "chHEF",
     "neEmEF", "neHEF",
-    "muEF",
+    # "muEF",
 
     "chMultiplicity", "neMultiplicity",
 
-    "nConstituents", "nElectrons", "nMuons",
+    "nConstituents", 
+    # "nElectrons", "nMuons",
 
     # "muonSubtrFactor", "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
 
@@ -453,24 +468,63 @@ def needed_columns(available: set[str], variation: str, max_jets: int, weight_co
     return sorted(requested & available)
 
 
-def load_stage1(paths: list[str], args: argparse.Namespace) -> pd.DataFrame:
-    frames = []
-    rows_left = args.max_rows
+def _read_one_stage1_file(
+    path: str, variation: str, max_jets: int, weight_col: str, row_cap: int | None
+) -> pd.DataFrame | None:
+    """Read one stage-1 parquet file, needed-columns only, in a single file open
+    (schema + data), tagged with its inferred sample name/group."""
+    import pyarrow.parquet as pq
 
-    for path in paths:
-        if rows_left is not None and rows_left <= 0:
-            break
-        local_cols = needed_columns(set(parquet_columns(path)), args.variation, args.max_jets, args.weight_col)
-        if not local_cols:
-            continue
-        frame = pd.read_parquet(path, columns=local_cols)
-        if rows_left is not None:
-            frame = frame.head(rows_left)
+    pf = pq.ParquetFile(path)
+    local_cols = needed_columns(set(pf.schema.names), variation, max_jets, weight_col)
+    if not local_cols:
+        return None
+    frame = pf.read(columns=local_cols).to_pandas()
+    if row_cap is not None:
+        frame = frame.head(row_cap)
+    sample_name = infer_sample_name(path)
+    frame["__sample_name"] = sample_name
+    frame["__sample_group"] = infer_sample_group(sample_name)
+    return frame
+
+
+def load_stage1(paths: list[str], args: argparse.Namespace) -> pd.DataFrame:
+    if args.max_rows is not None:
+        # Debug/testing path: stop as soon as enough rows are read, so we don't
+        # pay to open files we'll never need. Parallelizing here would just read
+        # every file anyway, defeating the point of --max-rows.
+        frames = []
+        rows_left = args.max_rows
+        for path in paths:
+            if rows_left <= 0:
+                break
+            frame = _read_one_stage1_file(
+                path, args.variation, args.max_jets, args.weight_col, rows_left
+            )
+            if frame is None:
+                continue
             rows_left -= len(frame)
-        sample_name = infer_sample_name(path)
-        frame["__sample_name"] = sample_name
-        frame["__sample_group"] = infer_sample_group(sample_name)
-        frames.append(frame)
+            frames.append(frame)
+    else:
+        # Full run: every file gets read regardless, so parallelize the I/O.
+        # pyarrow releases the GIL during the actual read/decompress, so threads
+        # (not processes) give real parallelism here without the cost of pickling
+        # large DataFrames back from worker processes.
+        max_workers = min(32, (os.cpu_count() or 4) * 4)
+        results: list[pd.DataFrame | None] = [None] * len(paths)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            future_to_idx = {
+                pool.submit(
+                    _read_one_stage1_file, path, args.variation, args.max_jets, args.weight_col, None
+                ): idx
+                for idx, path in enumerate(paths)
+            }
+            for future in tqdm.tqdm(
+                as_completed(future_to_idx), total=len(future_to_idx), desc="Reading stage-1 parquet"
+            ):
+                results[future_to_idx[future]] = future.result()
+        # Preserve `paths` order (not completion order) for run-to-run reproducibility.
+        frames = [frame for frame in results if frame is not None]
 
     if not frames:
         raise ValueError("No readable parquet frames with stage-1 jet columns were found.")
