@@ -1,0 +1,20 @@
+{
+  "rebinned": true,
+  "baseline_points": {
+    "Cfg12345": 1.37746,
+    "20260810": 1.36091,
+    "777001": 1.37443
+  },
+  "n_points": 3,
+  "mean_Run2_prefit": 1.3709333333333333,
+  "sigma_noise": 0.008811675966201448,
+  "full_spread": 0.016549999999999843,
+  "sigma_noise_pct_of_reference": 0.6427501434206464,
+  "reference_Run2": 1.52839,
+  "deviation_of_mean_from_reference": -0.15745666666666658,
+  "deviation_pct": -10.302126202518114,
+  "baseline_reproduces_reference": true,
+  "acceptance_floor_2pct": 1.5589578,
+  "target_5pct": 1.6048095,
+  "statonly_ceiling": 1.6903
+}

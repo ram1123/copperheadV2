@@ -1,0 +1,154 @@
+{
+  "stage3_datacards_Aug10_2026_advLambda0KeepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo": {
+    "meets_2pct_floor": false,
+    "meets_5pct_target": false,
+    "per_year": {
+      "2016postVFP": {
+        "pct_change": 9.617553138243952,
+        "prefit": 0.551183,
+        "reference": 0.5028236666666667,
+        "statonly": 0.588535
+      },
+      "2016preVFP": {
+        "pct_change": -3.7998714363561157,
+        "prefit": 0.491363,
+        "reference": 0.5107716666666667,
+        "statonly": 0.553894
+      },
+      "2017": {
+        "pct_change": -0.36975532710242476,
+        "prefit": 0.662755,
+        "reference": 0.6652146666666666,
+        "statonly": 0.750898
+      },
+      "2018": {
+        "pct_change": -0.6040928761319255,
+        "prefit": 0.947297,
+        "reference": 0.9530543333333332,
+        "statonly": 1.05217
+      },
+      "Run2": {
+        "pct_change": 0.47607469363936267,
+        "prefit": 1.37746,
+        "reference": 1.3709333333333333,
+        "statonly": 1.52449
+      }
+    },
+    "run2_pct_change": 0.47607469363936267,
+    "stage3_dir": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/stage3_datacards_Aug10_2026_advLambda0KeepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
+  },
+  "stage3_datacards_Aug10_2026_advLambdaOFFKeepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo": {
+    "meets_2pct_floor": false,
+    "meets_5pct_target": false,
+    "per_year": {
+      "2016postVFP": {
+        "pct_change": 9.617553138243952,
+        "prefit": 0.551183,
+        "reference": 0.5028236666666667,
+        "statonly": 0.588535
+      },
+      "2016preVFP": {
+        "pct_change": -3.8000672185549402,
+        "prefit": 0.491362,
+        "reference": 0.5107716666666667,
+        "statonly": 0.553893
+      },
+      "2017": {
+        "pct_change": -0.36975532710242476,
+        "prefit": 0.662755,
+        "reference": 0.6652146666666666,
+        "statonly": 0.750898
+      },
+      "2018": {
+        "pct_change": -0.6040928761319255,
+        "prefit": 0.947297,
+        "reference": 0.9530543333333332,
+        "statonly": 1.05217
+      },
+      "Run2": {
+        "pct_change": 0.47607469363936267,
+        "prefit": 1.37746,
+        "reference": 1.3709333333333333,
+        "statonly": 1.52449
+      }
+    },
+    "run2_pct_change": 0.47607469363936267,
+    "stage3_dir": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/stage3_datacards_Aug10_2026_advLambdaOFFKeepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
+  },
+  "stage3_datacards_Aug11_2026_advVarAB_lam0005keepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo": {
+    "meets_2pct_floor": false,
+    "meets_5pct_target": false,
+    "per_year": {
+      "2016postVFP": {
+        "pct_change": -7.616520304334656,
+        "prefit": 0.464526,
+        "reference": 0.5028236666666667,
+        "statonly": 0.524221
+      },
+      "2016preVFP": {
+        "pct_change": 6.469688021066149,
+        "prefit": 0.543817,
+        "reference": 0.5107716666666667,
+        "statonly": 0.582612
+      },
+      "2017": {
+        "pct_change": -3.0598643846297184,
+        "prefit": 0.64486,
+        "reference": 0.6652146666666666,
+        "statonly": 0.744924
+      },
+      "2018": {
+        "pct_change": -2.369154889035691,
+        "prefit": 0.930475,
+        "reference": 0.9530543333333332,
+        "statonly": 1.04371
+      },
+      "Run2": {
+        "pct_change": -1.5743532386695163,
+        "prefit": 1.34935,
+        "reference": 1.3709333333333333,
+        "statonly": 1.50283
+      }
+    },
+    "run2_pct_change": -1.5743532386695163,
+    "stage3_dir": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/stage3_datacards_Aug11_2026_advVarAB_lam0005keepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
+  },
+  "stage3_datacards_Aug11_2026_advVarAB_lam0082keepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo": {
+    "meets_2pct_floor": false,
+    "meets_5pct_target": false,
+    "per_year": {
+      "2016postVFP": {
+        "pct_change": -23.612585193881756,
+        "prefit": 0.384094,
+        "reference": 0.5028236666666667,
+        "statonly": 0.479882
+      },
+      "2016preVFP": {
+        "pct_change": -23.898676186032255,
+        "prefit": 0.388704,
+        "reference": 0.5107716666666667,
+        "statonly": 0.537322
+      },
+      "2017": {
+        "pct_change": -33.48402821344889,
+        "prefit": 0.442474,
+        "reference": 0.6652146666666666,
+        "statonly": 0.654307
+      },
+      "2018": {
+        "pct_change": -49.70779910064588,
+        "prefit": 0.479312,
+        "reference": 0.9530543333333332,
+        "statonly": 0.927384
+      },
+      "Run2": {
+        "pct_change": -39.624124683913635,
+        "prefit": 0.827713,
+        "reference": 1.3709333333333333,
+        "statonly": 1.34432
+      }
+    },
+    "run2_pct_change": -39.624124683913635,
+    "stage3_dir": "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/stage3_datacards_Aug11_2026_advVarAB_lam0082keepDeg/score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
+  }
+}

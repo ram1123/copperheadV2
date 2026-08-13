@@ -4,6 +4,7 @@ import itertools
 import logging
 import os
 import pickle
+import shutil
 import time
 from pathlib import Path
 
@@ -12,6 +13,7 @@ import hist
 import numpy as np
 import pandas as pd
 import torch
+import yaml
 from cli.common_argparser import build_common_parser
 from coffea import processor
 from coffea.ml_tools.torch_wrapper import torch_wrapper
@@ -20,6 +22,15 @@ from modules import selection
 from modules.dask_utils import get_dask_client
 from modules.utils import get_compacted_path, logger, fillEventNans
 from modules.sample_config import get_bkg_sig_dicts
+# Shape-systematics discovery/resolution lives in modules/systematics.py so that
+# Stage-2 inference and the DNN preprocessing/training share one definition of
+# "what is a variation". Re-exported here under their original names; the
+# semantics are unchanged.
+from modules.systematics import (  # noqa: F401
+    discover_shape_systs,
+    feature_name_for_variation,
+    stage2_shape_variations,
+)
 
 
 DATASET_SEPARATOR = "::"
@@ -37,47 +48,6 @@ def get_variation(wgt_variation, sys_variation):
         else:
             return None
 
-
-def discover_shape_systs(fields, prefixes=None):
-    """
-    Discover available shape-variation suffixes from shifted stage1 branches.
-    This covers both jet/JEC-like variations and muon-momentum shape variations.
-    """
-    if prefixes is None:
-        prefixes = [
-            "dimuon_mass_",
-            "dimuon_pt_",
-            "dimuon_pt_log_",
-            "dimuon_eta_",
-            "dimuon_rapidity_",
-            "dimuon_ebe_mass_res_",
-            "dimuon_ebe_mass_res_rel_",
-            "mu1_pt_",
-            "mu2_pt_",
-            "mu1_pt_over_mass_",
-            "mu2_pt_over_mass_",
-            "jet1_pt_",
-            "jet2_pt_",
-            "jj_mass_",
-            "jj_dEta_",
-            "njets_",
-            "nBtagLoose_",
-            "nBtagMedium_",
-        ]
-    suffixes = set()
-    for f in fields:
-        if not (f.endswith("_up") or f.endswith("_down")):
-            continue
-        # Use the longest (most specific) matching prefix, not the first one in
-        # list order, so e.g. "mu1_pt_over_mass_" wins over "mu1_pt_" for a field
-        # like "mu1_pt_over_mass_mu_roccor_up" regardless of how `prefixes` is
-        # ordered.
-        matching_prefixes = [p for p in prefixes if f.startswith(p)]
-        if not matching_prefixes:
-            continue
-        best_prefix = max(matching_prefixes, key=len)
-        suffixes.add(f[len(best_prefix):])
-    return sorted(suffixes)
 
 SHIFTED_SELECTION_VARIABLES = {
     "njets",
@@ -229,59 +199,6 @@ def prepare_features(events, features, variation="nominal", year_onehot_features
         raise ValueError("prepare_features: No features to use!")
 
     return features_var
-
-
-def feature_name_for_variation(
-    feat,
-    variation,
-    fields,
-    allow_nominal_fallback=False,
-    nominal_only_features=None,
-):
-    """Resolve DNN inputs; default caller passes nominal to match sideHustle5."""
-    # training_features often already carry a literal "_nominal" suffix
-    # (e.g. "jet1_phi_nominal") rather than a bare base name ("jet1_phi").
-    # Strip it so the shifted candidate below is built from the base name,
-    # not double-suffixed into something like "jet1_phi_nominal_nominal".
-    base = feat[: -len("_nominal")] if feat.endswith("_nominal") else feat
-
-    if variation == "nominal" or variation.startswith("wgt"):
-        use_var = "nominal"
-    elif "soft" in feat:
-        use_var = "nominal"
-    else:
-        use_var = variation
-
-    candidates = [f"{base}_{use_var}", f"{base}_nominal", feat]
-    for idx, c in enumerate(candidates):
-        if c in fields:
-            if idx > 0:
-                logger.warning(
-                    f"[stage2] DNN feature '{base}_{use_var}' unavailable for "
-                    f"variation '{variation}'; falling back to '{c}'."
-                )
-            logger.debug(
-            # logger.warning(
-                f"[stage2][field-resolve] kind=dnn variation={variation} "
-                f"var={feat} resolved={c} fallback={idx > 0}"
-            )
-            return c
-    if allow_nominal_fallback:
-        logger.warning(
-            f"[stage2] DNN feature '{base}_{use_var}' (and nominal/base) unavailable "
-            f"for variation '{variation}'; falling back to unverified '{feat}'."
-        )
-        logger.debug(
-        # logger.warning(
-            f"[stage2][field-resolve] kind=dnn variation={variation} "
-            f"var={feat} resolved={feat} fallback=True"
-        )
-        return feat
-    raise KeyError(
-        f"Feature {feat} (var={variation}) not found in fields. "
-        f"Tried: {candidates}. "
-        "DNN inputs are resolved to nominal fields for all variations."
-    )
 
 
 def getFoldFilter(events, fold_vals, nfolds):
@@ -531,10 +448,18 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
         syst_variations = ["nominal"]
         if not self.no_variations:
+            # syst_variations += stage2_shape_variations(fields)
+            # Restrict the discovered shape systematics to the reduced JEC and
+            # Rochester-correction set requested for Stage-2 evaluation.
             syst_variations += [
                 syst
-                for syst in discover_shape_systs(fields)
-                if not syst.startswith("log_")
+                for syst in stage2_shape_variations(fields)
+                if syst in {
+                    "Total_up",
+                    "Total_down",
+                    "mu_roccor_up",
+                    "mu_roccor_down",
+                }
             ]
 
         variations = []
@@ -671,6 +596,61 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
     def postprocess(self, accumulator):
         return accumulator
+
+
+def save_dnn_binning_config(dest_dir):
+    """
+    Drop a copy of the DNN binning config next to the histograms it produced.
+
+    The score axis is built from `selection.binning`, which is evaluated once
+    when modules.selection is imported. A config edited while stage2 is running
+    therefore no longer describes the histograms being written, so the copy is
+    checked against the edges actually used: if they have drifted, the in-use
+    edges are written instead and a warning is logged, so the file next to the
+    pickles is never a lie about how they were filled.
+
+    Parameters:
+    - dest_dir: directory holding this year's histograms
+    Returns:
+    - Path of the written file, or None if nothing could be written
+    """
+    dest_dir = Path(dest_dir)
+    src = Path(selection.DNN_BINNING_YAML)
+    dest = dest_dir / src.name
+
+    binning_in_use = np.asarray(selection.binning, dtype=float)
+    on_disk = None
+    if src.is_file():
+        try:
+            on_disk = np.asarray(selection.load_dnn_binning(src), dtype=float)
+        except Exception as exc:  # unreadable/invalid config -- fall back below
+            logger.warning(f"Could not re-read {src}: {exc}")
+
+    if on_disk is not None and np.array_equal(on_disk, binning_in_use):
+        shutil.copyfile(src, dest)
+    else:
+        logger.warning(
+            f"{src} no longer matches the binning these histograms were filled "
+            f"with (it was edited after import, or is unreadable). Writing the "
+            f"in-use edges to {dest} instead."
+        )
+        payload = {
+            "n_bins": len(binning_in_use) - 1,
+            "edges": [float(e) for e in binning_in_use],
+            "metadata": {
+                "generated_by": "run_stage2_vbf.py (edges in use at fill time)",
+                "source_config": str(src),
+                "note": (
+                    "the source config did not match these edges when the "
+                    "histograms were written"
+                ),
+            },
+        }
+        with open(dest, "w") as f:
+            yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
+
+    logger.info(f"Saved DNN binning ({len(binning_in_use) - 1} bins) to {dest}")
+    return dest
 
 
 def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samples=[], bkg_samples=[], do_vbf_filter_study=False):
@@ -863,6 +843,8 @@ if __name__ == "__main__":
         hist_save_path = base_path / "stage2_histograms" / histDirName / year
         os.makedirs(hist_save_path, exist_ok=True)
         logger.info(f"{year} histograms will be saved to: {hist_save_path}")
+        # keep the binning that produced these histograms alongside them
+        save_dnn_binning_config(hist_save_path)
 
         full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
 

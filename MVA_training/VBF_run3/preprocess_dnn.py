@@ -36,10 +36,21 @@ import awkward as ak
 import dask_awkward as dak
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import yaml
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.git_utils import get_git_commit, get_git_state
 from modules.selection import applyRegionCatCuts
+from modules.systematics import (
+    VARIATION_COL_SEP,
+    VARIATION_SETS,
+    assert_matches_stage2,
+    canonical_variation_name,
+    resolve_variation_columns,
+    select_variations,
+    stage2_shape_variations,
+    variation_column_name,
+)
 from modules.utils import logger
 from MVA_training.VBF_run3.utils.pre_scale_cleaning import pre_scaling_clean
 
@@ -193,6 +204,235 @@ def resolve_glob(base_path: str, year: str, glob_template: str, process: str) ->
     return files
 
 
+# --------------------------------------------------------------------------------------
+# Systematic-variation augmentation (opt-in, --include-systematic-variations)
+# --------------------------------------------------------------------------------------
+@dataclass(frozen=True)
+class VariationPlan:
+    """What to load and how to rename it, for one (year, process) input."""
+
+    #: Discovered per-event shape variations, in Stage-1 naming.
+    variations: Tuple[str, ...]
+    #: Year-agnostic slot names, aligned 1:1 with `variations`.
+    canonical: Tuple[str, ...]
+    #: Extra Stage-1 columns to read.
+    load_columns: Tuple[str, ...]
+    #: Stage-1 column -> augmented fold-parquet column.
+    rename: Dict[str, str]
+    #: augmented column -> the nominal training feature it is a variation of.
+    nominal_of: Dict[str, str]
+
+
+def plan_variations(
+    example_file: str,
+    physical_features: List[str],
+    variation_set: str,
+) -> VariationPlan:
+    """Build the per-input variation plan from a Stage-1 parquet's schema.
+
+    Uses the *Stage-2* discovery path (``modules.systematics``) so training and
+    inference agree on what a variation is, then maps each per-year JEC source
+    onto a year-agnostic canonical slot (``Absolute_2018_up`` and
+    ``Absolute_2016APV_up`` both land in ``Absolute_yearDecor_up``).  That is what
+    lets a four-year training set carry one homogeneous variation axis: every
+    event supplies its own year's decorrelated source in the same slot.
+    """
+    fields = set(pq.ParquetFile(example_file).schema_arrow.names)
+    variations = select_variations(stage2_shape_variations(fields), variation_set)
+
+    # Fail loudly if our resolution ever disagrees with Stage-2's.
+    assert_matches_stage2(physical_features, variations, fields)
+
+    resolved = resolve_variation_columns(physical_features, variations, fields)
+
+    load_columns: List[str] = []
+    rename: Dict[str, str] = {}
+    nominal_of: Dict[str, str] = {}
+    canonical: List[str] = []
+    for variation in variations:
+        canon = canonical_variation_name(variation)
+        canonical.append(canon)
+        for feat, col in resolved[variation].items():
+            aug = variation_column_name(feat, canon)
+            load_columns.append(col)
+            rename[col] = aug
+            nominal_of[aug] = feat
+
+    return VariationPlan(
+        variations=tuple(variations),
+        canonical=tuple(canonical),
+        load_columns=tuple(sorted(set(load_columns))),
+        rename=rename,
+        nominal_of=nominal_of,
+    )
+
+
+def _clean_variation_columns(
+    df: pd.DataFrame,
+    canonical_variations: List[str],
+    physical_features: List[str],
+    nominal_of: Dict[str, str],
+) -> pd.DataFrame:
+    """Apply the *same* pre-scaling sentinels to varied columns as to nominal.
+
+    ``pre_scaling_clean`` is written against the nominal column names, so for each
+    variation we build a temporary nominal-named view (varied values where the
+    variation shifts a feature, nominal values elsewhere), run the untouched
+    cleaning function on it, and write the result back.  Reusing the function
+    rather than reimplementing its sentinels is what keeps varied and nominal
+    inputs on the same footing -- a varied jet feature for an event with
+    ``njets_nominal < 2`` gets the identical sentinel its nominal sibling gets.
+    """
+    for canon in canonical_variations:
+        # Group by an EXACT separator split, matching
+        # train_dnn.load_variation_spec. An endswith() test would be enough for
+        # today's 26 canonical names (none is a suffix of another) but would
+        # silently mis-group a future name that is.
+        cols_for_var = {
+            aug: nominal_of[aug]
+            for aug in nominal_of
+            if aug in df.columns
+            and VARIATION_COL_SEP in aug
+            and aug.rsplit(VARIATION_COL_SEP, 1)[1] == canon
+        }
+        if not cols_for_var:
+            continue
+        view = pd.DataFrame(
+            {feat: df[feat].to_numpy(copy=True) for feat in physical_features},
+            index=df.index,
+        )
+        view["njets_nominal"] = df["njets_nominal"].to_numpy(copy=False)
+        for aug, feat in cols_for_var.items():
+            view[feat] = df[aug].to_numpy(copy=True)
+        view = pre_scaling_clean(view)
+        for aug, feat in cols_for_var.items():
+            df[aug] = view[feat].to_numpy(copy=False)
+        del view
+    return df
+
+
+def _fill_missing_variation_columns(
+    df: pd.DataFrame,
+    plans: List[VariationPlan],
+) -> Tuple[pd.DataFrame, List[str], Dict[str, str]]:
+    """Guarantee every augmented column exists for every row.
+
+    A sample/year that lacks a given variation column, or a row that came from an
+    input where the feature falls back to nominal, is filled with the *nominal*
+    value.  That is the documented fallback: an absent variation contributes
+    exactly zero to the consistency term because ``pred_i == pred_nominal``.
+    Non-finite varied values are filled the same way, which is the NaN/Inf guard.
+    """
+    nominal_of: Dict[str, str] = {}
+    for plan in plans:
+        nominal_of.update(plan.nominal_of)
+
+    aug_cols = sorted(nominal_of)
+    filled_from_nominal: Dict[str, int] = {}
+    for aug in aug_cols:
+        feat = nominal_of[aug]
+        nominal_vals = df[feat].to_numpy(dtype=np.float64, copy=False)
+        if aug not in df.columns:
+            df[aug] = nominal_vals
+            filled_from_nominal[aug] = len(df)
+            continue
+        vals = df[aug].to_numpy(dtype=np.float64, copy=True)
+        bad = ~np.isfinite(vals)
+        n_bad = int(bad.sum())
+        if n_bad:
+            vals[bad] = nominal_vals[bad]
+            df[aug] = vals
+            filled_from_nominal[aug] = n_bad
+    if filled_from_nominal:
+        logger.warning(
+            "[variations] %d augmented column(s) had missing/non-finite entries "
+            "filled from nominal; worst: %s",
+            len(filled_from_nominal),
+            sorted(filled_from_nominal.items(), key=lambda kv: -kv[1])[:5],
+        )
+    return df, aug_cols, nominal_of
+
+
+#: A varied column is treated as degenerate when this share of its finite entries
+#: sit on a single value while the nominal counterpart does not. Chosen from the
+#: measured separation on the Run-2 inputs, which is enormous: the 48 JEC-varied
+#: QvG columns span 0.9941-1.0000, every one of the other 324 varied columns is
+#: <= 0.0022, and nominal QvG itself is <= 0.5723. Any threshold in [0.90, 0.99]
+#: gives the identical split, so this is not a tuned knob.
+DEGENERATE_MODAL_SHARE = 0.99
+
+
+def _modal_share(a: np.ndarray) -> Tuple[float, float]:
+    """Return ``(modal_value, share)`` for the most common value in ``a``.
+
+    Exact whenever the true modal share exceeds 0.5, which is all this function is
+    used for: a value occupying >50% of the entries is necessarily the median, so
+    the median is the mode and counting matches against it gives the true share.
+    Below 0.5 the returned share can only *under*-state the mode, which cannot
+    produce a false positive at any threshold above 0.5. O(n) via
+    ``np.median``'s introselect, rather than the O(n log n) full sort a
+    ``np.unique`` count would need on ~3M rows x 372 columns.
+    """
+    if a.size == 0:
+        return float("nan"), 0.0
+    candidate = float(np.median(a))
+    return candidate, float(np.count_nonzero(a == candidate) / a.size)
+
+
+def find_degenerate_variation_columns(
+    df: pd.DataFrame,
+    variation_columns: List[str],
+    nominal_of: Dict[str, str],
+    modal_share_threshold: float = DEGENERATE_MODAL_SHARE,
+) -> Dict[str, Dict[str, Any]]:
+    """Flag varied columns that are effectively a constant sentinel.
+
+    Measured on the Run-2 Stage-1 inputs, ``jet1/jet2_btagUParTAK4QvG_<JEC>_up/down``
+    are a ``-1`` sentinel for essentially every event while the nominal branch spans
+    the full discriminant range. A variation like that is not a physical shift; it
+    is a missing branch wearing a legal value. Left in, it dominates the
+    consistency term (its per-event delta is ~1 sigma against ~0.03-0.09 sigma for
+    the genuine JEC shifts) and the network would learn to ignore the feature
+    outright.
+
+    The test is on the *modal share*, not on ``n_unique == 1``. A strict
+    uniqueness test misses these columns as soon as a handful of rows get their
+    nominal value back through the missing/non-finite fallback: on the real inputs
+    11 of the 48 QvG columns reach ``n_unique`` in the hundreds while still being
+    >99.4% sentinel, so a uniqueness test would silently leave them in the
+    "degenerate dropped" comparison set and hollow out that comparison.
+
+    Detection only -- the caller decides whether to drop, so the default stays
+    faithful to what Stage-2 actually feeds its own DNN at inference.
+    """
+    flagged: Dict[str, Dict[str, Any]] = {}
+    for col in variation_columns:
+        feat = nominal_of[col]
+        v = df[col].to_numpy(dtype=np.float64, copy=False)
+        x = df[feat].to_numpy(dtype=np.float64, copy=False)
+        both = np.isfinite(v) & np.isfinite(x)
+        if not both.any():
+            continue
+        v_fin = v[both]
+        x_fin = x[both]
+        modal_value, share_var = _modal_share(v_fin)
+        _, share_nom = _modal_share(x_fin)
+        # The nominal-side guard keeps a genuinely spiky feature (one with a real
+        # sentinel of its own, e.g. a pt set to 0 when the jet is absent) from
+        # being flagged just because its variation inherits the same spike.
+        if share_var >= modal_share_threshold > share_nom:
+            flagged[col] = {
+                "nominal_feature": feat,
+                "modal_value": modal_value,
+                "modal_share_variation": share_var,
+                "modal_share_nominal": share_nom,
+                "n_unique_variation": int(np.unique(v_fin).size),
+                "n_unique_nominal": int(np.unique(x_fin).size),
+                "mean_abs_delta_vs_nominal": float(np.mean(np.abs(v_fin - x_fin))),
+            }
+    return flagged
+
+
 def events_to_dataframe(
     events: dak.Array,
     keep_cols: List[str],
@@ -201,6 +441,7 @@ def events_to_dataframe(
     label_int: int,
     group: str,
     year: str,
+    variation_rename: Dict[str, str] | None = None,
 ) -> pd.DataFrame:
     """
     Apply selection, convert to pandas, attach label + group + process (+ year if requested).
@@ -229,6 +470,14 @@ def events_to_dataframe(
         data[c] = ak.to_numpy(col)
 
     df = pd.DataFrame(data)
+
+    # Stage-1 variation branches carry per-year names (e.g. "jet1_pt_Absolute_2018_up").
+    # Rename them to the year-agnostic augmented columns so the four years concat
+    # onto one homogeneous variation axis.
+    if variation_rename:
+        present = {src: dst for src, dst in variation_rename.items() if src in df.columns}
+        if present:
+            df = df.rename(columns=present)
 
     df["label"] = float(label_int)
     df["process"] = str(process)
@@ -356,6 +605,9 @@ def preprocess(
     out_dir: str,
     years: str,
     make_plots: bool,
+    include_variations: bool = False,
+    variation_set: str = "full",
+    files_per_chunk: int = 0,
 ) -> None:
     years_list = [y.strip() for y in years.split(",") if y.strip()]
     if not years_list:
@@ -374,8 +626,15 @@ def preprocess(
     logger.info("[preprocess] category=%s region=%s", cfg.category, cfg.region)
     logger.info("[preprocess] features2load: %s", features2load)
 
+    if include_variations:
+        logger.info(
+            "[preprocess] systematic-variation augmentation ON (variation_set=%s)",
+            variation_set,
+        )
+
     # ---- build combined dataframe across years ----
     dfs: List[pd.DataFrame] = []
+    plans: List[VariationPlan] = []
 
     for year in years_list:
         # resolve processes per year
@@ -406,7 +665,22 @@ def preprocess(
                 )
                 continue
             logger.info("[year %s] Reading %d files: %s", year, len(files), proc)
-            events = dak.from_parquet(files, columns=features2load + cfg.required_columns)
+            plan = None
+            extra_cols: List[str] = []
+            if include_variations:
+                plan = plan_variations(files[0], physical_training_features, variation_set)
+                plans.append(plan)
+                extra_cols = list(plan.load_columns)
+                logger.info(
+                    "[year %s] proc=%s: %d variations, %d extra columns",
+                    year,
+                    proc,
+                    len(plan.variations),
+                    len(extra_cols),
+                )
+            events = dak.from_parquet(
+                files, columns=features2load + cfg.required_columns + extra_cols
+            )
 
             # required columns check (best effort)
             if cfg.required_columns:
@@ -420,12 +694,13 @@ def preprocess(
 
             df = events_to_dataframe(
                 events=events,
-                keep_cols=features2load + cfg.required_columns,
+                keep_cols=features2load + cfg.required_columns + extra_cols,
                 cfg=cfg,
                 process=proc,
                 label_int=sig_label,
                 group="vbf",
                 year=year,
+                variation_rename=(plan.rename if plan else None),
             )
             dfs.append(df)
 
@@ -441,7 +716,25 @@ def preprocess(
                 )
                 continue
 
-            chunk_size = 50
+            plan = None
+            extra_cols = []
+            if include_variations:
+                plan = plan_variations(files[0], physical_training_features, variation_set)
+                plans.append(plan)
+                extra_cols = list(plan.load_columns)
+                logger.info(
+                    "[year %s] proc=%s: %d variations, %d extra columns",
+                    year,
+                    proc,
+                    len(plan.variations),
+                    len(extra_cols),
+                )
+
+            # Chunking bounds the transient, not the final concat (every chunk's
+            # frame is retained until the end either way). The augmented column
+            # set is 2x (sweep) to 10x (full) wider per file, so the default
+            # shrinks when augmentation is on; --files-per-chunk overrides it.
+            chunk_size = files_per_chunk if files_per_chunk else (25 if include_variations else 50)
             for ichunk, files_chunk in enumerate(chunk_list(files, chunk_size=chunk_size)):
                 logger.info(
                     "[year %s] proc=%s chunk %d/%d (nfiles=%d)",
@@ -451,7 +744,9 @@ def preprocess(
                     (len(files) - 1) // chunk_size + 1,
                     len(files_chunk),
                 )
-                events = dak.from_parquet(files_chunk, columns=features2load + cfg.required_columns)
+                events = dak.from_parquet(
+                    files_chunk, columns=features2load + cfg.required_columns + extra_cols
+                )
 
                 if cfg.required_columns:
                     missing_req = [
@@ -464,12 +759,13 @@ def preprocess(
 
                 df = events_to_dataframe(
                     events=events,
-                    keep_cols=features2load + cfg.required_columns,
+                    keep_cols=features2load + cfg.required_columns + extra_cols,
                     cfg=cfg,
                     process=proc,
                     label_int=cfg.background_label,
                     group=str(group_name).lower(),
                     year=year,
+                    variation_rename=(plan.rename if plan else None),
                 )
                 dfs.append(df)
 
@@ -501,6 +797,61 @@ def preprocess(
 
     logger.info("[preprocess] Running pre_scaling_clean...")
     df_total = pre_scaling_clean(df_total)
+
+    # ---- systematic-variation columns: complete, clean, and register ----
+    variation_columns: List[str] = []
+    variation_nominal_of: Dict[str, str] = {}
+    canonical_variations: List[str] = []
+    degenerate: Dict[str, Dict[str, Any]] = {}
+    if include_variations:
+        if not plans:
+            raise RuntimeError(
+                "--include-systematic-variations was requested but no input produced a "
+                "variation plan. Refusing to write nominal-only folds under an "
+                "augmented tag."
+            )
+        canonical_sets = {tuple(sorted(set(p.canonical))) for p in plans}
+        if len(canonical_sets) != 1:
+            raise RuntimeError(
+                "Inputs disagree on the canonical variation set; refusing to build a "
+                f"ragged variation axis. Distinct sets: {canonical_sets}"
+            )
+        canonical_variations = sorted(set(plans[0].canonical))
+        df_total, variation_columns, variation_nominal_of = _fill_missing_variation_columns(
+            df_total, plans
+        )
+        logger.info(
+            "[preprocess] %d canonical variations, %d augmented columns",
+            len(canonical_variations),
+            len(variation_columns),
+        )
+        logger.info("[preprocess] Running pre_scaling_clean on varied columns...")
+        df_total = _clean_variation_columns(
+            df_total,
+            canonical_variations,
+            physical_training_features,
+            variation_nominal_of,
+        )
+
+        degenerate = find_degenerate_variation_columns(
+            df_total, variation_columns, variation_nominal_of
+        )
+        if degenerate:
+            logger.warning(
+                "[variations] %d varied column(s) are effectively a CONSTANT sentinel "
+                "(>=%.1f%% of entries on one value) while their nominal counterpart is "
+                "not -- almost certainly unfilled Stage-1 branches, not physical "
+                "shifts: %s",
+                len(degenerate),
+                100.0 * DEGENERATE_MODAL_SHARE,
+                sorted(degenerate),
+            )
+            logger.warning(
+                "[variations] Keeping them, to match what Stage-2 feeds its DNN at "
+                "inference. A feature whose varied branches are a sentinel should be "
+                "dropped from the config's training features instead -- that is what "
+                "the no-QvG configs do."
+            )
 
     # Save training feature list
     save_feature_list(out_dir, cfg.training_features)
@@ -571,12 +922,31 @@ def preprocess(
         std = weighted_std(x_scale_train, w_train)
         std = np.where(std < 1e-6, 1.0, std)
 
+        scale_index = {f: k for k, f in enumerate(scale_features)}
+
         def _apply_scale(df_in: pd.DataFrame) -> None:
             x = df_in[scale_features].to_numpy(dtype=np.float64, copy=True)
             x = (x - mean) / std
             df_in.loc[:, scale_features] = x.astype(
                 np.float32 if cfg.dtype == "float32" else np.float64
             )
+            if not variation_columns:
+                return
+            # Varied features are standardized with the NOMINAL feature's
+            # mean/std -- never their own statistics. Re-standardizing a
+            # variation with its own moments would absorb the very shift the
+            # consistency term is supposed to see, making the adversarial term
+            # meaningless.
+            for aug in variation_columns:
+                feat = variation_nominal_of[aug]
+                k = scale_index.get(feat)
+                if k is None:
+                    continue  # do-not-scale feature: passthrough, as for nominal
+                v = df_in[aug].to_numpy(dtype=np.float64, copy=True)
+                v = (v - mean[k]) / std[k]
+                df_in[aug] = v.astype(
+                    np.float32 if cfg.dtype == "float32" else np.float64
+                )
 
         _apply_scale(df_train)
         _apply_scale(df_val)
@@ -589,7 +959,7 @@ def preprocess(
             "event",
             "process",
             "process_group",
-        ]
+        ] + variation_columns
         # If you created a year feature, ensure it remains (only if it is in training_features).
         df_train = df_train[keep_cols]
         df_val = df_val[keep_cols]
@@ -732,6 +1102,27 @@ def preprocess(
         "training_features": cfg.training_features,
         "scale_features": scale_features,
         "do_not_scale_features": sorted(list(do_not_scale_features)),
+        "systematic_variations": {
+            "enabled": bool(include_variations),
+            "variation_set": variation_set if include_variations else None,
+            # Stage-1 suffixes seen per input, before year-canonicalization.
+            "discovered_variations_per_input": (
+                sorted({v for p in plans for v in p.variations}) if include_variations else []
+            ),
+            # The homogeneous per-event variation axis the training sums over.
+            "canonical_variations": canonical_variations,
+            "n_variations": len(canonical_variations),
+            "n_augmented_columns": len(variation_columns),
+            # augmented column -> the nominal training feature it varies.
+            "column_to_nominal_feature": variation_nominal_of,
+            "degenerate_columns": degenerate if include_variations else {},
+            "degenerate_modal_share_threshold": DEGENERATE_MODAL_SHARE,
+            "scaling": (
+                "varied columns standardized with the nominal feature's mean/std"
+                if include_variations
+                else None
+            ),
+        },
         "samples": {
             "signal": {
                 "label": int(cfg.signal_spec["label"]),
@@ -810,6 +1201,38 @@ def build_argparser() -> argparse.ArgumentParser:
     )
     p.add_argument("--use-dask-gateway", action="store_true", help="Use Dask Gateway")
     p.add_argument("--region", default=None, help="Override analysis.region from YAML")
+
+    # opt-in systematic-variation augmentation (for adversarial DNN training)
+    p.add_argument(
+        "--include-systematic-variations",
+        action="store_true",
+        help=(
+            "Additionally write, per training feature, the resolved shape-variation "
+            "columns for every discovered up/down variation, plus a manifest entry "
+            "listing them. Off by default; the nominal-only output is byte-identical "
+            "to before when this is not passed."
+        ),
+    )
+    p.add_argument(
+        "--variation-set",
+        default="full",
+        choices=list(VARIATION_SETS),
+        help=(
+            "Which variations to write when --include-systematic-variations is on. "
+            "'sweep' = JEC Total + mu_roccor, up/down (4 variations); "
+            "'full' = every discovered shape variation (26 per event for Run 2)."
+        ),
+    )
+    p.add_argument(
+        "--files-per-chunk",
+        type=int,
+        default=0,
+        help=(
+            "Stage-1 files read per background chunk. 0 (default) picks 50 for "
+            "nominal-only and 25 when --include-systematic-variations is on. Lower "
+            "this if Dask workers die, rather than raising worker_memory."
+        ),
+    )
     return p
 
 
@@ -841,12 +1264,24 @@ def main() -> None:
         "[main] category=%s region=%s years=%s", cfg.category, cfg.region, args.years
     )
 
+    if args.include_systematic_variations:
+        existing = sorted(Path(out_dir).glob("data_df_train_*.parquet"))
+        if existing:
+            raise SystemExit(
+                f"[main] Refusing to overwrite existing fold parquets in {out_dir}: "
+                f"{[p.name for p in existing]}. The variation-augmented output must go "
+                "to a NEW --tag."
+            )
+
     preprocess(
         cfg=cfg,
         base_path=args.base_path,
         out_dir=out_dir,
         years=args.years,
         make_plots=(not args.no_plots),
+        include_variations=bool(args.include_systematic_variations),
+        variation_set=str(args.variation_set),
+        files_per_chunk=int(args.files_per_chunk),
     )
 
     logger.info("[main] Done. Success.")

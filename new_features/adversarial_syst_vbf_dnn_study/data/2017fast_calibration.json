@@ -1,0 +1,13 @@
+{
+  "source": "/work/users/yun79/sideHustle2/copperheadV2/dnn/trained_models/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/2017_h-peak_vbf/probe_2017fast_calib_Aug11_2026/fold0/history.json",
+  "fold": 0,
+  "epoch": 0,
+  "nominal_loss": 0.3019286888984986,
+  "penalty": 0.34169306063357696,
+  "parity_lambda": 0.8836254629773689,
+  "grid_fractions": {
+    "0.1x": 0.08836254629773689,
+    "0.3x": 0.26508763889321063,
+    "1.0x": 0.8836254629773689
+  }
+}

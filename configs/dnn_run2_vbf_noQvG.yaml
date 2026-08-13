@@ -1,0 +1,215 @@
+# dnn_run2_vbf.yaml with the two QvG b-tag discriminants removed from
+# features.training:
+#   jet1_btagUParTAK4QvG_nominal, jet2_btagUParTAK4QvG_nominal
+#
+# Task adversarial-syst-vbf-dnn-2017-noqvg. Their JEC-varied counterparts are a
+# -1 sentinel for >99.4% of events while the nominal branch spans the full
+# discriminant range (see find_degenerate_variation_columns in preprocess_dnn.py),
+# so under a systematics-aware loss the feature carries a variation that is a
+# missing branch rather than a physical shift. Dropping the feature outright
+# removes the ambiguity from training AND from Stage-2 inference, which reads
+# training_features.pkl written from this list.
+#
+# Everything else is identical to configs/dnn_run2_vbf.yaml.
+
+meta:
+  seed: 12345
+  device: "cuda"          # "cuda" or "cpu"
+  dtype: "float32"
+
+analysis:
+  category: "vbf"
+  region: "h-peak"
+
+data:
+  mode: "glob"
+
+  parquet:
+    required_columns: ["wgt_nominal", "njets_nominal", "nBtagLoose_nominal", "nBtagMedium_nominal"]
+    allow_missing_columns: false
+
+  weights:
+    weight_col: "wgt_nominal"
+    use_in_loss: true
+    normalize_in_batch: true
+
+  cv:
+    n_folds: 4
+    strategy: "simple" # TODO: Implement the "stratified" option from scikit
+    shuffle: false
+
+samples:
+  # base path comes from CLI. This is only the template.
+  # available tokens: {BASE}, {YEAR}, {PROCESS}
+  glob_template: "{BASE}/{YEAR}/compacted/{PROCESS}/*/*.parquet"
+
+  signal:
+    label: 1
+    processes: ["vbf_powheg_dipole"]
+    processes_per_year:
+      '2023': ["vbf_powheg"]
+      2023BPix: ["vbf_powheg"]
+      '2024': ["vbf_powheg"]
+
+  background:
+    label: 0
+    groups:
+      DY: 
+        processes: ["dyTo2Mu_M-50_MiNNLO", "dyTo2Mu_M-100to200_MiNNLO", "dy_VBF_filter"]  
+        processes_per_year:
+          2022preEE: ["dyTo2L_M-50_incl"]
+          2022postEE: ["dyTo2L_M-50_incl"]
+          '2023': ["dyTo2L_M-50_incl"]
+          2023BPix: ["dyTo2L_M-50_incl"]
+          '2024': ["dyTo2Mu_M-50_aMCatNLO"]
+      TOP:
+        processes: ["ttjets_dl", "ttjets_sl"]
+        processes_per_year: {}
+
+      EWK:
+        processes: ["ewk_lljj_mll50_mjj120", "ewk_zlljj"]
+        processes_per_year:
+          '2024': ["ewk_mmjj"]
+
+features:
+  training:
+    - "dimuon_mass"
+    - "dimuon_pt"
+    - "dimuon_pt_log"
+    - "dimuon_rapidity"
+    - "dimuon_ebe_mass_res"
+    - "dimuon_ebe_mass_res_rel"
+    - "dimuon_cos_theta_cs"
+    - "dimuon_phi_cs"
+    - "jet1_pt_nominal"
+    - "jet1_eta_nominal"
+    - "jet1_phi_nominal"
+    - "jet2_pt_nominal"
+    - "jet2_eta_nominal"
+    - "jet2_phi_nominal"
+    - "jj_mass_nominal"
+    - "jj_mass_log_nominal"
+    - "jj_dEta_nominal"
+    - "nsoftjets5_nominal"
+    - "htsoft2_nominal"
+    - "rpt_nominal"
+    - "ll_zstar_log_nominal"
+    - "mmj_min_dEta_nominal"
+    - "pt_centrality_nominal"
+    - "year_2016preVFP"
+    - "year_2016postVFP"
+    - "year_2017"
+    - "year_2018"
+    - "year_2022preEE"
+    - "year_2022postEE"
+    - "year_2023"
+    - "year_2023BPix"
+    - "year_2024"
+    - "year_2025"
+    - "year_2026"  # NOTE: for future usage
+  do_not_scale_features:
+    - "nsoftjets5_nominal"
+    - "year_2016preVFP"
+    - "year_2016postVFP"
+    - "year_2017"
+    - "year_2018"
+    - "year_2022preEE"
+    - "year_2022postEE"
+    - "year_2023"
+    - "year_2023BPix"
+    - "year_2024"
+    - "year_2025"
+    - "year_2026"  # NOTE: for future usage
+
+preprocessing:
+  scaler:
+    type: "standard"
+
+model:
+  kind: "mlp"
+  hidden: [384, 192, 96]
+  activation: "relu"
+  dropout: [0.4806533680364107,0.004194148970776745,0.05322218834885967]
+  batch_norm: true
+  output:
+    returns_logits: true
+
+training:
+  epochs: 100
+  batch_size: 8192
+
+  dataloader:
+    num_workers: 0
+    prefetch_factor: null     # must be null if num_workers == 0
+    pin_memory: false         # will be auto-forced false on CPU
+
+  optimizer:
+    name: "adamw"
+    lr: 0.0005967947149499895
+    weight_decay: 0.0002679447652129827
+    betas: [0.9, 0.999]
+    eps: 1.0e-08
+
+  scheduler:
+    name: "reduce_on_plateau"
+    reduce_on_plateau:
+      mode: "min"
+      factor: 0.5
+      patience: 2
+      min_lr: 1.0e-6
+      threshold: 1.0e-4
+
+  loss:
+    name: "bce_logits"
+    bce_logits:
+      pos_weight: null
+      label_smoothing: 0.04049062762704674
+
+  regularization:
+    gradient_clip_norm: 4.3608795686214155
+    amp:
+      enable: false
+
+early_stopping:
+  enable: true
+  monitor: "val_auc_weighted" # "val_auc_weighted" or "val_loss"
+  mode: "max" # when auc then max, with loss min
+  patience: 5
+  min_delta: 1.0e-4
+  warmup_epochs: 3
+  restore_best: true
+
+metrics:
+  weighted:
+    auc: true
+    pr: true
+    ks_overtraining: true
+    calibration: true
+    threshold_scan: true
+    significance: true
+  significance:
+    definition: "S/sqrt(B)"
+    signal_processes: ["vbf_powheg_dipole"]
+
+plots:
+  enable: true
+  out_subdir: "plots"
+  score_hist:
+    bins: 30
+    range: [0.0, 1.0]
+    normalize: true
+    logy: false
+  roc:
+    points: 300
+  calibration:
+    n_bins: 10
+  corr:
+    topk: 30
+
+artifacts:
+  save_best_model: true
+  save_last_model: true
+  save_scaler: true
+  save_fold_npz: true
+  save_history: true
+  save_predictions: false
