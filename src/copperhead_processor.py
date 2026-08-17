@@ -2263,6 +2263,8 @@ class EventProcessor(processor.ProcessorABC):
                     zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
+                
+                logger.warning(f"zpt weights: {zpt_cfg}")
 
                 zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv)
                 zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)

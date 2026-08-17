@@ -2,6 +2,13 @@
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
 
+# Compact command
+
+
+```bash
+time bash run_analysis_pipeline.sh -y 2024 -k -l Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER -m compact
+```
+
 # 11 May 2026
 
 ```bash
