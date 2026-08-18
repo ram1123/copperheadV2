@@ -34,6 +34,38 @@ from modules.systematics import (  # noqa: F401
 
 
 DATASET_SEPARATOR = "::"
+DY_MATCH_CATEGORIES = ("matched01J", "matched2J")
+
+
+def is_dy_sample(sample_name):
+    """Return whether a Stage-1 sample name belongs to the DY family."""
+    return sample_name.lower().startswith("dy")
+
+
+def histogram_output_name(sample_name, histogram_category):
+    """Return the output basename for one histogram category."""
+    if histogram_category == "hist":
+        return f"{sample_name}_hist.pkl"
+    return f"{sample_name}_{histogram_category}_hist.pkl"
+
+
+def histogram_output_names(sample_name, divide_dy_into_matched_jets=False):
+    """Return the output basenames expected for one Stage-2 sample."""
+    if divide_dy_into_matched_jets and is_dy_sample(sample_name):
+        return [
+            histogram_output_name(sample_name, category)
+            for category in DY_MATCH_CATEGORIES
+        ]
+    return [histogram_output_name(sample_name, "hist")]
+
+
+def dy_matched_jet_filters(gjj_mass):
+    """Split events into the requested complementary gjj_mass categories."""
+    matched2J_filter = ak.to_numpy(ak.materialize(gjj_mass > 0))
+    return {
+        "matched01J": ~matched2J_filter,
+        "matched2J": matched2J_filter,
+    }
 
 
 def get_variation(wgt_variation, sys_variation):
@@ -273,6 +305,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         score_name,
         no_variations=False,
         do_vbf_filter_study=False,
+        divide_dy_into_matched_jets=False,
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
     ):
@@ -286,6 +319,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.score_name = score_name
         self.no_variations = no_variations
         self.do_vbf_filter_study = do_vbf_filter_study
+        self.divide_dy_into_matched_jets = divide_dy_into_matched_jets
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
         # One-hot year features (e.g. "year_2022preEE") don't exist as event
@@ -471,14 +505,25 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if variation:
                 variations.append(variation)
 
-        score_hist = (
-            hist.Hist.new.StrCat(["h-peak", "h-sidebands"], name="region")
-            .StrCat(["vbf"], name="channel")
-            .StrCat(["value", "sumw2"], name="val_sumw2")
-            .StrCat(variations, name="variation", growth=True)
-            .Var(selection.binning, name=self.score_name)
-            .Double()
+        def make_score_hist():
+            return (
+                hist.Hist.new.StrCat(["h-peak", "h-sidebands"], name="region")
+                .StrCat(["vbf"], name="channel")
+                .StrCat(["value", "sumw2"], name="val_sumw2")
+                .StrCat(variations, name="variation", growth=True)
+                .Var(selection.binning, name=self.score_name)
+                .Double()
+            )
+
+        divide_dy_sample = (
+            self.divide_dy_into_matched_jets and is_dy_sample(sample_type)
         )
+        histogram_categories = (
+            DY_MATCH_CATEGORIES if divide_dy_sample else ("hist",)
+        )
+        score_hists = {
+            category: make_score_hist() for category in histogram_categories
+        }
 
         selected_events = 0
         for region, weight_variation, syst_variation in itertools.product(
@@ -579,18 +624,33 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 "variation": variation,
                 self.score_name: scores,
             }
-            score_hist.fill(**fill_common, val_sumw2="value", weight=weights)
-            score_hist.fill(
-                **fill_common,
-                val_sumw2="sumw2",
-                weight=weights * weights,
-            )
+            if divide_dy_sample:
+                category_filters = dy_matched_jet_filters(region_events.gjj_mass)
+            else:
+                category_filters = {"hist": np.ones(len(scores), dtype=bool)}
+
+            for histogram_category, category_filter in category_filters.items():
+                category_fill = {
+                    **fill_common,
+                    self.score_name: scores[category_filter],
+                }
+                category_weights = weights[category_filter]
+                score_hists[histogram_category].fill(
+                    **category_fill,
+                    val_sumw2="value",
+                    weight=category_weights,
+                )
+                score_hists[histogram_category].fill(
+                    **category_fill,
+                    val_sumw2="sumw2",
+                    weight=category_weights * category_weights,
+                )
 
         return {
             dataset_key: {
                 "events": processor.value_accumulator(int, selected_events),
                 "chunks": processor.value_accumulator(int, 1),
-                "score_hist": score_hist,
+                "score_hists": score_hists,
             }
         }
 
@@ -796,6 +856,16 @@ if __name__ == "__main__":
             "for all variations instead."
         ),
     )
+    parser.add_argument(
+        "--divideDY_intoMatachedJets",
+        dest="divide_dy_into_matched_jets",
+        default=True,
+        action="store_true",
+        help=(
+            "Split every DY sample histogram using gjj_mass > 0 into "
+            "<sample>_matched2J_hist.pkl and <sample>_matched01J_hist.pkl."
+        ),
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -892,14 +962,31 @@ if __name__ == "__main__":
     for year, full_sample_dict in sample_dict_by_year.items():
         hist_save_path = base_path / "stage2_histograms" / histDirName / year
         for sample_type, sample_l in full_sample_dict.items():
-            output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
-            if output_pkl_path.exists():
+            output_pkl_paths = [
+                hist_save_path / output_name
+                for output_name in histogram_output_names(
+                    sample_type,
+                    args.divide_dy_into_matched_jets,
+                )
+            ]
+            existing_output_paths = [
+                output_path
+                for output_path in output_pkl_paths
+                if output_path.exists()
+            ]
+            if len(existing_output_paths) == len(output_pkl_paths):
                 logger.warning(
-                    f"Output pkl file {output_pkl_path} already exists. "
+                    f"Output pkl file(s) {output_pkl_paths} already exist. "
                     f"Skipping {year} {sample_type}."
                 )
                 skipped_existing.append(f"{year}{DATASET_SEPARATOR}{sample_type}")
                 continue
+            if existing_output_paths:
+                raise FileExistsError(
+                    f"Only part of the expected output set exists for {year} "
+                    f"{sample_type}: {existing_output_paths}. Refusing to "
+                    "overwrite it while creating the missing output."
+                )
             if len(sample_l) == 0:
                 logger.critical(f"No files for {year} {sample_type} is found! Skipping!")
                 continue
@@ -929,6 +1016,7 @@ if __name__ == "__main__":
                 score_name=f"score_{args.label}",
                 no_variations=args.no_variations,
                 do_vbf_filter_study=args.do_vbf_filter_study,
+                divide_dy_into_matched_jets=args.divide_dy_into_matched_jets,
                 allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
             ),
@@ -939,14 +1027,19 @@ if __name__ == "__main__":
         for dataset_key, output in results.items():
             year, sample_type = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
             hist_save_path = base_path / "stage2_histograms" / histDirName / year
-            output_pkl_path = hist_save_path / f"{sample_type}_hist.pkl"
-            with open(output_pkl_path, "wb") as file:
-                pickle.dump(output["score_hist"], file)
-            logger.info(
-                f"{year} {sample_type} histogram on {output_pkl_path}; "
-                f"chunks={output['chunks'].value}; "
-                f"selected events={output['events'].value}"
-            )
+            for histogram_category, score_hist in output["score_hists"].items():
+                output_name = histogram_output_name(
+                    sample_type,
+                    histogram_category,
+                )
+                output_pkl_path = hist_save_path / output_name
+                with open(output_pkl_path, "wb") as file:
+                    pickle.dump(score_hist, file)
+                logger.info(
+                    f"{year} {sample_type} histogram on {output_pkl_path}; "
+                    f"chunks={output['chunks'].value}; "
+                    f"selected events={output['events'].value}"
+                )
     else:
         logger.warning("No samples left to process after existing-output checks.")
 

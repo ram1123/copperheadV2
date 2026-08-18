@@ -30,7 +30,7 @@ cat $1/prefitsignificance.log | grep "Significance:" >> $1/significance.txt
 # cat $1/postfitsignificance.log | grep "Significance:" >> $1/significance.txt
 
 
-
+rate_params="XSecAndNorm2017DY01J,XSecAndNorm2017DY2J,XSecAndNorm2018DY01J,XSecAndNorm2018DY2J,XSecAndNorm2016preVFPDY01J,XSecAndNorm2016preVFPDY2J,XSecAndNorm2016postVFPDY01J,XSecAndNorm2016postVFPDY2J"
 echo "Significance (Stat Only):" >> $1/significance.txt
-combineTool.py -d $1/HMuMu_13TeV_$2.txt -M Significance -m 125 --expectSignal=1 -n _$2_$3_ -t -1 --rMin -2 --rMax 5 --freezeParameters allConstrainedNuisances   > $1/prefitsignificance_StatOnly.log
+combineTool.py -d $1/HMuMu_13TeV_$2.txt -M Significance -m 125 --expectSignal=1 -n _$2_$3_ -t -1 --rMin -2 --rMax 5 --freezeParameters allConstrainedNuisances,$rate_params    > $1/prefitsignificance_StatOnly.log
 cat $1/prefitsignificance_StatOnly.log | grep "Significance:" >> $1/significance.txt

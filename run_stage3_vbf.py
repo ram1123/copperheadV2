@@ -3,6 +3,11 @@ import time
 
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
+from stage3.dy_matched_jets import (
+    has_matched_jet_histograms,
+    split_dy_grouping,
+    stage2_histogram_directory,
+)
 from stage3.make_datacards import build_datacards
 from stage3.make_templates import to_templates
 from modules.sample_config import get_all_dicts
@@ -67,9 +72,29 @@ _, _, parameters["grouping"] = get_all_dicts(
     year=year,
 )
 
+stage2_histogram_path = stage2_histogram_directory(
+    args.input_path,
+    f"score_{args.label}",
+    stage2_model_suffix,
+    args.no_variations,
+    year,
+)
+divide_dy_into_matched_jets = has_matched_jet_histograms(stage2_histogram_path)
+parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets
+if divide_dy_into_matched_jets:
+    parameters["grouping"] = split_dy_grouping(parameters["grouping"])
+logger.info(
+    "divide_dy_into_matched_jets=%s (stage2 directory: %s)",
+    divide_dy_into_matched_jets,
+    stage2_histogram_path,
+)
 
 parameters["plot_groups"] = {
-    "stack": ["DY", "EWK", "TT+ST", "VV", "VVV"],
+    "stack": (
+        ["DY_matched01J", "DY_matched2J", "EWK", "TT+ST", "VV", "VVV"]
+        if divide_dy_into_matched_jets
+        else ["DY", "EWK", "TT+ST", "VV", "VVV"]
+    ),
     "step": ["VBF", "ggH"],
     "errorbar": ["Data"],
 }
