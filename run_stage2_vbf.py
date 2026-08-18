@@ -448,19 +448,19 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
         syst_variations = ["nominal"]
         if not self.no_variations:
-            # syst_variations += stage2_shape_variations(fields)
-            # Restrict the discovered shape systematics to the reduced JEC and
-            # Rochester-correction set requested for Stage-2 evaluation.
-            syst_variations += [
-                syst
-                for syst in stage2_shape_variations(fields)
-                if syst in {
-                    "Total_up",
-                    "Total_down",
-                    "mu_roccor_up",
-                    "mu_roccor_down",
-                }
-            ]
+            syst_variations += stage2_shape_variations(fields)
+            # # Restrict the discovered shape systematics to the reduced JEC and
+            # # Rochester-correction set requested for Stage-2 evaluation.
+            # syst_variations += [
+            #     syst
+            #     for syst in stage2_shape_variations(fields)
+            #     if syst in {
+            #         "Total_up",
+            #         "Total_down",
+            #         "mu_roccor_up",
+            #         "mu_roccor_down",
+            #     }
+            # ]
 
         variations = []
         for weight_variation, syst_variation in itertools.product(
