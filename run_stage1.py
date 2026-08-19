@@ -170,7 +170,12 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     )
 
     runner = coffea_processor_module.Runner(
-        executor=coffea_processor_module.DaskExecutor(client=client),  # reuse existing client
+        # status=False: coffea's RichProgressBar (coffea/processor/_dask.py:_draw_stop)
+        # crashes with AttributeError: 'NoneType' object has no attribute '__traceback__'
+        # when a task fails from a lost/killed worker (no real exception object attached),
+        # masking the real error and aborting the whole chunk instead of letting Dask's
+        # own worker-loss retry recover transparently.
+        executor=coffea_processor_module.DaskExecutor(client=client, status=False),  # reuse existing client
         schema=NanoAODSchema,
         chunksize=100_000,
         skipbadfiles=False,
