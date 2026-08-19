@@ -591,11 +591,14 @@ class EventProcessor(processor.ProcessorABC):
                     "do_use_pySR_score and do_use_pu_dnn_score are alternative "
                     "forward-jet PU cleanup models; only one can be enabled at once."
                 )
-            pu_dnn_base_dir = self.config.get(
-                "pu_dnn_model_dir",
-                # "validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July",
-                "validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet",
-            )
+            # do_use_pu_dnn_score enabled must have an explicit model dir.
+            if "pu_dnn_model_dir" not in self.config:
+                raise KeyError(
+                    "do_use_pu_dnn_score is enabled for this year, but no "
+                    "'pu_dnn_model_dir' entry was found in the config. Add one "
+                    "for this year in configs/parameters/SF_filelist.yaml."
+                )
+            pu_dnn_base_dir = self.config["pu_dnn_model_dir"]
             self.pu_dnn_configs = load_pu_dnn_configs(pu_dnn_base_dir)
             if not self.pu_dnn_configs:
                 raise FileNotFoundError(
