@@ -124,7 +124,8 @@ new_zpt_weights_file_aMCatNLO:
     "2022postEE": data/zpt_rewgt/zpt_rewgt_params_INCamcatnloFXFX.yaml
     "2023": data/zpt_rewgt/zpt_rewgt_params_INCamcatnloFXFX.yaml
     "2023BPix": data/zpt_rewgt/zpt_rewgt_params_INCamcatnloFXFX.yaml
-    "2024": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
+    "2024": data/zpt_rewgt/zpt_rewgt_params_IncDY_aMCatNLO_Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024.yaml
+    # "2024": data/zpt_rewgt/zpt_rewgt_params_IncDY_aMCatNLO_Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets.yaml
 new_zpt_weights_file_MiNNLO:
     2016preVFP: data/zpt_rewgt/zpt_rewgt_params_minnlo.yaml
     2016postVFP: data/zpt_rewgt/zpt_rewgt_params_minnlo.yaml
@@ -136,6 +137,23 @@ new_zpt_weights_file_MiNNLO:
     "2023BPix": None
     "2024": None
     "2025": None
+pu_dnn_model_dir: # Base dir for the region PU/HS jet-ID DNN (switches.do_use_pu_dnn_score).
+    # Only read when do_use_pu_dnn_score is true for the year (currently
+    # 2022preEE/2022postEE/2023/2023BPix/2024/2025; see switches.yaml). Model
+    # feature lists differ by year because puIdDisc is only available starting
+    # 2024 (see MVA_training/pileup_dnn/train_pu_dnn.py); the two groups below
+    # use scaler.json feature lists that reflect that split (verified: the
+    # 2022postEE-trained model has no puIdDisc feature, the 2024-trained one does).
+    2016preVFP: validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # unused: do_use_pu_dnn_score is false for Run2
+    2016postVFP: validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # unused: do_use_pu_dnn_score is false for Run2
+    "2017": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # unused: do_use_pu_dnn_score is false for Run2
+    "2018": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # unused: do_use_pu_dnn_score is false for Run2
+    "2022preEE": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
+    2022postEE: validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
+    "2023": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
+    "2023BPix": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
+    "2024": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc
+    "2025": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc; placeholder until a 2025-trained model exists
 zpt_dnn_models_aMCatNLO:
     "2018": dummy
     "2017": dummy
