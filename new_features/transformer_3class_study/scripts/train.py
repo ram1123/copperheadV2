@@ -22,6 +22,7 @@ from src.data import DEFAULT_STANDARDIZED_CLIP, build_loaders, class_counts, loa
 from src.features import INDEX_TO_CLASS, OUTPUT_COLUMNS, describe_feature_contract
 from src.losses import inverse_sqrt_class_weights, total_objective, weighted_cross_entropy
 from src.model import build_model, masked_attention_bias_value
+from src.performance import learning_curve_summary, split_overlap_check
 from src.schedule import build_lr_scheduler, sample_schedule
 from src.utils import (
     amp_info,
@@ -631,6 +632,12 @@ def main() -> None:
         'epochs': epochs,
         'smoke_test': bool(args.smoke_test),
     }
+    patience = int(training_cfg.get('early_stopping_patience', 0) or 0)
+    min_delta = float(training_cfg.get('early_stopping_min_delta', 0.0) or 0.0)
+    best_epoch = 0
+    epochs_without_improvement = 0
+    early_stop = {'enabled': patience > 0, 'patience': patience, 'min_delta': min_delta,
+                  'triggered': False, 'stopped_at_epoch': None, 'best_epoch': None}
     for epoch in range(1, epochs + 1):
         cuda_reset_peak(device)
         train_metrics = run_epoch(
@@ -652,15 +659,40 @@ def main() -> None:
         row = {'epoch': epoch, 'train': train_metrics, 'val': val_metrics, 'cuda_memory': val_memory, 'train_cuda_memory': train_memory}
         history.append(row)
         logger.info('epoch %s train=%s val=%s', epoch, train_metrics, val_metrics)
-        if val_metrics['loss'] < best_val:
+        improved = val_metrics['loss'] < (best_val - min_delta)
+        if improved:
             best_val = float(val_metrics['loss'])
+            best_epoch = epoch
+            epochs_without_improvement = 0
             runtime_summary = {'device': device_info, 'amp': amp_summary, 'cuda_memory': cuda_memory_snapshot(device)}
             torch.save(checkpoint_payload(model, optimizer, cfg, normalization, history, training_limits, runtime_summary, epoch, best_val, schedule_summary, diagnostics), best_path)
+        else:
+            epochs_without_improvement += 1
+        logger.info('epoch %s val_loss=%.6f best=%.6f (epoch %s) no_improve=%s',
+                    epoch, val_metrics['loss'], best_val, best_epoch, epochs_without_improvement)
+        # Early stopping watches validation loss only; the test split never influences it.
+        if patience > 0 and epochs_without_improvement >= patience:
+            early_stop.update({'triggered': True, 'stopped_at_epoch': epoch, 'best_epoch': best_epoch})
+            logger.info('early stopping at epoch %s; best epoch %s with val loss %.6f',
+                        epoch, best_epoch, best_val)
+            break
 
+    early_stop['best_epoch'] = best_epoch
+    early_stop.setdefault('stopped_at_epoch', len(history))
     runtime_summary = {'device': device_info, 'amp': amp_summary, 'cuda_memory': cuda_memory_snapshot(device)}
-    torch.save(checkpoint_payload(model, optimizer, cfg, normalization, history, training_limits, runtime_summary, epochs, best_val, schedule_summary, diagnostics), final_path)
+    torch.save(checkpoint_payload(model, optimizer, cfg, normalization, history, training_limits, runtime_summary, len(history), best_val, schedule_summary, diagnostics), final_path)
+
+    # Restore the best-by-validation-loss weights before scoring the test split, so the
+    # reported performance belongs to the selected checkpoint and not to the last epoch.
+    restored_best = False
+    if best_epoch > 0 and best_path.exists():
+        best_state = torch.load(best_path, map_location=device, weights_only=False)
+        model.load_state_dict(best_state['model_state_dict'])
+        restored_best = True
+        logger.info('restored best checkpoint from epoch %s for test scoring', best_epoch)
 
     probs, labels, rows = predict(model, loaders['test'], device)
+    train_probs, train_labels, _ = predict(model, loaders['train'], device)
     test_metrics = prediction_metrics(probs, labels)
     final_memory = cuda_memory_snapshot(device)
     cuda_summary = {
@@ -713,6 +745,12 @@ def main() -> None:
         'split_counts': split_df.groupby(['split', 'true_class']).size().reset_index(name='n').to_dict(orient='records'),
         'lr_schedule': schedule_summary,
         'preprocessing_diagnostics': diagnostics,
+        'early_stopping': early_stop,
+        'best_epoch': best_epoch,
+        'best_val_loss': best_val,
+        'restored_best_checkpoint_for_test': restored_best,
+        'learning_curve': learning_curve_summary(history),
+        'split_overlap_check': split_overlap_check(split_df),
         'disco': disco_config,
         'pair_normalization': normalization.get('pair_normalization'),
         'class_balance_strategy': str(training_cfg.get('class_balance', 'none') or 'none'),
@@ -726,6 +764,11 @@ def main() -> None:
     write_yaml(output_dir / 'metrics' / 'smoke_train_metrics.yaml', metrics)
     write_json(output_dir / 'metrics' / 'smoke_train_metrics.json', metrics)
     save_predictions(output_dir / 'predictions' / 'smoke_test_predictions.parquet', bundles['test'].metadata, probs, labels, rows)
+    np.savez_compressed(
+        output_dir / 'predictions' / 'train_test_scores.npz',
+        train_probs=train_probs, train_labels=train_labels,
+        test_probs=probs, test_labels=labels,
+    )
     maybe_plot(history, output_dir / 'plots')
 
     report = [

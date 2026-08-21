@@ -55,8 +55,9 @@ model:
 
 training:
   seed: 12345
-  epochs: 2
-  batch_size: 256
+  # Real-scale run: generous cap with early stopping on validation loss.
+  epochs: 40
+  batch_size: 512
   learning_rate: 0.0001
   weight_decay: 0.01
   num_workers: 0
@@ -103,8 +104,16 @@ training:
   # Report dCorr even when lambda is 0, so the correlation is observable without training
   # against it. Computed under no_grad.
   disco_monitor: true
-  max_events_per_class: 10000
-  max_files_per_sample: 1
+  # Early stopping watches validation loss only. The test split never influences
+  # training, checkpoint selection, or the stopping decision.
+  early_stopping_patience: 6
+  early_stopping_min_delta: 0.0001
+  # All available ggH (619,427) and VBF (1,284,112), with background subsampled to a
+  # matched 1.3M spread across the background processes. The per-process background budget
+  # is equal rather than cross-section proportional; the per-event weights restore the
+  # physical proportions inside the loss.
+  max_events_per_class: 1300000
+  max_files_per_sample: null
 
 runtime:
   device: auto
