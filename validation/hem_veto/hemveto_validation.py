@@ -218,7 +218,8 @@ if __name__ == "__main__":
     ]
     label = "HemVetoStudy_Dec16_2025" # nanoAODv12
     year="2018"
-    load_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
+    # load_path = f"/depot/cms/users/yun79/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
+    load_path = f"/eos/purdue/store/user/hyeonseo/backup/hmm/copperheadV1clean/{label}/stage1_output/{year}/f1_0"
 
     # data2load = ['data_C', 'data_D']
     data2load = ['data_C',]
