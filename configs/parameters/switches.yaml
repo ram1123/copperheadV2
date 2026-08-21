@@ -232,9 +232,9 @@ switches:
         "2024": false
         "2025": false
     do_use_pu_dnn_score: # For run-3 reject HE/HF jets using the trained pileup-DNN (MVA_training/pileup_dnn/train_pu_dnn.py).
-        # Mutually exclusive with do_use_pySR_score. Model dir defaults to
-        # validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July
-        # (override via config key "pu_dnn_model_dir").
+        # Mutually exclusive with do_use_pySR_score. Model dir is per-year, see
+        # "pu_dnn_model_dir" in configs/parameters/SF_filelist.yaml (2022/2023
+        # models exclude puIdDisc, 2024/2025 models include it).
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
