@@ -11,6 +11,7 @@ data:
     "2023": [data_C]
     "2023BPix": [data_D]
     "2024": [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
+    "2025": [data_B, data_C, data_D, data_E, data_F, data_G]
     run3: [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
 
 # --------------------------------------------------
