@@ -1,6 +1,5 @@
 import argparse
 import copy
-from collections import defaultdict
 import glob
 import json
 import multiprocessing
@@ -18,7 +17,6 @@ import tqdm
 import uproot
 from coffea.dataset_tools import rucio_utils
 from coffea.dataset_tools.preprocess import preprocess
-from coffea.nanoevents import BaseSchema, NanoAODSchema, NanoEventsFactory
 from omegaconf import OmegaConf
 
 from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
@@ -30,6 +28,11 @@ from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize
 # warnings.filterwarnings("error", module="coffea.*")
 
 dask.config.set({'logging.distributed': 'error'})
+
+
+def _count_events_for_file(fname):
+    with uproot.open(f"{fname}:Events") as tree:
+        return tree.num_entries
 
 
 def _minnlo_genweight_metadata_for_file(args):
@@ -56,31 +59,85 @@ def merge_with_existing_json_dict(filename, updates):
     return existing
 
 
-def nanoevents_from_root_with_redirectors(
-    file_input, host_prefix, attempt, schemaclass, uproot_options, metadata=None
-):
-    if metadata is None:
-        metadata = {}
+def _runs_tree_metadata_for_file(args):
+    fname, uproot_options = args
+    with uproot.open(f"{fname}:Runs", **uproot_options) as tree:
+        keys = tree.keys()
+        if "genEventSumw" in keys:
+            sum_gen_wgts = float(ak.sum(tree["genEventSumw"].array()))
+            n_gen_evts = int(ak.sum(tree["genEventCount"].array()))
+        else:  # nanoAODv6
+            sum_gen_wgts = float(ak.sum(tree["genEventSumw_"].array()))
+            n_gen_evts = int(ak.sum(tree["genEventCount_"].array()))
+        return sum_gen_wgts, n_gen_evts
 
-    try:
-        fi_norm = normalize_paths(file_input, host_prefix)
-        logger.info(f"[prestage] attempt {attempt} using redirector {host_prefix}")
-        events = NanoEventsFactory.from_root(
-            fi_norm,
-            metadata=metadata,
-            schemaclass=schemaclass,
-            uproot_options=uproot_options,
-        ).events()
-        logger.info(f"[prestage] attempt {attempt} succeeded to read metadata with {host_prefix}")
-        return events
 
-    except Exception as e:
-        msg = str(e)
-        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-        logger.warning(
-            f"[prestage] attempt {attempt} failed with {host_prefix}: {type(e).__name__}: {e} (tls_bad={tls_bad})"
-        )
-        raise
+def _with_redirector_retries(sample_name: str, kind: str, fn):
+    """
+    Call fn(host_prefix, attempt) once per redirector in AAA_REDIRECTORS,
+    stopping at the first success. Only retries with the next redirector when
+    the failure looks like a transient XRootD/TLS issue (AAA_ERROR_FRAGMENTS);
+    any other exception, or exhausting all redirectors, propagates.
+    """
+    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
+        try:
+            return fn(host_prefix, attempt)
+        except Exception as e:
+            msg = str(e)
+            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+            logger.warning(
+                f"[prestage] {kind} {sample_name}: attempt {attempt} failed "
+                f"with {host_prefix}: {type(e).__name__}: {e}"
+            )
+            if tls_bad and attempt < len(AAA_REDIRECTORS):
+                logger.warning(f"[prestage] retrying {kind} with next redirector...")
+                continue
+            # Non-AAA error or no more redirectors
+            raise
+
+
+def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_options):
+    """
+    Read per-file genEventSumw/genEventCount (or the nanoAODv6 genEventSumw_/
+    genEventCount_ names) directly with uproot and sum across files.
+
+    Avoids NanoEventsFactory.from_root, whose default mode="virtual" (as of the
+    latest coffea) only accepts a single file via uproot.open() and raises on
+    the multi-file dict input a sample's full file list requires.
+    """
+    sum_gen_wgts = 0.0
+    n_gen_evts = 0
+
+    normalized_fnames = normalize_paths(fnames, host_prefix)
+    if len(normalized_fnames) == 0:
+        logger.warning(f"[prestage] Runs-tree attempt {attempt} has no files to read")
+        return {
+            "sumGenWgts": sum_gen_wgts,
+            "nGenEvts": n_gen_evts,
+        }
+
+    max_n_workers = 20  # NOTE added as a soft cap for stability. Increase if higher throughput is needed.
+    n_workers = min(len(normalized_fnames), multiprocessing.cpu_count(), max_n_workers)
+
+    logger.info(
+        f"[prestage] Runs-tree attempt {attempt} reading genEventSumw/genEventCount with {n_workers} workers"
+    )
+    worker_args = [(fname, uproot_options) for fname in normalized_fnames]
+    with multiprocessing.Pool(processes=n_workers) as pool:
+        for file_sum_gen_wgts, file_n_gen_evts in pool.imap_unordered(
+            _runs_tree_metadata_for_file,
+            worker_args,
+        ):
+            sum_gen_wgts += file_sum_gen_wgts
+            n_gen_evts += file_n_gen_evts
+
+    logger.info(
+        f"[prestage] Runs-tree attempt {attempt} succeeded to read metadata with {host_prefix}"
+    )
+    return {
+        "sumGenWgts": sum_gen_wgts,
+        "nGenEvts": n_gen_evts,
+    }
 
 
 def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, uproot_options):
@@ -93,47 +150,37 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
     sum_gen_wgts = 0.0
     n_gen_evts = 0
 
-    try:
-        logger.info(f"[prestage] MiNNLO attempt {attempt} using redirector {host_prefix}")
-        normalized_fnames = normalize_paths(fnames, host_prefix)
-        if len(normalized_fnames) == 0:
-            logger.warning(f"[prestage] MiNNLO attempt {attempt} has no files to read")
-            return {
-                "sumGenWgts": sum_gen_wgts,
-                "nGenEvts": n_gen_evts,
-            }
-
-        min_n_workers = 20 # NOTE added as a soft limit for stability. But if high throughput is needed, we can increase this.
-        n_workers = min(len(normalized_fnames), multiprocessing.cpu_count(), min_n_workers)
-
-        logger.info(
-            f"[prestage] MiNNLO attempt {attempt} reading genWeight with {n_workers} workers"
-        )
-        worker_args = [(fname, uproot_options) for fname in normalized_fnames]
-        with multiprocessing.Pool(processes=n_workers) as pool:
-            for file_sum_gen_wgts, file_n_gen_evts in pool.imap_unordered(
-                _minnlo_genweight_metadata_for_file,
-                worker_args,
-            ):
-                sum_gen_wgts += file_sum_gen_wgts
-                n_gen_evts += file_n_gen_evts
-
-        logger.info(
-            f"[prestage] MiNNLO attempt {attempt} succeeded to read genWeight metadata with {host_prefix}"
-        )
+    logger.info(f"[prestage] MiNNLO attempt {attempt} using redirector {host_prefix}")
+    normalized_fnames = normalize_paths(fnames, host_prefix)
+    if len(normalized_fnames) == 0:
+        logger.warning(f"[prestage] MiNNLO attempt {attempt} has no files to read")
         return {
             "sumGenWgts": sum_gen_wgts,
             "nGenEvts": n_gen_evts,
         }
 
-    except Exception as e:
-        msg = str(e)
-        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-        logger.warning(
-            f"[prestage] MiNNLO attempt {attempt} failed with {host_prefix}: "
-            f"{type(e).__name__}: {e} (tls_bad={tls_bad})"
-        )
-        raise
+    max_n_workers = 20  # NOTE added as a soft cap for stability. Increase if higher throughput is needed.
+    n_workers = min(len(normalized_fnames), multiprocessing.cpu_count(), max_n_workers)
+
+    logger.info(
+        f"[prestage] MiNNLO attempt {attempt} reading genWeight with {n_workers} workers"
+    )
+    worker_args = [(fname, uproot_options) for fname in normalized_fnames]
+    with multiprocessing.Pool(processes=n_workers) as pool:
+        for file_sum_gen_wgts, file_n_gen_evts in pool.imap_unordered(
+            _minnlo_genweight_metadata_for_file,
+            worker_args,
+        ):
+            sum_gen_wgts += file_sum_gen_wgts
+            n_gen_evts += file_n_gen_evts
+
+    logger.info(
+        f"[prestage] MiNNLO attempt {attempt} succeeded to read genWeight metadata with {host_prefix}"
+    )
+    return {
+        "sumGenWgts": sum_gen_wgts,
+        "nGenEvts": n_gen_evts,
+    }
 
 
 def preprocess_with_redirectors(
@@ -143,37 +190,25 @@ def preprocess_with_redirectors(
     Run coffea.dataset_tools.preprocess, retrying with different AAA redirectors
     if we hit typical XRootD / LZMA issues.
     """
-    for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
-        try:
-            # Normalize file URLs inside "files" dicts
-            norm_final_output = {}
-            for sname, sinfo in final_output.items():
-                norm_final_output[sname] = {
-                    "files": normalize_paths(sinfo["files"], host_prefix)
-                }
+    sample_label = ", ".join(final_output.keys())
 
-            logger.info(
-                f"[prestage] preparing files: attempt {attempt} with redirector {host_prefix}"
-            )
-            return preprocess(
-                norm_final_output,
-                step_size=step_size,
-                align_clusters=align_clusters,
-                skip_bad_files=skip_bad_files,
-            )
+    def _attempt(host_prefix, attempt):
+        # Normalize file URLs inside "files" dicts
+        norm_final_output = {
+            sname: {"files": normalize_paths(sinfo["files"], host_prefix)}
+            for sname, sinfo in final_output.items()
+        }
+        logger.info(
+            f"[prestage] preparing files: attempt {attempt} with redirector {host_prefix}"
+        )
+        return preprocess(
+            norm_final_output,
+            step_size=step_size,
+            align_clusters=align_clusters,
+            skip_bad_files=skip_bad_files,
+        )
 
-        except Exception as e:
-            msg = str(e)
-            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-            logger.warning(
-                f"[prestage] preprocess attempt {attempt} failed "
-                f"with {host_prefix}: {type(e).__name__}: {e}"
-            )
-            if tls_bad and attempt < len(AAA_REDIRECTORS):
-                logger.warning("[prestage] retrying preprocess with next redirector...")
-                continue
-            # Non-AAA error or no more redirectors
-            raise
+    return _with_redirector_retries(sample_label, "preprocess", _attempt)
 
 
 def getBadFile(fname):
@@ -198,10 +233,19 @@ def getBadFile(fname):
             return "" # if no problem, return empty string
         else:
             return fname # bad file
-    except Exception:
-        # return f"An error occurred with file {fname}: {e}"
-        # print(f"An error occurred with file {fname}: {e}")
-        return fname # bad fileclient
+    except Exception as e:
+        msg = str(e)
+        if any(frag in msg for frag in AAA_ERROR_FRAGMENTS):
+            # Looks like a transient XRootD/network issue, not file
+            # corruption -- don't misclassify it as a bad file and have
+            # --skipBadFiles permanently drop a perfectly good file.
+            logger.warning(
+                f"[prestage] getBadFile: transient error reading {fname}, "
+                f"not marking as bad: {type(e).__name__}: {e}"
+            )
+            return ""
+        logger.warning(f"[prestage] getBadFile: {fname} looks bad: {type(e).__name__}: {e}")
+        return fname # bad file
 
 # def getBadFileParallelize(filelist, max_workers=60)
 #     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -231,7 +275,7 @@ def getBadFileParallelizeDask(filelist):
         if result != "":
             # print(result)
             bad_file_l.append(result)
-    print(f"bad_file_l: {bad_file_l}")
+    logger.info(f"[prestage] bad_file_l: {bad_file_l}")
     return bad_file_l
 
 def removeBadFiles(filelist):
@@ -287,15 +331,21 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
     else:
         das_query = single_dataset_name
 
-        rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
-
-        outlist, outtree = rucio_utils.query_dataset(
-            das_query,
-            client=rucio_client,
-            tree=True,
-            scope="cms",
-        )
+        # Wrap the whole rucio path (client setup, dataset query, and replica
+        # lookup) so any failure in it -- not just the replica lookup -- falls
+        # back to dasgoclient instead of crashing the run.
         try:
+            rucio_client = rucio_utils.get_rucio_client() # INFO: Why rucio?
+
+            outlist, outtree = rucio_utils.query_dataset(
+                das_query,
+                client=rucio_client,
+                tree=True,
+                scope="cms",
+            )
+            if not outlist:
+                raise RuntimeError(f"rucio query_dataset found no match for {das_query}")
+
             outfiles,outsites,sites_counts =rucio_utils.get_dataset_files_replicas(
                 outlist[0],
                 allowlist_sites=allowlist_sites,
@@ -306,7 +356,7 @@ def getDatasetRootFiles(single_dataset_name: str, allowlist_sites: list)-> list:
             fnames = [file[0] for file in outfiles if file != []]
         except Exception as exc:
             logger.warning(
-                "[prestage] Rucio replica lookup failed for %s with %s: %s",
+                "[prestage] Rucio lookup failed for %s with %s: %s",
                 single_dataset_name,
                 type(exc).__name__,
                 exc,
@@ -324,26 +374,6 @@ def get_Xcache_filelist(fnames: list):
         new_fnames.append(x_cache_fname)
     # logger.debug(f"new_fnames: {new_fnames}")
     return new_fnames
-
-def find_keys_in_yaml(yaml_data, keys_to_find):
-    """
-    Recursively searches for specific keys in a nested OmegaConf YAML structure.
-    """
-    found_values = {}
-
-    def recursive_search(data, parent_key=""):
-        if isinstance(data, dict) or OmegaConf.is_dict(data):
-            for key, value in data.items():
-                if key in keys_to_find:
-                    found_values[key] = value
-                recursive_search(value, key)
-        elif isinstance(data, list) or OmegaConf.is_list(data):
-            for item in data:
-                recursive_search(item, parent_key)
-
-    recursive_search(yaml_data)
-    return found_values
-
 
 if __name__ == "__main__":
     parser = build_common_parser()
@@ -395,7 +425,6 @@ if __name__ == "__main__":
 
     time_step = time.time()
     logger.setLevel(args.log_level)
-    os.environ['XRD_REQUESTTIMEOUT']="2400" # some root files via XRootD may timeout with default value
     year = args.year
     args.dataset_yaml_file = resolve_dataset_yaml_file(
         args.dataset_yaml_file, year, args.NanoAODv
@@ -468,7 +497,10 @@ if __name__ == "__main__":
             # then search in each signal/bkg MC group
             for g in group_keys:
                 if name in year_node[g]:
-                    dataset[name] = year_node[g][name]
+                    # Copy rather than alias year_node[g][name]: it's shared
+                    # OmegaConf state, and adding "__group__" below would
+                    # otherwise mutate the source YAML tree in place.
+                    dataset[name] = copy.deepcopy(year_node[g][name])
                     dataset[name]["__group__"] = g
                     break
 
@@ -480,7 +512,6 @@ if __name__ == "__main__":
 
         logger.info(f"Final selected dataset keys: {list(dataset.keys())}")
 
-        fnames = ""
         for sample_name in tqdm.tqdm(dataset.keys()):
             is_data =  ("data" in sample_name)
             logger.debug(f"Sample Name: {sample_name}")
@@ -525,7 +556,7 @@ if __name__ == "__main__":
             # resolve files
             fnames = []
             for single_dataset_name in ds_list:
-                if "None" in single_dataset_name:
+                if single_dataset_name is None or single_dataset_name == "None":
                     logger.warning(f"Sample {sample_name} has 'None' dataset; skipping.")
                     continue
                 fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
@@ -563,176 +594,65 @@ if __name__ == "__main__":
                 "data_entries" : None,
             }
             if is_data:  # data sample
-                base_file_input = {fname: {"object_path": "Events"} for fname in fnames}
+                def _read_data_entries(host_prefix, attempt):
+                    file_input = normalize_paths(fnames, host_prefix)
+                    logger.info(
+                        f"[prestage] data sample {sample_name}: attempt {attempt} using {host_prefix}"
+                    )
+                    # Read entry counts directly with uproot rather than
+                    # NanoEventsFactory.from_root: its default mode="virtual" (as of
+                    # the latest coffea) routes through uproot.open(), which only
+                    # accepts a single file or a length-1 dict of {file: treename},
+                    # breaking for any multi-file sample. Farmed out over the
+                    # existing Dask client (local or Gateway) instead of a serial
+                    # loop, since per-file XRootD opens are the bottleneck here.
+                    logger.debug(f"file_input: {file_input}")
+                    futures = client.map(_count_events_for_file, file_input)
+                    return sum(client.gather(futures))
 
-                for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
-                    try:
-                        file_input = normalize_paths(base_file_input, host_prefix)
-                        logger.info(
-                            f"[prestage] data sample {sample_name}: attempt {attempt} using {host_prefix}"
-                        )
-
-                        events = NanoEventsFactory.from_root(
-                            file_input,
-                            metadata={},
-                            schemaclass=NanoAODSchema,
-                            uproot_options={"timeout": 4 * 2400},
-                        ).events()
-                        logger.debug(f"file_input: {file_input}")
-                        logger.debug(f"events.fields: {events.fields}")
-
-                        data_entries = 0
-                        try:
-                            data_entries = int(ak.num(events, axis=0))
-                        except (ValueError, RuntimeError, OSError) as err:
-                            logger.warning(
-                                "[prestage] Falling back to uproot entry counting after NanoEvents "
-                                "count failed: %s: %s",
-                                type(err).__name__,
-                                err,
-                            )
-                            # Reset to 0 before accumulating from uproot to avoid double-counting
-                            data_entries = 0
-                            for fname_normalized in file_input.keys():
-                                with uproot.open(f"{fname_normalized}:Events") as tree:
-                                    data_entries += tree.num_entries
-
-                        preprocess_metadata["data_entries"] = data_entries
-                        total_events += preprocess_metadata["data_entries"]
-
-                        logger.info(
-                            f"[prestage] data sample {sample_name}: success on attempt {attempt} "
-                            f"with {host_prefix}, entries = {preprocess_metadata['data_entries']}"
-                        )
-                        break  # success → stop trying redirectors
-
-                    except Exception as e:
-                        msg = str(e)
-                        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-                        logger.warning(
-                            f"[prestage] data sample {sample_name}: attempt {attempt} failed "
-                            f"with {host_prefix}: {type(e).__name__}: {e}"
-                        )
-                        if tls_bad and attempt < len(AAA_REDIRECTORS):
-                            logger.warning("[prestage] retrying data sample with next redirector...")
-                            continue
-                        # Non-AAA error or last redirector → propagate
-                        raise
+                data_entries = _with_redirector_retries(sample_name, "data sample", _read_data_entries)
+                preprocess_metadata["data_entries"] = data_entries
+                total_events += data_entries
+                logger.info(f"[prestage] data sample {sample_name}: success, entries = {data_entries}")
             else: # if MC
-                for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
-                    try:
-                        if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
-                            minnlo_metadata = minnlo_genweight_metadata_with_redirector(
-                                fnames=fnames,
-                                host_prefix=host_prefix,
-                                attempt=attempt,
-                                uproot_options={"timeout": 4 * 2400},
-                            )
-                            preprocess_metadata["sumGenWgts"] = minnlo_metadata["sumGenWgts"]
-                            preprocess_metadata["nGenEvts"] = minnlo_metadata["nGenEvts"]
-                            break  # stop trying once successful
-                        else:
-                            file_input = {fname: {"object_path": "Runs"} for fname in fnames}
-                            file_input = normalize_paths(file_input, host_prefix)
-                            logger.debug(f"file_input: {file_input}")
-                            runs = nanoevents_from_root_with_redirectors(
-                                file_input=file_input,
-                                host_prefix=host_prefix,
-                                attempt=attempt,
-                                schemaclass=BaseSchema,
-                                metadata={},
-                                uproot_options={"timeout": 4 * 2400},
-                            )
-
-                            # print(f"runs.fields: {runs.fields}")
-                            # if sample_name == "dy_m105_160_vbf_amc": # nanoAODv6
-                            if "genEventSumw" in runs.fields:
-                                logger.debug("genEventSumw found: nanoAODv9 or v12")
-                                # sumGenwgts = ak.sum(runs.genEventSumw).compute()
-                                # sumGenwgts_v2 = ak.sum(events.genWeight).compute()
-                                # gen_wgt_max = ak.max(events.genWeight).compute()
-                                # big_gen_wgt = events.genWeight > 3000
-                                # print(f"big_gen_wgt num: {ak.sum(big_gen_wgt).compute()}")
-                                # print(f"gen_wgt_max: {gen_wgt_max}")
-                                # print(f"nevents: {nevents}")
-                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw)) # convert into 32bit precision as 64 bit precision isn't json serializable
-                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount)) # convert into 32bit precision as 64 bit precision isn't json serializable
-                            else: # nanoAODv6
-                                logger.debug("genEventSumw_ found: nanoAODv6")
-                                preprocess_metadata["sumGenWgts"] = float(ak.sum(runs.genEventSumw_)) # convert into 32bit precision as 64 bit precision isn't json serializable
-                                preprocess_metadata["nGenEvts"] = int(ak.sum(runs.genEventCount_)) # convert into 32bit precision as 64 bit precision isn't json serializable
-                            logger.info(f"[prestage] data sample {sample_name}: success on attempt {attempt} ")
-                            break  # stop trying once successful
-                    except Exception as e:
-                        msg = str(e)
-                        tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-                        logger.warning(
-                            f"[prestage] data sample {sample_name}: attempt {attempt} failed "
-                            f"with {host_prefix}: {type(e).__name__}: {e}"
+                def _read_mc_metadata(host_prefix, attempt):
+                    if "MiNNLO" in sample_name: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
+                        return minnlo_genweight_metadata_with_redirector(
+                            fnames=fnames,
+                            host_prefix=host_prefix,
+                            attempt=attempt,
+                            uproot_options={"timeout": 4 * 2400},
                         )
-                        if tls_bad and attempt < len(AAA_REDIRECTORS):
-                            logger.warning("[prestage] retrying data sample with next redirector...")
-                            continue
-                        # Non-AAA error or last redirector → propagate
-                        raise
+                    return runs_tree_metadata_with_redirector(
+                        fnames=fnames,
+                        host_prefix=host_prefix,
+                        attempt=attempt,
+                        uproot_options={"timeout": 4 * 2400},
+                    )
+
+                mc_metadata = _with_redirector_retries(sample_name, "MC sample", _read_mc_metadata)
+                preprocess_metadata["sumGenWgts"] = mc_metadata["sumGenWgts"]
+                preprocess_metadata["nGenEvts"] = mc_metadata["nGenEvts"]
+                logger.info(f"[prestage] MC sample {sample_name}: success")
 
                 total_events += preprocess_metadata["nGenEvts"]
 
-            # test start -------------------------------
-            if sample_name == "dy_VBF_filter_NoUSE": # FIXME: Temporary fix. Remove this patch
-                """
-                Starting from coffea 2024.4.1, this if statement is technically as obsolite preprocess
-                can now handle thousands of root files no problem, but this "manual" is at least three
-                times faster than preprocess, so keeping this if statement for now
-                """
-                runs = NanoEventsFactory.from_root(
-                        file_input,
-                        metadata={},
-                        schemaclass=BaseSchema,
-                        uproot_options={"timeout":2400},
-                ).events()
-                genEventCount = ak.to_numpy(ak.materialize(runs.genEventCount))
+            val = "Events"
+            file_dict = {}
+            for file in fnames:
+                file_dict[file] = val
+            final_output = {
+                sample_name :{"files" :file_dict}
+            }
+            step_size = int(args.chunksize)
+            files_available, _ = preprocess_with_redirectors(
+                final_output,
+                step_size=step_size,
+                align_clusters=False,
+                skip_bad_files=args.skipBadFiles,
+            )
+            pre_stage_data = files_available
 
-                assert len(fnames) == len(genEventCount)
-                file_dict = {}
-                for idx in range(len(fnames)):
-                    step_start = 0
-                    step_end = int(genEventCount[idx]) # convert into 32bit precision as 64 bit precision isn't json serializable
-                    file = fnames[idx]
-                    file_dict[file] = {
-                        "object_path": "Events",
-                        "steps" : [[step_start,step_end]],
-                        "num_entries" : step_end,
-                    }
-                final_output = {
-                    sample_name :{"files" :file_dict}
-                }
-                # print(f"final_output: {final_output}")
-                pre_stage_data = final_output
-            else:
-                """
-                everything else other than VBF filter, but starting from coffea 2024.4.1 is condition could
-                techincally work on VBF filter files, just slower
-                """
-                val = "Events"
-                file_dict = {}
-                for file in fnames:
-                    file_dict[file] = val
-                final_output = {
-                    sample_name :{"files" :file_dict}
-                }
-                # print(f"final_output: {final_output}")
-                step_size = int(args.chunksize)
-                files_available, files_total = preprocess_with_redirectors(
-                    final_output,
-                    step_size=step_size,
-                    align_clusters=False,
-                    skip_bad_files=args.skipBadFiles,
-                )
-                # print(f"files_available: {files_available}")
-                pre_stage_data = files_available
-
-            # test end2  --------------------------------------------------------------
             # add in metadata
             pre_stage_data[sample_name]['metadata'] = preprocess_metadata
             # add in faction -> for later use
