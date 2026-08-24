@@ -232,10 +232,10 @@ switches:
         "2023BPix": false
         "2024": false
     do_jet_horn_puid:
-        '2016preVFP': true # For nanoAODv12, do_jet_horn_puid should be true
-        '2016postVFP': true # For nanoAODv12, do_jet_horn_puid should be true
-        '2017': true # For nanoAODv12, do_jet_horn_puid should be true
-        '2018': true # For nanoAODv12, do_jet_horn_puid should be true
+        '2016preVFP': false # For nanoAODv12, do_jet_horn_puid should be true
+        '2016postVFP': false # For nanoAODv12, do_jet_horn_puid should be true
+        '2017': false # For nanoAODv12, do_jet_horn_puid should be true
+        '2018': false # For nanoAODv12, do_jet_horn_puid should be true
         '2022preEE': false
         '2022postEE': false
         "2023": false
