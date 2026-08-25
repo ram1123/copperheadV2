@@ -9,6 +9,19 @@
 time bash run_analysis_pipeline.sh -y 2024 -k -l Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER -m compact
 ```
 
+# 23 Aug 2026
+
+```bash
+time bash run_analysis_pipeline.sh -y "2022preEE,2022postEE,2023,2023BPix,2024" -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE -m dnn
+time bash run_analysis_pipeline.sh -y "2022preEE,2022postEE,2023,2023BPix,2024" -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets -m dnn
+
+
+time MODEL_YEARS="2022preEE,2022postEE,2023,2023BPix,2024" bash run_analysis_pipeline.sh -y 2024 -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE -m all
+
+
+time bash run_stats_pipeline_VBF.sh -y "2022preEE,2022postEE,2023,2023BPix,2024" -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE -m 8
+```
+
 # 11 May 2026
 
 ```bash
