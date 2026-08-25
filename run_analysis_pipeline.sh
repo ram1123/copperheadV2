@@ -10,7 +10,7 @@ Modes:
   2|stage2
   2p|stage2_plot
   3|stage3
-  all
+  23|stage23
   zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12
   calib|calib_closure
   compact
@@ -19,6 +19,13 @@ Modes:
 Options:
   -D    Add DNN score during the compact step. Default is off.
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 workflow.
+
+Env vars:
+  MODEL_YEARS   Comma-separated years used to build the DNN model directory name
+                (dnn/trained_models/<label>/<MODEL_YEARS>_<region>_<category>),
+                independent of the years passed via -y. Defaults to -y's years.
+                Use this to run stage2/stage3 for one year (-y) while loading a
+                model trained on a different (e.g. combined) set of years.
 EOF
     exit 1
 }
@@ -63,14 +70,20 @@ for year in "${years[@]}"; do
         3|stage3)
             run_mode_from_nul < <(build_stage3_cmd "${year}")
             ;;
-        all)
-            # run_mode_from_nul < <(build_stage1_cmd "${year}")
-            # run_mode_from_nul < <(build_compact_cmd "${year}")
+        23|stage23)
             run_mode_from_nul < <(build_stage2_cmd "${year}")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
             run_mode_from_nul < <(build_stage3_cmd "${year}")
             ;;
+        all)
+            run_mode_from_nul < <(build_stage1_cmd "${year}")
+            run_mode_from_nul < <(build_compact_cmd "${year}")
+            run_mode_from_nul < <(build_stage2_cmd "${year}")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
+            run_mode_from_nul < <(build_stage3_cmd "${year}")
+            ;;            
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             run_zpt_fit "${year}"
             ;;

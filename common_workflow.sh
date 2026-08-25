@@ -70,7 +70,11 @@ parse_common_args() {
     dnn_hpo_trials="${HPO_TRIALS:-50}"
     dnn_hpo_label="${HPO_LABEL:-v1_multifold_050Trials}"
     dnn_train_label="${TRAIN_LABEL:-trained_best_optuna_${dnn_hpo_label}}"
-    dnn_base_dir="dnn/trained_models/${label}/${dnn_years_slug}_${region}_${category}"
+    # MODEL_YEARS lets the DNN model directory reference a different (e.g. combined-year
+    # trained) model than the years actually processed via -y; defaults to -y's years.
+    dnn_model_years_csv="${MODEL_YEARS:-${dnn_years_csv}}"
+    dnn_model_years_slug="${dnn_model_years_csv//,/-}"
+    dnn_base_dir="dnn/trained_models/${label}/${dnn_model_years_slug}_${region}_${category}"
     dnn_hpo_dir="${dnn_base_dir}/hpo_optuna/${dnn_hpo_label}"
     dnn_best_json="${OPTUNA_BEST_JSON:-${dnn_hpo_dir}/optuna_best.json}"
     dnn_model_path="./${dnn_base_dir}"
@@ -669,6 +673,56 @@ collect_vbf_significance_summary() {
     log "Collected VBF significance summary: ${summary_csv}"
 }
 
+extract_expected_limit() {
+    local log_path="$1"
+    sed -n 's/.*Expected[[:space:]]*50\.0%:[[:space:]]*r[[:space:]]*<[[:space:]]*\([-+0-9.eE][0-9.eE+-]*\).*/\1/p' "${log_path}" | head -n 1
+}
+
+collect_vbf_limit_summary() {
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local summary_csv="${card_dir}/vbf_expected_limit_summary_${save_postfix}.csv"
+    local tmp_rows
+    tmp_rows="$(mktemp "${card_dir}/.vbf_limit_rows_XXXXXX.csv")"
+    : > "${tmp_rows}"
+    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 Run3)
+    local year stem lim_log stat_log lim_val stat_val
+    for year in "${ordered_years[@]}"; do
+        stem="$(vbf_card_stem "${year}")"
+        lim_log="${card_dir}/${stem}_expectedlimit.log"
+        stat_log="${card_dir}/${stem}_expectedlimit_StatOnly.log"
+        if [[ -f "${lim_log}" || -f "${stat_log}" ]]; then
+            lim_val="NA"
+            stat_val="NA"
+            [[ -f "${lim_log}" ]] && lim_val="$(extract_expected_limit "${lim_log}" 2>/dev/null || printf 'NA')"
+            [[ -f "${stat_log}" ]] && stat_val="$(extract_expected_limit "${stat_log}" 2>/dev/null || printf 'NA')"
+            printf '%s,%s,%s,%s\n' "${year}" "${stem}.txt" "${lim_val}" "${stat_val}" >> "${tmp_rows}"
+        fi
+    done
+    {
+        echo "year,card,expected_limit_median,expected_limit_median_statonly"
+        cat "${tmp_rows}"
+    } > "${summary_csv}"
+    rm -f "${tmp_rows}"
+    log "Collected VBF expected-limit summary: ${summary_csv}"
+}
+
+run_vbf_limit() {
+    local year="$1"
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local stem
+    stem="$(vbf_card_stem "${year}")"
+    ensure_vbf_card "${year}"
+    (
+        cd "${card_dir}"
+        # Blinded analysis: --run blind computes the expected limit from the Asimov
+        # background-only dataset instead of unblinding real data.
+        combineTool.py -d "${stem}.txt" -M AsymptoticLimits -m 125 --run blind -n "_${year}_${save_postfix}_" --rMin -2 --rMax 5 > "${stem}_expectedlimit.log"
+        combineTool.py -d "${stem}.txt" -M AsymptoticLimits -m 125 --run blind -n "_${year}_${save_postfix}_" --rMin -2 --rMax 5 --freezeParameters allConstrainedNuisances > "${stem}_expectedlimit_StatOnly.log"
+    )
+}
+
 run_vbf_significance() {
     local year="$1"
     local card_dir
@@ -690,13 +744,20 @@ run_vbf_impacts() {
     local stem
     stem="$(vbf_card_stem "${year}")"
     ensure_vbf_workspace "${year}"
-    (
-        cd "${card_dir}"
-        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 -t -1 --expectSignal 1
-        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 --doFits --robustFit 1 -t -1 --expectSignal 1 --parallel 60
-        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 -o "impacts_${year}_${save_postfix}.json" -t -1 --expectSignal 1 --parallel 60
-        plotImpacts.py -i "impacts_${year}_${save_postfix}.json" -o "impacts_${year}_${save_postfix}"
-    )
+    # Blinded analysis: no observed impacts. Run both Asimov scenarios instead —
+    # r=1 (SM signal injected) and r=0 (background-only) — so a nuisance that only
+    # ranks high under one hypothesis is visible.
+    local r_inject tag
+    for r_inject in 1 0; do
+        tag="r${r_inject}"
+        (
+            cd "${card_dir}"
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 -t -1 --expectSignal "${r_inject}"
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doFits --robustFit 1 -t -1 --expectSignal "${r_inject}" --parallel 60
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 -o "impacts_${year}_${save_postfix}_${tag}.json" -t -1 --expectSignal "${r_inject}" --parallel 60
+            plotImpacts.py -i "impacts_${year}_${save_postfix}_${tag}.json" -o "impacts_${year}_${save_postfix}_${tag}"
+        )
+    done
 }
 
 run_vbf_lhscan() {
