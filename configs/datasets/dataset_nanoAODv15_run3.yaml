@@ -589,6 +589,8 @@ years:
             data_C:
                 skip_sample: False
                 datasets:
+                    - /Muon0/Run2025C-PromptReco-v1/NANOAOD
+                    - /Muon1/Run2025C-PromptReco-v1/NANOAOD
                     - /Muon0/Run2025C-PromptReco-v2/NANOAOD
                     - /Muon1/Run2025C-PromptReco-v2/NANOAOD
                 lumi_pb: 21630.0
@@ -625,6 +627,8 @@ years:
             data_F:
                 skip_sample: False
                 datasets:
+                    - /Muon0/Run2025F-PromptReco-v1/NANOAOD
+                    - /Muon1/Run2025F-PromptReco-v1/NANOAOD
                     - /Muon0/Run2025F-PromptReco-v2/NANOAOD
                     - /Muon1/Run2025F-PromptReco-v2/NANOAOD
                 lumi_pb: 26890.0
