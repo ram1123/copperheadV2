@@ -72,3 +72,14 @@ if [[ "$2" == "Run2" ]]; then
         # > $1/HMuMu_13TeV_Run2.txt
     text2workspace.py $1/HMuMu_13TeV_Run2.txt -m 125
 fi
+
+if [[ "$2" == "Run2SB" ]]; then
+    echo "Run2 sidebands (2016-2018)"
+    combineCards.py \
+        SB_2016preVFP=$1/datacard_vbf_SB_2016preVFP.txt \
+        SB_2016postVFP=$1/datacard_vbf_SB_2016postVFP.txt \
+        SB_2017=$1/datacard_vbf_SB_2017.txt \
+        SB_2018=$1/datacard_vbf_SB_2018.txt \
+        > $1/HMuMu_13TeV_Run2SB.txt
+    text2workspace.py $1/HMuMu_13TeV_Run2SB.txt -m 125
+fi
