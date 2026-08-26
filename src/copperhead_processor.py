@@ -2681,6 +2681,13 @@ class EventProcessor(processor.ProcessorABC):
                 "hfsigmaPhiPhi",
                 "nConstituents",
                 "rawFactor",
+                # Needed by the PU-DNN model's feature list (see scaler.json
+                # under pu_dnn_model_dir) when do_use_pu_dnn_score is enabled.
+                "hfEmEF",
+                "hfHEF",
+                "nElectrons",
+                "nMuons",
+                "puIdDisc",
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
 
