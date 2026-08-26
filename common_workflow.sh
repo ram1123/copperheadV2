@@ -78,6 +78,17 @@ parse_common_args() {
     dnn_hpo_dir="${dnn_base_dir}/hpo_optuna/${dnn_hpo_label}"
     dnn_best_json="${OPTUNA_BEST_JSON:-${dnn_hpo_dir}/optuna_best.json}"
     dnn_model_path="./${dnn_base_dir}"
+
+    # PU-DNN (jet-level HS-vs-PU classifier, MVA_training/pileup_dnn/train_pu_dnn.py)
+    # is unrelated to the VBF category DNN above: it trains on stage1's own
+    # compacted output and is consumed back inside stage1 (do_use_pu_dnn_score),
+    # not on stage2 output. Sample-name globs are the training script's own
+    # --use-glob patterns, resolved against each year's compacted/ dir below.
+    pu_dnn_dy_glob="${PU_DNN_DY_GLOB:-dyTo2Mu_M-50_aMCatNLO}"
+    pu_dnn_ttbar_glob="${PU_DNN_TTBAR_GLOB:-ttjets_*}"
+    pu_dnn_ewk_glob="${PU_DNN_EWK_GLOB:-ewk_*}"
+    pu_dnn_regions="${PU_DNN_REGIONS:-HEpos HEneg HFpos HFneg}"
+    pu_dnn_out_tag="${PU_DNN_OUT_TAG:-}"
 }
 
 setup_logging() {
@@ -306,6 +317,35 @@ build_compact_cmd() {
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_gateway_args)
+    printf '%s\0' "${cmd[@]}"
+}
+
+build_pu_dnn_train_cmd() {
+    local year="$1"
+    local compacted_dir="${save_path}/stage1_output/${year}/compacted"
+    local out_tag="${pu_dnn_out_tag:-run${year}_dy_top_ewk_$(date +%b%d)}"
+    local -a region_args=()
+    local token
+    for token in ${pu_dnn_regions}; do
+        region_args+=("${token}")
+    done
+    local cmd=(
+        python MVA_training/pileup_dnn/train_pu_dnn.py
+        -i
+        "${compacted_dir}/${pu_dnn_dy_glob}/*/*.parquet"
+        "${compacted_dir}/${pu_dnn_ttbar_glob}/*/*.parquet"
+        "${compacted_dir}/${pu_dnn_ewk_glob}/*/*.parquet"
+        --use-glob
+        -o "validation/pu_dnn/${out_tag}"
+        --regions "${region_args[@]}"
+    )
+    # Raw passthrough for the training script's many hyperparameter/plotting
+    # flags (epochs, lr, pt-min/max, ...) so this wrapper doesn't need to
+    # hand-mirror every one of them; word-split is intentional here.
+    if [[ -n "${PU_DNN_EXTRA_ARGS:-}" ]]; then
+        local -a extra_args=(${PU_DNN_EXTRA_ARGS})
+        cmd+=("${extra_args[@]}")
+    fi
     printf '%s\0' "${cmd[@]}"
 }
 
