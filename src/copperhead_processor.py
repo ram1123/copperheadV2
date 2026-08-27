@@ -1380,8 +1380,8 @@ class EventProcessor(processor.ProcessorABC):
                 year,
                 is_mc,
             )
-            PuppiMET["pt"] = xy_met_pt
-            PuppiMET["phi"] = xy_met_phi
+            PuppiMET["pt_xyCorr"] = xy_met_pt
+            PuppiMET["phi_xyCorr"] = xy_met_phi
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
             logger.info("Applying jet veto maps!")
             jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
@@ -1872,6 +1872,8 @@ class EventProcessor(processor.ProcessorABC):
         _add_block(out_dict, {
             "PuppiMET_pt": PuppiMET.pt,
             "PuppiMET_phi": PuppiMET.phi,
+            "PuppiMET_pt_xyCorr": PuppiMET.pt_xyCorr,
+            "PuppiMET_phi_xyCorr": PuppiMET.phi_xyCorr,
             "PuppiMET_sumEt": PuppiMET.sumEt,
         })
 

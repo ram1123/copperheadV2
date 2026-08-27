@@ -182,10 +182,10 @@ switches:
     do_met_xy_correction: # PuppiMET xy-shift (phi modulation) correction, see src/corrections/met_xy_correction.py
         # Full Run 2 UL enabled (implement-met-phi-modulation-correction task,
         # Run3 is not implemented (no sourced coefficients).
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
