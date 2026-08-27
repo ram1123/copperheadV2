@@ -12,6 +12,7 @@ data:
     "2023BPix": [data_D]
     "2024": [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
     "2025": [data_B, data_C, data_D, data_E, data_F, data_G]
+    "2026": [data_A, data_B, data_D] # data_C excluded: low-PU era
     run3: [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
 
 # --------------------------------------------------
@@ -24,6 +25,8 @@ background:
             processes:
                 - dyTo2L_M-50_incl
             processes_per_year:
+                2026:
+                    - dyTo2Mu_M-50_aMCatNLO
                 2025:
                     - dyTo2Mu_M-50_aMCatNLO
                 2024:
@@ -150,6 +153,8 @@ signal:
                 # - vbf_powheg_herwig # herwig
                 # - vbf_powhegPS # pythia 8
             processes_per_year:
+                2026:
+                    - vbf_powheg
                 2025:
                     - vbf_powheg
                 2023:

@@ -1131,7 +1131,6 @@ def get_jet_variation(jets_orig, variation, fields2add):
         else:
             logger.warning(f"jets_orig has no field {field}!")
             if field == "puId":
-                puId = get_puId(jets_orig)
-                new_jets["puId"] = puId
+                new_jets["puId"] = get_puId(jets_orig)
 
     return new_jets

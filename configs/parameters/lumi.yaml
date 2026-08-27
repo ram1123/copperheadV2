@@ -12,6 +12,7 @@ integrated_lumis: # source: https://github.com/TopEFT/topeft/blob/252c6454e06e49
   '2023BPix': 9680.0
   "2024": 109820.0 # https://docs.google.com/presentation/d/1TjPem5jX0fzqvTGl271_nQFoVBabsrdrO0i8Qo1uD5E/edit?slide=id.g289f499aa6b_2_58#slide=id.g289f499aa6b_2_58
   "2025": 110840.0 # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2025
+  "2026": 25950.0 # Golden JSON lumi for eras A+B+D (0.64+15.28+10.03 /fb); era C (low-PU) excluded from the analysis -- Preliminary Offline Results
 lumimask:
   2016preVFP: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt
   2016postVFP: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt
@@ -23,6 +24,7 @@ lumimask:
   2023BPix: data/lumimasks/Cert_Collisions2023_366442_370790_Golden.json
   "2024":  data/lumimasks/Cert_Collisions2024_378981_386951_Golden.json
   "2025":  data/lumimasks/Cert_Collisions2025_391658_398903_Golden.json
+  "2026":  data/lumimasks/Cert_Collisions2026_401624_403937_golden.json
   2016_RERECO: data/lumimasks/RERECO/Cert_271036-284044_13TeV_ReReco_07Aug2017_Collisions16_JSON.txt # RERECO source https://twiki.cern.ch/twiki/bin/viewauth/CMS/DCUserPage#Early2018Re_Reco_datasets_17Sep2 and https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation
   '2017_RERECO': data/lumimasks/RERECO/Cert_294927-306462_13TeV_EOY2017ReReco_Collisions17_JSON_v1.txt
   '2018_RERECO': data/lumimasks/RERECO/Cert_314472-325175_13TeV_17SeptEarlyReReco2018ABC_PromptEraD_Collisions18_JSON.txt

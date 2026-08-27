@@ -37,6 +37,7 @@ samples:
     label: 1
     processes: ["vbf_powheg_dipole"]
     processes_per_year:
+      '2026': ["vbf_powheg"]
       '2025': ["vbf_powheg"]
       '2023': ["vbf_powheg"]
       2023BPix: ["vbf_powheg"]
@@ -52,6 +53,7 @@ samples:
           2022postEE: ["dyTo2L_M-50_incl"]
           '2023': ["dyTo2L_M-50_incl"]
           2023BPix: ["dyTo2L_M-50_incl"]
+          '2026': ["dyTo2Mu_M-50_aMCatNLO"]
           '2025': ["dyTo2Mu_M-50_aMCatNLO"]
           '2024': ["dyTo2Mu_M-50_aMCatNLO"]
           '2017': ["dy_M-50_MiNNLO", "dy_M-100To200_MiNNLO"]
@@ -62,6 +64,7 @@ samples:
       EWK:
         processes: ["ewk_mmjj_mll_105_160"]
         processes_per_year:
+          '2026': ["ewk_mmjj_mll_105_160"]
           '2025': ["ewk_mmjj_mll_105_160"]
           '2024': ["ewk_mmjj_mll_105_160"]
           '2017': ["ewk_lljj_mll50_mjj120"]
