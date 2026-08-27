@@ -19,12 +19,16 @@ Outputs, written locally to --outdir and then also xrdcp'd to
   - copy_failed.csv
   - copy_summary.txt
 
+By default the copy is incremental (rsync-like): a file already at the destination with a
+matching adler32 checksum is skipped. Use --force to always re-copy, or --dry-run to preview
+what would be copied/skipped without transferring anything.
+
 Example:
 
   python scripts/copy_work_to_store.py \
       --src /work/projects/hmm/shar1172/hmm_ntuples \
       --dst /eos/purdue/store/user/rasharma/hmm/reducedNtuples \
-      --outdir copy_out      
+      --outdir copy_out
 """
 
 import os
@@ -126,6 +130,8 @@ def copy_and_verify_one(
     max_retries: int,
     copy_timeout: int,
     checksum_timeout: int,
+    skip_existing: bool = True,
+    dry_run: bool = False,
 ) -> Dict[str, str]:
     src = row["full_path_src"]
     rel = row["rel_path"]
@@ -140,6 +146,22 @@ def copy_and_verify_one(
     row["adler32_src"] = expected or ""
     if not expected:
         row["status"] = "src_checksum_failed"
+        row["attempts"] = "0"
+        row["adler32_dst"] = ""
+        return row
+
+    # rsync-like short-circuit: if the destination already exists with a matching
+    # checksum, skip the transfer entirely (missing or changed files still copy).
+    if skip_existing:
+        existing = eos_query_adler32(dst_store, timeout=checksum_timeout)
+        if existing and existing.lower() == expected.lower():
+            row["status"] = "would_skip_unchanged" if dry_run else "skipped_unchanged"
+            row["attempts"] = "0"
+            row["adler32_dst"] = existing
+            return row
+
+    if dry_run:
+        row["status"] = "would_copy"
         row["attempts"] = "0"
         row["adler32_dst"] = ""
         return row
@@ -210,10 +232,26 @@ def main():
     ap.add_argument("--max-retries", type=int, default=3, help="Max copy attempts per file")
     ap.add_argument("--copy-timeout", type=int, default=7200, help="Seconds for xrdcp timeout")
     ap.add_argument("--checksum-timeout", type=int, default=60, help="Seconds for checksum queries")
+    ap.add_argument(
+        "--force",
+        action="store_true",
+        help="Always re-copy every file, even if the destination already has a matching checksum "
+        "(default: rsync-like — skip files that already exist at the destination unchanged)",
+    )
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be copied/skipped without transferring anything or uploading logs",
+    )
     args = ap.parse_args()
+    skip_existing = not args.force
 
+    # Accept either the POSIX EOS mount or the bare /store path (same file, per
+    # modules/xrootd_utils.py's normalize_paths) and use the /store form throughout.
+    if args.dst.startswith("/eos/purdue/store/"):
+        args.dst = args.dst[len("/eos/purdue"):]
     if not args.dst.startswith("/store/"):
-        sys.exit(f"--dst must start with /store/ (got {args.dst!r})")
+        sys.exit(f"--dst must start with /store/ or /eos/purdue/store/ (got {args.dst!r})")
 
     os.makedirs(args.outdir, exist_ok=True)
 
@@ -228,9 +266,12 @@ def main():
 
     print(f"EOS host: {EOS_HOST}")
     print(f"Destination prefix: {args.dst}")
-    print(f"Workers={args.workers}  max_retries={args.max_retries}")
+    print(f"Workers={args.workers}  max_retries={args.max_retries}  skip_existing={skip_existing}"
+          f"{'  DRY-RUN' if args.dry_run else ''}")
 
-    ok_rows, fail_rows = [], []
+    ok_rows, skipped_rows, fail_rows = [], [], []
+    FAIL_STATUSES = {"copy_failed", "checksum_mismatch", "src_checksum_failed"}
+    SKIP_STATUSES = {"skipped_unchanged", "would_skip_unchanged"}
     fieldnames = [
         "rel_path",
         "full_path_src",
@@ -251,6 +292,8 @@ def main():
                 args.max_retries,
                 args.copy_timeout,
                 args.checksum_timeout,
+                skip_existing,
+                args.dry_run,
             )
             for row in rows
         ]
@@ -259,19 +302,27 @@ def main():
         for fut in as_completed(futs):
             done += 1
             out = fut.result()
-            if out.get("status") == "ok":
-                ok_rows.append(out)
-            else:
+            st = out.get("status", "")
+            if st in FAIL_STATUSES:
                 fail_rows.append(out)
+            elif st in SKIP_STATUSES:
+                skipped_rows.append(out)
+            else:
+                ok_rows.append(out)
 
             if done % 50 == 0 or done == len(futs):
-                print(f"[progress] {done}/{len(futs)} ok={len(ok_rows)} failed={len(fail_rows)}")
+                print(
+                    f"[progress] {done}/{len(futs)} ok={len(ok_rows)} "
+                    f"skipped={len(skipped_rows)} failed={len(fail_rows)}"
+                )
 
     # manifest reflects the (now checksum-populated) source listing
     ok_path = os.path.join(args.outdir, "copy_ok.csv")
+    skipped_path = os.path.join(args.outdir, "copy_skipped.csv")
     fail_path = os.path.join(args.outdir, "copy_failed.csv")
-    write_csv(manifest_path, ok_rows + fail_rows, fieldnames)
+    write_csv(manifest_path, ok_rows + skipped_rows + fail_rows, fieldnames)
     write_csv(ok_path, ok_rows, fieldnames)
+    write_csv(skipped_path, skipped_rows, fieldnames)
     write_csv(fail_path, fail_rows, fieldnames)
 
     summary_path = os.path.join(args.outdir, "copy_summary.txt")
@@ -279,20 +330,29 @@ def main():
         f.write(f"Source: {args.src}\n")
         f.write(f"Destination prefix: {args.dst}\n")
         f.write(f"EOS host: {EOS_HOST}\n")
+        f.write(f"Dry run: {args.dry_run}\n")
         f.write(f"Total files: {len(rows)}\n")
-        f.write(f"OK: {len(ok_rows)}\n")
+        f.write(f"Copied OK: {len(ok_rows)}\n")
+        f.write(f"Skipped (already up to date): {len(skipped_rows)}\n")
         f.write(f"Failed: {len(fail_rows)}\n")
 
     print("Done.")
     print(f"Manifest: {manifest_path}")
     print(f"OK:       {ok_path} ({len(ok_rows)})")
+    print(f"Skipped:  {skipped_path} ({len(skipped_rows)})")
     print(f"Failed:   {fail_path} ({len(fail_rows)})")
     print(f"Summary:  {summary_path}")
+
+    if args.dry_run:
+        print("Dry run: no files were transferred and no logs were uploaded to EOS.")
+        if fail_rows:
+            sys.exit(1)
+        return
 
     logs_store_dir = args.dst.rstrip("/") + "/" + TRANSFER_LOGS_DIRNAME
     print(f"Uploading logs to EOS: {logs_store_dir}")
     upload_logs_to_eos(
-        [manifest_path, ok_path, fail_path, summary_path],
+        [manifest_path, ok_path, skipped_path, fail_path, summary_path],
         args.dst,
         timeout=args.checksum_timeout,
     )
