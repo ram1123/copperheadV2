@@ -12,6 +12,7 @@ nnlops_file:
     "2023BPix": data/NNLOPS_reweight.root
     "2024": data/NNLOPS_reweight.root
     "2025": data/NNLOPS_reweight.root
+    "2026": data/NNLOPS_reweight.root
 btag_sf_json:
     2016preVFP: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2016preVFP_UL/btagging.json.gz
     2016postVFP: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2016postVFP_UL/btagging.json.gz
@@ -23,6 +24,7 @@ btag_sf_json:
     2023BPix: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/BTV/2023_Summer23BPix/btagging.json.gz
     "2024": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-08-19/btagging.json.gz
     "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/2026-06-26/btagging.json.gz
+    "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/2026-06-26/btagging.json.gz # PLACEHOLDER: no BTV/*2026* payload exists on cvmfs yet, reusing 2025 pending real 2026 b-tag SFs
 btag_sf_csv:
     2016preVFP: data/btag/DeepCSV_2016LegacySF_V1.csv
     2016postVFP: data/btag/DeepCSV_2016LegacySF_V1.csv
@@ -34,6 +36,7 @@ btag_sf_csv:
     "2023BPix": data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
     "2024": data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
     "2025": data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
+    "2026": data/btag/DeepCSV_106XUL18SF.csv # FIXME: Update SF
 pu_file_data:
     2016preVFP: data/pileup/puData2016_UL_withVar.root
     2016postVFP: data/pileup/puData2016_UL_withVar.root
@@ -45,6 +48,7 @@ pu_file_data:
     "2023BPix": dummy_only_pu_file_mc_is_needed # FIXME
     "2024": dummy_only_pu_file_mc_is_needed # FIXME
     "2025": dummy_only_pu_file_mc_is_needed # FIXME
+    "2026": dummy_only_pu_file_mc_is_needed # FIXME
 pu_file_mc: # source https://github.com/cms-sw/cmssw/blob/CMSSW_10_6_X/SimGeneral/MixingModule/python/mix_2018_25ns_UltraLegacy_PoissonOOTPU_cfi.py
     2016preVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
     2016postVFP: data/pileup/mix_2016_25ns_UltraLegacy_PoissonOOTPU_cfi.yaml
@@ -61,6 +65,7 @@ pu_file_mc: # source https://github.com/cms-sw/cmssw/blob/CMSSW_10_6_X/SimGenera
     2023BPix: data/cat/metadata/LUM/Run3-23DSep23-Summer23BPix-NanoAODv12/2024-01-31/puWeights.json.gz
     "2024": data/cat/metadata/LUM/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-12-02/puWeights_BCDEFGHI.json.gz
     "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-25Prompt-Summer24-NanoAODv15/2026-06-05/puWeights_2025pp_Golden_Summer24_25ns_69200ub.json.gz
+    "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-25Prompt-Summer24-NanoAODv15/2026-06-05/puWeights_2025pp_Golden_Summer24_25ns_69200ub.json.gz # PLACEHOLDER: no LUM/*2026* payload exists on cvmfs yet, reusing 2025 pileup weights pending real 2026 pileup payload
 muSFFileList:
     "2016preVFP":
         json_file: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run2-2016preVFP-UL-NanoAODv9/2024-07-02/muon_Z.json.gz
@@ -112,10 +117,17 @@ muSFFileList:
         id: NUM_MediumID_DEN_TrackerMuons
         iso: NUM_LoosePFIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
+    "2026": # PLACEHOLDER: MUO/Run3-26Prompt-Summer24-NanoAODv15/ exists on cvmfs but is empty, reusing 2025 muon SFs pending real 2026 payload
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_Z.json.gz
+        id: NUM_MediumID_DEN_TrackerMuons
+        iso: NUM_LoosePFIso_DEN_MediumID
+        trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
 new_zpt_weights_file_aMCatNLO:
     # do_zpt is false for 2025 so this value isn't actually read yet; placeholder
     # copied from 2024 only so getParametersForYr's per-year key lookup doesn't crash.
     "2025": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
+    # do_zpt is also false for 2026 (mirrors 2025); placeholder copied from 2025/2024
+    "2026": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2018": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2017": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2016preVFP": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
@@ -137,6 +149,7 @@ new_zpt_weights_file_MiNNLO:
     "2023BPix": None
     "2024": None
     "2025": None
+    "2026": None
 pu_dnn_model_dir: # Base dir for the region PU/HS jet-ID DNN (switches.do_use_pu_dnn_score).
     # Only read when do_use_pu_dnn_score is true for the year (currently
     # 2022preEE/2022postEE/2023/2023BPix/2024/2025; see switches.yaml). Model
@@ -154,6 +167,7 @@ pu_dnn_model_dir: # Base dir for the region PU/HS jet-ID DNN (switches.do_use_pu
     "2023BPix": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
     "2024": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc
     "2025": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc; placeholder until a 2025-trained model exists
+    "2026": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc; placeholder until a 2026-trained model exists
 zpt_dnn_models_aMCatNLO:
     "2018": dummy
     "2017": dummy
@@ -171,6 +185,10 @@ zpt_dnn_models_aMCatNLO:
         0j: dummy
         1j: dummy
         2j: dummy
+    "2026":
+        0j: dummy
+        1j: dummy
+        2j: dummy
 jetpuid_sf_file: # old method as of Dec 16 2024,
     2016preVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
     2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
@@ -182,6 +200,7 @@ jetpuid_sf_file: # old method as of Dec 16 2024,
     "2023BPix": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetid.json.gz
     "2024": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-12-02/jetid.json.gz
     "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-25Prompt-Summer24-NanoAODv15/2026-07-16/jetid.json.gz
+    "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-26Prompt-Summer24-NanoAODv15/2026-07-15/jetid.json.gz
 jmar_sf_file:
     2016preVFP: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016preVFP_UL/jmar.json.gz
     2016postVFP: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2016postVFP_UL/jmar.json.gz
@@ -197,3 +216,4 @@ jmar_sf_file:
     "2023BPix": dummy
     "2024": dummy
     "2025": dummy
+    "2026": dummy

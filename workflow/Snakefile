@@ -73,6 +73,7 @@ YEAR_META = {
     "2023BPix": ("run3", "12"),
     "2024": ("run3", "15"),
     "2025": ("run3", "15"),
+    "2026": ("run3", "15"),
 }
 
 DATASET_YAMLS = {
@@ -171,6 +172,9 @@ rule all:
         INITIAL_STAGE1_DONE,
         # (2) stage1Compact for all years
         INITIAL_STAGE1_COMPACT_DONE,
+        # (5b) PU-DNN retraining -- deliberate/occasional, not automatic; uncomment
+        # or request state/<run_tag>/pu_dnn_train_<year>.done directly to run it.
+        expand(STATEDIR + "/pu_dnn_train_{year}.done", year=YEARS),        
         # (3) plotter (after stage1)
         PLOT_DONE,
         # (4) get zpt
@@ -178,10 +182,11 @@ rule all:
         expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
         expand(STATEDIR + "/zpt_step2_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
         # (5) get EBE mass calibration
-        expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
+        # (6) summary
         f"{STATEDIR}/summary.done"
 
 rule plot_all:
@@ -319,6 +324,43 @@ rule stage1Compact:
             echo "stage1Compact year={wildcards.year} attempt= FAILED" >> {FAIL_LOG}
             exit 1
         fi
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# ---------------------------------------
+# 2b) PU-DNN training (jet-level HS-vs-PU classifier consumed back inside a
+# LATER stage1 run via do_use_pu_dnn_score/pu_dnn_model_dir -- not to be
+# confused with the VBF-category DNN, which trains on stage2 output).
+# Not wired into `rule all` (see the commented-out target below): this is a
+# deliberate, occasional retraining step, not something that should fire as
+# a side effect of a routine `snakemake ... all_stage1` run. Request it
+# explicitly, e.g.:
+#   snakemake -s workflow/Snakefile state/<run_tag>/pu_dnn_train_<year>.done
+# ---------------------------------------
+rule pu_dnn_train:
+    input:
+        STATEDIR + f"/stage1_compact_{{year}}.done"
+    output:
+        done=STATEDIR + "/pu_dnn_train_{year}.done",
+    log:
+        LOGDIR + "/pu_dnn_train_{year}.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        label=lambda wc: label_for_year(wc.year),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -l {params.label} \
+            -y "{wildcards.year}" \
+            -m pu_dnn_train \
+            > {log} 2>&1
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
