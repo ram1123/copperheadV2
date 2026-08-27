@@ -1868,10 +1868,13 @@ class EventProcessor(processor.ProcessorABC):
         _add_block(out_dict, {
             "PuppiMET_pt": PuppiMET.pt,
             "PuppiMET_phi": PuppiMET.phi,
-            "PuppiMET_pt_xyCorr": PuppiMET.pt_xyCorr,
-            "PuppiMET_phi_xyCorr": PuppiMET.phi_xyCorr,
             "PuppiMET_sumEt": PuppiMET.sumEt,
         })
+        if self.config["switches"].get("do_met_xy_correction", False):
+          _add_block(out_dict, {
+                "PuppiMET_pt_xyCorr": PuppiMET.pt_xyCorr,
+                "PuppiMET_phi_xyCorr": PuppiMET.phi_xyCorr,
+            })  
 
         # FatJet block
         if do_getFatJet_vars:
