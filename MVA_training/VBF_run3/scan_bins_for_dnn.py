@@ -525,10 +525,8 @@ def scan_nbins_for_best_edges(
     Z_tot_list = []
     S_NoWgt_bins_list = []
     B_NoWgt_bins_list = []
-    # nbins_list = reversed(nbins_list)
     logger.info(f"nbins_list: {nbins_list}")
     print(f"nbins_list: {nbins_list}")
-    # raise ValueError
     for nb in nbins_list:
         # str (not Path) so the ".pdf" -> ".root"/"_root.pdf" swaps below still work
         outfile = str(
@@ -865,10 +863,6 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
     # do_vbf_filter_study = False
     do_vbf_filter_study = True
     for name, globpath in items:
-        # if "dy_" in name:
-        #     do_vbf_filter_study = True
-        # else:
-        #     do_vbf_filter_study = False
         print(
             f"Processing {name} from {globpath} (do_vbf_filter_study={do_vbf_filter_study})"
         )
@@ -881,16 +875,6 @@ def collect_scores(process_globs, selection, category="vbf", region_name="h-peak
             variation="nominal",
             do_vbf_filter_study=do_vbf_filter_study,
         )
-        # print(f"ev.fields: {ev.fields}")
-        # print(f"ev.fields: {dak.max(ev.dnn_vbf_score).compute()}")
-        # print(f"ev.fields: {dak.min(ev.dnn_vbf_score).compute()}")
-        # raise ValueError 
-        # dnn_score = ev["dnn_vbf_score"].compute().to_numpy()
-        # dnn_score = np.atanh(logit(dnn_score))
-        # print(dnn_score.max())
-        # print(dnn_score.min())
-        # raise ValueError 
-        # scores.append(dnn_score)
         scores.append(ev["dnn_vbf_score_atanh"].compute().to_numpy())
         weights.append(ev["wgt_nominal"].compute().to_numpy())
         if "year" in ev.fields:
@@ -922,16 +906,7 @@ def collect_bkg(process_globs, selection, category="vbf", region_name="h-peak"):
 # Previously used inputs, kept for reference -- pass any of them with
 # --stage1-path / --compacted-tag instead of editing this file:
 #   stage1_path: .../Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc
-#                .../Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc
-#                .../Run2_NanoV12_forVBFChannel_May15_2026_jetUnc
 #   compacted_tag: May08_2026_FixDimuonMass
-#                  Jun01_2026_FixDimuonMass
-#                  Jun05_2026_RamMay2025Binning_FixDimuonMass
-#                  Jun07_2026_50nTrialsFoldsAll_FixDimuonMass
-#                  Jun08_2026_20nTrialsFoldsAll_FixDimuonMass
-#                  Jun08_2026_50nTrialsFoldsAll_FixDimuonMass
-#                  Jul04_2026_50nTrialsFoldsAll_FixDimuonMass
-#                  Jul11_2026_100nTrialsFoldsAll_Max70bins_FixDimuonMass
 DEFAULT_STAGE1_PATH = "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo"
 DEFAULT_COMPACTED_TAG = "Jul24_2026_dnnCompact_test_FixDimuonMass"
 DEFAULT_YEAR = "*"
@@ -1007,10 +982,6 @@ if __name__ == "__main__":
         "vbf_powheg_dipole": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/vbf_powheg_dipole/**/*.parquet",
         # "ggh_powhegPS": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ggh_powhegPS/**/*.parquet",
     }
-    # sig_globs = {
-    #     "vbf_powheg_dipole": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/vbf_powheg_dipole/**/*.parquet",
-    #     # "ggh_powhegPS": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ggh_powhegPS/**/*.parquet",
-    # }
     sig_score, sig_w, sig_years = collect_scores(sig_globs, selection)
 
     bkg_globs = {
@@ -1028,16 +999,6 @@ if __name__ == "__main__":
         # "ww": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ww_*/**/*.parquet",
         # "wz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/wz_*/**/*.parquet",
     }
-
-    # bkg_globs = {
-    #     "dy_VBF_filter": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_VBF_filter/**/*.parquet",
-    #     "dy_M-50_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-50_aMCatNLO/**/*.parquet",
-    #     "dy_M-100To200_aMCatNLO": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/dy_M-100To200_aMCatNLO/**/*.parquet",
-    #     "ewk_lljj_mll50_mjj120": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ewk_lljj_mll50_mjj120/**/*.parquet",
-    #     "ttjets_dl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_dl/**/*.parquet",
-    #     "ttjets_sl": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/ttjets_sl/**/*.parquet",
-    #     "zz": "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run2_nanoAODv12_UpdatedQGL_FixPUJetIDWgt/stage1_output/*/compacted_19September_FixDimuonMass/zz/**/*.parquet",
-    # }
     
     bkg_score, bkg_w, bkg_years = collect_scores(bkg_globs, selection)
 
@@ -1062,21 +1023,7 @@ if __name__ == "__main__":
 
     # frac_tol = 0.005  # allow merge if local Z² drop <= 1%
     frac_tol = 0.01  # recommended
-    # max_nbins = 15  # max number of bins to try
-    # max_nbins = 50  # max number of bins to try
-    # max_nbins = 25  # max number of bins to try
-    # max_nbins = 30  # max number of bins to try
-    # max_nbins = 65  # max number of bins to try
-    # max_nbins = 70  # max number of bins to try
-    # max_nbins = 57  # max     number of bins to try
-    # max_nbins = 25  # max number of bins to try
-    # max_nbins = 25  # max number of bins to try
-    # max_nbins = 40  # max number of bins to try
-    # max_nbins = 24  # max number of bins to try
-    # max_nbins = 23  # max number of bins to try
     max_nbins = 70  # max number of bins to try
-    # max_nbins = 80  # max number of bins to try
-    # max_nbins = 100  # max number of bins to try
     #------------------------------
     # min_total_events_per_bin=5.0
     min_total_events_per_bin= 15

@@ -1368,10 +1368,6 @@ class EventProcessor(processor.ProcessorABC):
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_met_xy_correction", False):
             logger.info("Applying PuppiMET xy-shift correction!")
-            # xy_n_unmatched (data only) is a lazy per-chunk count of events whose
-            # run number matched no known UL2016 era (should be ~0); left uncomputed
-            # here to avoid forcing per-chunk graph materialization -- validate via
-            # the "run"/"PuppiMET_phi" output branches post-hoc instead.
             xy_met_pt, xy_met_phi, xy_n_unmatched = apply_puppi_met_xy_correction(
                 PuppiMET.pt,
                 PuppiMET.phi,
