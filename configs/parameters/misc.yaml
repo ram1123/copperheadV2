@@ -142,6 +142,17 @@ sths_names:
         - Mjj1500
         - PTH25
         - JET01
+    "2026":
+        - Yield
+        - PTH200
+        - Mjj60
+        - Mjj120
+        - Mjj350
+        - Mjj700
+        - Mjj1000
+        - Mjj1500
+        - PTH25
+        - JET01
 btag_systs:
     2016preVFP:
         - jes
@@ -273,6 +284,16 @@ btag_systs:
         - hf
         - lfstats1
         - lfstats2
+    "2026":
+        - jes
+        - lf
+        - hfstats1
+        - hfstats2
+        - cferr1
+        - cferr2
+        - hf
+        - lfstats1
+        - lfstats2
 event_flags: # MET/Noise filters source: https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2#Recipe_for_BadPFMuonDz_filter_in
     2016preVFP:
         - BadPFMuonFilter
@@ -370,6 +391,15 @@ event_flags: # MET/Noise filters source: https://twiki.cern.ch/twiki/bin/view/CM
         - hfNoisyHitsFilter
         - eeBadScFilter
         # - ecalBadCalibFilter
+    "2026":
+        - goodVertices
+        - globalSuperTightHalo2016Filter
+        - EcalDeadCellTriggerPrimitiveFilter
+        - BadPFMuonFilter
+        - BadPFMuonDzFilter
+        - hfNoisyHitsFilter
+        - eeBadScFilter
+        # - ecalBadCalibFilter
 n_pdf_variations:
     2016preVFP: 100
     2016postVFP: 100
@@ -384,3 +414,4 @@ n_pdf_variations:
     "2023BPix": 33
     "2024": 33
     "2025": 33
+    "2026": 33

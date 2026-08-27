@@ -1,7 +1,6 @@
 # filesystem base for hmm area
 hmm_base: /work/projects/hmm
 # hmm_base: /depot/cms/hmm
-
 #  pattern of output folder:
 # load_path=lambda wc: (
 #     f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
@@ -9,12 +8,15 @@ hmm_base: /work/projects/hmm
 # )
 
 # what to run
-years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
+# years: ["2022preEE", "2022postEE", "2023BPix", "2024"]
 # years: ["2022preEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE"]
 # years: ["2022preEE"]
 # years: ["2022postEE"]
 # years: ["2024"]
+years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
 # years: ["2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017", "2018"]
 # run_tag: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2"
@@ -35,14 +37,26 @@ years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # run_tag: "test_14apr"
 
 
-run_tag: "FilterJets_May14_PySR07MayV2"
+# run_tag: "FilterJets_May14_PySR07MayV2"
+
+# run_tag: "FilterJets_June02_tightPassLepVeto_NoJER_coffea_latest"
+
+# run_tag: "FilterJets_May08_tightPassLepVeto_NoJER"
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN"
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE"
+
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024_Syst"
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024"
+
+run_tag: "FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets_Syst"
+# run_tag: "FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets"
 
 # dask gateway
 use_gateway: true
 cluster_index: 0
 
 # plotting workflow
-plot_vbf_filter_study: false
+plot_vbf_filter_study: true
 
 # zpt DNN
 zpt:
