@@ -217,6 +217,8 @@ switches:
         "2026": true
     do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
         # Currently, updated the pT to 30 GeV
+        # official recommendation:
+        # 2024 and 2025: HE and HF both >50 GeV        
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -268,6 +270,8 @@ switches:
         "2025": false
         "2026": false
     add_pt_cut_for_HE_HF_jets:
+        # official recommendation:
+        # 2022 and 2023: HE and HF both >50 GeV
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
