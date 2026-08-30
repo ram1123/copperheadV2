@@ -1,0 +1,21 @@
+# Scenario 2: nominal run, Z-pT reweighting on.
+#
+# Only apply this profile once the Z-pT correction has actually been derived
+# from scenario 1's output (see run_zpt_fit / zpt_fit0/1/2 modes).
+#
+# IMPORTANT -- this scenario does NOT need a fresh full stage1 run: Z-pT only
+# reweights DY, so everything else in scenario 1's output is already correct
+# and unaffected. Reprocess DY samples only, IN PLACE, under the SAME -l
+# label/save_path as scenario 1 -- do not point this at a new label. Use
+# scripts/reset_stage1_samples.sh to clear the DY samples' existing "done"
+# state first (otherwise stage1's resumability will just skip them as
+# already-done), then rerun stage1 for that label/year as normal; every
+# non-DY sample will be skipped automatically since its output is untouched.
+#
+# Deliberately does NOT touch do_jet_veto_maps_filterEvents/filterJets/
+# do_jet_horn_ptcut: whichever scenario-1 variant (nominal_nozpt_jme_reco or
+# nominal_nozpt_jvm_jets) produced the output you're adding Z-pT on top of,
+# this profile must NOT change that choice -- it only flips the Z-pT switch.
+do_zpt: true
+do_add_jet_ID_vars: false
+save_four_jets_kinematics: false
