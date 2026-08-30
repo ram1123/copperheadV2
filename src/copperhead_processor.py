@@ -1423,7 +1423,7 @@ class EventProcessor(processor.ProcessorABC):
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        logger.info(f"jets type before pad_none: {jets.type}")
+        logger.debug(f"jets type before pad_none: {jets.type}")
         logger.info(f"jets ndim: {jets.ndim}")
 
         jet_default = ak.pad_none(jets, target=4, axis=1)

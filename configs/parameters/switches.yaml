@@ -320,7 +320,7 @@ switches:
         "2024": true
         "2025": true
         "2026": true
-    jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised.
+    jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised, 4 is the official JME ad hoc mitigation.
         # ---------------------------------------
         # jer strat description
         # ---------------------------------------
@@ -329,17 +329,21 @@ switches:
         # 1 : jer strat 1 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets if pT > 50. For fake jets with pT < 50 and passing tight PU Id, apply stochastic method. For fake jets with pT < 50 and failing tight PU Id, apply no jer smearing.
         # 2 : jer strat 2 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets except fake jets with pT <= 50 and abseta > 2.5. For fake jets with pT <= 50 and abseta > 2.5, apply no jer smearing.
         # 3 : our custom Run2 jer smearinig method for CHS jets. Source: https://indico.cern.ch/event/1499935/#175-update-from-purdue, slide 19
+        # 4 : official JME "option (b)" ad hoc mitigation for the poor Run3 2.5<|eta|<3.0 data/MC agreement
+        #     (https://cms-jme-jerc.docs.cern.ch/recommendations/jer/): apply scaling method for real jets;
+        #     apply NO stochastic smearing for fake jets, unconditionally (no PUID/pT/eta gating, unlike
+        #     strat 1/2). JME's doc names this exact approach for H->WW, H->mumu, and VBF SUSY.
         '2016preVFP': -1 # For nanoAODv12, jer_strat should be 3
         '2016postVFP': -1 # For nanoAODv12, jer_strat should be 3
         '2017': -1 # For nanoAODv12, jer_strat should be 3
         '2018': -1 # For nanoAODv12, jer_strat should be 3
-        '2022preEE': -1
-        '2022postEE': -1
-        "2023": -1
-        "2023BPix": -1
-        "2024": -1
-        "2025": -1
-        "2026": -1
+        '2022preEE': 4
+        '2022postEE': 4
+        "2023": 4
+        "2023BPix": 4
+        "2024": 4
+        "2025": 4
+        "2026": 4
     do_jec_unc:
         '2016preVFP': true
         '2016postVFP': true
