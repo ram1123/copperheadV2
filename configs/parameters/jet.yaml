@@ -75,6 +75,25 @@ jet_id:
     "2024": tightPassLepVeto
     "2025": tightPassLepVeto
     "2026": tightPassLepVeto
+jet_veto_map_jet_id:
+    # Fixed by the official JME jet-veto-map minimal selection
+    # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+    # "tightLepVeto jet ID" -- kept as its own key (not derived from the
+    # general "jet_id" switch above) so a future change to the analysis's
+    # own jet ID choice can't silently change what the veto-map minimal
+    # selection uses; this one is a fixed procedural requirement, not an
+    # analysis-configurable choice.
+    2016preVFP: tightPassLepVeto
+    2016postVFP: tightPassLepVeto
+    "2017": tightPassLepVeto
+    "2018": tightPassLepVeto
+    "2022preEE": tightPassLepVeto
+    "2022postEE": tightPassLepVeto
+    "2023": tightPassLepVeto
+    "2023BPix": tightPassLepVeto
+    "2024": tightPassLepVeto
+    "2025": tightPassLepVeto
+    "2026": tightPassLepVeto
 btag_jet_id:
     # B-tag selection follows the dedicated tight jet ID recommendation.
     2016preVFP: tight
