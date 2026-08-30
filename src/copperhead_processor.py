@@ -611,6 +611,19 @@ class EventProcessor(processor.ProcessorABC):
         # application is in "do_jet_veto_maps_filterEvents" field in config.
         # If any jet in the event falls into the veto map region, the whole event is vetoed.
         """
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Without this,
+        # a soft/loose-ID/high-EM-fraction jet landing in a vetoed region would
+        # trigger event rejection even though the recommendation says it shouldn't count.
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jets = jets[min_sel]
+
         jet_veto_maps_path = self.config.get("jet_veto_maps", None)
         logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
         if jet_veto_maps_path is None:
@@ -690,6 +703,22 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
 
         jet_veto_mask = ak.unflatten(jet_veto_mask, counts)   # jagged, same shape as jets
+
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Force the mask
+        # to "not vetoed" (0.0) for jets failing this selection, so they're never
+        # counted for the event decision below nor removed by the jet-removal
+        # step further down -- without this, a soft/loose-ID/high-EM-fraction
+        # jet landing in a vetoed region would incorrectly count.
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jet_veto_mask = ak.where(min_sel, jet_veto_mask, 0.0)
+
         jet_veto_eventFilter = ak.any(jet_veto_mask != 0.0, axis=1)
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
 
