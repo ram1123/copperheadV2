@@ -242,6 +242,23 @@ switches:
         "2024": false
         "2025": false
         "2026": false
+    do_reject_high_rawFactor_jets: # Official JME mitigation (reject Jet_rawFactor > 0.9) for a rare
+        # Run3 L2Relative-JEC asymptotic-behavior known issue producing anomalously high jet pT
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jes/#known-issues). Affects ~1e-7 to 1e-6
+        # of events in the rare samples where it occurs at all -- JME's own doc says to check the
+        # linked GitLab issue for whether it applies to the specific samples in use, so this defaults
+        # to off everywhere rather than being force-enabled for all Run3 samples.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_use_pySR_score: # For run-3 reject the jets based on the pySR equeation.
         '2016preVFP': false
         '2016postVFP': false

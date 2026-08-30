@@ -2777,6 +2777,16 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_ptcut = ak.ones_like(jets.pt, dtype="bool") # default value is True
         HE_HF_ptcut = ak.ones_like(jets.pt, dtype="bool")
         jetHorn_nConst_Cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        rawFactor_cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        if self.config["switches"]["do_reject_high_rawFactor_jets"]:
+            # Official JME mitigation for a rare L2Relative asymptotic-behavior known
+            # issue in Run3 (https://cms-jme-jerc.docs.cern.ch/recommendations/jes/#known-issues):
+            # in a very narrow pT bin the L2Relative JEC can blow up to anomalously
+            # large corrected jet pT (>10 TeV). Affects ~1e-7 to 1e-6 of events in the
+            # rare samples where it occurs at all; JME's own fix is to reject jets with
+            # Jet_rawFactor > 0.9.
+            logger.info("Applying Jet_rawFactor > 0.9 rejection (rare L2Relative asymptotic-JEC mitigation)")
+            rawFactor_cut = jets.rawFactor <= 0.9
         n_active = sum(bool(x) for x in [do_he_ptcut, add_hehf_ptcut, add_hehf_asym])
         if n_active > 1:
             raise ValueError(
@@ -2860,6 +2870,7 @@ class EventProcessor(processor.ProcessorABC):
             & jetHorn_ptcut
             & HE_HF_ptcut
             & jetHorn_nConst_Cut
+            & rawFactor_cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 
@@ -3101,6 +3112,11 @@ class EventProcessor(processor.ProcessorABC):
                 "btagUParTAK4B",
                 "btagDeepB",
                 # "btagDeepFlavB",
+
+                # Needed to check do_reject_high_rawFactor_jets' rare L2Relative
+                # asymptotic-JEC mitigation (rejects Jet_rawFactor > 0.9) even when
+                # that switch (do_reject_high_rawFactor_jets) is off
+                "rawFactor",
                 ]
         jets_to_process = [jet1, jet2, jet3, jet4] if save_four_jets_kinematics else [jet1, jet2]
         for i, jet in enumerate(jets_to_process, start=1):
@@ -3130,7 +3146,7 @@ class EventProcessor(processor.ProcessorABC):
                 "hadronFlavour", "partonFlavour",
                 "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
                 "hfsigmaEtaEta", "hfsigmaPhiPhi",
-                "muonSubtrFactor", "rawFactor",
+                "muonSubtrFactor",
                 "puIdDisc"
             ]
 
