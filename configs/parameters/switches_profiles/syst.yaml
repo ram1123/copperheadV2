@@ -1,0 +1,36 @@
+# Scenario 4: full systematics production run.
+#
+# Assumes scenarios 1-3 already validated the Z-pT correction and it's part
+# of the final production config -- do_zpt: true here. If you actually want
+# the systematics run WITHOUT Z-pT, edit this file (or pass
+# --set do_zpt=false on the command line) before applying.
+#
+# WITH_VARIATIONS=1 is a separate env var (not a switches.yaml key) that
+# still needs to be set when invoking run_analysis_pipeline.sh -- this
+# profile does not and cannot set it for you:
+#   WITH_VARIATIONS=1 bash run_analysis_pipeline.sh -m 1 ...
+#
+# do_jec_unc/do_jer_unc are the actual gates for stage1's own pt_variations
+# loop (WITH_VARIATIONS only controls stage2/stage3's --no_variations flag
+# and output path suffix -- it does nothing at stage1 by itself). Without
+# these, stage1 would only ever produce the "nominal" variation regardless
+# of WITH_VARIATIONS.
+#
+# do_jer_unc is flagged "Not validated yet for Run-3" directly in
+# switches.yaml, but as of jer_strat=4 (the official JME ad hoc mitigation,
+# see that switch's own comment) Run3's nominal jets DO get JER smearing --
+# the up/down JER-uncertainty evaluation runs unconditionally as part of
+# that same smearing pass regardless of do_jer_unc; this switch only
+# controls whether those already-computed variations get exposed through
+# stage1's pt_variations loop. do_jer_unc stays false in the base
+# switches.yaml (general/nominal runs) and is only turned on here, for the
+# dedicated systematics scenario -- if you want to exclude JER specifically
+# from a systematics run: --set do_jer_unc=false.
+do_jec_unc: true
+do_jer_unc: true
+save_all_weight_variations: true
+save_muon_roccor_variations: true
+save_zpt_variations: true
+do_zpt: true
+do_add_jet_ID_vars: false
+save_four_jets_kinematics: false

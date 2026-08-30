@@ -1,0 +1,26 @@
+# Scenario 1, variant A: nominal, no Z-pT, following the official JME
+# jet-veto-map recommendation (remove the whole EVENT, not just the jet).
+#
+# Deliberately does NOT touch do_jet_horn_ptcut / add_pt_cut_for_HE_HF_jets /
+# add_asymmetric_pt_cut_for_HE_HF_jets (three alternative, mutually-exclusive
+# implementations of the same horn-region extra-pT-cut idea -- 2024-2026 use
+# do_jet_horn_ptcut, 2022/2023 are meant to use add_pt_cut_for_HE_HF_jets per
+# the "official recommendation" comment on that switch). Forcing one value
+# across all years here would overwrite whichever one a given year's
+# per-year values already encode.
+#
+# CAVEAT, worth checking rather than assuming: add_pt_cut_for_HE_HF_jets is
+# currently `false` for every 2022/2023 year despite that switch's own
+# comment documenting the recommended value as 50 for those years -- i.e.
+# right now this profile does NOT actually reproduce the official
+# recommendation for 2022/2023, only for 2024-2026. Not fixed here since I
+# don't know whether that's a deliberate deviation or an oversight -- if you
+# want 2022/2023 to genuinely match the documented recommendation:
+#   --set add_pt_cut_for_HE_HF_jets=50 --years 2022preEE 2022postEE 2023 2023BPix
+# Only override do_jet_horn_ptcut/etc explicitly if you mean to deviate from
+# JME's own guidance for a specific year.
+do_zpt: false
+do_add_jet_ID_vars: false
+save_four_jets_kinematics: false
+do_jet_veto_maps_filterEvents: true
+do_jet_veto_maps_filterJets: false
