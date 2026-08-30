@@ -1,0 +1,9 @@
+# Scenario 3: PU-DNN training input.
+#
+# Needs the full per-jet ID/composition block and all 4 leading jets, for
+# nominal jets only -- do NOT combine with WITH_VARIATIONS=1 (that's a
+# separate env var, not a switches.yaml key): full jet-ID detail x 4 jets x
+# ~22 systematic variations would be the worst-case output-size blowup for
+# zero benefit, since PU-DNN training doesn't use systematic-shifted jets.
+do_add_jet_ID_vars: true
+save_four_jets_kinematics: true
