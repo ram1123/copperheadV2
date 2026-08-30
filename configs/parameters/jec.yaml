@@ -27,7 +27,7 @@ jec_parameters:
         2022postEE: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jet_jerc.json.gz
         "2023": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jet_jerc.json.gz
         2023BPix: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jet_jerc.json.gz
-        "2024": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-12-02/jet_jerc.json.gz
+        "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-07-16/jet_jerc.json.gz
         "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-25Prompt-Summer24-NanoAODv15/2026-07-16/jet_jerc.json.gz
         "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-26Prompt-Summer24-NanoAODv15/2026-07-15/jet_jerc.json.gz
     jersmear_load_path:
@@ -766,9 +766,9 @@ jec_parameters:
         2022postEE: Summer22EE_22Sep2023_V3_MC
         "2023": Summer23Prompt23_V2_MC
         2023BPix: Summer23BPixPrompt23_V3_MC
-        "2024": Summer24Prompt24_V2_MC
+        "2024": Summer24Prompt24_V5_MC
         "2025": Summer24Prompt25_V3_MC
-        "2026": Summer24Prompt26_V1_MC # verified via jet_jerc.json.gz correction names on cvmfs
+        "2026": Summer24Prompt26_V1_MC
     jer_tags:
         2016preVFP: Summer20UL16APV_JRV3_MC
         2016postVFP: Summer20UL16_JRV3_MC
@@ -781,8 +781,8 @@ jec_parameters:
         2022postEE: Summer22EE_22Sep2023_JRV1_MC
         "2023": Summer23Prompt23_RunCv1234_JRV1_MC
         2023BPix: Summer23BPixPrompt23_RunD_JRV1_MC
-        "2024": Summer24Prompt24_V2_MC
-        "2025": Summer24Prompt25_V3_MC
+        "2024": Summer24Prompt24_JRV2_MC
+        "2025": Summer24Prompt25_JRV2_MC
         # 2026 JER is genuinely split by run: era C is a dedicated low-PU run and has its own
         # JER (Summer24Prompt26_RunC_JRV1_MC), while B/D share Summer24Prompt26_RunBD_JRV1_MC.
         # This config only supports one JER tag for the whole "2026" year bucket, so we use the
