@@ -1073,12 +1073,22 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
         false_cond_val = -1*ak.ones_like(jets.pt_jec)
         pt_gen = ak.where(pt_gen_filter, pt_gen, false_cond_val)
         apply_scaling = pt_gen != -1.0
+        # event_id is per-event (events.event), but every other input here is
+        # per-jet. correctionlib's evaluate() only broadcasts a per-event scalar
+        # against per-jet arrays via its jagged-awkward fallback path, which is
+        # skipped whenever a chunk happens to have a uniform jet count across all
+        # its events (the awkward array collapses to a regular/rectangular numpy
+        # array, and plain numpy broadcasting -- aligned from the right -- then
+        # fails: e.g. shape (2, 6) vs (2,)). Broadcast event_id to jet-level shape
+        # explicitly so behavior doesn't depend on that coincidence, same as
+        # PU_rho already is (see events["Jet","PU_rho"] assignment upstream).
+        event_id_jets = ak.broadcast_arrays(pt_jec, event_id)[1]
         inputs = (
             pt_jec, # == JetPt
             jets.eta, # == JetEta
             pt_gen, # == GenPt
             jets.PU_rho, # == Rho
-            event_id, # == EventID
+            event_id_jets, # == EventID
             jer_res, # == JERs
             jer_sf, # == JERSF
 
