@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__purdue-af-agentic-interface__get_facility_health"
+    ]
+  }
+}
