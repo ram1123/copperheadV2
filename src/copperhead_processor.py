@@ -1542,7 +1542,13 @@ class EventProcessor(processor.ProcessorABC):
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
             if is_mc and (self.config["switches"]["jer_strat"] >=0):
                 logger.debug("Applying JER smearing!")
-                jets = do_jer_smear(jets, self.config, events.event)
+                # Only build the up/down JER-smear columns when they will be used
+                # (do_jer_unc drives the pt_variations loop further below). On a
+                # nominal run this skips 2/3 of the JER correctionlib evaluations
+                # and the apply_jer_unc per-eta-bin columns, with no change to the
+                # skim output.
+                jer_syst_l = ["nom", "up", "down"] if do_jer_unc else ["nom"]
+                jets = do_jer_smear(jets, self.config, events.event, syst_l=jer_syst_l)
             else:
                 logger.debug(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 

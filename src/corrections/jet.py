@@ -995,8 +995,29 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     logger.debug(f"JER SF inputs: {sf.inputs}")
     for inp in sf.inputs:
         logger.debug(f"JER SF input name: {inp.name}, type: {inp.type}, description: {inp.description}")
-    sf_input_names = [inp.name for inp in sf.inputs]
-    logger.debug(f"JER SF input: {sf_input_names}")
+    jer_sf_input_names = [inp.name for inp in sf.inputs]
+    logger.debug(f"JER SF input: {jer_sf_input_names}")
+
+    # ScaleFactor payloads come in three schemas:
+    #   (JetEta, systematic)          -- Run 2 UL
+    #   (JetEta, JetPt, systematic)   -- Run 3 JRV1 (2022preEE/postEE, 2023, 2023BPix)
+    #   (JetEta, JetPt)               -- Summer24 (2024, 2025, 2026): no "systematic"
+    #                                    axis; the uncertainty is a separate correction
+    #                                    "<jer_tag>_SFUncertainty_<algo>" holding a
+    #                                    symmetric absolute delta, so
+    #                                    SF_up/down = SF +/- SFUncertainty.
+    sf_has_syst_axis = "systematic" in jer_sf_input_names
+    if sf_has_syst_axis:
+        sf_unc = None
+        jer_sf_unc_input_names = []
+    else:
+        unc_key = "{}_{}_{}".format(jer_tag, "SFUncertainty", algo)
+        logger.info(
+            f"JER ScaleFactor has no 'systematic' axis; taking up/down from key: {unc_key}"
+        )
+        sf_unc = cset[unc_key]
+        jer_sf_unc_input_names = [inp.name for inp in sf_unc.inputs]
+        logger.debug(f"JER SFUncertainty input: {jer_sf_unc_input_names}")
 
     #  JER pT resolution key
     key = "{}_{}_{}".format(jer_tag, "PtResolution", algo)
@@ -1006,20 +1027,29 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     logger.debug(f"JER resolution input: {sf_input_names}")
 
     for syst in syst_l:
-        # Second, get JER resolution
-        if is_run3(year):
-            inputs = (
-                jets.eta, # == JetEta
-                jets.pt_raw, # == JetPt
-                syst, # == systematic
-            )
-        else:
-            inputs = (
-                jets.eta, # == JetEta
-                syst, # == systematic
-            )
+        # Build ScaleFactor inputs from the payload's declared axes (see schema note
+        # above), instead of hardcoding per run era.
+        sf_arg_by_name = {
+            "JetEta": jets.eta,
+            "JetPt": jets.pt_raw,
+            "systematic": syst,
+        }
         printCorrObjInputs(sf)
-        jer_sf = sf.evaluate(*inputs)
+        if sf_has_syst_axis:
+            jer_sf = sf.evaluate(*(sf_arg_by_name[n] for n in jer_sf_input_names))
+        else:
+            jer_sf_nom = sf.evaluate(*(sf_arg_by_name[n] for n in jer_sf_input_names))
+            if syst == "nom":
+                jer_sf = jer_sf_nom
+            elif syst in ("up", "down"):
+                sf_unc_val = sf_unc.evaluate(
+                    *(sf_arg_by_name[n] for n in jer_sf_unc_input_names)
+                )
+                jer_sf = jer_sf_nom + sf_unc_val if syst == "up" else jer_sf_nom - sf_unc_val
+            else:
+                raise ValueError(
+                    f"Unsupported JER systematic '{syst}' for split SFUncertainty payload"
+                )
         # logger.debug("JER SF : {}".format(jer_sf.compute()))
 
         inputs = ( # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L107C73-L107C75
@@ -1081,7 +1111,13 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     # logger.debug(f"jet pt: {jets.pt[:100].compute()}")
     # logger.debug(f"jet pt_jer_up: {jets.pt_jer_up[:100].compute()}")
     # logger.debug(f"jet pt_jer_down: {jets.pt_jer_down[:100].compute()}")
-    jets = apply_jer_unc(jets)
+    # The per-eta-bin JER-uncertainty columns (pt_jer1_up ... pt_jer6_down) are
+    # only consumed when do_jer_unc drives the pt_variations loop. For a
+    # nominal-only run the caller passes syst_l == ["nom"], so pt_jer_up/down
+    # were never built -- skip apply_jer_unc (nothing downstream reads those
+    # columns and they are not written to the skim).
+    if "up" in syst_l and "down" in syst_l:
+        jets = apply_jer_unc(jets)
     # for i in range(1,7):
     #     logger.debug(f"pt_jer{i}_up: {jets[f'pt_jer{i}_up'][:100].compute()}")
     #     logger.debug(f"pt_jer{i}_down: {jets[f'pt_jer{i}_down'][:100].compute()}")
