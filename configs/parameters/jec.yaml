@@ -903,7 +903,7 @@ jec_parameters:
             Summer23BPixPrompt23_V3_DATA:
                 - D
         "2024":
-            Summer24Prompt24_V2_DATA:
+            Summer24Prompt24_V5_DATA: 
                 - C
                 - D
                 - E
