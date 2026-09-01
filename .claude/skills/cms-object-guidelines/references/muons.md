@@ -17,10 +17,12 @@ scale‑smearing group. Beam‑spot–constrained pT: this analysis's custom Nan
 | C4 | Scale‑factor payloads + map keys | `configs/parameters/SF_filelist.yaml` (`muSFFileList`) | 2026‑08‑31 |
 | C5 | Implementation | `src/copperhead_processor.py` muon block (~L900–1130); `src/corrections/{rochester,MuonScaRe,geofit,fsr_recovery,muon_sf}.py` | 2026‑08‑31 |
 | C6 | NanoAOD muon branch dictionary; Run 3 sync table | `docs/temp/muon_nanoAOD_docs.md`; `docs/Run3_all_basic_Information.md` | 2026‑08‑31 |
+| P1 | MUO POG entry points | `MuonPOG#User_Recommendations`; Run 3 `MuonRun32022`, `MuonRun3_2023` (from PdmV `PdmVRun3Analysis` — see `lumi.md` §9) | via user, 2026‑09‑01 |
 
-Not covered by stored sources → **Authoritative CMS verification required**: the MUO
-numeric ID/iso working‑point recommendation per era, the reco/tracking‑SF requirement,
-the Run 3 momentum‑calibration prescription, and the correctionlib payload version.
+Not covered by stored sources → **Authoritative CMS verification required** (consult
+P1 for the target era): the MUO numeric ID/iso working‑point recommendation per era,
+the reco/tracking‑SF requirement, the Run 3 momentum‑calibration prescription, and the
+correctionlib payload version.
 
 Classification tags: **[MUO official]**, **[Analysis‑specific]** (AN‑19‑124 choice),
 **[Implementation]** (code detail), **[Verify]** (not established from stored material).

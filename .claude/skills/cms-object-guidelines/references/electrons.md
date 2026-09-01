@@ -11,13 +11,16 @@ below (top / diboson suppression).
 | # | Source | Location | Snapshot / verified |
 |---|--------|----------|---------------------|
 | S1 | This analysis's electron‑veto definition | `docs/Official_recommendation.md` (Electron Selection table) | local review 2026‑08‑31 |
+| S2 | EGM Run 3 offline ID names + WPs (`EgammaIDRecipesRun3`) | CMS PdmV `PdmVRun3Analysis`, "Notes from POGs / From E/Gamma" — see `lumi.md` §9 | via user, 2026‑09‑01 |
 | C1 | Per‑year working‑point keys | `configs/parameters/electron.yaml` | 2026‑08‑31 |
 | C2 | Implementation | `src/copperhead_processor.py` (electron‑veto block) | 2026‑08‑31 |
 
-Not covered by stored sources → **Authoritative CMS verification required**: whether
-`mvaIso_WP90` is the current EGM‑recommended MVA ID for NanoAODv12/v15 in the target
-era; the Run 3 gap definition; correctionlib payload/version; and reconstruction + ID
-scale factors (needed only if electrons become a selection object).
+Per S2, the Run 3 offline MVA electron ID is `mvaEleID-RunIIIWinter22-iso` (wp80,
+wp90), available from CMSSW_126X / NanoV11 — the NanoAOD `Electron_mvaIso_WP90` branch
+is its **wp90** point. Still **[Verify]** for the target era: that Winter22 is the
+current EGM training (not superseded for 2023/2024/2025), the Run 3 gap definition, the
+correctionlib payload/version, and reconstruction + ID scale factors (needed only if
+electrons become a selection object).
 
 Classification tags: **[EGM official]**, **[Analysis‑specific]**, **[Implementation]**,
 **[Verify]**.
@@ -45,10 +48,10 @@ An event is **rejected** if any electron passes all of:
 
 Working‑point key by NanoAOD campaign (C1):
 
-| NanoAOD | Key | Meaning |
-|---------|-----|---------|
-| v9 (Run 2 UL) | `mvaFall17V2Iso_WP90` | EGM Fall17V2 MVA, iso, 90% signal‑eff WP |
-| v12 / v15 | `mvaIso_WP90` | EGM Run 3 MVA, iso, 90% WP (same key for v12 and v15) |
+| NanoAOD | Key | EGM ID (S2) |
+|---------|-----|-------------|
+| v9 (Run 2 UL) | `mvaFall17V2Iso_WP90` | Fall17V2 MVA, iso, 90 % WP |
+| v12 / v15 | `mvaIso_WP90` | `mvaEleID-RunIIIWinter22-iso` **wp90** |
 
 No IP or extra isolation cut is layered on top — the MVA‑with‑iso WP is the whole
 definition.
