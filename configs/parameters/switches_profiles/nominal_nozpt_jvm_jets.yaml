@@ -1,0 +1,20 @@
+# Scenario 1, variant B: nominal, no Z-pT, alternate jet-veto-map handling --
+# remove individual JETS falling in the veto map instead of the whole event,
+# and use the plain 25 GeV jet_pt_cut everywhere (no extra JME horn-region
+# pT threshold on top of it).
+#
+# do_jet_horn_ptcut / add_pt_cut_for_HE_HF_jets / add_asymmetric_pt_cut_for_HE_HF_jets
+# are three alternative implementations of the same horn-region extra-pT-cut
+# idea (stage1 raises if more than one is truthy at once) -- all three carry
+# the JME "dual purpose" pattern where the value is BOTH the on/off gate and
+# the actual pT threshold (a number = on, using that number as the cut;
+# false = off). All three need to be off for "25 GeV cut only" to actually
+# hold for every year, not just whichever one a given year happens to use.
+do_zpt: false
+do_add_jet_ID_vars: false
+save_four_jets_kinematics: false
+do_jet_veto_maps_filterEvents: false
+do_jet_veto_maps_filterJets: true
+do_jet_horn_ptcut: false
+add_pt_cut_for_HE_HF_jets: false
+add_asymmetric_pt_cut_for_HE_HF_jets: false

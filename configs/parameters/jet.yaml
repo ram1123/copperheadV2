@@ -11,6 +11,8 @@ jet_pt_cut:
     "2023": 25.0
     "2023BPix": 25.0
     "2024": 25.0
+    "2025": 25.0
+    "2026": 25.0
 jet_eta_cut:
     2016preVFP: 4.7
     2016postVFP: 4.7
@@ -24,6 +26,8 @@ jet_eta_cut:
     "2023": 4.7
     "2023BPix": 4.7
     "2024": 4.7
+    "2025": 4.7
+    "2026": 4.7
 btag_jet_pt_cut:
     2016preVFP: 25.0
     2016postVFP: 25.0
@@ -37,6 +41,8 @@ btag_jet_pt_cut:
     "2023": 25.0
     "2023BPix": 25.0
     "2024": 25.0
+    "2025": 25.0
+    "2026": 25.0
 btag_jet_eta_cut:
     2016preVFP: 2.4
     2016postVFP: 2.4
@@ -50,6 +56,8 @@ btag_jet_eta_cut:
     "2023": 2.5
     "2023BPix": 2.5
     "2024": 2.5
+    "2025": 2.5
+    "2026": 2.5
 jet_id:
     # INFO: For 2016UL, we don't have loose ID, so make it just tight https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD#Jets
     # INFO: Use tight, tightPassLepVeto, or tightFailLepVeto
@@ -65,6 +73,27 @@ jet_id:
     "2023": tightPassLepVeto
     "2023BPix": tightPassLepVeto
     "2024": tightPassLepVeto
+    "2025": tightPassLepVeto
+    "2026": tightPassLepVeto
+jet_veto_map_jet_id:
+    # Fixed by the official JME jet-veto-map minimal selection
+    # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+    # "tightLepVeto jet ID" -- kept as its own key (not derived from the
+    # general "jet_id" switch above) so a future change to the analysis's
+    # own jet ID choice can't silently change what the veto-map minimal
+    # selection uses; this one is a fixed procedural requirement, not an
+    # analysis-configurable choice.
+    2016preVFP: tightPassLepVeto
+    2016postVFP: tightPassLepVeto
+    "2017": tightPassLepVeto
+    "2018": tightPassLepVeto
+    "2022preEE": tightPassLepVeto
+    "2022postEE": tightPassLepVeto
+    "2023": tightPassLepVeto
+    "2023BPix": tightPassLepVeto
+    "2024": tightPassLepVeto
+    "2025": tightPassLepVeto
+    "2026": tightPassLepVeto
 btag_jet_id:
     # B-tag selection follows the dedicated tight jet ID recommendation.
     2016preVFP: tight
@@ -79,6 +108,8 @@ btag_jet_id:
     "2023": tight
     "2023BPix": tight
     "2024": tight
+    "2025": tight
+    "2026": tight
 jet_id_json_files: # old method as of Dec 16 2024,
     2016preVFP: dummy
     2016postVFP: dummy
@@ -92,6 +123,8 @@ jet_id_json_files: # old method as of Dec 16 2024,
     "2023": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jetid.json.gz
     "2023BPix": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetid.json.gz
     "2024": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-12-02/jetid.json.gz
+    "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-25Prompt-Summer24-NanoAODv15/2026-07-16/jetid.json.gz
+    "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-26Prompt-Summer24-NanoAODv15/2026-07-15/jetid.json.gz
 jet_puid:
     2016preVFP: loose
     2016postVFP: loose
@@ -105,6 +138,8 @@ jet_puid:
     "2023": loose
     "2023BPix": loose
     "2024": loose
+    "2025": loose
+    "2026": loose
 min_dr_mu_jet:
     2016preVFP: 0.4
     2016postVFP: 0.4
@@ -118,6 +153,8 @@ min_dr_mu_jet:
     "2023": 0.4
     "2023BPix": 0.4
     "2024": 0.4
+    "2025": 0.4
+    "2026": 0.4
 btag_loose_wp_DeepCSV:
     2016preVFP: 0.2027 # DeepCSV
     2016postVFP: 0.1918 # DeepCSV
@@ -131,6 +168,8 @@ btag_loose_wp_DeepCSV:
     "2023": 0.000
     "2023BPix": 0.000
     "2024": 0.000
+    "2025": 0.000 # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.000 # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 btag_medium_wp_DeepCSV:
     2016preVFP: 0.6001 # DeepCSV
     2016postVFP: 0.5847 # DeepCSV
@@ -144,6 +183,8 @@ btag_medium_wp_DeepCSV:
     "2023": 0.000
     "2023BPix": 0.000
     "2024": 0.000
+    "2025": 0.000 # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.000 # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 btag_loose_wp_deepJet:
     2016preVFP: 0.000
     2016postVFP: 0.000
@@ -157,6 +198,8 @@ btag_loose_wp_deepJet:
     "2023": 0.0479 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
     "2023BPix": 0.048 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
     "2024": 0.000 
+    "2025": 0.000  # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.000  # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 btag_medium_wp_deepJet:
     2016preVFP: 0.000
     2016postVFP: 0.000
@@ -170,6 +213,8 @@ btag_medium_wp_deepJet:
     "2023": 0.2431 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
     "2023BPix": 0.2435 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
     "2024": 0.000 
+    "2025": 0.000  # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.000  # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 btag_loose_wp_ParticleNet:
     2016preVFP: 0.000
     2016postVFP: 0.000
@@ -183,6 +228,8 @@ btag_loose_wp_ParticleNet:
     "2023": 0.0358 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
     "2023BPix": 0.0359 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging  For deepJet
     "2024": 0.000 
+    "2025": 0.000  # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.000  # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 btag_medium_wp_ParticleNet:
     2016preVFP: 0.000
     2016postVFP: 0.000
@@ -196,6 +243,8 @@ btag_medium_wp_ParticleNet:
     "2023": 0.1917 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
     "2023BPix": 0.1919 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/#ak4-b-tagging. For deepJet
     "2024": 0.000     
+    "2025": 0.000      # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.000      # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 btag_loose_wp_UParT:
     2016preVFP: 0.0387
     2016postVFP: 0.0400
@@ -209,6 +258,8 @@ btag_loose_wp_UParT:
     "2023": 0.000
     "2023BPix": 0.000
     "2024": 0.0246 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4
+    "2025": 0.0246 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4 # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.0246 # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 btag_medium_wp_UParT:
     2016preVFP: 0.1847
     2016postVFP: 0.1898
@@ -222,6 +273,8 @@ btag_medium_wp_UParT:
     "2023": 0.000
     "2023BPix": 0.000
     "2024": 0.1272 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4
+    "2025": 0.1272 # https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer24/#ak4-b-tagging for UParTAK4 # PLACEHOLDER copied from 2024, pending BTV POG 2025 WPs
+    "2026": 0.1272 # PLACEHOLDER copied from 2025 (itself copied from 2024), pending BTV POG 2026 WPs
 softjet_dr2:
     2016preVFP: 0.16
     2016postVFP: 0.16
@@ -235,6 +288,8 @@ softjet_dr2:
     "2023": 0.16
     "2023BPix": 0.16
     "2024": 0.16
+    "2025": 0.16
+    "2026": 0.16
 HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
     2016preVFP: 0.0
     2016postVFP: 0.0
@@ -250,6 +305,8 @@ HemVeto_ratio: # ratio of HemVeto applicable run / total nevents for 2018UL
     "2023": 0.0
     "2023BPix": 0.0
     "2024": 0.0
+    "2025": 0.0
+    "2026": 0.0
 jet_veto_maps:
     2016preVFP: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016preVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
     2016postVFP: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016postVFP-UL-NanoAODv9/2025-04-11/jetvetomaps.json.gz
@@ -260,6 +317,8 @@ jet_veto_maps:
     "2023": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jetvetomaps.json.gz
     2023BPix: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetvetomaps.json.gz
     "2024": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-07-17/jetvetomaps.json.gz
+    "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-25Prompt-Summer24-NanoAODv15/2026-07-16/jetvetomaps.json.gz
+    "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-26Prompt-Summer24-NanoAODv15/2026-07-15/jetvetomaps.json.gz
 jet_veto_maps_tag:
     "2016preVFP": None
     "2016postVFP": None
@@ -270,3 +329,5 @@ jet_veto_maps_tag:
     "2023": Summer23Prompt23_RunC_V1
     "2023BPix": Summer23BPixPrompt23_RunD_V1
     "2024": Summer24Prompt24_RunBCDEFGHI_V1
+    "2025": Summer24Prompt25_RunCDEFG_V1
+    "2026": Summer24Prompt26_RunBCD_V1

@@ -682,7 +682,12 @@ def getJecDataTag(run, jec_data_tags, NanoAODv=None):
     logger.debug(f"run: {run}")
     logger.debug(f"jec_data_tags: {jec_data_tags}")
     if (not isinstance(jec_data_tags, str)) and (NanoAODv is not None): # if it's a dictionary like
-        jec_data_tags = jec_data_tags[f"nanoAODv{NanoAODv}"]
+        nano_key = f"nanoAODv{NanoAODv}"
+        # Run2 years nest jec_data_tags by NanoAOD version; Run3 years (only one
+        # NanoAOD version supported so far) are a flat {tag: [runs]} dict. Only
+        # descend into the nano_key sub-dict if it's actually nested that way.
+        if nano_key in jec_data_tags:
+            jec_data_tags = jec_data_tags[nano_key]
     logger.debug(f"jec_data_tags: {jec_data_tags}")
     for jec_tag, jec_run_l in jec_data_tags.items():
         for jec_run in jec_run_l:
@@ -908,6 +913,20 @@ def applyStrat1n2Revised(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta,
     return ak.where(apply_stat2, jer_smearing2, jer_smearing1)
 
 
+def applyStrat4(apply_scaling, jer_smearing):
+    """Official JME ad hoc mitigation ("option b") for the poor Run3
+    2.5 < |eta| < 3.0 data/MC agreement, per
+    https://cms-jme-jerc.docs.cern.ch/recommendations/jer/ : the jet is
+    corrected only when a matched gen-jet is found (scaling method); if no
+    match is available, no stochastic smearing is applied. Unlike
+    applyStrat1/applyStrat2, this drops the stochastic component
+    UNCONDITIONALLY for every unmatched jet -- no PUID/pT/eta gating. The
+    doc names this exact approach for H->WW, H->mumu, and VBF SUSY.
+    """
+    no_smearing = ak.ones_like(jer_smearing)
+    return ak.where(apply_scaling, jer_smearing, no_smearing)
+
+
 def apply_jer_unc(jets):
     """
     we assume do_jer_smear has been applied
@@ -976,8 +995,29 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     logger.debug(f"JER SF inputs: {sf.inputs}")
     for inp in sf.inputs:
         logger.debug(f"JER SF input name: {inp.name}, type: {inp.type}, description: {inp.description}")
-    sf_input_names = [inp.name for inp in sf.inputs]
-    logger.debug(f"JER SF input: {sf_input_names}")
+    jer_sf_input_names = [inp.name for inp in sf.inputs]
+    logger.debug(f"JER SF input: {jer_sf_input_names}")
+
+    # ScaleFactor payloads come in three schemas:
+    #   (JetEta, systematic)          -- Run 2 UL
+    #   (JetEta, JetPt, systematic)   -- Run 3 JRV1 (2022preEE/postEE, 2023, 2023BPix)
+    #   (JetEta, JetPt)               -- Summer24 (2024, 2025, 2026): no "systematic"
+    #                                    axis; the uncertainty is a separate correction
+    #                                    "<jer_tag>_SFUncertainty_<algo>" holding a
+    #                                    symmetric absolute delta, so
+    #                                    SF_up/down = SF +/- SFUncertainty.
+    sf_has_syst_axis = "systematic" in jer_sf_input_names
+    if sf_has_syst_axis:
+        sf_unc = None
+        jer_sf_unc_input_names = []
+    else:
+        unc_key = "{}_{}_{}".format(jer_tag, "SFUncertainty", algo)
+        logger.info(
+            f"JER ScaleFactor has no 'systematic' axis; taking up/down from key: {unc_key}"
+        )
+        sf_unc = cset[unc_key]
+        jer_sf_unc_input_names = [inp.name for inp in sf_unc.inputs]
+        logger.debug(f"JER SFUncertainty input: {jer_sf_unc_input_names}")
 
     #  JER pT resolution key
     key = "{}_{}_{}".format(jer_tag, "PtResolution", algo)
@@ -987,20 +1027,29 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     logger.debug(f"JER resolution input: {sf_input_names}")
 
     for syst in syst_l:
-        # Second, get JER resolution
-        if is_run3(year):
-            inputs = (
-                jets.eta, # == JetEta
-                jets.pt_raw, # == JetPt
-                syst, # == systematic
-            )
-        else:
-            inputs = (
-                jets.eta, # == JetEta
-                syst, # == systematic
-            )
+        # Build ScaleFactor inputs from the payload's declared axes (see schema note
+        # above), instead of hardcoding per run era.
+        sf_arg_by_name = {
+            "JetEta": jets.eta,
+            "JetPt": jets.pt_raw,
+            "systematic": syst,
+        }
         printCorrObjInputs(sf)
-        jer_sf = sf.evaluate(*inputs)
+        if sf_has_syst_axis:
+            jer_sf = sf.evaluate(*(sf_arg_by_name[n] for n in jer_sf_input_names))
+        else:
+            jer_sf_nom = sf.evaluate(*(sf_arg_by_name[n] for n in jer_sf_input_names))
+            if syst == "nom":
+                jer_sf = jer_sf_nom
+            elif syst in ("up", "down"):
+                sf_unc_val = sf_unc.evaluate(
+                    *(sf_arg_by_name[n] for n in jer_sf_unc_input_names)
+                )
+                jer_sf = jer_sf_nom + sf_unc_val if syst == "up" else jer_sf_nom - sf_unc_val
+            else:
+                raise ValueError(
+                    f"Unsupported JER systematic '{syst}' for split SFUncertainty payload"
+                )
         # logger.debug("JER SF : {}".format(jer_sf.compute()))
 
         inputs = ( # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L107C73-L107C75
@@ -1024,12 +1073,22 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
         false_cond_val = -1*ak.ones_like(jets.pt_jec)
         pt_gen = ak.where(pt_gen_filter, pt_gen, false_cond_val)
         apply_scaling = pt_gen != -1.0
+        # event_id is per-event (events.event), but every other input here is
+        # per-jet. correctionlib's evaluate() only broadcasts a per-event scalar
+        # against per-jet arrays via its jagged-awkward fallback path, which is
+        # skipped whenever a chunk happens to have a uniform jet count across all
+        # its events (the awkward array collapses to a regular/rectangular numpy
+        # array, and plain numpy broadcasting -- aligned from the right -- then
+        # fails: e.g. shape (2, 6) vs (2,)). Broadcast event_id to jet-level shape
+        # explicitly so behavior doesn't depend on that coincidence, same as
+        # PU_rho already is (see events["Jet","PU_rho"] assignment upstream).
+        event_id_jets = ak.broadcast_arrays(pt_jec, event_id)[1]
         inputs = (
             pt_jec, # == JetPt
             jets.eta, # == JetEta
             pt_gen, # == GenPt
             jets.PU_rho, # == Rho
-            event_id, # == EventID
+            event_id_jets, # == EventID
             jer_res, # == JERs
             jer_sf, # == JERSF
 
@@ -1052,6 +1111,8 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
             jer_smearing = applyStrat2(apply_scaling, jer_smearing, jet_puId, pt_jec, jets.eta)
         elif jer_strat == 3:
             jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, get_puId(jets), pt_jec, jets.eta, year)
+        elif jer_strat == 4:
+            jer_smearing = applyStrat4(apply_scaling, jer_smearing)
         else:
             raise ValueError(f"jer strategy {jer_strat} is not yet supported!")
         # jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
@@ -1060,7 +1121,13 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     # logger.debug(f"jet pt: {jets.pt[:100].compute()}")
     # logger.debug(f"jet pt_jer_up: {jets.pt_jer_up[:100].compute()}")
     # logger.debug(f"jet pt_jer_down: {jets.pt_jer_down[:100].compute()}")
-    jets = apply_jer_unc(jets)
+    # The per-eta-bin JER-uncertainty columns (pt_jer1_up ... pt_jer6_down) are
+    # only consumed when do_jer_unc drives the pt_variations loop. For a
+    # nominal-only run the caller passes syst_l == ["nom"], so pt_jer_up/down
+    # were never built -- skip apply_jer_unc (nothing downstream reads those
+    # columns and they are not written to the skim).
+    if "up" in syst_l and "down" in syst_l:
+        jets = apply_jer_unc(jets)
     # for i in range(1,7):
     #     logger.debug(f"pt_jer{i}_up: {jets[f'pt_jer{i}_up'][:100].compute()}")
     #     logger.debug(f"pt_jer{i}_down: {jets[f'pt_jer{i}_down'][:100].compute()}")
@@ -1126,7 +1193,6 @@ def get_jet_variation(jets_orig, variation, fields2add):
         else:
             logger.warning(f"jets_orig has no field {field}!")
             if field == "puId":
-                puId = get_puId(jets_orig)
-                new_jets["puId"] = puId
+                new_jets["puId"] = get_puId(jets_orig)
 
     return new_jets

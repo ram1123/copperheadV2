@@ -56,6 +56,7 @@ from src.corrections.jet import (
     getJecDataTag,
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib
+from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
@@ -583,12 +584,46 @@ class EventProcessor(processor.ProcessorABC):
                 )
                 self.pysr_all_features.update(cfg["features"])
 
+        self.pu_dnn_configs = {}
+        if self.config["switches"].get("do_use_pu_dnn_score", False):
+            if self.config["switches"].get("do_use_pySR_score", False):
+                raise ValueError(
+                    "do_use_pySR_score and do_use_pu_dnn_score are alternative "
+                    "forward-jet PU cleanup models; only one can be enabled at once."
+                )
+            # do_use_pu_dnn_score enabled must have an explicit model dir.
+            if "pu_dnn_model_dir" not in self.config:
+                raise KeyError(
+                    "do_use_pu_dnn_score is enabled for this year, but no "
+                    "'pu_dnn_model_dir' entry was found in the config. Add one "
+                    "for this year in configs/parameters/SF_filelist.yaml."
+                )
+            pu_dnn_base_dir = self.config["pu_dnn_model_dir"]
+            self.pu_dnn_configs = load_pu_dnn_configs(pu_dnn_base_dir)
+            if not self.pu_dnn_configs:
+                raise FileNotFoundError(
+                    f"PU DNN scoring is enabled, but no region models were found under {pu_dnn_base_dir}."
+                )
+
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
         # application is in "do_jet_veto_maps_filterEvents" field in config.
         # If any jet in the event falls into the veto map region, the whole event is vetoed.
         """
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Without this,
+        # a soft/loose-ID/high-EM-fraction jet landing in a vetoed region would
+        # trigger event rejection even though the recommendation says it shouldn't count.
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jets = jets[min_sel]
+
         jet_veto_maps_path = self.config.get("jet_veto_maps", None)
         logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
         if jet_veto_maps_path is None:
@@ -668,6 +703,22 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
 
         jet_veto_mask = ak.unflatten(jet_veto_mask, counts)   # jagged, same shape as jets
+
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Force the mask
+        # to "not vetoed" (0.0) for jets failing this selection, so they're never
+        # counted for the event decision below nor removed by the jet-removal
+        # step further down -- without this, a soft/loose-ID/high-EM-fraction
+        # jet landing in a vetoed region would incorrectly count.
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jet_veto_mask = ak.where(min_sel, jet_veto_mask, 0.0)
+
         jet_veto_eventFilter = ak.any(jet_veto_mask != 0.0, axis=1)
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
 
@@ -1372,7 +1423,7 @@ class EventProcessor(processor.ProcessorABC):
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        logger.info(f"jets type before pad_none: {jets.type}")
+        logger.debug(f"jets type before pad_none: {jets.type}")
         logger.info(f"jets ndim: {jets.ndim}")
 
         jet_default = ak.pad_none(jets, target=4, axis=1)
@@ -1491,7 +1542,13 @@ class EventProcessor(processor.ProcessorABC):
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
             if is_mc and (self.config["switches"]["jer_strat"] >=0):
                 logger.debug("Applying JER smearing!")
-                jets = do_jer_smear(jets, self.config, events.event)
+                # Only build the up/down JER-smear columns when they will be used
+                # (do_jer_unc drives the pt_variations loop further below). On a
+                # nominal run this skips 2/3 of the JER correctionlib evaluations
+                # and the apply_jer_unc per-eta-bin columns, with no change to the
+                # skim output.
+                jer_syst_l = ["nom", "up", "down"] if do_jer_unc else ["nom"]
+                jets = do_jer_smear(jets, self.config, events.event, syst_l=jer_syst_l)
             else:
                 logger.debug(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
@@ -2244,6 +2301,8 @@ class EventProcessor(processor.ProcessorABC):
                     zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
+                
+                logger.warning(f"zpt weights: {zpt_cfg}")
 
                 zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv)
                 zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)
@@ -2657,6 +2716,13 @@ class EventProcessor(processor.ProcessorABC):
                 "hfsigmaPhiPhi",
                 "nConstituents",
                 "rawFactor",
+                # Needed by the PU-DNN model's feature list (see scaler.json
+                # under pu_dnn_model_dir) when do_use_pu_dnn_score is enabled.
+                "hfEmEF",
+                "hfHEF",
+                "nElectrons",
+                "nMuons",
+                "puIdDisc",
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
 
@@ -2717,6 +2783,16 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_ptcut = ak.ones_like(jets.pt, dtype="bool") # default value is True
         HE_HF_ptcut = ak.ones_like(jets.pt, dtype="bool")
         jetHorn_nConst_Cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        rawFactor_cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        if self.config["switches"]["do_reject_high_rawFactor_jets"]:
+            # Official JME mitigation for a rare L2Relative asymptotic-behavior known
+            # issue in Run3 (https://cms-jme-jerc.docs.cern.ch/recommendations/jes/#known-issues):
+            # in a very narrow pT bin the L2Relative JEC can blow up to anomalously
+            # large corrected jet pT (>10 TeV). Affects ~1e-7 to 1e-6 of events in the
+            # rare samples where it occurs at all; JME's own fix is to reject jets with
+            # Jet_rawFactor > 0.9.
+            logger.info("Applying Jet_rawFactor > 0.9 rejection (rare L2Relative asymptotic-JEC mitigation)")
+            rawFactor_cut = jets.rawFactor <= 0.9
         n_active = sum(bool(x) for x in [do_he_ptcut, add_hehf_ptcut, add_hehf_asym])
         if n_active > 1:
             raise ValueError(
@@ -2800,6 +2876,7 @@ class EventProcessor(processor.ProcessorABC):
             & jetHorn_ptcut
             & HE_HF_ptcut
             & jetHorn_nConst_Cut
+            & rawFactor_cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 
@@ -2812,6 +2889,12 @@ class EventProcessor(processor.ProcessorABC):
             jets = ensure_symbolic_features(jets, self.pysr_all_features)
             pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)
             jets = jets[pysr_dict["jet_pysr_pu_pass"]]
+
+        if_pu_dnn = self.config["switches"].get("do_use_pu_dnn_score", False)
+        if if_pu_dnn:
+            jets = add_dphi_met_jet_features(jets, events.PuppiMET.phi)
+            pu_dnn_out = eval_pu_dnn(jets, self.pu_dnn_configs)
+            jets = jets[pu_dnn_out["pu_dnn_pass"]]
 
         jets = ak.to_packed(jets)
 
@@ -3035,6 +3118,11 @@ class EventProcessor(processor.ProcessorABC):
                 "btagUParTAK4B",
                 "btagDeepB",
                 # "btagDeepFlavB",
+
+                # Needed to check do_reject_high_rawFactor_jets' rare L2Relative
+                # asymptotic-JEC mitigation (rejects Jet_rawFactor > 0.9) even when
+                # that switch (do_reject_high_rawFactor_jets) is off
+                "rawFactor",
                 ]
         jets_to_process = [jet1, jet2, jet3, jet4] if save_four_jets_kinematics else [jet1, jet2]
         for i, jet in enumerate(jets_to_process, start=1):
@@ -3064,7 +3152,7 @@ class EventProcessor(processor.ProcessorABC):
                 "hadronFlavour", "partonFlavour",
                 "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
                 "hfsigmaEtaEta", "hfsigmaPhiPhi",
-                "muonSubtrFactor", "rawFactor",
+                "muonSubtrFactor",
                 "puIdDisc"
             ]
 

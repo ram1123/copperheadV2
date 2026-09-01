@@ -190,6 +190,16 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+    do_jet_PUID_cut:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_use_pySR_score: # For run-3 reject the jets based on the pySR equeation.
         '2016preVFP': false
         '2016postVFP': false
@@ -200,6 +210,21 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+    do_use_pu_dnn_score:
+        # Forced false for every year in the CI reference: the sync-stage1 `ci`
+        # pixi env has no pytorch, and the trained model artifacts under
+        # validation/pu_dnn/ are not committed to the repo, so enabling this
+        # would raise (ModuleNotFoundError / FileNotFoundError) regardless of
+        # what configs/parameters/switches.yaml says for production years.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     add_pt_cut_for_HE_HF_jets:
         '2016preVFP': false
         '2016postVFP': false

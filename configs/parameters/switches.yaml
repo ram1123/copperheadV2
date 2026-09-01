@@ -1,14 +1,4 @@
 switches:
-    do_add_jet_ID_vars:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
     save_full_muon_detail:
         '2016preVFP': false
         '2016postVFP': false
@@ -19,6 +9,20 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
+    do_add_jet_ID_vars:
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     save_four_jets_kinematics:
         '2016preVFP': false
         '2016postVFP': false
@@ -29,6 +33,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     save_default_jet_vars:
         '2016preVFP': false
         '2016postVFP': false
@@ -39,6 +45,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_getFatJet_vars:
         '2016preVFP': false
         '2016postVFP': false
@@ -49,6 +57,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_trigger_match:
         '2016preVFP': true
         '2016postVFP': true
@@ -59,6 +69,8 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_roccor:
         '2016preVFP': true
         '2016postVFP': true
@@ -69,6 +81,8 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_fsr:
         '2016preVFP': true
         '2016postVFP': true
@@ -79,6 +93,8 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_geofit:
         '2016preVFP': false
         '2016postVFP': false
@@ -89,6 +105,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_beamConstraint:
         '2016preVFP': true
         '2016postVFP': true
@@ -99,26 +117,32 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_remove_dy_M100to200: # Remove 100 to 200 mll region from inclusive DY.
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_zpt:
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     save_zpt_variations:
         '2016preVFP': false
         '2016postVFP': false
@@ -129,6 +153,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_jet_PUID_cut:
         '2016preVFP': false
         '2016postVFP': false
@@ -139,6 +165,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_HemVeto:
         '2016preVFP': false
         '2016postVFP': false
@@ -149,6 +177,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_HemVetoStudy: # this should be true for obtaining the HemVeto_ratio value below. See documenation
         '2016preVFP': false
         '2016postVFP': false
@@ -159,6 +189,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_jet_veto_maps_filterEvents: # remove the events
         '2016preVFP': false
         '2016postVFP': false
@@ -169,6 +201,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_jet_veto_maps_filterJets: # remove the jets not events
         '2016preVFP': false
         '2016postVFP': false
@@ -179,8 +213,12 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
         # Currently, updated the pT to 30 GeV
+        # official recommendation:
+        # 2024 and 2025: HE and HF both >50 GeV        
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -190,6 +228,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_jet_HE_nConstCut: # For run-3 we scanned and noted that for nconstituents <= 3 its mostly fake jets.
         '2016preVFP': false
         '2016postVFP': false
@@ -200,17 +240,14 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
-    do_use_pySR_score: # For run-3 reject the jets based on the pySR equeation.
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
-    add_pt_cut_for_HE_HF_jets:
+        "2025": false
+        "2026": false
+    do_reject_high_rawFactor_jets: # Official JME mitigation (reject Jet_rawFactor > 0.9) for a rare
+        # Run3 L2Relative-JEC asymptotic-behavior known issue producing anomalously high jet pT
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jes/#known-issues). Affects ~1e-7 to 1e-6
+        # of events in the rare samples where it occurs at all -- JME's own doc says to check the
+        # linked GitLab issue for whether it applies to the specific samples in use, so this defaults
+        # to off everywhere rather than being force-enabled for all Run3 samples.
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -220,6 +257,49 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
+    do_use_pySR_score: # For run-3 reject the jets based on the pySR equeation.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
+    do_use_pu_dnn_score: # For run-3 reject HE/HF jets using the trained pileup-DNN (MVA_training/pileup_dnn/train_pu_dnn.py).
+        # Mutually exclusive with do_use_pySR_score. Model dir is per-year, see
+        # "pu_dnn_model_dir" in configs/parameters/SF_filelist.yaml (2022/2023
+        # models exclude puIdDisc, 2024/2025 models include it).
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
+    add_pt_cut_for_HE_HF_jets:
+        # official recommendation:
+        # 2022 and 2023: HE and HF both >50 GeV
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     add_asymmetric_pt_cut_for_HE_HF_jets:
         # available options: [35.0, 30.0] or false
         '2016preVFP': false
@@ -231,6 +311,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_jet_horn_puid:
         '2016preVFP': false # For nanoAODv12, do_jet_horn_puid should be true
         '2016postVFP': false # For nanoAODv12, do_jet_horn_puid should be true
@@ -241,6 +323,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_jec:
         '2016preVFP': true
         '2016postVFP': true
@@ -251,7 +335,9 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
-    jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised.
+        "2025": true
+        "2026": true
+    jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised, 4 is the official JME ad hoc mitigation.
         # ---------------------------------------
         # jer strat description
         # ---------------------------------------
@@ -260,15 +346,21 @@ switches:
         # 1 : jer strat 1 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets if pT > 50. For fake jets with pT < 50 and passing tight PU Id, apply stochastic method. For fake jets with pT < 50 and failing tight PU Id, apply no jer smearing.
         # 2 : jer strat 2 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets except fake jets with pT <= 50 and abseta > 2.5. For fake jets with pT <= 50 and abseta > 2.5, apply no jer smearing.
         # 3 : our custom Run2 jer smearinig method for CHS jets. Source: https://indico.cern.ch/event/1499935/#175-update-from-purdue, slide 19
+        # 4 : official JME "option (b)" ad hoc mitigation for the poor Run3 2.5<|eta|<3.0 data/MC agreement
+        #     (https://cms-jme-jerc.docs.cern.ch/recommendations/jer/): apply scaling method for real jets;
+        #     apply NO stochastic smearing for fake jets, unconditionally (no PUID/pT/eta gating, unlike
+        #     strat 1/2). JME's doc names this exact approach for H->WW, H->mumu, and VBF SUSY.
         '2016preVFP': -1 # For nanoAODv12, jer_strat should be 3
         '2016postVFP': -1 # For nanoAODv12, jer_strat should be 3
         '2017': -1 # For nanoAODv12, jer_strat should be 3
         '2018': -1 # For nanoAODv12, jer_strat should be 3
-        '2022preEE': -1
-        '2022postEE': -1
-        "2023": -1
-        "2023BPix": -1
-        "2024": -1
+        '2022preEE': 4
+        '2022postEE': 4
+        "2023": 4
+        "2023BPix": 4
+        "2024": 4
+        "2025": 4
+        "2026": 4
     do_jec_unc:
         '2016preVFP': true
         '2016postVFP': true
@@ -279,6 +371,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_jer_unc: # FIXME: Not validated yet for Run-3
         '2016preVFP': false
         '2016postVFP': false
@@ -289,6 +383,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_nnlops:
         '2016preVFP': true
         '2016postVFP': true
@@ -299,6 +395,8 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_pdf:
         '2016preVFP': true
         '2016postVFP': true
@@ -309,6 +407,8 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_THU:
         '2016preVFP': true
         '2016postVFP': true
@@ -319,6 +419,8 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_pu_wgt:
         '2016preVFP': true
         '2016postVFP': true
@@ -329,6 +431,8 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+        "2025": true
+        "2026": true
     do_l1prefiring_wgts:
         2016preVFP: true
         2016postVFP: true
@@ -342,6 +446,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     apply_jet_PUID_wgt:
         '2016preVFP': false
         '2016postVFP': false
@@ -352,6 +458,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_qgl_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
         '2016preVFP': true
         '2016postVFP': true
@@ -363,6 +471,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     do_btag_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
         '2016preVFP': true
         '2016postVFP': true
@@ -373,6 +483,8 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     save_all_weight_variations:
         '2016preVFP': false
         '2016postVFP': false
@@ -383,23 +495,29 @@ switches:
         "2023": false
         "2023BPix": false
         "2024": false
+        "2025": false
+        "2026": false
     save_muon_roccor_variations:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_save_partial_weights:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false

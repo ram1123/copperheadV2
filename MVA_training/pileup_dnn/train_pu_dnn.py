@@ -12,25 +12,42 @@ efficiency/rejection plots.
 
 Example command:
 --------------------
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
+  -i \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
+  --use-glob \
+  -o validation/pu_dnn/run2022postEE_dy_top_ewk_IDVarsOnly_13June \
+  --regions HEpos HEneg HFpos HFneg
 
 time python MVA_training/pileup_dnn/train_pu_dnn.py \
-    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
-    --use-glob \
-    -o validation/pu_dnn/run2022postEE_03June_DYIncl_OnlyJetRelatedVariables \
-    --regions HEpos HEneg HFpos HFneg
+  -i \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
+  --use-glob \
+  -o validation/pu_dnn/run2022postEE_dy_top_ewk_allvars_13June \
+  --regions HEpos HEneg HFpos HFneg
 
 time python MVA_training/pileup_dnn/train_pu_dnn.py \
-    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
-    --use-glob \
-    -o validation/pu_dnn/ablation_scan_03June \
-    --regions HEpos HEneg HFpos HFneg \
-    --run-ablations
+  -i \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ewk_*/*/*.parquet" \
+  --use-glob \
+  -o validation/pu_dnn/run2024_dy_top_ewk_OnlyIDVars_NopuIdDisc \
+  --regions HEpos HEneg HFpos HFneg  
 
-python MVA_training/pileup_dnn/train_pu_dnn.py \
-    -i "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet"     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
-    -o validation/pu_dnn/run2022postEE_dy_top_ewk_02June_DYIncl_dPhi_NoPt \
-    --regions HEpos HEneg HFpos HFneg \
-    --replot-only    
+
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
+  -i \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2024/compacted/ewk_*/*/*.parquet" \
+  --use-glob \
+  -o validation/pu_dnn/run2024_dy_top_ewk_OnlyIDVarsAndOthersNopTrelated_NopuIdDisc \
+  --regions HEpos HEneg HFpos HFneg  
 """
 
 from __future__ import annotations
@@ -38,11 +55,15 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import random
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from glob import glob
 from pathlib import Path
 from typing import Iterable
+
+import tqdm
 
 import matplotlib
 
@@ -52,6 +73,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+from modules.git_utils import get_git_commit, get_git_state
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     average_precision_score,
@@ -67,6 +89,15 @@ CORE_VARS = ("pt", "eta", "hasMatchedGenJet")
 DEFAULT_REGIONS = ("HE", "HF")
 REGION_CHOICES = ("HE", "HF", "HEpos", "HEneg", "HFpos", "HFneg")
 DEFAULT_PT_BINS = [25, 27, 30, 32.5, 35, 37.5, 40, 42.5, 45, 47.5, 50]
+
+# Finest usable |eta| binning for HE/HF review plots (calorimeter tower boundaries,
+# per reviewer comment). The stacked before/after |eta| plots use this list merged
+# 4-to-1 (see ETA_STACK_BINS) so the plotted bins are no finer than this granularity.
+ETA_RING_EDGES_FINE = [
+    2.500, 2.650, 2.853, 2.964, 3.139, 3.314, 3.489, 3.664,
+    3.839, 4.013, 4.191, 4.363, 4.538, 4.716, 4.889, 5.191,
+]
+ETA_STACK_BINS = np.array(ETA_RING_EDGES_FINE[::4] + [ETA_RING_EDGES_FINE[-1]], dtype=np.float64)
 
 # These are the only DNN input features. Branch-name aliases protect us from
 # drift between NanoAOD/stage-1 versions.
@@ -100,27 +131,33 @@ BASELINE_ALIASES = {
 }
 
 MODEL_FEATURES = [
-    "logpt",
+    # "logpt",
     "minDPhiMetJet",
-    "chEmEF",
-    "chHEF",
-    "neEmEF",
-    "neHEF",
-    "muEF",
-    "chMultiplicity",
-    "neMultiplicity",
-    "nConstituents",
-    "nElectrons",
-    "nMuons",
-    "muonSubtrFactor",
-    "muonSubtrDeltaEta",
-    "muonSubtrDeltaPhi",
-    "hfadjacentEtaStripsSize",
-    "hfcentralEtaStripSize",
-    "hfsigmaEtaEta",
-    "hfsigmaPhiPhi",
-    "hfEmEF",
-    "hfHEF",
+    "maxDPhiMetJet",
+    "absDPhiMetJet",
+    "minDRJetMuon",
+    "minAbsDEtaJetMuon",
+    "dRJetOther",
+    "absDEtaJetOther",
+    # "otherJetPt",
+    # "jetPtOverOtherJetPt",
+
+    # "puIdDisc",
+
+    "chEmEF", "chHEF",
+    "neEmEF", "neHEF",
+    # "muEF",
+
+    "chMultiplicity", "neMultiplicity",
+
+    "nConstituents", 
+    # "nElectrons", "nMuons",
+
+    # "muonSubtrFactor", "muonSubtrDeltaEta", "muonSubtrDeltaPhi",
+
+    "hfadjacentEtaStripsSize", "hfcentralEtaStripSize",
+    "hfsigmaEtaEta", "hfsigmaPhiPhi",
+    "hfEmEF", "hfHEF",
 ]
 
 
@@ -250,6 +287,29 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-col", default="wgt_nominal")
     parser.add_argument("--weight-clip", type=float, default=50.0)
     parser.add_argument(
+        "--pt-decorrelation-mode",
+        default="none",
+        choices=("none", "class"),
+        help=(
+            "Optional pT decorrelation for the training loss. "
+            "'class' reweights HS and PU to the same jet-pT spectrum within each region, "
+            "while keeping nominal weights for evaluation."
+        ),
+    )
+    parser.add_argument(
+        "--pt-decorrelation-bins",
+        nargs="+",
+        type=float,
+        default=DEFAULT_PT_BINS,
+        help="Jet-pT bins used when building decorrelation weights for the training loss.",
+    )
+    parser.add_argument(
+        "--pt-decorrelation-max-scale",
+        type=float,
+        default=5.0,
+        help="Maximum per-bin weight scale factor applied by pT decorrelation reweighting.",
+    )
+    parser.add_argument(
         "--importance-max-rows",
         type=int,
         default=20000,
@@ -276,8 +336,10 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         default=[
             "pt=logpt",
-            "met=minDPhiMetJet",
-            "ptMET=logpt,minDPhiMetJet",
+            "met=minDPhiMetJet,maxDPhiMetJet,absDPhiMetJet",
+            "ptMET=logpt,minDPhiMetJet,maxDPhiMetJet,absDPhiMetJet",
+            "muon_geometry=minDRJetMuon,minAbsDEtaJetMuon",
+            "jet_pair=dRJetOther,absDEtaJetOther,otherJetPt,jetPtOverOtherJetPt",
             "neutral=neEmEF,neHEF",
             "charged=chEmEF,chHEF,nElectrons",
             "muon=muEF,nMuons,muonSubtrFactor,muonSubtrDeltaEta,muonSubtrDeltaPhi",
@@ -375,6 +437,12 @@ def delta_phi(phi1: np.ndarray, phi2: np.ndarray) -> np.ndarray:
     return (dphi + np.pi) % (2 * np.pi) - np.pi
 
 
+def delta_r(
+    eta1: np.ndarray, phi1: np.ndarray, eta2: np.ndarray, phi2: np.ndarray
+) -> np.ndarray:
+    return np.hypot(eta1 - eta2, delta_phi(phi1, phi2))
+
+
 def possible_cols(prefix: str, feature: str, aliases: dict[str, tuple[str, ...]], variation: str) -> list[str]:
     cols = []
     for alias in aliases[feature]:
@@ -385,7 +453,7 @@ def possible_cols(prefix: str, feature: str, aliases: dict[str, tuple[str, ...]]
 
 def needed_columns(available: set[str], variation: str, max_jets: int, weight_col: str) -> list[str]:
     requested: set[str] = {"event", "run", "luminosityBlock", weight_col}
-    requested.update({"MET_phi", "PuppiMET_phi"})
+    requested.update({"MET_phi", "PuppiMET_phi", "mu1_eta", "mu1_phi", "mu2_eta", "mu2_phi"})
     for jidx in range(1, max_jets + 1):
         prefix = f"jet{jidx}_"
         for var in CORE_VARS:
@@ -400,24 +468,63 @@ def needed_columns(available: set[str], variation: str, max_jets: int, weight_co
     return sorted(requested & available)
 
 
-def load_stage1(paths: list[str], args: argparse.Namespace) -> pd.DataFrame:
-    frames = []
-    rows_left = args.max_rows
+def _read_one_stage1_file(
+    path: str, variation: str, max_jets: int, weight_col: str, row_cap: int | None
+) -> pd.DataFrame | None:
+    """Read one stage-1 parquet file, needed-columns only, in a single file open
+    (schema + data), tagged with its inferred sample name/group."""
+    import pyarrow.parquet as pq
 
-    for path in paths:
-        if rows_left is not None and rows_left <= 0:
-            break
-        local_cols = needed_columns(set(parquet_columns(path)), args.variation, args.max_jets, args.weight_col)
-        if not local_cols:
-            continue
-        frame = pd.read_parquet(path, columns=local_cols)
-        if rows_left is not None:
-            frame = frame.head(rows_left)
+    pf = pq.ParquetFile(path)
+    local_cols = needed_columns(set(pf.schema.names), variation, max_jets, weight_col)
+    if not local_cols:
+        return None
+    frame = pf.read(columns=local_cols).to_pandas()
+    if row_cap is not None:
+        frame = frame.head(row_cap)
+    sample_name = infer_sample_name(path)
+    frame["__sample_name"] = sample_name
+    frame["__sample_group"] = infer_sample_group(sample_name)
+    return frame
+
+
+def load_stage1(paths: list[str], args: argparse.Namespace) -> pd.DataFrame:
+    if args.max_rows is not None:
+        # Debug/testing path: stop as soon as enough rows are read, so we don't
+        # pay to open files we'll never need. Parallelizing here would just read
+        # every file anyway, defeating the point of --max-rows.
+        frames = []
+        rows_left = args.max_rows
+        for path in paths:
+            if rows_left <= 0:
+                break
+            frame = _read_one_stage1_file(
+                path, args.variation, args.max_jets, args.weight_col, rows_left
+            )
+            if frame is None:
+                continue
             rows_left -= len(frame)
-        sample_name = infer_sample_name(path)
-        frame["__sample_name"] = sample_name
-        frame["__sample_group"] = infer_sample_group(sample_name)
-        frames.append(frame)
+            frames.append(frame)
+    else:
+        # Full run: every file gets read regardless, so parallelize the I/O.
+        # pyarrow releases the GIL during the actual read/decompress, so threads
+        # (not processes) give real parallelism here without the cost of pickling
+        # large DataFrames back from worker processes.
+        max_workers = min(32, (os.cpu_count() or 4) * 4)
+        results: list[pd.DataFrame | None] = [None] * len(paths)
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            future_to_idx = {
+                pool.submit(
+                    _read_one_stage1_file, path, args.variation, args.max_jets, args.weight_col, None
+                ): idx
+                for idx, path in enumerate(paths)
+            }
+            for future in tqdm.tqdm(
+                as_completed(future_to_idx), total=len(future_to_idx), desc="Reading stage-1 parquet"
+            ):
+                results[future_to_idx[future]] = future.result()
+        # Preserve `paths` order (not completion order) for run-to-run reproducibility.
+        frames = [frame for frame in results if frame is not None]
 
     if not frames:
         raise ValueError("No readable parquet frames with stage-1 jet columns were found.")
@@ -439,23 +546,79 @@ def flatten_jets(df_in: pd.DataFrame, args: argparse.Namespace) -> pd.DataFrame:
     frames = []
     met_phi_col = first_existing_column(df_in, ["MET_phi", "PuppiMET_phi"])
     met_phi = numeric_series(df_in, met_phi_col) if met_phi_col is not None else None
+    muon_coords = []
+    for mu_idx in (1, 2):
+        mu_eta_col = first_existing_column(df_in, [f"mu{mu_idx}_eta"])
+        mu_phi_col = first_existing_column(df_in, [f"mu{mu_idx}_phi"])
+        if mu_eta_col is None or mu_phi_col is None:
+            continue
+        muon_coords.append(
+            (
+                numeric_series(df_in, mu_eta_col),
+                numeric_series(df_in, mu_phi_col),
+            )
+        )
+    jet_event_vars: dict[int, dict[str, np.ndarray]] = {}
     min_dphi_met_jet = None
+    max_dphi_met_jet = None
     if met_phi is not None:
         dphi_stack = []
         for jidx in range(1, args.max_jets + 1):
             prefix = f"jet{jidx}_"
+            pt_col = first_existing_column(
+                df_in, [jet_col(prefix, "pt", args.variation), f"{prefix}pt"]
+            )
+            eta_col = first_existing_column(
+                df_in, [jet_col(prefix, "eta", args.variation), f"{prefix}eta"]
+            )
             phi_col = first_existing_column(
                 df_in,
                 [jet_col(prefix, "phi", args.variation), f"{prefix}phi"],
             )
-            if phi_col is None:
+            if pt_col is None or eta_col is None or phi_col is None:
                 continue
+            pt = numeric_series(df_in, pt_col)
+            eta = numeric_series(df_in, eta_col)
             jet_phi = numeric_series(df_in, phi_col)
+            present = np.isfinite(pt) & np.isfinite(eta) & np.isfinite(jet_phi) & (pt > 0)
             dphi = np.abs(delta_phi(jet_phi, met_phi)).astype(np.float32)
-            dphi[~(np.isfinite(jet_phi) & np.isfinite(met_phi))] = np.nan
+            dphi[~(present & np.isfinite(met_phi))] = np.nan
+            jet_event_vars[jidx] = {
+                "pt": pt,
+                "eta": eta,
+                "phi": jet_phi,
+                "present": present,
+                "absDPhiMetJet": dphi,
+            }
             dphi_stack.append(dphi)
         if dphi_stack:
             min_dphi_met_jet = np.nanmin(np.vstack(dphi_stack), axis=0).astype(np.float32)
+            max_dphi_met_jet = np.nanmax(np.vstack(dphi_stack), axis=0).astype(np.float32)
+    else:
+        for jidx in range(1, args.max_jets + 1):
+            prefix = f"jet{jidx}_"
+            pt_col = first_existing_column(
+                df_in, [jet_col(prefix, "pt", args.variation), f"{prefix}pt"]
+            )
+            eta_col = first_existing_column(
+                df_in, [jet_col(prefix, "eta", args.variation), f"{prefix}eta"]
+            )
+            phi_col = first_existing_column(
+                df_in,
+                [jet_col(prefix, "phi", args.variation), f"{prefix}phi"],
+            )
+            if pt_col is None or eta_col is None or phi_col is None:
+                continue
+            pt = numeric_series(df_in, pt_col)
+            eta = numeric_series(df_in, eta_col)
+            jet_phi = numeric_series(df_in, phi_col)
+            present = np.isfinite(pt) & np.isfinite(eta) & np.isfinite(jet_phi) & (pt > 0)
+            jet_event_vars[jidx] = {
+                "pt": pt,
+                "eta": eta,
+                "phi": jet_phi,
+                "present": present,
+            }
 
     for jidx in range(1, args.max_jets + 1):
         prefix = f"jet{jidx}_"
@@ -493,6 +656,53 @@ def flatten_jets(df_in: pd.DataFrame, args: argparse.Namespace) -> pd.DataFrame:
         )
         if min_dphi_met_jet is not None:
             frame["minDPhiMetJet"] = min_dphi_met_jet[exists]
+        if max_dphi_met_jet is not None:
+            frame["maxDPhiMetJet"] = max_dphi_met_jet[exists]
+        event_vars = jet_event_vars.get(jidx)
+        if event_vars is not None:
+            if "absDPhiMetJet" in event_vars:
+                frame["absDPhiMetJet"] = event_vars["absDPhiMetJet"][exists]
+            if muon_coords and np.isfinite(event_vars["phi"]).any():
+                dr_candidates = []
+                deta_candidates = []
+                jet_eta_all = event_vars["eta"]
+                jet_phi_all = event_vars["phi"]
+                for mu_eta, mu_phi in muon_coords:
+                    valid = event_vars["present"] & np.isfinite(mu_eta) & np.isfinite(mu_phi)
+                    dr = delta_r(jet_eta_all, jet_phi_all, mu_eta, mu_phi).astype(np.float32)
+                    dr[~valid] = np.nan
+                    abs_deta = np.abs(jet_eta_all - mu_eta).astype(np.float32)
+                    abs_deta[~valid] = np.nan
+                    dr_candidates.append(dr)
+                    deta_candidates.append(abs_deta)
+                if dr_candidates:
+                    frame["minDRJetMuon"] = np.nanmin(np.vstack(dr_candidates), axis=0)[exists]
+                    frame["minAbsDEtaJetMuon"] = np.nanmin(np.vstack(deta_candidates), axis=0)[exists]
+            other_idx = 2 if jidx == 1 else 1 if jidx == 2 else None
+            other_vars = jet_event_vars.get(other_idx) if other_idx is not None else None
+            if other_vars is not None:
+                valid_pair = event_vars["present"] & other_vars["present"]
+                dr_other = delta_r(
+                    event_vars["eta"],
+                    event_vars["phi"],
+                    other_vars["eta"],
+                    other_vars["phi"],
+                ).astype(np.float32)
+                dr_other[~valid_pair] = np.nan
+                abs_deta_other = np.abs(event_vars["eta"] - other_vars["eta"]).astype(np.float32)
+                abs_deta_other[~valid_pair] = np.nan
+                other_pt = other_vars["pt"].astype(np.float32, copy=True)
+                other_pt[~valid_pair] = np.nan
+                pt_ratio = np.divide(
+                    event_vars["pt"],
+                    other_vars["pt"],
+                    out=np.full_like(event_vars["pt"], np.nan, dtype=np.float32),
+                    where=valid_pair & (np.abs(other_vars["pt"]) > 1e-6),
+                ).astype(np.float32)
+                frame["dRJetOther"] = dr_other[exists]
+                frame["absDEtaJetOther"] = abs_deta_other[exists]
+                frame["otherJetPt"] = other_pt[exists]
+                frame["jetPtOverOtherJetPt"] = pt_ratio[exists]
         for meta_col in (
             "event",
             "run",
@@ -775,6 +985,125 @@ def event_weights(df: pd.DataFrame, args: argparse.Namespace) -> np.ndarray:
     return (weights / mean).astype(np.float32)
 
 
+def apply_pt_decorrelation_weights(
+    weights: np.ndarray,
+    df: pd.DataFrame,
+    args: argparse.Namespace,
+) -> np.ndarray:
+    if args.pt_decorrelation_mode == "none":
+        return weights.astype(np.float32, copy=True)
+    if "pt" not in df.columns or "y_hs" not in df.columns:
+        return weights.astype(np.float32, copy=True)
+
+    pt = df["pt"].to_numpy(dtype=np.float32)
+    y = df["y_hs"].to_numpy(dtype=bool)
+    bins = np.asarray(args.pt_decorrelation_bins, dtype=np.float32)
+    if bins.ndim != 1 or len(bins) < 2:
+        return weights.astype(np.float32, copy=True)
+
+    balanced = weights.astype(np.float32, copy=True)
+    valid = np.isfinite(pt) & np.isfinite(balanced) & (balanced > 0)
+    if valid.sum() == 0:
+        return balanced
+
+    class_hists: list[np.ndarray] = []
+    present_classes: list[np.ndarray] = []
+    for class_mask in (y, ~y):
+        mask = valid & class_mask
+        total = float(np.sum(balanced[mask]))
+        if total <= 0:
+            continue
+        hist, _ = np.histogram(pt[mask], bins=bins, weights=balanced[mask])
+        class_hists.append(hist.astype(np.float64) / total)
+        present_classes.append(class_mask)
+    if len(class_hists) < 2:
+        return balanced
+
+    target_frac = np.mean(np.stack(class_hists, axis=0), axis=0)
+    pt_bin = np.digitize(pt, bins, right=False) - 1
+    in_range = valid & (pt_bin >= 0) & (pt_bin < len(bins) - 1)
+    max_scale = max(1.0, float(args.pt_decorrelation_max_scale))
+
+    for class_mask in present_classes:
+        mask = in_range & class_mask
+        total = float(np.sum(balanced[mask]))
+        if total <= 0:
+            continue
+        hist, _ = np.histogram(pt[mask], bins=bins, weights=balanced[mask])
+        frac = hist.astype(np.float64) / total
+        scales = np.ones(len(target_frac), dtype=np.float64)
+        nonzero = frac > 0
+        scales[nonzero] = target_frac[nonzero] / frac[nonzero]
+        scales = np.clip(scales, 1.0 / max_scale, max_scale)
+        balanced[mask] *= scales[pt_bin[mask]].astype(np.float32)
+
+    mean = balanced[balanced > 0].mean() if np.any(balanced > 0) else 1.0
+    return (balanced / mean).astype(np.float32)
+
+
+def weighted_corr(x: np.ndarray, y: np.ndarray, weight: np.ndarray | None = None) -> float:
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    finite = np.isfinite(x) & np.isfinite(y)
+    if weight is None:
+        if finite.sum() < 2:
+            return float("nan")
+        xx = x[finite]
+        yy = y[finite]
+        sx = np.std(xx)
+        sy = np.std(yy)
+        if sx <= 0 or sy <= 0:
+            return float("nan")
+        return float(np.corrcoef(xx, yy)[0, 1])
+
+    w = np.asarray(weight, dtype=np.float64)
+    finite &= np.isfinite(w) & (w > 0)
+    if finite.sum() < 2:
+        return float("nan")
+    xx = x[finite]
+    yy = y[finite]
+    ww = w[finite]
+    wsum = float(np.sum(ww))
+    if wsum <= 0:
+        return float("nan")
+    mx = float(np.sum(ww * xx) / wsum)
+    my = float(np.sum(ww * yy) / wsum)
+    cov = float(np.sum(ww * (xx - mx) * (yy - my)) / wsum)
+    vx = float(np.sum(ww * (xx - mx) ** 2) / wsum)
+    vy = float(np.sum(ww * (yy - my) ** 2) / wsum)
+    if vx <= 0 or vy <= 0:
+        return float("nan")
+    return float(cov / np.sqrt(vx * vy))
+
+
+def score_pt_correlation_summary(pred: pd.DataFrame, weight_col: str = "weight") -> dict:
+    if "score" not in pred.columns or "pt" not in pred.columns or "y_hs" not in pred.columns:
+        return {}
+    score = pred["score"].to_numpy(dtype=np.float32)
+    pt = pred["pt"].to_numpy(dtype=np.float32)
+    logpt = np.log1p(np.clip(pt, 0, None))
+    y = pred["y_hs"].to_numpy(dtype=bool)
+    weight = (
+        pred[weight_col].to_numpy(dtype=np.float32)
+        if weight_col in pred.columns
+        else np.ones(len(pred), dtype=np.float32)
+    )
+
+    rows = {}
+    masks = {
+        "all": np.ones(len(pred), dtype=bool),
+        "hs": y,
+        "pu": ~y,
+    }
+    for label, mask in masks.items():
+        rows[label] = {
+            "score_vs_pt": weighted_corr(score[mask], pt[mask], weight[mask]),
+            "score_vs_logpt": weighted_corr(score[mask], logpt[mask], weight[mask]),
+            "n_jets": int(mask.sum()),
+        }
+    return rows
+
+
 def sample_group_summary(df: pd.DataFrame, weights: np.ndarray | None = None) -> dict:
     if "__sample_group" not in df.columns:
         return {}
@@ -814,9 +1143,11 @@ def train_one_model(
     y_train = df_train["y_hs"].to_numpy(dtype=np.float32)
     y_val = df_val["y_hs"].to_numpy(dtype=np.float32)
     y_test = df_test["y_hs"].to_numpy(dtype=np.float32)
-    w_train = event_weights(df_train, args)
-    w_val = event_weights(df_val, args)
-    w_test = event_weights(df_test, args)
+    w_train_eval = event_weights(df_train, args)
+    w_val_eval = event_weights(df_val, args)
+    w_test_eval = event_weights(df_test, args)
+    w_train_opt = apply_pt_decorrelation_weights(w_train_eval, df_train, args)
+    w_val_opt = apply_pt_decorrelation_weights(w_val_eval, df_val, args)
 
     device = choose_device(args.device)
     print(f"device: {device}")
@@ -824,7 +1155,7 @@ def train_one_model(
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     loss_fn = nn.BCEWithLogitsLoss(reduction="none")
     train_loader = DataLoader(
-        JetDataset(x_train, y_train, w_train),
+        JetDataset(x_train, y_train, w_train_opt),
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=0,
@@ -854,10 +1185,10 @@ def train_one_model(
 
         train_score = predict_scores(model, x_train, device, args.batch_size)
         val_score = predict_scores(model, x_val, device, args.batch_size)
-        train_auc = safe_auc(y_train, train_score, w_train)
-        val_auc = safe_auc(y_val, val_score, w_val)
+        train_auc = safe_auc(y_train, train_score, w_train_eval)
+        val_auc = safe_auc(y_val, val_score, w_val_eval)
         train_loss = float(np.mean(batch_losses))
-        val_loss = bce_numpy(y_val, val_score, w_val)
+        val_loss = bce_numpy(y_val, val_score, w_val_opt)
 
         history.append(
             {
@@ -892,9 +1223,12 @@ def train_one_model(
         if meta in df_test.columns:
             pred_test[meta] = df_test[meta].to_numpy()
     pred_test["score"] = test_score
-    pred_test["weight"] = w_test
+    pred_test["weight"] = w_test_eval
+    pred_test["weight_train"] = apply_pt_decorrelation_weights(w_test_eval, df_test, args)
     if "puIdDisc" in df_test.columns:
         pred_test["puIdDisc"] = df_test["puIdDisc"].to_numpy(dtype=np.float32)
+
+    score_pt_corr = score_pt_correlation_summary(pred_test, weight_col="weight")
 
     metrics = {
         "n_train": int(len(y_train)),
@@ -902,15 +1236,18 @@ def train_one_model(
         "n_test": int(len(y_test)),
         "n_features": int(len(features)),
         "best_epoch": int(best_epoch),
-        "train_auc": safe_auc(y_train, train_score, w_train),
-        "val_auc": safe_auc(y_val, val_score, w_val),
-        "test_auc": safe_auc(y_test, test_score, w_test),
-        "test_average_precision": safe_ap(y_test, test_score, w_test),
+        "train_auc": safe_auc(y_train, train_score, w_train_eval),
+        "val_auc": safe_auc(y_val, val_score, w_val_eval),
+        "test_auc": safe_auc(y_test, test_score, w_test_eval),
+        "test_average_precision": safe_ap(y_test, test_score, w_test_eval),
         "sample_group_balance": not args.no_sample_balance,
         "sample_balance_groups": args.sample_balance_groups,
-        "train_sample_groups": sample_group_summary(df_train, w_train),
-        "val_sample_groups": sample_group_summary(df_val, w_val),
-        "test_sample_groups": sample_group_summary(df_test, w_test),
+        "pt_decorrelation_mode": args.pt_decorrelation_mode,
+        "pt_decorrelation_bins": [float(x) for x in args.pt_decorrelation_bins],
+        "train_sample_groups": sample_group_summary(df_train, w_train_eval),
+        "val_sample_groups": sample_group_summary(df_val, w_val_eval),
+        "test_sample_groups": sample_group_summary(df_test, w_test_eval),
+        "score_pt_correlation": score_pt_corr,
         "history": history,
     }
 
@@ -1241,15 +1578,19 @@ def plot_stacked_before_after(
     xlabel: str,
     formats: list[str],
     bins: int = 50,
+    bin_edges: np.ndarray | None = None,
 ) -> None:
     values = np.asarray(values, dtype=np.float32)
     finite = np.isfinite(values)
     if finite.sum() == 0:
         return
-    lo, hi = np.nanpercentile(values[finite], [0.5, 99.5])
-    if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
-        return
-    hist_bins = np.linspace(lo, hi, bins + 1)
+    if bin_edges is not None:
+        hist_bins = np.asarray(bin_edges, dtype=np.float64)
+    else:
+        lo, hi = np.nanpercentile(values[finite], [0.5, 99.5])
+        if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
+            return
+        hist_bins = np.linspace(lo, hi, bins + 1)
     y = y.astype(bool)
 
     for suffix, mask, title in [
@@ -1314,6 +1655,84 @@ def plot_stacked_before_after(
         rax.set_xlabel(xlabel)
         rax.grid(alpha=0.3)
         save_plot(fig, outdir / f"stack_{name}_{region}_{suffix}", formats)
+
+
+SHOWER_SHAPE_2D_ZMAX = 10000.0
+
+
+def plot_shower_shape_2d_before_after(
+    pred_test: pd.DataFrame,
+    y: np.ndarray,
+    pass_mask: np.ndarray,
+    outdir: Path,
+    region: str,
+    formats: list[str],
+    bins: int = 50,
+    zmax: float = SHOWER_SHAPE_2D_ZMAX,
+) -> None:
+    """2D hfsigmaEtaEta vs hfsigmaPhiPhi, split by PU/HS and before/after the DNN cut.
+
+    Lets a reviewer see which part of the shower-shape phase space the DNN cut removes.
+    Drawn with ROOT (COLZ) on a shared, fixed Z-axis range so the four panels are
+    directly comparable.
+    """
+    import ROOT
+    from modules.root_2dColorProfile import set_gradient_style
+
+    ROOT.gROOT.SetBatch(True)
+    set_gradient_style()
+
+    x_all = pred_test["hfsigmaEtaEta"].to_numpy(dtype=np.float32)
+    y_all = pred_test["hfsigmaPhiPhi"].to_numpy(dtype=np.float32)
+    # hfsigmaEtaEta/hfsigmaPhiPhi are only defined for HF jets; NanoAOD fills
+    # them with a -1 sentinel for non-HF jets, so exclude that from the "finite" mask.
+    finite = np.isfinite(x_all) & np.isfinite(y_all) & (x_all > -1) & (y_all > -1)
+    if finite.sum() == 0:
+        return
+    y_hs = y.astype(bool)
+    pass_mask = pass_mask.astype(bool)
+
+    x_lo, x_hi = np.nanpercentile(x_all[finite], [0.00001, 99.99])
+    y_lo, y_hi = np.nanpercentile(y_all[finite], [0.00001, 99.99])
+    if not (np.isfinite(x_lo) and np.isfinite(x_hi) and x_lo < x_hi):
+        return
+    if not (np.isfinite(y_lo) and np.isfinite(y_hi) and y_lo < y_hi):
+        return
+
+    panels = [
+        ("HS", "before", np.ones(len(x_all), dtype=bool) & y_hs & finite),
+        ("HS", "after", pass_mask & y_hs & finite),
+        ("PU", "before", np.ones(len(x_all), dtype=bool) & ~y_hs & finite),
+        ("PU", "after", pass_mask & ~y_hs & finite),
+    ]
+
+    ROOT.gStyle.SetOptStat(0)
+
+    canvas = ROOT.TCanvas(f"c_shower_shape_2d_{region}", "", 1100, 900)
+    canvas.Divide(2, 2)
+
+    hists = []
+    for pad_idx, (label, suffix, mask) in enumerate(panels, start=1):
+        n = int(mask.sum())
+        h = ROOT.TH2F(
+            f"h_{region}_{label}_{suffix}",
+            f"{region} {label} {suffix} DNN cut (N={n});hfsigmaEtaEta;hfsigmaPhiPhi",
+            bins, x_lo, x_hi,
+            bins, y_lo, y_hi,
+        )
+        for xv, yv in zip(x_all[mask], y_all[mask]):
+            h.Fill(float(xv), float(yv))
+        h.SetMinimum(1.0)
+        h.SetMaximum(zmax)
+        hists.append(h)
+
+        pad = canvas.cd(pad_idx)
+        pad.SetLogz()
+        pad.SetRightMargin(0.15)
+        h.Draw("COLZ")
+
+    for fmt in formats:
+        canvas.SaveAs(str(outdir / f"shower_shape_2d_{region}.{fmt}"))
 
 
 def permutation_importance(
@@ -1524,7 +1943,10 @@ def make_validation_outputs(
                 name,
                 xlabel,
                 args.plot_format,
+                bin_edges=ETA_STACK_BINS if name == "aeta" else None,
             )
+        if region.startswith("HF") and "hfsigmaEtaEta" in pred_test.columns and "hfsigmaPhiPhi" in pred_test.columns:
+            plot_shower_shape_2d_before_after(pred_test, y, pass_mask, outdir, region, args.plot_format)
 
     importance = permutation_importance(model, scaler, pred_test, args)
     importance.to_csv(outdir / f"feature_importance_{region}.csv", index=False)
@@ -1533,6 +1955,10 @@ def make_validation_outputs(
         plot_top_feature_shapes(df_region, scaler.features, importance, outdir, region, args.plot_format)
 
     baseline = baseline_puid_plots(pred_test, outdir, region, args)
+    score_pt_corr = score_pt_correlation_summary(pred_test, weight_col="weight")
+    (outdir / f"score_pt_correlation_{region}.json").write_text(
+        json.dumps(score_pt_corr, indent=2)
+    )
 
     summary = {
         "region": region,
@@ -1549,6 +1975,9 @@ def make_validation_outputs(
         "pt_min": float(args.pt_min),
         "pt_turnoff": float(args.pt_max),
         "valid_pt_range": {"min": float(args.pt_min), "max": float(args.pt_max)},
+        "pt_decorrelation_mode": args.pt_decorrelation_mode,
+        "pt_decorrelation_bins": [float(x) for x in args.pt_decorrelation_bins],
+        "score_pt_correlation": score_pt_corr,
         "metrics": {k: v for k, v in metrics.items() if k != "history"},
         "baseline_puIdDisc": baseline,
     }
@@ -1619,7 +2048,10 @@ def replot_region_from_saved_outputs(output: Path, region: str, args: argparse.N
                 name,
                 xlabel,
                 args.plot_format,
+                bin_edges=ETA_STACK_BINS if name == "aeta" else None,
             )
+    if region.startswith("HF") and "hfsigmaEtaEta" in pred_test.columns and "hfsigmaPhiPhi" in pred_test.columns:
+        plot_shower_shape_2d_before_after(pred_test, y, pass_mask, outdir, region, args.plot_format)
     if "puIdDisc" in pred_test.columns:
         baseline_puid_plots(pred_test, outdir, region, args)
     return True
@@ -1688,6 +2120,17 @@ def main() -> None:
     set_seed(args.seed)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
+    git_state = get_git_state(output)
+    git_commit = get_git_commit()
+    (output / "git_state.json").write_text(
+        json.dumps(
+            {
+                "git_commit": git_commit,
+                "git_state": git_state,
+            },
+            indent=2,
+        )
+    )
 
     if args.replot_only:
         refreshed = 0
@@ -1708,6 +2151,8 @@ def main() -> None:
                 "use_glob": args.use_glob,
                 "n_files": len(paths),
                 "files": paths,
+                "git_commit": git_commit,
+                "git_state": git_state,
             },
             indent=2,
         )

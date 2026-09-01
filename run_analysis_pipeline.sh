@@ -10,15 +10,35 @@ Modes:
   2|stage2
   2p|stage2_plot
   3|stage3
-  all
+  23|stage23
   zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12
   calib|calib_closure
   compact
   dnn|dnn_pre|dnn_train|dnn_var_rank
+  pu_dnn_train                VBF-category DNN above is unrelated to this: pu_dnn_train
+                               runs MVA_training/pileup_dnn/train_pu_dnn.py, the per-jet
+                               HS-vs-PU classifier consumed inside stage1 via
+                               do_use_pu_dnn_score. Runs once per year in -y (unlike
+                               dnn_train, which combines years into one invocation).
 
 Options:
   -D    Add DNN score during the compact step. Default is off.
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 workflow.
+
+Env vars:
+  MODEL_YEARS   Comma-separated years used to build the DNN model directory name
+                (dnn/trained_models/<label>/<MODEL_YEARS>_<region>_<category>),
+                independent of the years passed via -y. Defaults to -y's years.
+                Use this to run stage2/stage3 for one year (-y) while loading a
+                model trained on a different (e.g. combined) set of years.
+
+  pu_dnn_train mode (all optional, sensible defaults shown):
+  PU_DNN_DY_GLOB       Compacted sample-name glob for the HS-jet proxy (default: dyTo2Mu_M-50_aMCatNLO)
+  PU_DNN_TTBAR_GLOB    Compacted sample-name glob for a PU-jet proxy (default: ttjets_*)
+  PU_DNN_EWK_GLOB      Compacted sample-name glob for a PU-jet proxy (default: ewk_*)
+  PU_DNN_REGIONS       Space-separated region list (default: HEpos HEneg HFpos HFneg)
+  PU_DNN_OUT_TAG       Output dir name under validation/pu_dnn/ (default: run<year>_dy_top_ewk_<date>)
+  PU_DNN_EXTRA_ARGS    Extra args passed through as-is to train_pu_dnn.py (epochs, lr, pt-min, ...)
 EOF
     exit 1
 }
@@ -63,14 +83,20 @@ for year in "${years[@]}"; do
         3|stage3)
             run_mode_from_nul < <(build_stage3_cmd "${year}")
             ;;
-        all)
-            # run_mode_from_nul < <(build_stage1_cmd "${year}")
-            # run_mode_from_nul < <(build_compact_cmd "${year}")
+        23|stage23)
             run_mode_from_nul < <(build_stage2_cmd "${year}")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
             run_mode_from_nul < <(build_stage3_cmd "${year}")
             ;;
+        all)
+            run_mode_from_nul < <(build_stage1_cmd "${year}")
+            run_mode_from_nul < <(build_compact_cmd "${year}")
+            run_mode_from_nul < <(build_stage2_cmd "${year}")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
+            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
+            run_mode_from_nul < <(build_stage3_cmd "${year}")
+            ;;            
         zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12)
             run_zpt_fit "${year}"
             ;;
@@ -87,6 +113,9 @@ for year in "${years[@]}"; do
             fi
             dnn_invoked="1"
             run_dnn_workflow_once "${mode}"
+            ;;
+        pu_dnn_train)
+            run_mode_from_nul_timed < <(build_pu_dnn_train_cmd "${year}")
             ;;
         *)
             die "Invalid analysis mode '${mode}'."

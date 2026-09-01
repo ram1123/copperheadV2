@@ -2,11 +2,15 @@
 authors = ["ram1123 <ramkrishna.sharma71@gmail.com>"]
 channels = ["conda-forge", "bioconda"]
 name = "copperhead-analysis"
-platforms = ["linux-64", "osx-arm64"]
+# "linux-64-cuda" is a named alias for linux-64 that additionally requires a
+# CUDA virtual package. Only [feature.cuda] restricts itself to it (see
+# below), so only environments that include that feature (default,
+# default-legacy) need a CUDA virtual package to resolve. Every other
+# feature has no `platforms` override, so it inherits this whole list and
+# can resolve via plain "linux-64" instead -- e.g. ci/ci-legacy/combine/
+# combine-legacy no longer need CONDA_OVERRIDE_CUDA on GPU-less machines.
+platforms = ["linux-64", { name = "linux-64-cuda", platform = "linux-64", cuda = "12.4" }, "osx-arm64"]
 version = "0.1.0"
-
-[system-requirements]
-cuda = "12.4"
 
 [tasks]
 list-tasks = "pixi task list"
@@ -118,6 +122,11 @@ snakemake-minimal = ">=9.16.3,<10"
 # ----------------------------------------------------------------------
 # CUDA helpers
 # ----------------------------------------------------------------------
+[feature.cuda]
+# Restricts any environment including this feature to the CUDA-requiring
+# platform variant (see [workspace].platforms above).
+platforms = ["linux-64-cuda", "osx-arm64"]
+
 [feature.cuda.target.linux-64.dependencies]
 libnvjitlink-dev = "*"
 

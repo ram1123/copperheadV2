@@ -70,10 +70,25 @@ parse_common_args() {
     dnn_hpo_trials="${HPO_TRIALS:-50}"
     dnn_hpo_label="${HPO_LABEL:-v1_multifold_050Trials}"
     dnn_train_label="${TRAIN_LABEL:-trained_best_optuna_${dnn_hpo_label}}"
-    dnn_base_dir="dnn/trained_models/${label}/${dnn_years_slug}_${region}_${category}"
+    # MODEL_YEARS lets the DNN model directory reference a different (e.g. combined-year
+    # trained) model than the years actually processed via -y; defaults to -y's years.
+    dnn_model_years_csv="${MODEL_YEARS:-${dnn_years_csv}}"
+    dnn_model_years_slug="${dnn_model_years_csv//,/-}"
+    dnn_base_dir="dnn/trained_models/${label}/${dnn_model_years_slug}_${region}_${category}"
     dnn_hpo_dir="${dnn_base_dir}/hpo_optuna/${dnn_hpo_label}"
     dnn_best_json="${OPTUNA_BEST_JSON:-${dnn_hpo_dir}/optuna_best.json}"
     dnn_model_path="./${dnn_base_dir}"
+
+    # PU-DNN (jet-level HS-vs-PU classifier, MVA_training/pileup_dnn/train_pu_dnn.py)
+    # is unrelated to the VBF category DNN above: it trains on stage1's own
+    # compacted output and is consumed back inside stage1 (do_use_pu_dnn_score),
+    # not on stage2 output. Sample-name globs are the training script's own
+    # --use-glob patterns, resolved against each year's compacted/ dir below.
+    pu_dnn_dy_glob="${PU_DNN_DY_GLOB:-dyTo2Mu_M-50_aMCatNLO}"
+    pu_dnn_ttbar_glob="${PU_DNN_TTBAR_GLOB:-ttjets_*}"
+    pu_dnn_ewk_glob="${PU_DNN_EWK_GLOB:-ewk_*}"
+    pu_dnn_regions="${PU_DNN_REGIONS:-HEpos HEneg HFpos HFneg}"
+    pu_dnn_out_tag="${PU_DNN_OUT_TAG:-}"
 }
 
 setup_logging() {
@@ -147,6 +162,8 @@ load_year_maps() {
         [2023]="C"
         [2023BPix]="D"
         [2024]="C D E F G H I"
+        [2025]="B C D E F G"
+        [2026]="A B D"
         [run2]="A B C D E F G H"
         [run3]="C D E F G H I"
     )
@@ -155,13 +172,13 @@ load_year_maps() {
 
     if [[ "${debug_level}" -ge 1 ]]; then
         log "Debug mode ON"
-        year_data_map["2016preVFP"]=""
-        year_data_map["2016postVFP"]=""
-        year_data_map["2017"]=""
-        year_data_map["2018"]=""
-        year_data_map["2022postEE"]=""
+        # year_data_map["2016preVFP"]=""
+        # year_data_map["2016postVFP"]=""
+        # year_data_map["2017"]=""
+        # year_data_map["2018"]=""
+        # year_data_map["2022postEE"]=""
         bkg_groups=""
-        sig_groups="Higgs"
+        sig_groups=""
     fi
 }
 
@@ -301,6 +318,35 @@ build_compact_cmd() {
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_gateway_args)
+    printf '%s\0' "${cmd[@]}"
+}
+
+build_pu_dnn_train_cmd() {
+    local year="$1"
+    local compacted_dir="${save_path}/stage1_output/${year}/compacted"
+    local out_tag="${pu_dnn_out_tag:-run${year}_dy_top_ewk_$(date +%b%d)}"
+    local -a region_args=()
+    local token
+    for token in ${pu_dnn_regions}; do
+        region_args+=("${token}")
+    done
+    local cmd=(
+        python MVA_training/pileup_dnn/train_pu_dnn.py
+        -i
+        "${compacted_dir}/${pu_dnn_dy_glob}/*/*.parquet"
+        "${compacted_dir}/${pu_dnn_ttbar_glob}/*/*.parquet"
+        "${compacted_dir}/${pu_dnn_ewk_glob}/*/*.parquet"
+        --use-glob
+        -o "validation/pu_dnn/${out_tag}"
+        --regions "${region_args[@]}"
+    )
+    # Raw passthrough for the training script's many hyperparameter/plotting
+    # flags (epochs, lr, pt-min/max, ...) so this wrapper doesn't need to
+    # hand-mirror every one of them; word-split is intentional here.
+    if [[ -n "${PU_DNN_EXTRA_ARGS:-}" ]]; then
+        local -a extra_args=(${PU_DNN_EXTRA_ARGS})
+        cmd+=("${extra_args[@]}")
+    fi
     printf '%s\0' "${cmd[@]}"
 }
 
@@ -668,6 +714,56 @@ collect_vbf_significance_summary() {
     log "Collected VBF significance summary: ${summary_csv}"
 }
 
+extract_expected_limit() {
+    local log_path="$1"
+    sed -n 's/.*Expected[[:space:]]*50\.0%:[[:space:]]*r[[:space:]]*<[[:space:]]*\([-+0-9.eE][0-9.eE+-]*\).*/\1/p' "${log_path}" | head -n 1
+}
+
+collect_vbf_limit_summary() {
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local summary_csv="${card_dir}/vbf_expected_limit_summary_${save_postfix}.csv"
+    local tmp_rows
+    tmp_rows="$(mktemp "${card_dir}/.vbf_limit_rows_XXXXXX.csv")"
+    : > "${tmp_rows}"
+    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 Run3)
+    local year stem lim_log stat_log lim_val stat_val
+    for year in "${ordered_years[@]}"; do
+        stem="$(vbf_card_stem "${year}")"
+        lim_log="${card_dir}/${stem}_expectedlimit.log"
+        stat_log="${card_dir}/${stem}_expectedlimit_StatOnly.log"
+        if [[ -f "${lim_log}" || -f "${stat_log}" ]]; then
+            lim_val="NA"
+            stat_val="NA"
+            [[ -f "${lim_log}" ]] && lim_val="$(extract_expected_limit "${lim_log}" 2>/dev/null || printf 'NA')"
+            [[ -f "${stat_log}" ]] && stat_val="$(extract_expected_limit "${stat_log}" 2>/dev/null || printf 'NA')"
+            printf '%s,%s,%s,%s\n' "${year}" "${stem}.txt" "${lim_val}" "${stat_val}" >> "${tmp_rows}"
+        fi
+    done
+    {
+        echo "year,card,expected_limit_median,expected_limit_median_statonly"
+        cat "${tmp_rows}"
+    } > "${summary_csv}"
+    rm -f "${tmp_rows}"
+    log "Collected VBF expected-limit summary: ${summary_csv}"
+}
+
+run_vbf_limit() {
+    local year="$1"
+    local card_dir
+    card_dir="$(vbf_card_dir)"
+    local stem
+    stem="$(vbf_card_stem "${year}")"
+    ensure_vbf_card "${year}"
+    (
+        cd "${card_dir}"
+        # Blinded analysis: --run blind computes the expected limit from the Asimov
+        # background-only dataset instead of unblinding real data.
+        combineTool.py -d "${stem}.txt" -M AsymptoticLimits -m 125 --run blind -n "_${year}_${save_postfix}_" --rMin -2 --rMax 5 > "${stem}_expectedlimit.log"
+        combineTool.py -d "${stem}.txt" -M AsymptoticLimits -m 125 --run blind -n "_${year}_${save_postfix}_" --rMin -2 --rMax 5 --freezeParameters allConstrainedNuisances > "${stem}_expectedlimit_StatOnly.log"
+    )
+}
+
 run_vbf_significance() {
     local year="$1"
     local card_dir
@@ -689,13 +785,20 @@ run_vbf_impacts() {
     local stem
     stem="$(vbf_card_stem "${year}")"
     ensure_vbf_workspace "${year}"
-    (
-        cd "${card_dir}"
-        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 -t -1 --expectSignal 1
-        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 --doFits --robustFit 1 -t -1 --expectSignal 1 --parallel 60
-        combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}" --setParameterRanges r=-5.0,5.0 -o "impacts_${year}_${save_postfix}.json" -t -1 --expectSignal 1 --parallel 60
-        plotImpacts.py -i "impacts_${year}_${save_postfix}.json" -o "impacts_${year}_${save_postfix}"
-    )
+    # Blinded analysis: no observed impacts. Run both Asimov scenarios instead —
+    # r=1 (SM signal injected) and r=0 (background-only) — so a nuisance that only
+    # ranks high under one hypothesis is visible.
+    local r_inject tag
+    for r_inject in 1 0; do
+        tag="r${r_inject}"
+        (
+            cd "${card_dir}"
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 -t -1 --expectSignal "${r_inject}"
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doFits --robustFit 1 -t -1 --expectSignal "${r_inject}" --parallel 60
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 -o "impacts_${year}_${save_postfix}_${tag}.json" -t -1 --expectSignal "${r_inject}" --parallel 60
+            plotImpacts.py -i "impacts_${year}_${save_postfix}_${tag}.json" -o "impacts_${year}_${save_postfix}_${tag}"
+        )
+    done
 }
 
 run_vbf_lhscan() {

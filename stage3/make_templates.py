@@ -26,8 +26,8 @@ class Variable(object):
         self.xmax = xmax_
 
 decorrelation_scheme = {
-    "LHERen": ["DY", "EWK", "ggH", "TT+ST"],
-    "LHEFac": ["DY", "EWK", "ggH", "TT+ST"],
+    "LHERen": ["DY", "EWK", "ggH", "TT+ST", "VV"],
+    "LHEFac": ["DY", "EWK", "ggH", "TT+ST", "VV"],
     "pdf_2rms": ["DY", "VBF", "ggH"], # ["DY", "qqH_hmm", "ggH_hmm"],
     # "pdf_2rms": ["DY", "qqH_hmm", "ggH_hmm"],
 }

@@ -1,0 +1,17 @@
+# Scenario 1, variant A: nominal, no Z-pT, following the official JME
+# jet-veto-map recommendation (remove the whole EVENT, not just the jet).
+#
+# Deliberately does NOT touch do_jet_horn_ptcut / add_pt_cut_for_HE_HF_jets /
+# add_asymmetric_pt_cut_for_HE_HF_jets (the HE/HF forward-jet pT-cut
+# mitigation switches) -- per explicit user decision, this scenario doesn't
+# change them; it always just uses whatever's already sitting in the base
+# switches.yaml (currently: do_jet_horn_ptcut=50 for 2024-2026, matching the
+# official recommendation there; add_pt_cut_for_HE_HF_jets still false for
+# 2022/2023, an open question -- see the jme-horn-region-official-
+# recommendation memory for the full picture). No --set override needed for
+# this scenario; just apply the profile plainly.
+do_zpt: false
+do_add_jet_ID_vars: false
+save_four_jets_kinematics: false
+do_jet_veto_maps_filterEvents: true
+do_jet_veto_maps_filterJets: false

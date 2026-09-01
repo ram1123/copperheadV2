@@ -1,6 +1,7 @@
 import os
 import pickle
 import math
+import time
 from pathlib import Path
 
 import awkward as ak
@@ -134,7 +135,7 @@ def group_parquet_files(file_infos, target_n_final_files):
 
 
 def write_compacted_group(idx, group_files, compacted_path):
-    group_rows = sum(rows for _, rows in group_files)
+    group_rows = sum(rows for _, rows, _ in group_files)
     output_path = os.path.join(compacted_path, f"part{idx}.parquet")
     logger.debug(
         "Writing compacted part %s with %s input files and %s rows to %s",
@@ -143,110 +144,121 @@ def write_compacted_group(idx, group_files, compacted_path):
         group_rows,
         output_path,
     )
-    arrays = [ak.from_parquet(path) for path, _ in group_files]
+    arrays = [ak.from_parquet(path) for path, _, _ in group_files]
     events = arrays[0] if len(arrays) == 1 else ak.concatenate(arrays)
     ak.to_parquet(events, output_path)
     return idx, len(group_files), group_rows, output_path
 
-def _get_num_rows(path):
-    return pq.ParquetFile(path).metadata.num_rows
 
-def _get_file_info(path):
-    return path, pq.ParquetFile(path).metadata.num_rows
+# Target *uncompressed* (in-memory) size per compacted output file. Chosen instead
+# of a fixed row-count budget because different samples have very different
+# per-row memory footprints (jet multiplicity, jagged-array widths, which optional
+# branches got saved, etc.) -- row count alone is a poor proxy for that.
+DEFAULT_TARGET_MB_PER_FILE = 250.0
 
-def ensure_compacted(year, sample, input_path, compacted_path, client=None):
-    logger.info(f"year: {year}")
-    logger.info(f"samples: {sample}")
-    logger.info(f"input_path: {input_path}")
-    logger.info(f"Checking compacted dataset: {compacted_path}")
 
-    if not os.path.exists(compacted_path):
-        logger.info("No compacted dataset exists")
-        logger.debug(f"Compacted dataset not found: {compacted_path}")
+def _get_file_rows_and_bytes(path):
+    """Return (path, num_rows, total_uncompressed_bytes) from parquet metadata,
+    without reading the actual column data."""
+    meta = pq.ParquetFile(path).metadata
+    total_bytes = sum(meta.row_group(i).total_byte_size for i in range(meta.num_row_groups))
+    return path, meta.num_rows, total_bytes
 
-        orig_path = os.path.join(input_path, sample)
-        if not os.path.exists(orig_path):
-            logger.info(f"Original data not found at {orig_path}. Skipping.")
-            return
+def ensure_compacted(
+    year, sample, input_path, compacted_path, client=None,
+    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE,
+):
+    """Compact `sample`'s stage-1 parquet output into fewer, larger files.
 
-        logger.debug(f"Reading data from {orig_path}")
-        # check if any parquet files exist (recursively)
-        parquet_files = glob.glob(os.path.join(orig_path, "**", "*.parquet"), recursive=True)
+    Returns a short status string for the caller to tally: "compacted",
+    "already_exists", "no_input_dir", "no_files", or "no_rows".
+    """
+    logger.debug(f"year: {year}, sample: {sample}, input_path: {input_path}")
 
-        if len(parquet_files) == 0:
-            logger.warning(f"No parquet files found under {orig_path}. Skipping.")
-            return
+    if os.path.exists(compacted_path):
+        logger.info(f"[{sample}] already compacted, skipping ({compacted_path})")
+        return "already_exists"
 
-        futures = client.map(_get_num_rows, parquet_files)
-        total_rows = sum(client.gather(futures))
+    logger.debug(f"Compacted dataset not found: {compacted_path}")
 
-        if total_rows == 0:
-            logger.warning(f"No rows found in parquet files under {orig_path}. Skipping.")
-            return
+    orig_path = os.path.join(input_path, sample)
+    if not os.path.exists(orig_path):
+        logger.info(f"[{sample}] no stage-1 output at {orig_path}, skipping")
+        return "no_input_dir"
 
-        if ("vbf_powheg" in sample):
-            logger.warning(f"Sample {sample} has high density (e.g. vbf signal), so, using a smaller maximum row count (10k) per compacted file.")
-            # max_num_of_rows = 100_000
-            max_num_of_rows = 10_000
-        elif ("top" in sample.lower()) or ("ttjets" in sample.lower()):
-            logger.warning(f"Sample {sample} has high memory usage (e.g. st_tchannel_antitop), so, using a smaller maximum row count per compacted file.")
-            max_num_of_rows = 1_000
-        else:
-            # max_num_of_rows = 300_000
-            max_num_of_rows = 30_000
+    logger.debug(f"Reading data from {orig_path}")
+    # check if any parquet files exist (recursively)
+    parquet_files = glob.glob(os.path.join(orig_path, "**", "*.parquet"), recursive=True)
 
-        target_n_final_files = min(
-            len(parquet_files),
-            max(1, math.ceil(total_rows / max_num_of_rows)),
-        )
-        logger.info(
-            "Compacting %s rows from %s parquet files to %s final files",
-            total_rows,
-            len(parquet_files),
-            target_n_final_files,
-        )
-        parquet_files = sorted(parquet_files)
-        futures = client.map(_get_file_info, parquet_files) # TODO: merge _get_num_rows and _get_file_info, since they do the same thing.
-        file_infos = client.gather(futures)
-        grouped_files = group_parquet_files(file_infos, target_n_final_files)
-        # print(f"Grouped files: {grouped_files}")
-        logger.info(
-            "Writing compacted dataset as %s parquet files",
-            len(grouped_files),
-        )
-        os.makedirs(compacted_path, exist_ok=True)
-        if client is None:
-            logger.warning("No Dask client provided; writing compacted dataset sequentially")
-            results = [
-                write_compacted_group(idx, group_files, compacted_path)
-                for idx, group_files in enumerate(grouped_files)
-            ]
-        else:
-            n_workers = len(client.scheduler_info().get("workers", {}))
-            logger.info("Writing compacted dataset with Dask client (%s workers)", n_workers)
-            futures = [
-                client.submit(
-                    write_compacted_group,
-                    idx,
-                    group_files,
-                    compacted_path,
-                    pure=False, # Since it performs I/O, do not optimize it away as a reusable pure computation.
-                )
-                for idx, group_files in enumerate(grouped_files)
-            ]
-            results = client.gather(futures)
+    if len(parquet_files) == 0:
+        logger.warning(f"[{sample}] no parquet files found under {orig_path}, skipping")
+        return "no_files"
 
-        for idx, n_files, n_rows, output_path in sorted(results):
-            logger.debug(
-                "Finished compacted part %s with %s input files and %s rows at %s",
-                idx,
-                n_files,
-                n_rows,
-                output_path,
-            )
-        logger.info("Dataset successfully compacted.")
+    t_start = time.perf_counter()
+    parquet_files = sorted(parquet_files)
+    futures = client.map(_get_file_rows_and_bytes, parquet_files)
+    file_infos = client.gather(futures)
+    total_rows = sum(rows for _, rows, _ in file_infos)
+    total_bytes = sum(nbytes for _, _, nbytes in file_infos)
+
+    if total_rows == 0:
+        logger.warning(f"[{sample}] no rows found in parquet files under {orig_path}, skipping")
+        return "no_rows"
+
+    avg_bytes_per_row = total_bytes / total_rows
+    target_bytes_per_file = target_mb_per_file * 1024 * 1024
+    max_num_of_rows = max(1, round(target_bytes_per_file / avg_bytes_per_row))
+    size_note = f"~{avg_bytes_per_row:.0f} B/row -> {max_num_of_rows:,} rows/file for {target_mb_per_file:.0f}MB target"
+
+    target_n_final_files = min(
+        len(parquet_files),
+        max(1, math.ceil(total_rows / max_num_of_rows)),
+    )
+    grouped_files = group_parquet_files(file_infos, target_n_final_files)
+
+    os.makedirs(compacted_path, exist_ok=True)
+    if client is None:
+        n_workers_note = "sequentially, no Dask client"
+        results = [
+            write_compacted_group(idx, group_files, compacted_path)
+            for idx, group_files in enumerate(grouped_files)
+        ]
     else:
-        logger.warning(f"Compacted dataset already exists at {compacted_path}")
+        n_workers = len(client.scheduler_info().get("workers", {}))
+        n_workers_note = f"{n_workers} workers"
+        futures = [
+            client.submit(
+                write_compacted_group,
+                idx,
+                group_files,
+                compacted_path,
+                pure=False, # Since it performs I/O, do not optimize it away as a reusable pure computation.
+            )
+            for idx, group_files in enumerate(grouped_files)
+        ]
+        results = client.gather(futures)
+
+    for idx, n_files, n_rows, output_path in sorted(results):
+        logger.debug(
+            "Finished compacted part %s with %s input files and %s rows at %s",
+            idx,
+            n_files,
+            n_rows,
+            output_path,
+        )
+
+    elapsed = time.perf_counter() - t_start
+    logger.info(
+        "[%s] %s rows, %s files -> %s files (%s), %s, done in %.1fs",
+        sample,
+        f"{total_rows:,}",
+        len(parquet_files),
+        len(grouped_files),
+        n_workers_note,
+        size_note,
+        elapsed,
+    )
+    return "compacted"
 
 def add_dnn_score(events_partition,
                 model_trained_path,
@@ -357,6 +369,7 @@ def compact_and_add_dnn_score(
     fix_dimuon_mass=False,
     model_tag="",
     client=None,
+    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE,
 ):
     compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
 
@@ -364,20 +377,20 @@ def compact_and_add_dnn_score(
     compacted_dir_tagged = f"{compacted_dir_tagged}_FixDimuonMass" if fix_dimuon_mass else compacted_dir_tagged
     compacted_path_DNN = os.path.join(compacted_dir_tagged, sample, "0")
 
-    logger.info(f"Checking compacted dataset for: {compacted_path}")
-
     # compact the dataset
-    ensure_compacted(year, sample, input_path, compacted_path, client=client)
+    status = ensure_compacted(
+        year, sample, input_path, compacted_path, client=client,
+        target_mb_per_file=target_mb_per_file,
+    )
 
     # Add the DNN score to the compacted dataset
     if not add_dnn_score_flag:
-        logger.info("Skipping DNN score addition as add_dnn_score is False.")
-        return
+        return status
 
-    logger.info(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
+    logger.debug(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
     if not os.path.exists(compacted_path):
         logger.warning(f"Compacted dataset missing at {compacted_path}. Skipping DNN score addition.")
-        return
+        return status
     # Load the compacted dataset
     logger.debug(f"Loading compacted dataset from {compacted_path}")
     events = dak.from_parquet(compacted_path)
@@ -426,6 +439,7 @@ def compact_and_add_dnn_score(
     # Save the updated events with DNN score to the compacted dataset
     events.to_parquet(compacted_path_DNN)
     logger.info(f"Updated dataset with DNN score saved to {compacted_path_DNN}")
+    return status
 
 
 if __name__ == "__main__":
@@ -446,6 +460,16 @@ if __name__ == "__main__":
         "--add_dnn_score",
         action="store_true",
         help="Add DNN score to the compacted dataset"
+    )
+    parser.add_argument(
+        "--target-mb-per-file",
+        type=float,
+        default=DEFAULT_TARGET_MB_PER_FILE,
+        help=(
+            "Target uncompressed size (MB) per compacted output file. Rows-per-file "
+            "is derived per sample from its actual average row size, instead of a "
+            "fixed row count."
+        ),
     )
     args = parser.parse_args()
 
@@ -470,26 +494,45 @@ if __name__ == "__main__":
     logger.info(f"Compacted directory set to: {args.compacted_dir}")
 
     samples = os.listdir(args.input_path)
-    for sample in tqdm(samples, desc="Processing samples"):
+    t_run_start = time.perf_counter()
+    status_counts = {}
+    failed_samples = []
+    for i, sample in enumerate(tqdm(samples, desc="Processing samples"), start=1):
         # Uncomment below lines to filter specific samples for testing
         # if sample != "vbf_powheg_dipole": continue
         # if "MiNNLO" not in sample: continue
         # if "dy_VBF_filter" not in sample:
         # continue
         # if "DY" not in sample: continue
-        print("\n\n")
-        logger.info(f"Processing sample: {sample}")
-        compact_and_add_dnn_score(
-            args.year,
-            sample,
-            args.input_path,
-            args.compacted_dir,
-            args.model_path,
-            args.add_dnn_score,
-            args.save_postfix,
-            args.fix_dimuon_mass,
-            args.model_tag,
-            client=client,
-        )
+        tqdm.write(f"--- [{i}/{len(samples)}] {sample} ---")
+        try:
+            status = compact_and_add_dnn_score(
+                args.year,
+                sample,
+                args.input_path,
+                args.compacted_dir,
+                args.model_path,
+                args.add_dnn_score,
+                args.save_postfix,
+                args.fix_dimuon_mass,
+                args.model_tag,
+                client=client,
+                target_mb_per_file=args.target_mb_per_file,
+            )
+        except Exception:
+            logger.exception(f"[{sample}] failed")
+            status = "failed"
+            failed_samples.append(sample)
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    elapsed = time.perf_counter() - t_run_start
+    logger.info(
+        "Compaction summary: %s samples in %.1fs -> %s",
+        len(samples),
+        elapsed,
+        ", ".join(f"{k}={v}" for k, v in sorted(status_counts.items())),
+    )
+    if failed_samples:
+        logger.warning("Failed samples: %s", ", ".join(failed_samples))
 
     close_dask_client()
