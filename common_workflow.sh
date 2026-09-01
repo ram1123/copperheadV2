@@ -177,8 +177,8 @@ load_year_maps() {
         # year_data_map["2017"]=""
         # year_data_map["2018"]=""
         # year_data_map["2022postEE"]=""
-        # bkg_groups=""
-        # sig_groups="Higgs"
+        bkg_groups=""
+        sig_groups=""
     fi
 }
 
