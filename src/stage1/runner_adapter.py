@@ -4,6 +4,7 @@ import awkward as ak
 from coffea.processor import ProcessorABC
 
 from src.stage1.cutflow_io import write_cutflow_outputs
+from src.stage1.lumi_io import write_processed_lumis
 
 
 class CopperheadRunnerAdapter(ProcessorABC):
@@ -81,6 +82,20 @@ class CopperheadRunnerAdapter(ProcessorABC):
         if self._isCutflow and hasattr(processor, "cutflow"):
             write_cutflow_outputs(
                 processor.cutflow,
+                self._save_path,
+                events.metadata["dataset"],
+                shard_id,
+            )
+
+        # "processed lumi" tracking (data only to ensure the processed lumi matches
+        # the golden json). It is built from the raw input events of this chunk, not
+        # the post-selection skim, so it reflects what was actually read/run over
+        # -- reaching this line means the chunk completed successfully. Per-shard
+        # files get merged + range-compressed by scripts/build_processed_lumi_json.py.
+        if not events.metadata.get("is_mc", True):
+            write_processed_lumis(
+                events.run,
+                events.luminosityBlock,
                 self._save_path,
                 events.metadata["dataset"],
                 shard_id,

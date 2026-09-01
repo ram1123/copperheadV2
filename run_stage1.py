@@ -29,6 +29,7 @@ from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import absolutize_config, get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from scripts.build_processed_lumi_json import build_report as build_processed_lumi_report
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
 from pathlib import Path
@@ -43,11 +44,12 @@ np.set_printoptions(threshold=sys.maxsize)
 
 ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
 
+MAX_FILE_LEN = 50000
 DATASET_ELEMENT_LIMITS = {
-    "data_": 900,  # None means no limit (use uproot's default behavior)
-    "dy": 500,
-    "ttjets_dl": 500,
-    "ttjets_sl": 500,
+    "data_": MAX_FILE_LEN,  # None means no limit (use uproot's default behavior)
+    "dy": MAX_FILE_LEN,
+    "ttjets_dl": MAX_FILE_LEN,
+    "ttjets_sl": MAX_FILE_LEN,
 }
 
 
@@ -177,7 +179,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         # own worker-loss retry recover transparently.
         executor=coffea_processor_module.DaskExecutor(client=client, status=False),  # reuse existing client
         schema=NanoAODSchema,
-        chunksize=100_000,
+        chunksize=250_000,
         skipbadfiles=False,
     )
 
@@ -254,7 +256,7 @@ if __name__ == "__main__":
         "--max_file_len",
         dest="max_file_len",
         type=int,
-        default = 3000,
+        default = MAX_FILE_LEN,
         help = "How many maximum files to process simultaneously.",
     )
     parser.add_argument(
@@ -394,7 +396,7 @@ if __name__ == "__main__":
                     args.max_file_len = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset][0]]
                     logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
-                    args.max_file_len = 500
+                    args.max_file_len = MAX_FILE_LEN
                 logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
 
                 # split the sample files into smaller chunks of size args.max_file_len
@@ -589,6 +591,20 @@ if __name__ == "__main__":
         out_json_path=os.path.join(start_save_path, "_status", "stage1_summary.json"),
         logger=logger,
     )
+
+    # CRAB-style processed-lumi report: merge the per-chunk processedlumis_*.json
+    # shards (written for data only, see src/stage1/lumi_io.py) into one
+    # processedLumis.json, and check it against this year's certified lumimask
+    # so completeness can be confirmed right after the run instead of as a
+    # separate manual step. Never fails the run itself.
+    try:
+        lumi_report = build_processed_lumi_report(
+            start_save_path,
+            golden_json_path=config.get("lumimask"),
+        )
+        logger.info(f"[processed-lumi report]\n{lumi_report}")
+    except Exception as err:
+        logger.error(f"Processed-lumi report failed (non-fatal): {err}")
 
     close_dask_client()
     logger.info(f"Finished everything in {elapsed} s.")
