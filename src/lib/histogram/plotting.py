@@ -86,8 +86,9 @@ def plotDataMC_compare(
     # -----------------------------------------
     # plot data
     # -----------------------------------------
-    data_hist = data["hist_arr"]
+    data_hist = ak.to_numpy(data["hist_arr"])
     data_hist_err = np.sqrt(data["hist_w2_arr"])
+    data_hist_w2 = np.asarray(data["hist_w2_arr"])
 
     hep.histplot(
         data_hist,
@@ -114,6 +115,17 @@ def plotDataMC_compare(
         bkg_mc_sample_names.append(bkg_mc_sample)
         bkg_MC_hist_l.append(hist_arr)
         bkg_MC_histW2_l.append(hist_w2_arr)
+    # Total bkg MC (summed over samples) and its stat. uncertainty -- computed here,
+    # unconditionally of plot_ratio, since both the ratio panel AND the summary text
+    # file need it.
+    n_bins = len(binning) - 1
+    if len(bkg_MC_hist_l) > 0:
+        bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
+        bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
+    else:
+        bkg_mc_sum = np.zeros(n_bins, dtype=float)
+        bkg_mc_w2_sum = np.zeros(n_bins, dtype=float)
+    bkg_mc_err = np.sqrt(bkg_mc_w2_sum)
     # plot bkg_MC in one go
     color_idx = len(bkg_MC_hist_l)
     hep.histplot(
@@ -158,13 +170,6 @@ def plotDataMC_compare(
     # Data/MC ratio
     # -----------------------------------------
     if plot_ratio:
-        # compute Data/MC ratio
-        # get bkg_MC errors
-        bkg_mc_w2_sum = np.sum(np.asarray(bkg_MC_histW2_l), axis=0)
-        bkg_mc_err = np.sqrt(bkg_mc_w2_sum)
-        # initialize ratio histogram and fill in values
-        data_hist = ak.to_numpy(data_hist)
-        bkg_mc_sum = np.sum(np.asarray(bkg_MC_hist_l), axis=0)
         # instead of zero like we should fill it with NaNs to avoid misleading points at zero. NaNs will not be plotted
         ratio_hist = np.full_like(data_hist, np.nan, dtype=float)
 
@@ -183,6 +188,36 @@ def plotDataMC_compare(
         ratio_err = np.zeros_like(rel_unc_ratio)
         ratio_err[both_pos] = rel_unc_ratio[both_pos] * ratio_hist[both_pos]
         # logger.debug(f"plotDataMC compare ratio_err: {ratio_err}")
+
+        # ---- summary stats for the text file ----
+        # A plain np.sum(ratio_hist) is NaN whenever ANY bin has zero data or zero
+        # MC (ratio_hist is NaN there by design, see above) -- essentially always
+        # true for a validation plot, which is why the old summary was always
+        # "nan". Report nan-aware stats over only the bins that actually have a
+        # defined ratio, plus how many bins were excluded and why.
+        n_bins_total = ratio_hist.size
+        n_bins_used = int(np.count_nonzero(both_pos))
+        n_bins_zero_data = int(np.count_nonzero(~data_pos & mc_pos))
+        n_bins_zero_mc = int(np.count_nonzero(data_pos & ~mc_pos))
+        n_bins_zero_both = int(np.count_nonzero(~data_pos & ~mc_pos))
+        if n_bins_used > 0:
+            ratio_mean = float(np.mean(ratio_hist[both_pos]))
+            ratio_std = float(np.std(ratio_hist[both_pos]))
+            ratio_median = float(np.median(ratio_hist[both_pos]))
+        else:
+            ratio_mean = ratio_std = ratio_median = float("nan")
+        # chi2 between data and MC, restricted to bins where both are defined
+        # (skips bins with zero MC or zero data, where a per-bin comparison isn't
+        # meaningful anyway)
+        if n_bins_used > 0:
+            chi2_denom = data_hist_err[both_pos] ** 2 + bkg_mc_err[both_pos] ** 2
+            chi2_per_bin = (data_hist[both_pos] - bkg_mc_sum[both_pos]) ** 2
+            chi2_ok = chi2_denom > 0
+            chi2 = float(np.sum(chi2_per_bin[chi2_ok] / chi2_denom[chi2_ok]))
+            chi2_ndof = int(np.count_nonzero(chi2_ok))
+        else:
+            chi2 = float("nan")
+            chi2_ndof = 0
 
         hep.histplot(ratio_hist,
                      bins=binning, histtype='errorbar', yerr=ratio_err,
@@ -284,6 +319,7 @@ def plotDataMC_compare(
     # -----------------------------------------
     # Separation power, d=\frac{1}{2}\int{|s(x)~-~b(x)|}$, where $s(x)$ and $b(x)$ are normalized signal and background distributions.
     logger.debug("Computing separation power for signal samples...")
+    separation_power = {}  # sig_name -> d_val, also reused by the summary text file
     if len(sig_MC_dict) > 0 and len(bkg_MC_hist_l) > 0:
         # bin widths for integral
         widths = np.diff(binning)
@@ -308,6 +344,7 @@ def plotDataMC_compare(
             if bkg_density is not None and sig_norm > 0:
                 sig_density = sig_arr / sig_norm
                 d_val = 0.5 * np.sum(np.abs(sig_density - bkg_density) * widths)
+            separation_power[sig_name] = d_val
 
             # Text placement
             if log_scale:
@@ -344,20 +381,76 @@ def plotDataMC_compare(
     plt.savefig(save_full_path)
     plt.close(fig)
 
-    # Save the raw event number, yield  for each MC and data to the text file along with the data/mc ratio value
+    # Save the raw event number/yield for each MC and data to the text file, along
+    # with an enriched summary of the Data/MC agreement.
+    #
+    # NOTE on the old "Data/MC ratio (Sum ratio_hist)" metric: ratio_hist is
+    # deliberately filled with NaN in bins where data or MC is zero (so those
+    # bins don't get misleadingly plotted at 0), and plain np.sum() propagates
+    # NaN from a single such bin to the whole sum -- which is essentially
+    # guaranteed for a validation histogram with any sparse bins, hence the
+    # "nan" that always showed up. Replaced below with an integrated ratio
+    # (sum Data / sum MC, well-defined regardless of per-bin sparsity) plus
+    # nan-aware per-bin ratio stats that explicitly report how many bins were
+    # excluded and why.
+    data_total = float(np.sum(data_hist))
+    data_total_err = float(np.sqrt(np.sum(data_hist_w2)))
+    mc_total = float(np.sum(bkg_mc_sum))
+    mc_total_err = float(np.sqrt(np.sum(bkg_mc_w2_sum)))
+
     with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
-        f.write(f"Data: {np.sum(data_hist)}\n")
-        for bkg_mc_sample, bkg_mc_hist in zip(bkg_mc_sample_names, bkg_MC_hist_l):
-            f.write(f"{bkg_mc_sample}: {np.sum(bkg_mc_hist):.2f}\n")
+        f.write(f"# {title}\n" if title else "")
+        f.write(f"n_bins: {n_bins}\n")
+        f.write("\n[Yields: value +/- stat. unc. (fraction of total bkg MC)]\n")
+        f.write(f"Data: {data_total:.2f} +/- {data_total_err:.2f}\n")
+        for bkg_mc_sample, bkg_mc_hist, bkg_mc_histw2 in zip(
+            bkg_mc_sample_names, bkg_MC_hist_l, bkg_MC_histW2_l
+        ):
+            sample_yield = float(np.sum(bkg_mc_hist))
+            sample_err = float(np.sqrt(np.sum(bkg_mc_histw2)))
+            frac = f"{100 * sample_yield / mc_total:.1f}%" if mc_total > 0 else "N/A"
+            f.write(f"{bkg_mc_sample}: {sample_yield:.2f} +/- {sample_err:.2f} ({frac})\n")
+        f.write(f"Total bkg MC: {mc_total:.2f} +/- {mc_total_err:.2f}\n")
+
         if len(sig_MC_dict.keys()) > 0:
-            f.write(f"{sig_mc_sample}: {np.sum(sig_MC_hist):.2f}\n")
+            f.write("\n[Signal]\n")
+            for sig_name, sig_mc_sample_arrs in sig_MC_dict.items():
+                sig_yield = float(np.sum(sig_mc_sample_arrs["hist_arr"]))
+                sig_err = float(np.sqrt(np.sum(sig_mc_sample_arrs["hist_w2_arr"])))
+                d_val = separation_power.get(sig_name, np.nan)
+                d_str = f"{d_val:.3f}" if np.isfinite(d_val) else "N/A"
+                f.write(
+                    f"{sig_name}: {sig_yield:.2f} +/- {sig_err:.2f} "
+                    f"(separation power d = {d_str})\n"
+                )
+
+        f.write("\n[Data/MC agreement]\n")
+        if mc_total > 0:
+            ratio_int = data_total / mc_total
+            ratio_int_err = ratio_int * np.sqrt(
+                (data_total_err / data_total) ** 2 + (mc_total_err / mc_total) ** 2
+            ) if data_total > 0 else float("nan")
+            f.write(
+                f"Integrated Data/MC ratio (sum Data / sum bkg MC): "
+                f"{ratio_int:.4f} +/- {ratio_int_err:.4f}\n"
+            )
+        else:
+            f.write("Integrated Data/MC ratio (sum Data / sum bkg MC): N/A (total bkg MC is 0)\n")
+
         if plot_ratio:
             f.write(
-                f"Data/MC ratio (Sum ratio_hist): {np.sum(ratio_hist)}\n"
+                f"Per-bin ratio: mean = {ratio_mean:.4f}, median = {ratio_median:.4f}, "
+                f"std = {ratio_std:.4f}, over {n_bins_used}/{n_bins_total} bins\n"
             )
             f.write(
-                f"Data/MC ratio (Sum ratio_hist then divide by number of bins): {np.sum(ratio_hist) / len(binning):.2f}\n"
+                f"Bins excluded from per-bin ratio: {n_bins_total - n_bins_used} total "
+                f"(zero data only: {n_bins_zero_data}, zero MC only: {n_bins_zero_mc}, "
+                f"both zero: {n_bins_zero_both})\n"
             )
+            if chi2_ndof > 0:
+                f.write(f"Data vs. MC chi2/ndof (bins with data>0 and MC>0): {chi2:.2f} / {chi2_ndof} = {chi2 / chi2_ndof:.2f}\n")
+            else:
+                f.write("Data vs. MC chi2/ndof: N/A (no bins with both data>0 and MC>0)\n")
     # logger.debug(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 
