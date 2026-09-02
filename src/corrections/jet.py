@@ -681,8 +681,10 @@ def applyHemVeto(jets, run, event_num, config, is_mc: bool, NanoAODv: int):
 def getJecDataTag(run, jec_data_tags, NanoAODv=None):
     logger.debug(f"run: {run}")
     logger.debug(f"jec_data_tags: {jec_data_tags}")
-    if (not isinstance(jec_data_tags, str)) and (NanoAODv is not None): # if it's a dictionary like
-        jec_data_tags = jec_data_tags[f"nanoAODv{NanoAODv}"]
+    if (not isinstance(jec_data_tags, str)) and (NanoAODv is not None):
+        nanoaod_key = f"nanoAODv{NanoAODv}"
+        if nanoaod_key in jec_data_tags:
+            jec_data_tags = jec_data_tags[nanoaod_key] # if nanoAODv is specified, use the corresponding jec_data_tags
     logger.debug(f"jec_data_tags: {jec_data_tags}")
     for jec_tag, jec_run_l in jec_data_tags.items():
         for jec_run in jec_run_l:
