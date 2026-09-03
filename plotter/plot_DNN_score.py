@@ -6,6 +6,7 @@ import sys
 import os
 import numpy as np
 import json
+import yaml
 from collections import OrderedDict
 from modules.selection import filterRegion
 import glob
@@ -134,7 +135,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         lumi = lumi,
         status = status,
         log_scale = do_logscale,
-        plot_ratio_range = "auto", # options: "default" or "auto" or list with format [0.8, 1.2]
+        plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
     )
     plotDataMC_compare(
         binning,
@@ -148,7 +149,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         lumi = lumi,
         status = status,
         log_scale = False,
-        plot_ratio_range = "auto", # options: "default" or "auto" or list with format [0.8, 1.2]
+        plot_ratio_range = "default", # options: "default" or "auto" or list with format [0.8, 1.2]
     )
 
 
@@ -163,22 +164,55 @@ def getPickledHist_byFname(pickled_filelist, load_path):
 
     return return_dict
 
-def arrangeHist_bySampleGroup(pickled_hist_dict):
-    sample_group_dict = {  # keys are sample group names and values are string indicators
+def load_group_process_indicators(sample_config_path):
+    """
+    Build {plot_group_name: [process_name, ...]} indicators from a
+    samples.yaml-style config (see configs/samples/samples.yaml), instead of
+    a hardcoded list that silently drops any process added/renamed later
+    (e.g. MiNNLO DY: dyTo2Mu_M-50_MiNNLO, dyTo2Mu_M-100to200_MiNNLO).
+
+    Indicators are the union of a group's default `processes` and every
+    year's `processes_per_year` override, across ALL years in the file --
+    not just one requested year -- since a stage2 histogram directory can
+    mix multiple years (e.g. --year run2 globs 2016preVFP/2016postVFP/2017/
+    2018 together) and a process name means the same sample in any year.
+    """
+    with open(sample_config_path, "r") as f:
+        cfg = yaml.safe_load(f)
+
+    def _union_group_processes(section):
+        groups = (cfg.get(section) or {}).get("groups", {}) or {}
+        out = {}
+        for group_name, gcfg in groups.items():
+            procs = set(gcfg.get("processes") or [])
+            for year_procs in (gcfg.get("processes_per_year") or {}).values():
+                procs.update(year_procs or [])
+            out[group_name] = sorted(procs)
+        return out
+
+    bkg = _union_group_processes("background")
+    sig = _union_group_processes("signal")
+
+    return {
+        # "data" isn't an MC sample in samples.yaml -- stage2 combines all
+        # data-era files into one "data" histogram, so this stays literal.
         "data": ["data"],
-        "ggH": ["ggh_"],
-        "VBF": ["vbf_"],
-        "DYVBF": ["dy_VBF_filter"],
-        "DY": ["dyTo2L_M-50_incl", "dyTo2Mu_M-50_aMCatNLO"],
-        # "DYJ01": ["DYJ01"],
-        # "DYJ2": ["DYJ2"],
-        "Top": ["ttjets", "top", "st"],
-        "Ewk": ["ewk"],
-        "VV": ["ww_", "wz_"],
-        # "VV": ["ww_", "wz_", "zz"],
-        "VVV": ["www_", "wwz", "wzz", "zzz"],
+        "ggH": sig.get("GGH", []),
+        "VBF": sig.get("VBF", []),
+        "DYVBF": bkg.get("DYVBF", []),
+        "DY": bkg.get("DY", []),
+        "Top": bkg.get("TT", []) + bkg.get("ST", []),
+        "Ewk": bkg.get("EWK", []),
+        "VV": bkg.get("VV", []),
+        "VVV": bkg.get("VVV", []),
     }
 
+
+def arrangeHist_bySampleGroup(pickled_hist_dict, sample_group_dict):
+    """
+    sample_group_dict: {plot_group_name: [process_name, ...]}, as built by
+    load_group_process_indicators().
+    """
     hist_bySampleGroup = {sample_group: [] for sample_group in sample_group_dict.keys()}
     for hist_name, hist_instance in pickled_hist_dict.items():
         # loop over hist_name and add them to the appropriate sample group
@@ -261,6 +295,12 @@ if __name__ == "__main__":
     help="Enable DY vs DY-VBF-filter study mode for grouping and output naming.",
     )
     parser.add_argument(
+        "--sample-config",
+        dest="sample_config",
+        default="configs/samples/samples.yaml",
+        help="Path to the sample configuration YAML file (same one run_stage2_vbf.py uses to resolve MC process groups).",
+    )
+    parser.add_argument(
     "-reg",
     "--region",
     dest="region",
@@ -299,12 +339,13 @@ if __name__ == "__main__":
 
     pickled_hist_dict = getPickledHist_byFname(pickled_filelist, load_path)
     logger.info(f"pickled_hist_dict.keys() : {pickled_hist_dict.keys()}")
-    hist_dict_bySampleGroup = arrangeHist_bySampleGroup(pickled_hist_dict)
+    sample_group_dict = load_group_process_indicators(args.sample_config)
+    logger.info(f"sample_group_dict (from {args.sample_config}) : {sample_group_dict}")
+    hist_dict_bySampleGroup = arrangeHist_bySampleGroup(pickled_hist_dict, sample_group_dict)
     logger.info(f"hist_dict_bySampleGroup.keys() : {hist_dict_bySampleGroup.keys()}")
 
     # read lumi value from configs/parameters/lumi.yaml
     infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
-    import yaml
     with open(infile_lumi, "r") as f:
         lumi_config = yaml.safe_load(f)
     lumi_dict = lumi_config.get("integrated_lumis", {})
@@ -316,8 +357,6 @@ if __name__ == "__main__":
         raise ValueError(f"lumi for year {year} is not defined!")
 
     lumi_val = lumi
-
-    possible_samples = ["data", "ggh", "vbf", "dy", "ewk", "tt", "st", "ww", "wz", "zz","VVV"]
 
     plot_setting_fname = "src/lib/histogram/plot_settings_vbfCat_MVA_input.json"
     with open(plot_setting_fname, "r") as file:

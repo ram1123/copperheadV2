@@ -9,13 +9,21 @@ background:
                 2024:
                     - dyTo2Mu_M-50_aMCatNLO
                 2018:
-                    - dyTo2L_M-50_aMCatNLO
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
                 2017:
-                    - dyTo2L_M-50_aMCatNLO
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
                 2016postVFP:
-                    - dyTo2L_M-50_aMCatNLO
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
                 2016preVFP:
-                    - dyTo2L_M-50_aMCatNLO
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
         DYVBF:
             processes:
                 - dy_VBF_filter

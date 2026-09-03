@@ -24,26 +24,41 @@ DEFAULT_FLOW = True
 #     # "quick_tests/histograms/trained_dnn_groups/with_variations"
 #     "quick_tests/histograms/trained_dnn_groups/nominal"
 # )
+# TEST_HISTOGRAM_BASE = Path(
+#     "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/"
+#     "Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/"
+#     "stage2_histograms/"
+#     "score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc_"
+#     # "Jun22_2026_stage2PR_test"
+#     "Jun22_2026_stage2PR_test_vbf_filter_study_NoSyst"
+# )
+# REFERENCE_HISTOGRAM_BASE = Path(
+#     "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/"
+#     "Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/"
+#     "stage2_histograms/"
+#     "score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc_"
+#     "Jun11_2026_50nTrialsFoldsAll_Max57bins_NoSyst"
+#     # "Jun20_2026_50nTrialsFoldsAll_Max57bins"
+# )
+
 TEST_HISTOGRAM_BASE = Path(
     "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/"
-    "Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/"
+    "Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo/"
     "stage2_histograms/"
-    "score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc_"
-    # "Jun22_2026_stage2PR_test"
-    "Jun22_2026_stage2PR_test_vbf_filter_study_NoSyst"
+    "score_Run2_NanoV15_forVBFChannel_July06_2026_jetUncRedo_Jul04_2026_50nTrialsFoldsAll_Max70bins_NoSyst"
 )
 REFERENCE_HISTOGRAM_BASE = Path(
     "/work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/"
-    "Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/"
+    "Run2_NanoV15_forVBFChannel_June26_2026_jetUnc/"
     "stage2_histograms/"
-    "score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc_"
-    "Jun11_2026_50nTrialsFoldsAll_Max57bins_NoSyst"
-    # "Jun20_2026_50nTrialsFoldsAll_Max57bins"
+    "score_Run2_NanoV15_forVBFChannel_June26_2026_jetUnc_Jul04_2026_50nTrialsFoldsAll_Max70bins_NoSyst"
 )
 
 SAMPLES = (
     "data",
-    "dyTo2L_M-50_aMCatNLO",
+    # "dyTo2L_M-50_aMCatNLO",
+    "dyTo2Mu_M-50_MiNNLO",
+    "dyTo2Mu_M-100to200_MiNNLO",
     "dy_VBF_filter",
     "ttjets_dl",
     "ttjets_sl",

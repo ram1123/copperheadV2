@@ -220,6 +220,16 @@ def build_datacards(var_name, yield_df, parameters):
                 # )
                 datacard.write("---------------\n")
                 # nuisnace edit end ----------------------------
+                if parameters.get("divide_dy_into_matched_jets", False):
+                    datacard.write("\n")
+                    datacard.write(
+                        f"XSecAndNorm{year_savepath}DY01J rateParam * "
+                        "DY_matched01J 1 [0.2,5]\n"
+                    )
+                    datacard.write(
+                        f"XSecAndNorm{year_savepath}DY2J rateParam * "
+                        "DY_matched2J 1 [0.2,5]\n"
+                    )
                 datacard.close()
                 logger.info(f"Saved datacard to {datacard_name}")
 

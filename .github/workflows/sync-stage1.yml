@@ -14,7 +14,10 @@ on:
       - "modules/**"
       - "configs/**"
       - "scripts/sync_parquet_dimuon.py"
+      - "scripts/update_sync_references.sh"
       - "stage1_loop_Improved.sh"
+      - "run_analysis_pipeline.sh"
+      - "common_workflow.sh"
       - "pixi.toml"
       - "pixi.lock"
       - ".github/workflows/**"
@@ -26,7 +29,10 @@ on:
       - "modules/**"
       - "configs/**"
       - "scripts/sync_parquet_dimuon.py"
+      - "scripts/update_sync_references.sh"
       - "stage1_loop_Improved.sh"
+      - "run_analysis_pipeline.sh"
+      - "common_workflow.sh"
       - "pixi.toml"
       - "pixi.lock"
       - ".github/workflows/**"
@@ -41,7 +47,9 @@ jobs:
       matrix:
         year: [2017, 2022preEE]
     env:
-      CONDA_OVERRIDE_CUDA: "12.0"
+      # No CONDA_OVERRIDE_CUDA needed: pixi.toml scopes the CUDA requirement to
+      # environments that include the "cuda" feature, and this workflow only
+      # ever uses "ci" (which doesn't), so it resolves on GPU-less runners as-is.
       ENABLE_DASK_REPORT: "0"
       PYTHONUNBUFFERED: "1"
 
@@ -52,6 +60,7 @@ jobs:
       - name: Install pixi
         uses: prefix-dev/setup-pixi@v0.9.0
         with:
+          environments: ci
           cache: true
           cache-write: true
 
@@ -114,7 +123,7 @@ jobs:
 
       - name: Compare cutflow JSON against references
         run: |
-          pixi run -e ci bash -l << 'BASH_EOF'
+          pixi run -e ci bash -lc '
             set -euo pipefail
             export PYTHONPATH="$PWD:${PYTHONPATH:-}"
 
@@ -166,19 +175,19 @@ jobs:
 
               if [ "${#matches[@]}" -ne 1 ]; then
                 echo "Expected exactly one cutflow JSON for ${sample_name} in ${sample_dir}, found ${#matches[@]}" >&2
-                printf '%s\n' "${matches[@]}" >&2
+                printf "%s\n" "${matches[@]}" >&2
                 exit 1
               fi
 
               echo "[debug] selected cutflow for ${sample_name}: ${matches[0]}" >&2
-              printf '%s\n' "${matches[0]}"
+              printf "%s\n" "${matches[0]}"
             }
 
             normalize_existing_path() {
               local raw_path="$1"
               local cleaned_path
 
-              cleaned_path=$(printf '%s' "${raw_path}" | tr -d '\r\n')
+              cleaned_path=$(printf "%s" "${raw_path}" | tr -d "\r\n")
               if [ ! -e "${cleaned_path}" ] && [[ "${cleaned_path}" == *.jsonn ]] && [ -e "${cleaned_path%n}" ]; then
                 echo "[debug] repairing suspicious .jsonn suffix: ${cleaned_path} -> ${cleaned_path%n}" >&2
                 cleaned_path="${cleaned_path%n}"
@@ -224,7 +233,7 @@ jobs:
               "${vbf_cutflow_ref}" \
               "${vbf_cutflow}" \
               -o diff_cutflow_vbf_${{ matrix.year }}.csv
-          BASH_EOF
+          '
 
       - name: Compare against references
         run: |

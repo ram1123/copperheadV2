@@ -24,6 +24,10 @@ Options:
   -d            Enable debug mode (0/1/2; default: 0)
   -f            Run only 10% of samples for debugging (default: 0)
   -k            Enable Dask/Gateway (default: 0)
+  -P <path>     Override trained DNN model_trained_path used in stage2 (optional)
+  -T <tag>      Override trained DNN training_tag used in stage2 (optional)
+  -R            Relay --rerun to run_stage1.py / scripts/compact_parquet_data.py
+                (bypasses their done markers and reprocesses from scratch)
 EOF
     exit 1
 }
@@ -48,6 +52,9 @@ dask="0"
 cluster_index="0"
 isMC="0"
 isSync="0"
+model_trained_path_override=""
+training_tag_override=""
+rerun="0"
 
 # ----------- Default save paths -----------
 save_path_depot="/depot/cms/hmm/$USER/hmm_ntuples/copperheadV1clean"
@@ -58,9 +65,10 @@ save_path_eos="/store/user/rasharma/hmm/copperheadV1clean"
 save_path="$save_path_work"   # default
 
 # ----------- Parse options -----------
-while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksfS:z" option; do
+while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksfS:zP:T:R" option; do
     case "$option" in
         h) usage ;;
+        R) rerun="1" ;;
         c) datasetYAML="$OPTARG" ;;
         m) mode="$OPTARG" ;;
         v) NanoAODv="$OPTARG" ;;
@@ -80,6 +88,8 @@ while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:ksfS:z" option; do
         f) frac="1" ;;
         S) save_path="$OPTARG" ;;
         z) isSync="1" ;;
+        P) model_trained_path_override="$OPTARG" ;;
+        T) training_tag_override="$OPTARG" ;;
         \?) echo "Invalid option: -$OPTARG" >&2; usage ;;
         :) echo "Option -$OPTARG requires an argument." >&2; usage ;;
     esac
@@ -156,6 +166,7 @@ declare -A data_l_dict=(
 
 # bkg_l="DY TT ST VV EWK VVV"
 bkg_l="DY Top VV EWK VVV"
+# bkg_l="DY Top VV EWK"
 # bkg_l=""
 
 # sig_l="VBF"
@@ -202,6 +213,7 @@ echo "  Output append: $save_postfix"
 echo "  Region: $region"
 echo "  Category: $category"
 echo "  isMC: $isMC"
+echo "  Rerun: $rerun"
 
 
 stage2_years_csv="$(join_by "," "${years[@]}")"
@@ -250,12 +262,15 @@ for year in "${years[@]}"; do
     model_label="${label}"
     # model_dir="${dnn_years_csv//,/-}_${region}_${category}"
     model_dir="2022preEE-2022postEE-2023-2023BPix-2024_h-peak_vbf"
-    training_tag="${dnn_train_label}"
     model_trained_path="./dnn/trained_models/${label}/${model_dir}"
+    training_tag="${dnn_train_label}"
+
+    [[ -n "$model_trained_path_override" ]] && model_trained_path="$model_trained_path_override"
+    [[ -n "$training_tag_override" ]] && training_tag="$training_tag_override"
 
     # ########## Compact command ##########
-    # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path --model_tag $training_tag --add_dnn_score --fix_dimuon_mass --save_postfix $save_postfix "
-    command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path  "
+    command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path -m $model_trained_path --model_tag $training_tag --add_dnn_score --fix_dimuon_mass --save_postfix $save_postfix "
+    # command_compact="python scripts/compact_parquet_data.py -y $year --input_path $save_path  "
 
     # rename "Top" to "TT ST" in the $bkg_l for stage2
     # FIXME: This is a temporary fix, will try to sync the naming convention in the stage2 python script.
@@ -266,7 +281,8 @@ for year in "${years[@]}"; do
 
     # ########## STAGE-2 command ##########
     # use option "--no_variations" with stage2 if you want to run with only nominal weights
-    variation=false
+    # variation=false
+    variation=true
     sig_l_stage2="ggH VBF"
     stage2_year_arg="$year"
     stage2_data_arg="$data_l"
@@ -278,7 +294,7 @@ for year in "${years[@]}"; do
     echo "stage2_data_arg: $stage2_data_arg"
 
     if ${variation}; then
-        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix}"
+        command2="python run_stage2_vbf.py --years $stage2_year_arg -input $save_path -l $label --model_tag $training_tag --model_path $model_trained_path -data $stage2_data_arg -bkg $bkg_l_stage2 -sig $sig_l_stage2 --save_postfix ${save_postfix} " 
         echo "Running stage2 command: $command2"
         command3="python run_stage3_vbf.py --years $year -input $save_path -l $label  --save_postfix ${save_postfix} "
         variation_tag=""
@@ -353,6 +369,10 @@ for year in "${years[@]}"; do
         command5+=" --cluster_index $cluster_index "
         command6+=" --cluster_index $cluster_index "
         command_compact+=" --cluster_index $cluster_index "
+    fi
+    if [[ "$rerun" == "1" ]]; then
+        command1+=" --rerun "
+        command_compact+=" --rerun "
     fi
 
     # ---- Mode switch ----

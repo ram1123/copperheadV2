@@ -3,6 +3,11 @@ import time
 
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
+from stage3.edit_datacard4DY_matchedJets import (
+    has_matched_jet_histograms,
+    split_dy_grouping,
+    stage2_histogram_directory,
+)
 from stage3.make_datacards import build_datacards
 from stage3.make_templates import to_templates
 from modules.sample_config import get_all_dicts
@@ -19,9 +24,12 @@ args = parser.parse_args()
 
 years = args.years if args.years else [args.year]
 
-year = years[0]
-if "2016" in year:
-    year = "2016"
+# Use the exact year string (e.g. "2016preVFP", "2016postVFP") to resolve
+# sample groups, instead of collapsing to a bare "2016" that matches no
+# `processes_per_year` key in samples.yaml and silently falls back to
+# group defaults that may not exist on disk (e.g. DY's "dyTo2L_M-50_incl",
+# EWK's "ewk_mmjj_mll_105_160" for 2016preVFP/2016postVFP).
+year = years[0] # TODO: update this fixed year portion in the future into something more robust.
 
 stage2_model_suffix = args.save_postfix if args.save_postfix else ""
 if args.do_vbf_filter_study:
@@ -64,9 +72,29 @@ _, _, parameters["grouping"] = get_all_dicts(
     year=year,
 )
 
+stage2_histogram_path = stage2_histogram_directory(
+    args.input_path,
+    f"score_{args.label}",
+    stage2_model_suffix,
+    args.no_variations,
+    year,
+)
+divide_dy_into_matched_jets = has_matched_jet_histograms(stage2_histogram_path)
+parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets
+if divide_dy_into_matched_jets:
+    parameters["grouping"] = split_dy_grouping(parameters["grouping"])
+logger.info(
+    "divide_dy_into_matched_jets=%s (stage2 directory: %s)",
+    divide_dy_into_matched_jets,
+    stage2_histogram_path,
+)
 
 parameters["plot_groups"] = {
-    "stack": ["DY", "EWK", "TT+ST", "VV", "VVV"],
+    "stack": (
+        ["DY_matched01J", "DY_matched2J", "EWK", "TT+ST", "VV", "VVV"]
+        if divide_dy_into_matched_jets
+        else ["DY", "EWK", "TT+ST", "VV", "VVV"]
+    ),
     "step": ["VBF", "ggH"],
     "errorbar": ["Data"],
 }

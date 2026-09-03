@@ -100,10 +100,10 @@ switches:
         "2023BPix": true
         "2024": true
     do_remove_dy_M100to200: # Remove 100 to 200 mll region from inclusive DY.
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -179,6 +179,18 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+    do_met_xy_correction: # PuppiMET xy-shift (phi modulation) correction, see src/corrections/met_xy_correction.py
+        # Full Run 2 UL enabled (implement-met-phi-modulation-correction task,
+        # Run3 is not implemented (no sourced coefficients).
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
         # Currently, updated the pT to 30 GeV
         '2016preVFP': false
@@ -353,10 +365,10 @@ switches:
         "2023BPix": false
         "2024": false
     do_qgl_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         # Run-3: Recommendation does not exists, yet.
         '2022preEE': false
         '2022postEE': false

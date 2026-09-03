@@ -30,6 +30,7 @@ python train_dnn.py \
 import argparse
 import copy
 import json
+import math
 import os
 import random
 import sys
@@ -46,6 +47,7 @@ import torch
 import torch.nn as nn
 import yaml
 from modules.git_utils import get_git_commit, get_git_state
+from modules.systematics import VARIATION_COL_SEP
 from modules.utils import logger
 from sklearn.metrics import (
     average_precision_score,
@@ -370,6 +372,21 @@ def set_seed(seed: int) -> None:
 # Dataset / Dataloader
 # --------------------------------------------------------------------------------------
 class ParquetDataset(Dataset):
+    """Nominal fold data, optionally carrying systematic-variation inputs.
+
+    ``variation_spec`` is ``[(variation_name, {feature: augmented_column}), ...]``.
+    When it is ``None`` (the default, and always the case without
+    ``--use_adversarial``) this class behaves exactly as before and yields the
+    original 3-tuple, so the non-adversarial training path is untouched.
+
+    Varied inputs are *not* materialised as a dense ``[N, V, F]`` block: a JEC
+    variation only shifts the jet-side features and ``mu_roccor`` only the
+    dimuon-side ones, so only the shifted columns are stored and the rest of each
+    variation row is the nominal row. A feature absent from a variation's map is
+    therefore identical to nominal by construction and contributes exactly zero
+    to the consistency term -- the same fallback Stage-2 applies at inference.
+    """
+
     def __init__(
         self,
         df: pd.DataFrame,
@@ -377,6 +394,7 @@ class ParquetDataset(Dataset):
         label_col: str,
         weight_col: str,
         dtype: str,
+        variation_spec: Optional[List[Tuple[str, Dict[str, str]]]] = None,
     ) -> None:
         self.features = features
         self.label_col = label_col
@@ -390,14 +408,71 @@ class ParquetDataset(Dataset):
         self.y = y
         self.w = w
 
+        self.variation_names: List[str] = []
+        self.n_variations = 0
+        if variation_spec:
+            feat_pos = {f: i for i, f in enumerate(features)}
+            cols: List[str] = []
+            slot_idx: List[int] = []
+            feat_idx: List[int] = []
+            for vi, (vname, fmap) in enumerate(variation_spec):
+                self.variation_names.append(vname)
+                for feat, col in sorted(fmap.items()):
+                    if feat not in feat_pos:
+                        raise KeyError(
+                            f"Variation '{vname}' maps feature '{feat}' which is not a "
+                            "training feature."
+                        )
+                    if col not in df.columns:
+                        raise KeyError(
+                            f"Missing variation column '{col}' (variation '{vname}', "
+                            f"feature '{feat}') in the fold parquet. Point --data-dir at "
+                            "a directory produced with --include-systematic-variations."
+                        )
+                    cols.append(col)
+                    slot_idx.append(vi)
+                    feat_idx.append(feat_pos[feat])
+
+            self.n_variations = len(variation_spec)
+            self.var_slot_idx = np.asarray(slot_idx, dtype=np.int64)
+            self.var_feat_idx = np.asarray(feat_idx, dtype=np.int64)
+            xvar = df[cols].to_numpy(dtype=x.dtype, copy=True)
+
+            # NaN/Inf guard: a non-finite varied value falls back to its nominal
+            # counterpart, which makes that (event, variation, feature) contribute
+            # exactly zero to the consistency term rather than poisoning the loss.
+            bad = ~np.isfinite(xvar)
+            n_bad = int(bad.sum())
+            if n_bad:
+                nominal_broadcast = self.x[:, self.var_feat_idx]
+                xvar[bad] = nominal_broadcast[bad]
+                logger.warning(
+                    "[dataset] %d non-finite varied values replaced by nominal "
+                    "(%.3g%% of %d).",
+                    n_bad,
+                    100.0 * n_bad / max(xvar.size, 1),
+                    xvar.size,
+                )
+            self.xvar = xvar
+
     def __len__(self) -> int:
         return int(self.x.shape[0])
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int):
+        if self.n_variations == 0:
+            return (
+                torch.from_numpy(self.x[idx]),
+                torch.from_numpy(np.array(self.y[idx])),
+                torch.from_numpy(np.array(self.w[idx])),
+            )
+        xi = self.x[idx]
+        xv = np.repeat(xi[None, :], self.n_variations, axis=0)
+        xv[self.var_slot_idx, self.var_feat_idx] = self.xvar[idx]
         return (
-            torch.from_numpy(self.x[idx]),
+            torch.from_numpy(xi),
             torch.from_numpy(np.array(self.y[idx])),
             torch.from_numpy(np.array(self.w[idx])),
+            torch.from_numpy(xv),
         )
 
 
@@ -561,6 +636,233 @@ def make_loss_weights(
         else:
             w_eff = torch.ones_like(w_eff)
     return w_eff
+
+
+def training_loop_loss(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    wb: torch.Tensor,
+    pos_weight: Optional[torch.Tensor],
+    label_smoothing: float,
+    normalize_in_batch: bool,
+) -> torch.Tensor:
+    """`original_loss` as the training loop has always computed it.
+
+    This is a verbatim extraction of the inline block that used to sit in
+    `train_one_fold`'s batch loop -- same calls, same operand order -- so the
+    non-adversarial path stays bit-for-bit identical while the adversarial terms
+    reuse exactly the same functional form.
+
+    NOTE (pre-existing behaviour, deliberately preserved): `bce_with_logits_loss`
+    with `weights=None` already returns the *scalar* mean BCE, so multiplying by
+    `loss_w` and dividing by `sum|loss_w|` cancels and this reduces to the
+    unweighted mean. The per-event weights therefore do not currently reach the
+    training loss (they do reach `evaluate()`). Changing that would move the
+    baseline and is out of scope here; see assumptions.md.
+    """
+    loss_raw = bce_with_logits_loss(
+        logits=logits,
+        targets=targets,
+        weights=None,
+        pos_weight=pos_weight,
+        label_smoothing=label_smoothing,
+        normalize_in_batch=False,
+    )
+    loss_w = make_loss_weights(
+        w=wb,
+        normalize_in_batch=normalize_in_batch,
+        clip_abs_max=None,
+    )
+    return torch.sum(loss_raw * loss_w) / (torch.sum(torch.abs(loss_w)) + 1e-12)
+
+
+@dataclass(frozen=True)
+class AdversarialConfig:
+    """Settings for the systematics-consistency term. See assumptions.md."""
+
+    lam: float
+    #: stop-gradient on the nominal prediction used as the consistency target
+    detach_nominal: bool
+    #: "inherit" reuses cfg.label_smoothing for original_loss(pred_i, pred_nom);
+    #: "none" uses 0.0 there (the soft target is already a probability)
+    consistency_label_smoothing: str
+    #: number of variations per forward chunk; <=0 means all in one chunk
+    variation_chunk: int
+    #: VARIANT B -- restrict the consistency term to events whose nominal score is
+    #: high, `arctanh(p_nominal) > high_score_cut`. The significance comes from the
+    #: top score bins, so decorrelating across the bulk spends discrimination where
+    #: it cannot pay. None disables the cut.
+    high_score_cut: Optional[float] = None
+    #: STEP 2 of the three-step schedule -- keep only `original_loss(pred_i, label)`
+    #: and drop the consistency term entirely, i.e. the variations are trained
+    #: against the truth label alongside the nominal.
+    label_only: bool = False
+    #: Apply `high_score_cut` to the label term as well. The three-step schedule
+    #: writes `[score_cut]` on every term inside the lambda sum, whereas the
+    #: original variant-B formula masked the consistency term alone; this flag is
+    #: what separates the two readings. No effect when `high_score_cut` is None.
+    mask_label_term: bool = False
+
+
+def adversarial_penalty(
+    logits_var: torch.Tensor,
+    p_nominal: torch.Tensor,
+    yb: torch.Tensor,
+    wb: torch.Tensor,
+    pos_weight: Optional[torch.Tensor],
+    cfg: TrainConfig,
+    adv: AdversarialConfig,
+) -> torch.Tensor:
+    """`sum_i [ 2*original_loss(pred_i, pred_nominal) + original_loss(pred_i, label) ]`.
+
+    `logits_var` is `[B, V]`; `p_nominal` is `[B]` in (0,1). `up` and `down` are
+    independent entries of the V axis, so the sum treats them independently, as
+    the task formula implies. The sum is plain (un-normalised).
+
+    Two forms are selectable, corresponding to the steps of the three-step
+    schedule:
+
+    * `label_only`      -> `sum_i original_loss(pred_i, label)`            (step 2)
+    * default           -> the full formula above                          (step 3)
+
+    `high_score_cut` masks the consistency term always, and the label term as well
+    when `mask_label_term` is set.
+    """
+    consistency_ls = (
+        cfg.label_smoothing if adv.consistency_label_smoothing == "inherit" else 0.0
+    )
+
+    # VARIANT B: keep only the high-score events in the consistency term.
+    # `arctanh(p) > c` is equivalent to `p > tanh(c)` for c > 0 and avoids
+    # arctanh's blow-up as p -> 1, which is exactly where the selected events sit.
+    # The mask is a selection, not a differentiable quantity, so it is detached.
+    keep = None
+    empty = False
+    if adv.high_score_cut is not None:
+        keep = p_nominal.detach() > math.tanh(adv.high_score_cut)
+        # No event in this batch is in the high-score region. Slicing to an empty
+        # tensor would give NaN, so every term the cut applies to is skipped below.
+        # This is not a rare edge case: from a cold start the model predicts ~0.5
+        # everywhere, so NO event clears the cut and every run hits it on its first
+        # batch.
+        empty = not bool(keep.any())
+
+    # STEP 2 of the three-step schedule drops the consistency term; step 3 keeps
+    # both terms with the factor of 2 on the consistency side.
+    include_consistency = not adv.label_only
+    consistency_coeff = 2.0
+    # The consistency term is always masked when a cut is set. The label term is
+    # masked only when `mask_label_term` is set, which is what separates the
+    # three-step reading from the earlier variant-B formula.
+    mask_label = adv.mask_label_term
+
+    total = logits_var.new_zeros(())
+    contributed = False
+    for v in range(logits_var.shape[1]):
+        lv = logits_var[:, v]
+        if include_consistency and not empty:
+            if keep is None:
+                total = total + consistency_coeff * training_loop_loss(
+                    logits=lv,
+                    targets=p_nominal,
+                    wb=wb,
+                    pos_weight=pos_weight,
+                    label_smoothing=consistency_ls,
+                    normalize_in_batch=cfg.normalize_in_batch,
+                )
+            else:
+                total = total + consistency_coeff * training_loop_loss(
+                    logits=lv[keep],
+                    targets=p_nominal[keep],
+                    wb=wb[keep],
+                    pos_weight=pos_weight,
+                    label_smoothing=consistency_ls,
+                    normalize_in_batch=cfg.normalize_in_batch,
+                )
+            contributed = True
+        if keep is None or not mask_label:
+            total = total + training_loop_loss(
+                logits=lv,
+                targets=yb,
+                wb=wb,
+                pos_weight=pos_weight,
+                label_smoothing=cfg.label_smoothing,
+                normalize_in_batch=cfg.normalize_in_batch,
+            )
+            contributed = True
+        elif not empty:
+            total = total + training_loop_loss(
+                logits=lv[keep],
+                targets=yb[keep],
+                wb=wb[keep],
+                pos_weight=pos_weight,
+                label_smoothing=cfg.label_smoothing,
+                normalize_in_batch=cfg.normalize_in_batch,
+            )
+            contributed = True
+
+    if not contributed:
+        # Every term was cut away. The zero must stay attached to the graph: a bare
+        # `new_zeros(())` has no grad_fn and the caller's
+        # `scaler.scale(term).backward()` then raises "element 0 of tensors does not
+        # require grad". Multiplying by zero keeps the graph and contributes exactly
+        # zero gradient.
+        return logits_var.sum() * 0.0
+    return total
+
+
+def _variation_chunks(n_variations: int, chunk: int) -> List[Tuple[int, int]]:
+    if chunk is None or chunk <= 0 or chunk >= n_variations:
+        return [(0, n_variations)]
+    return [(s, min(s + chunk, n_variations)) for s in range(0, n_variations, chunk)]
+
+
+def load_variation_spec(data_dir: str) -> List[Tuple[str, Dict[str, str]]]:
+    """Read the variation axis written by `preprocess_dnn.py --include-systematic-variations`.
+
+    Returns `[(canonical_variation, {feature: augmented_column}), ...]` ordered by
+    canonical variation name, so `up` and `down` of a source sit next to each other
+    and the ordering is reproducible across runs.
+    """
+    manifest_path = Path(data_dir) / "preprocess_manifest.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(
+            f"--use_adversarial needs {manifest_path}, written by preprocess_dnn.py."
+        )
+    with open(manifest_path, "r") as f:
+        manifest = json.load(f)
+
+    block = manifest.get("systematic_variations") or {}
+    if not block.get("enabled"):
+        raise ValueError(
+            f"{manifest_path} has no systematic-variation block "
+            "(systematic_variations.enabled is not true). Re-run preprocess_dnn.py "
+            "with --include-systematic-variations and point --data-dir at that output."
+        )
+
+    canonical = list(block["canonical_variations"])
+    col_to_feat: Dict[str, str] = dict(block["column_to_nominal_feature"])
+
+    known = set(canonical)
+    per_variation: Dict[str, Dict[str, str]] = {v: {} for v in canonical}
+    for col, feat in col_to_feat.items():
+        if VARIATION_COL_SEP not in col:
+            raise ValueError(
+                f"Augmented column '{col}' is missing the '{VARIATION_COL_SEP}' separator."
+            )
+        variation = col.rsplit(VARIATION_COL_SEP, 1)[1]
+        if variation not in known:
+            raise ValueError(
+                f"Augmented column '{col}' names variation '{variation}', which is not "
+                f"in the manifest's canonical_variations."
+            )
+        per_variation[variation][feat] = col
+
+    empty = [v for v in canonical if not per_variation[v]]
+    if empty:
+        raise ValueError(f"Variations with no shifted feature columns: {empty}")
+
+    return [(v, per_variation[v]) for v in canonical]
 
 
 def sigmoid_np(x: np.ndarray) -> np.ndarray:
@@ -861,7 +1163,10 @@ def evaluate(
     y_all = []
     w_all = []
 
-    for xb, yb, wb in loader:
+    for batch in loader:
+        # The train loader yields a 4th element (variation inputs) when the
+        # adversarial term is on; metrics are always nominal-only.
+        xb, yb, wb = batch[0], batch[1], batch[2]
         xb = xb.to(device)
         yb = yb.to(device)
         wb = wb.to(device)
@@ -918,6 +1223,9 @@ def train_one_fold(
     trial_step_offset: int = 0,
     evaluate_train_each_epoch: bool = True,
     run_final_evaluation: bool = True,
+    adv: Optional[AdversarialConfig] = None,
+    variation_spec: Optional[List[Tuple[str, Dict[str, str]]]] = None,
+    init_from: Optional[str] = None,
 ) -> float:
     fold_dir = Path(out_dir) / f"fold{fold_idx}"
     plots_dir = fold_dir / cfg.plots_subdir
@@ -955,9 +1263,33 @@ def train_one_fold(
     )
 
     # datasets/loaders
-    ds_train = ParquetDataset(df_train, cfg.training_features, cfg.label_col, cfg.weight_col, cfg.dtype)
+    # Only the TRAIN dataset carries variation inputs: the adversarial term is a
+    # training-time regulariser, and val/eval keep their original nominal-only
+    # metrics so `evaluate()` and the reported AUC/loss stay comparable to the
+    # non-adversarial baseline.
+    ds_train = ParquetDataset(
+        df_train,
+        cfg.training_features,
+        cfg.label_col,
+        cfg.weight_col,
+        cfg.dtype,
+        variation_spec=variation_spec if adv is not None else None,
+    )
     ds_val = ParquetDataset(df_val, cfg.training_features, cfg.label_col, cfg.weight_col, cfg.dtype)
     ds_eval = ParquetDataset(df_eval, cfg.training_features, cfg.label_col, cfg.weight_col, cfg.dtype)
+
+    if adv is not None:
+        logger.info(
+            "[fold %d] adversarial ON: lambda=%.6g N_variations=%d detach_nominal=%s "
+            "consistency_label_smoothing=%s variation_chunk=%d",
+            fold_idx,
+            adv.lam,
+            ds_train.n_variations,
+            adv.detach_nominal,
+            adv.consistency_label_smoothing,
+            adv.variation_chunk,
+        )
+        logger.info("[fold %d] variations: %s", fold_idx, ds_train.variation_names)
 
     device = torch.device(cfg.device if (cfg.device == "cpu" or torch.cuda.is_available()) else "cpu")
     pin_memory = bool(cfg.pin_memory) and (device.type == "cuda")
@@ -995,6 +1327,24 @@ def train_one_fold(
         dropout=cfg.dropout,
         batch_norm=cfg.batch_norm,
     ).to(device)
+
+    # Warm start: initialise the weights from another run's best checkpoint for this
+    # fold. Only the weights are carried over -- the optimizer, the LR schedule and
+    # the early-stopping counter are all built fresh below, so the second phase is a
+    # genuine "train again until early stopping" rather than a resumed epoch loop.
+    # Used to run the adversarial phase from a converged lambda=0 model instead of
+    # from random init, which both speeds up the sweep and makes every lambda start
+    # from the identical point.
+    if init_from is not None:
+        init_ckpt = Path(init_from) / f"fold{fold_idx}" / "best.pt"
+        if not init_ckpt.exists():
+            raise FileNotFoundError(
+                f"--init-from: no checkpoint for fold {fold_idx} at {init_ckpt}. "
+                "The warm-start run must have completed this fold."
+            )
+        state = torch.load(init_ckpt, map_location=device)["model_state"]
+        model.load_state_dict(state)
+        logger.info("[fold %d] warm start from %s", fold_idx, init_ckpt)
 
     # optimizer
     opt_name = cfg.optimizer_name.lower()
@@ -1079,8 +1429,11 @@ def train_one_fold(
     for epoch in range(cfg.epochs):
         model.train()
         running = []
+        running_nominal = []
+        running_penalty = []
 
-        for xb, yb, wb in loader_train:
+        for batch in loader_train:
+            xb, yb, wb = batch[0], batch[1], batch[2]
             xb = xb.to(device)
             yb = yb.to(device)
             wb = wb.to(device)
@@ -1089,24 +1442,72 @@ def train_one_fold(
 
             with torch.amp.autocast("cuda", enabled=(cfg.amp_enable and device.type == "cuda")):
                 logits = model(xb)
-                weights = wb if cfg.use_weight_in_loss else None
-                loss_raw = bce_with_logits_loss(
+                loss = training_loop_loss(
                     logits=logits,
                     targets=yb,
-                    weights=None,
+                    wb=wb,
                     pos_weight=pos_weight_t,
                     label_smoothing=cfg.label_smoothing,
-                    normalize_in_batch=False,
-                )
-
-                loss_w = make_loss_weights(
-                    w=wb,
                     normalize_in_batch=cfg.normalize_in_batch,
-                    clip_abs_max=None,
                 )
-                loss = torch.sum(loss_raw * loss_w) / (torch.sum(torch.abs(loss_w)) + 1e-12)
 
-            scaler.scale(loss).backward()
+            if adv is None:
+                scaler.scale(loss).backward()
+            else:
+                # Term 1: the original loss, backwarded exactly as before.
+                scaler.scale(loss).backward(retain_graph=False)
+                running_nominal.append(float(loss.item()))
+
+                xvb = batch[3].to(device)  # [B, V, F]
+                n_var = xvb.shape[1]
+                penalty_value = 0.0
+
+                # The adversarial forwards run with the model in eval() mode on
+                # purpose:
+                #   * dropout must not fire, or it would consume RNG and the
+                #     lambda=0 run could no longer reproduce the switch-off run;
+                #   * BatchNorm must not update its running statistics from
+                #     variation batches, or the exported (eval-mode) model that
+                #     Stage-2 scores with would drift even at lambda=0.
+                # Gradients still flow: eval() only changes dropout/BN behaviour.
+                was_training = model.training
+                model.eval()
+                try:
+                    with torch.amp.autocast(
+                        "cuda", enabled=(cfg.amp_enable and device.type == "cuda")
+                    ):
+                        if adv.detach_nominal:
+                            with torch.no_grad():
+                                p_nominal = torch.sigmoid(model(xb))
+                        else:
+                            p_nominal = torch.sigmoid(model(xb))
+
+                        chunks = _variation_chunks(n_var, adv.variation_chunk)
+                        for ci, (lo, hi) in enumerate(chunks):
+                            sub = xvb[:, lo:hi, :]
+                            b, v, f = sub.shape
+                            logits_var = model(sub.reshape(b * v, f)).reshape(b, v)
+                            penalty = adversarial_penalty(
+                                logits_var=logits_var,
+                                p_nominal=p_nominal,
+                                yb=yb,
+                                wb=wb,
+                                pos_weight=pos_weight_t,
+                                cfg=cfg,
+                                adv=adv,
+                            )
+                            penalty_value += float(penalty.item())
+                            term = adv.lam * penalty
+                            # Chunks accumulate into .grad; the un-detached
+                            # nominal graph is shared, so keep it until the last.
+                            keep = (not adv.detach_nominal) and (ci < len(chunks) - 1)
+                            scaler.scale(term).backward(retain_graph=keep)
+                finally:
+                    if was_training:
+                        model.train()
+
+                running_penalty.append(penalty_value)
+                loss = loss.detach() + adv.lam * penalty_value
 
             if cfg.grad_clip_norm and cfg.grad_clip_norm > 0:
                 scaler.unscale_(optimizer)
@@ -1136,6 +1537,26 @@ def train_one_fold(
         history["train_auc_w"].append(train_auc_w)
         history["val_auc_w"].append(val_auc_w)
         history["lr"].append(float(optimizer.param_groups[0]["lr"]))
+
+        if adv is not None:
+            # Batch-mean split of the epoch's training objective, so the reviewer
+            # can see whether the consistency penalty is actually coming down
+            # rather than the total just tracking the nominal term.
+            history.setdefault("train_loss_nominal", []).append(
+                float(np.mean(running_nominal)) if running_nominal else float("nan")
+            )
+            history.setdefault("train_adv_penalty", []).append(
+                float(np.mean(running_penalty)) if running_penalty else float("nan")
+            )
+            logger.info(
+                "[fold %d] epoch %d  adv: nominal_loss=%.6f penalty=%.6f "
+                "lambda*penalty=%.6f",
+                fold_idx,
+                epoch,
+                history["train_loss_nominal"][-1],
+                history["train_adv_penalty"][-1],
+                adv.lam * history["train_adv_penalty"][-1],
+            )
 
         if evaluate_train_each_epoch:
             logger.info(
@@ -1303,14 +1724,30 @@ def train_one_fold(
     return float(best_metric) if best_metric is not None else float("nan")
 
 
-def train_all_folds(cfg: TrainConfig, data_dir: str, out_dir: str, folds: Optional[List[int]]) -> None:
+def train_all_folds(
+    cfg: TrainConfig,
+    data_dir: str,
+    out_dir: str,
+    folds: Optional[List[int]],
+    adv: Optional[AdversarialConfig] = None,
+    variation_spec: Optional[List[Tuple[str, Dict[str, str]]]] = None,
+    init_from: Optional[str] = None,
+) -> None:
     if folds is None:
         folds = list(range(cfg.n_folds))
 
     for i in folds:
         logger.info("============================================================")
         logger.info("Training fold %d/%d", i, cfg.n_folds - 1)
-        train_one_fold(i, cfg, data_dir=data_dir, out_dir=out_dir)
+        train_one_fold(
+            i,
+            cfg,
+            data_dir=data_dir,
+            out_dir=out_dir,
+            adv=adv,
+            variation_spec=variation_spec,
+            init_from=init_from,
+        )
 
 
 # --------------------------------------------------------------------------------------
@@ -1425,11 +1862,128 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--folds", default=None, help="Comma list of folds to train (e.g. 0,1,2,3). Default: all.")
     p.add_argument("--optuna-best-json",default=None,help="Path to optuna_best.json (will override config hyperparameters).")
     p.add_argument("--log-level", default="INFO", help="Logging level (INFO/DEBUG/...)")
+    p.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help=(
+            "Override the training seed (meta.seed / the optuna trial seed). Used to "
+            "measure the run-to-run noise band. Default: unchanged behaviour."
+        ),
+    )
+
+    p.add_argument(
+        "--epochs",
+        type=int,
+        default=None,
+        help=(
+            "Override training.epochs from the config. Mainly for short probe runs "
+            "(e.g. one epoch to measure the adversarial penalty against the nominal "
+            "loss for lambda calibration). Default: unchanged."
+        ),
+    )
+    p.add_argument(
+        "--init-from",
+        default=None,
+        help=(
+            "Warm start: directory of a previous run whose <dir>/fold<i>/best.pt is "
+            "loaded as the initial weights for fold i. The optimizer, LR schedule "
+            "and early-stopping counter are still built fresh, so training runs to "
+            "early stopping again. Used to train the adversarial phase from a "
+            "converged lambda=0 model. Default: random initialisation, as before."
+        ),
+    )
+
+    adv = p.add_argument_group("systematics-adversarial loss")
+    adv.add_argument(
+        "--use_adversarial",
+        action="store_true",
+        help=(
+            "Add the systematics-consistency term to the loss. Requires --data-dir to "
+            "point at fold parquets produced with "
+            "preprocess_dnn.py --include-systematic-variations. When this flag is "
+            "absent the training path is unchanged."
+        ),
+    )
+    adv.add_argument(
+        "--adversarial-lambda",
+        type=float,
+        default=0.0,
+        help="Weight of the adversarial sum (default 0.0).",
+    )
+    adv.add_argument(
+        "--adversarial-detach-nominal",
+        action="store_true",
+        help=(
+            "Stop-gradient on the nominal prediction used as the consistency target, "
+            "so only the variation branch is penalised. Default: not detached "
+            "(both branches are penalised)."
+        ),
+    )
+    adv.add_argument(
+        "--adversarial-consistency-smoothing",
+        choices=["inherit", "none"],
+        default="inherit",
+        help=(
+            "Label smoothing inside original_loss(pred_i, pred_nominal). 'inherit' "
+            "(default) reuses cfg.label_smoothing, i.e. original_loss literally; "
+            "'none' disables it, since the target is already a soft probability and "
+            "smoothing it biases variation scores toward 0.5."
+        ),
+    )
+    adv.add_argument(
+        "--adversarial-label-only",
+        action="store_true",
+        help=(
+            "STEP 2 of the three-step schedule: use "
+            "lambda * sum_i original_loss(pred_i, label) only -- the variations are "
+            "trained against the truth label and the consistency term is absent."
+        ),
+    )
+    adv.add_argument(
+        "--adversarial-mask-label-term",
+        action="store_true",
+        help=(
+            "Apply --adversarial-high-score-cut to the original_loss(pred_i, label) "
+            "term as well, not just to the consistency term. The three-step schedule "
+            "puts [score_cut] on every term inside the lambda sum; the earlier "
+            "variant-B formula masked the consistency term alone. No effect without "
+            "a cut."
+        ),
+    )
+    adv.add_argument(
+        "--adversarial-high-score-cut",
+        type=float,
+        default=None,
+        help=(
+            "VARIANT B: restrict the consistency term to events with "
+            "arctanh(p_nominal) > CUT (e.g. 2.0, i.e. p_nominal > 0.9640). The "
+            "significance comes from the top score bins, so decorrelating across the "
+            "bulk spends discrimination where it cannot pay. Changes the effective "
+            "lambda scale, so re-scan lambda when enabling it."
+        ),
+    )
+    adv.add_argument(
+        "--adversarial-variation-chunk",
+        type=int,
+        default=0,
+        help=(
+            "Variations per forward/backward chunk (gradient accumulation). "
+            "<=0 (default) processes all variations in one chunk; lower it if the "
+            "full-variation run runs out of device memory."
+        ),
+    )
     return p
 
 
 def main() -> None:
     args = build_argparser().parse_args()
+
+    # --log-level was declared but never applied, so the shared logger stayed at
+    # its WARNING default and the per-epoch lines (including the adversarial
+    # nominal_loss/penalty report) never reached the log. Mirrors what
+    # preprocess_dnn.py already does with the same flag.
+    logger.setLevel(args.log_level)
 
     cfg = load_config(args.config)
     set_seed(cfg.seed)
@@ -1457,6 +2011,51 @@ def main() -> None:
         if trial_seed is not None:
             logger.info("[optuna] Reusing winning trial seed: %d", active_seed)
 
+    # --seed is applied last so it wins over both the config and the optuna
+    # trial seed; without it, seeding is exactly as before.
+    if args.seed is not None:
+        active_seed = int(args.seed)
+        set_seed(active_seed)
+        logger.info("[seed] Overriding training seed from --seed: %d", active_seed)
+
+    # Applied after the optuna overrides so a probe run's epoch budget is not
+    # silently replaced by the tuned value.
+    if args.epochs is not None:
+        cfg = replace(cfg, epochs=int(args.epochs))
+        logger.info("[epochs] Overriding training epochs from --epochs: %d", cfg.epochs)
+
+    adv = None
+    variation_spec = None
+    if args.use_adversarial:
+        variation_spec = load_variation_spec(args.data_dir)
+        adv = AdversarialConfig(
+            lam=float(args.adversarial_lambda),
+            detach_nominal=bool(args.adversarial_detach_nominal),
+            consistency_label_smoothing=str(args.adversarial_consistency_smoothing),
+            variation_chunk=int(args.adversarial_variation_chunk),
+            high_score_cut=(
+                float(args.adversarial_high_score_cut)
+                if args.adversarial_high_score_cut is not None
+                else None
+            ),
+            label_only=bool(args.adversarial_label_only),
+            mask_label_term=bool(args.adversarial_mask_label_term),
+        )
+        logger.info(
+            "[adversarial] lambda=%.6g N_variations=%d detach_nominal=%s "
+            "consistency_smoothing=%s chunk=%d "
+            "label_only=%s high_score_cut=%s mask_label_term=%s",
+            adv.lam,
+            len(variation_spec),
+            adv.detach_nominal,
+            adv.consistency_label_smoothing,
+            adv.variation_chunk,
+            adv.label_only,
+            adv.high_score_cut,
+            adv.mask_label_term,
+        )
+        logger.info("[adversarial] variations: %s", [v for v, _ in variation_spec])
+
     folds = None
     if args.folds is not None:
         folds = [int(x.strip()) for x in args.folds.split(",") if x.strip()]
@@ -1468,7 +2067,15 @@ def main() -> None:
         logger.info("CUDA device: %s", torch.cuda.get_device_name(0))
     logger.info("Active training seed: %d", active_seed)
 
-    train_all_folds(cfg, data_dir=args.data_dir, out_dir=args.out_dir, folds=folds)
+    train_all_folds(
+        cfg,
+        data_dir=args.data_dir,
+        out_dir=args.out_dir,
+        folds=folds,
+        adv=adv,
+        variation_spec=variation_spec,
+        init_from=args.init_from,
+    )
 
     # Save manifest for reproducibility
     manifest = {
@@ -1514,6 +2121,30 @@ def main() -> None:
         # -------------------------
         # Training behavior (critical!)
         # -------------------------
+        "adversarial": {
+            "enabled": bool(args.use_adversarial),
+            "lambda": float(args.adversarial_lambda) if args.use_adversarial else None,
+            "n_variations": len(variation_spec) if variation_spec else 0,
+            "variations": [v for v, _ in variation_spec] if variation_spec else [],
+            "detach_nominal": bool(args.adversarial_detach_nominal),
+            "consistency_label_smoothing": str(args.adversarial_consistency_smoothing),
+            "variation_chunk": int(args.adversarial_variation_chunk),
+            "label_only": bool(args.adversarial_label_only),
+            "mask_label_term": bool(args.adversarial_mask_label_term),
+            "high_score_cut": args.adversarial_high_score_cut,
+            "high_score_cut_p_threshold": (
+                math.tanh(args.adversarial_high_score_cut)
+                if args.adversarial_high_score_cut is not None
+                else None
+            ),
+            "seed_override": (int(args.seed) if args.seed is not None else None),
+            "active_seed": int(active_seed),
+        },
+
+        "warm_start": {
+            "init_from": args.init_from,
+        },
+
         "training_behavior": {
             "loss_name": cfg.loss_name,
             "use_weight_in_loss": cfg.use_weight_in_loss,
