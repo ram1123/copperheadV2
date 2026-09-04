@@ -229,10 +229,15 @@ switches:
         "2024": false
         "2025": false
         "2026": false
-    do_jet_horn_ptcut: # For run-3 where the JME recommendation is to add pT > 50 GeV cut in the horn region
-        # Currently, updated the pT to 30 GeV
-        # official recommendation:
-        # 2024 and 2025: HE and HF both >50 GeV        
+    do_jet_horn_ptcut: # Applies ONLY to the HE region (2.5 < |eta| <= 3.0, see jetHorn_region in
+        # jet_loop) -- it never touches HF (3 < |eta| < 5) regardless of value.
+        # Official JME per-year/per-region guidance ("Mitigation techniques", Anna Benecke slide 14):
+        #   2022/2023: HF needs pT>50 (not this switch -- see add_pt_cut_for_HE_HF_jets instead);
+        #              HE needs pT>50 + JER restricted to gen-matched jets only (see jer_strat=4).
+        #   2024: HF "Fixed" (no cut needed); HE still needs pT>50 + JER-gen-matched-only.
+        #   2025/2026: per explicit user decision, treated the same as 2024 (HF: none via this
+        #              switch; HE: 50) -- JME's own slide left 2025 as an open question ("Enough
+        #              for analysers? please check!"), not a settled recommendation.
         '2016preVFP': false
         '2016postVFP': false
         '2017': false

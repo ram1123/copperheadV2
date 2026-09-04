@@ -7,6 +7,13 @@
 
 ```bash
 time bash run_analysis_pipeline.sh -y 2024 -k -l Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER -m compact
+
+bash scripts/run_scenario.sh \
+    --profile nominal_nozpt_jme_reco \
+    --run-tag FilterJets_Aug26_JMEreco \
+    --years 2024,2025,2026 \
+    --target all_stage1
+    
 ```
 
 # 23 Aug 2026
