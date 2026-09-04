@@ -261,6 +261,27 @@ if __name__ == "__main__":
             "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
         ),
     )
+    parser.add_argument(
+        "--he-pt-cut",
+        dest="he_pt_cut",
+        default=None,
+        type=float,
+        help=(
+            "Post-hoc HE-region (2.5<|eta|<=3.0) jet pT cut (GeV), applied at "
+            "plot time to jet1..jet4 -- for validating stage-1 output that was "
+            "produced with a looser jet pT threshold, without rerunning "
+            "stage-1. See modules.selection.apply_jet_horn_ptcut for scope/"
+            "caveats (jj_mass, jj_dEta, zeppenfeld etc. are NOT recomputed). "
+            "Default: off (no cut)."
+        ),
+    )
+    parser.add_argument(
+        "--hf-pt-cut",
+        dest="hf_pt_cut",
+        default=None,
+        type=float,
+        help="Same as --he-pt-cut but for the HF region (|eta|>3.0). Default: off (no cut).",
+    )
     # add dnn score to the plotting variable list
     parser.add_argument(
      "--dnn-score",
@@ -552,6 +573,17 @@ if __name__ == "__main__":
         #     # scale the weights for DY samples by 3.0
         #     logger.warning("Scaling DY weights by 3.0 after removing zpt weights!")
         #     events["wgt_nominal"] = events["wgt_nominal"] * (1997.0/2124.08)
+
+        if args.he_pt_cut is not None or args.hf_pt_cut is not None:
+            logger.warning(
+                f"Applying post-hoc HE/HF jet pT cut (HE>={args.he_pt_cut}, HF>={args.hf_pt_cut} GeV) "
+                "for validating a loosely-selected stage-1 run -- jj_mass/jj_dEta/zeppenfeld/etc. are "
+                "NOT recomputed and may still reflect the pre-cut jet1/jet2 pairing "
+                "(see modules.selection.apply_jet_horn_ptcut)."
+            )
+            events = selection.apply_jet_horn_ptcut(
+                events, he_pt_cut=args.he_pt_cut, hf_pt_cut=args.hf_pt_cut
+            )
 
         loaded_events[(year, process)] = events
     logger.info("finished loading parquet files!")
