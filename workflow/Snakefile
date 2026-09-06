@@ -30,22 +30,44 @@ PLOT_CATS = ["nocat", "vbf", "ggh"]
 # PLOT_CATS = ["vbf"]
 # PLOT_CATS = ["nocat"]
 
-# PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
-# PLOT_NJETS = ["0", "1", "2"]   # adapt to what your script accepts
-PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
+# All njets_plot values actually produced by _jet_region_targets_for() below
+# ("inclusive" for the plain overview target, "0"/"1"/"2" for the
+# multiplicity-first split) -- needed for the wildcard_constraints regex, not
+# a knob to hand-edit like the old single-value PLOT_NJETS was.
+PLOT_NJETS = ["inclusive", "0", "1", "2"]
 
+# Two-jet (pair) topology options -- only meaningful for njets>=2 (jet2 is
+# null otherwise). Mirrors (not imported -- Snakemake only sees plain CLI
+# strings) modules/selection.py::PAIR_JJ_ETA_REGIONS; this is a curated
+# subset of that full list (the "one_*" asymmetric combos and the broad
+# "both_fwd25" are commented out, kept available if wanted later).
 JJ_ETA_REGIONS = [
     "all",
     "jj_both_central",
-    # "jj_non_central",
+    "jj_non_central",
     # "jj_one_fwd25_one_central",
     # "jj_one_he_one_central",
     # "jj_one_fwd30_one_central",
     # "jj_both_fwd25",
-    # "jj_both_he",
-    # "jj_both_fwd30",
+    "jj_both_he",
+    "jj_both_fwd30",
     # "jj_one_he_one_fwd30",
 ]
+
+# Single-jet topology options -- for njets==1 only (njets==1 baked directly
+# into these masks in modules/selection.py, so they're the njets==1 subset
+# regardless of njets_plot, but applyRegionCatCuts rejects pairing them with
+# njets_plot="0"/"2" since that's always empty -- see
+# modules.selection.SINGLE_JET_ETA_REGIONS). Parallel structure to
+# JJ_ETA_REGIONS above: central<->central, fwd25<->non_central (both are the
+# true complement of "central"), he<->he, fwd30<->fwd30.
+SINGLE_JET_ETA_REGIONS = [
+    "single_central",
+    "single_fwd25",
+    "single_he",
+    "single_fwd30",
+]
+
 PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
 # PLOT_ZPT_MODES  = ["withzpt", "nozpt"] # ["withzpt", "nozpt"]
 PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
@@ -58,7 +80,7 @@ wildcard_constraints:
     njets_plot = "|".join(PLOT_NJETS),
     zpt_mode   = "|".join(PLOT_ZPT_MODES),
     var_set    = "|".join(PLOT_VAR_SETS),
-    jj_eta_region = "|".join(JJ_ETA_REGIONS),
+    jj_eta_region = "|".join(JJ_ETA_REGIONS + SINGLE_JET_ETA_REGIONS),
 
 RUN2_YEARS = ["2016preVFP", "2016postVFP", "2017", "2018"]
 RUN3_YEARS = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025"]
@@ -135,15 +157,35 @@ def gw_flags():
 def gw_flags_plots():
     return f" --use_gateway --cluster_index {CLIDX} " if USE_GW else ""
 
+def _jet_region_targets_for(cat):
+    """
+    (njets_plot, jj_eta_region) pairs to generate for one category, matching
+    the physics logic: for ggh/nocat, 0j gets no region split, 1j gets the
+    single-jet region split only, >=2j gets the existing pair-based region
+    split -- plus the plain njets-inclusive/region="all" overview plot,
+    unchanged from before this split existed. vbf's own category cut
+    (jj_mass/jj_dEta need two real jets, see applyRegionCatCuts) already
+    requires njets>=2 by construction, so it keeps just the pair-based
+    matrix, explicitly labeled njets_plot="2" (not "inclusive" -- vbf-tagged
+    events are never anything but >=2-jet, so the label should say so).
+    """
+    if cat == "vbf":
+        return [("2", r) for r in JJ_ETA_REGIONS]
+    # ggh / nocat
+    targets = [("inclusive", "all")]
+    targets += [("0", "all")]
+    targets += [("1", r) for r in SINGLE_JET_ETA_REGIONS]
+    targets += [("2", r) for r in JJ_ETA_REGIONS]
+    return targets
+
+
 PLOT_TARGETS = [
     (year, cat, njets_plot, jj_eta_region, zpt_mode, var_set)
     for year in YEARS
     for cat in PLOT_CATS
-    for njets_plot in PLOT_NJETS
-    for jj_eta_region in JJ_ETA_REGIONS
+    for (njets_plot, jj_eta_region) in _jet_region_targets_for(cat)
     for zpt_mode in PLOT_ZPT_MODES
     for var_set in PLOT_VAR_SETS
-    if not (cat == "vbf" and njets_plot != "inclusive")
 ]
 PLOT_DONE = expand(
     STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
