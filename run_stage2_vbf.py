@@ -36,6 +36,36 @@ from modules.systematics import (  # noqa: F401
 DATASET_SEPARATOR = "::"
 DY_MATCH_CATEGORIES = ("matched01J", "matched2J")
 
+# --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
+# The score and its working point both come from plotter/mva_A1xB2_scoring.py, which
+# already drives the equivalent control-plot categories; nothing is redefined here.
+# Imported lazily so that the default kinematic path never pays the import cost and
+# never fails if the scan artifact or the checkpoints are absent.
+TRANSFORMER_SCORE_FIELD = "p_VBF_transformer"
+
+
+def transformer_threshold():
+    from plotter.mva_A1xB2_scoring import THRESHOLD
+
+    return THRESHOLD
+
+
+def add_transformer_score(events, year):
+    """Attach out-of-fold p_VBF to every event in the chunk, once.
+
+    The transformer's inputs resolve to the nominal jet columns, so p_VBF is the same
+    number for every weight and shape variation of a given event. Scoring here rather
+    than inside the variation loop therefore changes no result and avoids re-running
+    the model 43 variations x 2 regions times per chunk. The consequence for
+    systematics is worth stating plainly: shape variations still move events across
+    the region and b-tag cuts, but never across the VBF/ggH boundary.
+    """
+    from plotter.mva_A1xB2_scoring import score_vbf_probability
+
+    return ak.with_field(
+        events, score_vbf_probability(events, year), TRANSFORMER_SCORE_FIELD
+    )
+
 
 def is_dy_sample(sample_name):
     """Return whether a Stage-1 sample name belongs to the DY family."""
@@ -308,6 +338,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         divide_dy_into_matched_jets=False,
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
+        use_transformer_vbf_channel=False,
     ):
         NO_SCALE_FEATURES = {
             "nsoftjets5_nominal",
@@ -322,6 +353,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.divide_dy_into_matched_jets = divide_dy_into_matched_jets
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
+        self.use_transformer_vbf_channel = use_transformer_vbf_channel
         # One-hot year features (e.g. "year_2022preEE") don't exist as event
         # fields; they're synthesized in evaluate_scores() from the dataset's
         # metadata year string, so they're excluded from scaler lookup like
@@ -465,17 +497,22 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         sample_type = events.metadata.get("sample", dataset_key)
         year = events.metadata["year"]
         # events["MET_pt"] = events["PuppiMET_pt"]
+        if self.use_transformer_vbf_channel:
+            events = add_transformer_score(events, year)
         fields = set(events.fields)
 
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
+            # TODO: add the b-tag weight systematics back once they are
+            # validated; they are skipped here on purpose for now.
             wgt_variations = ["wgt_nominal"] + sorted(
                 w
                 for w in fields
                 if w.startswith("wgt_")
                 and (w.endswith("_up") or w.endswith("_down"))
                 and ("separate" not in w)
+                and ("btag" not in w.lower())
             )
             if self.no_variations:
                 wgt_variations = ["wgt_nominal"]
@@ -537,6 +574,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             category= "vbf"
             sel_cols = columns_for_selection(category, variation, events.fields)
             needed_cols = set(sel_cols + [weight_variation])
+            if self.use_transformer_vbf_channel:
+                needed_cols.add(TRANSFORMER_SCORE_FIELD)
 
             # DNN inputs are evaluated with feature_variation (which may be pinned to
             # "nominal" via use_nominal_dnn_features_for_systs), not the raw selection
@@ -587,12 +626,21 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             region_events = selection.applyRegionCatCuts(
                 filtered_events,
                 process=sample_type,
-                category=category,
+                # Same region selection, but stop at the b-jet veto and let the
+                # transformer score -- not jj_mass/jj_dEta/jet1_pt -- decide what is
+                # VBF. This is the "bJetVeto" branch applyRegionCatCuts already has,
+                # and it is exactly what plotter/mva_A1xB2_scoring.apply_mva_A1xB2_cut
+                # uses for the equivalent control-plot categories.
+                category="bJetVeto" if self.use_transformer_vbf_channel else category,
                 region_name=region,
                 do_vbf_filter_study=self.do_vbf_filter_study,
                 variation=variation,
                 # year=year,
             )
+            if self.use_transformer_vbf_channel:
+                region_events = region_events[
+                    region_events[TRANSFORMER_SCORE_FIELD] >= transformer_threshold()
+                ]
             region_events = fillEventNans(region_events, category=category)
             if region == "h-sidebands":
                 # Pin dimuon_mass to 125 GeV for every event in h-sidebands so DNN
@@ -857,6 +905,33 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "-nw",
+        "--n_workers",
+        dest="n_workers",
+        default=12,
+        type=int,
+        action="store",
+        help=(
+            "Local Dask worker count (ignored with --use_gateway). Exposes the "
+            "parameter get_dask_client already takes; the default is its own default, "
+            "so nothing changes unless this is set. Worth raising for the transformer "
+            "VBF channel, which is several times heavier per chunk."
+        ),
+    )
+    parser.add_argument(
+        "--use_transformer_vbf_channel",
+        dest="use_transformer_vbf_channel",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Define the VBF channel by the 2017 three-class transformer's "
+            "out-of-fold p_VBF (see plotter/mva_A1xB2_scoring.py) instead of the "
+            "kinematic jj_mass/jj_dEta/jet1_pt cut. Off by default; the DNN score "
+            "and the datacard binning are unaffected either way. 2017 only -- the "
+            "ensemble is 2017-trained and carries no year feature."
+        ),
+    )
+    parser.add_argument(
         "--divideDY_intoMatachedJets",
         dest="divide_dy_into_matched_jets",
         default=True,
@@ -873,7 +948,9 @@ if __name__ == "__main__":
     logger.info(f"[timing] Argument parsing time: {t1 - t0:.2f} seconds")
 
     start_time = time.time()
-    client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
+    client = get_dask_client(
+        args.use_gateway, n_workers=args.n_workers, cluster_index=args.cluster_index
+    )
 
     t2 = time.perf_counter()
     logger.info(f"[timing] Dask client creation time: {t2 - t1:.2f} seconds")
@@ -1019,6 +1096,7 @@ if __name__ == "__main__":
                 divide_dy_into_matched_jets=args.divide_dy_into_matched_jets,
                 allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
+                use_transformer_vbf_channel=args.use_transformer_vbf_channel,
             ),
         )
         t5 = time.perf_counter()
