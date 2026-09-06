@@ -231,7 +231,27 @@ def eval_pu_dnn(
     needed = {"pt", "eta"}
     for cfg in configs.values():
         needed.update(cfg.features)
-    feat_rec = ak.zip({name: jets[name] for name in sorted(needed)})
+
+    def _feature_or_sentinel(name: str) -> ak.Array:
+        # getattr (not jets[name]) because non-nominal jets from
+        # get_jet_variation() are Cartesian-built (x/y/z/mass)
+        # PtEtaPhiMCandidates: pt/eta/phi are behavior-computed properties
+        # there, not literal fields, so string-keyed field access raises
+        # FieldNotFoundError even though attribute access works.
+        try:
+            return getattr(jets, name)
+        except AttributeError:
+            # A genuinely-absent literal field (e.g. an hf* variable
+            # get_jet_variation() couldn't carry over for this sample/year).
+            # -1 matches the sentinel NanoAOD itself uses for hf* fields on
+            # non-HF jets (see CLAUDE.md), which is what every consumer of
+            # these features already expects for an inactive/unknown value.
+            logger.warning(
+                f"jets has no field {name!r} for PU-DNN eval; using -1 sentinel"
+            )
+            return ak.zeros_like(jets.pt) - 1.0
+
+    feat_rec = ak.zip({name: _feature_or_sentinel(name) for name in sorted(needed)})
 
     if isinstance(feat_rec, dak.Array):
         empty_bool = ak.to_backend(ak.Array([[True]])[:0], "typetracer")
