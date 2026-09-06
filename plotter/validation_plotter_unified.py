@@ -243,21 +243,14 @@ if __name__ == "__main__":
         "--jj-eta-region",
         dest="jj_eta_region",
         default="all",
-        choices=[
-            "all",
-            "jj_both_central",
-            "jj_non_central",
-            "jj_one_fwd25_one_central",
-            "jj_one_he_one_central",
-            "jj_one_fwd30_one_central",
-            "jj_both_fwd25",
-            "jj_both_he",
-            "jj_both_fwd30",
-            "jj_one_he_one_fwd30",
-        ],
+        choices=["all", *selection.PAIR_JJ_ETA_REGIONS, *selection.SINGLE_JET_ETA_REGIONS],
         help=(
-            "Select dijet eta topology using jet1_eta/jet2_eta. "
-            "'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
+            "Select jet eta topology. 'jj_*' names use jet1_eta AND jet2_eta "
+            "(pair with --njets 2 or 'inclusive'; --njets 0 or 1 raises, "
+            "since a jj_* condition can never be satisfied there). 'single_*' "
+            "names use jet1_eta alone with njets==1 baked in (pair with "
+            "--njets 1 or 'inclusive'; --njets 0 or 2 raises for the same "
+            "reason). 'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
             "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
         ),
     )
@@ -582,7 +575,7 @@ if __name__ == "__main__":
                 "(see modules.selection.apply_jet_horn_ptcut)."
             )
             events = selection.apply_jet_horn_ptcut(
-                events, he_pt_cut=args.he_pt_cut, hf_pt_cut=args.hf_pt_cut
+                events, he_pt_cut=args.he_pt_cut, hf_pt_cut=args.hf_pt_cut, max_jet_slots=2
             )
 
         loaded_events[(year, process)] = events
