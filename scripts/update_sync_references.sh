@@ -95,10 +95,31 @@ for year in "${years[@]}"; do
     cp "${year_root}/${year}_data_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_dy_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_vbf_eventKinematics.txt" "$reference_dir/"
-    cp "${f1_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
+    # The actual cutflow JSON filename embeds the input file's UUID + entry
+    # range (see runner_adapter.py::_build_shard_id), not a literal "_0" file
+    # index -- e.g. cutflow_data_B_<uuid>_NanoAOD_0_5420.json. Glob for it
+    # rather than assuming the old literal name, same as
+    # .github/workflows/sync-stage1.yml's find_cutflow_file() already does.
+    # The *destination* name in test/reference/ stays the plain "_0.json"
+    # form, matching what that CI workflow expects to diff against.
+    find_cutflow_file() {
+        local sample_dir="$1" sample_name="$2"
+        local matches=()
+        while IFS= read -r path; do
+            matches+=("$path")
+        done < <(find "$sample_dir" -maxdepth 1 -type f -name "cutflow_${sample_name}_*.json" | sort)
+        if [ "${#matches[@]}" -ne 1 ]; then
+            echo "Expected exactly one cutflow JSON for ${sample_name} in ${sample_dir}, found ${#matches[@]}" >&2
+            printf "%s\n" "${matches[@]}" >&2
+            exit 1
+        fi
+        printf "%s\n" "${matches[0]}"
+    }
+
+    cp "$(find_cutflow_file "${f1_root}/${data_sample}/0" "${data_sample}")" \
         "${reference_dir}/${year}_cutflow_${data_sample}_0.json"
-    cp "${f1_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
+    cp "$(find_cutflow_file "${f1_root}/${dy_sample}/0" "${dy_sample}")" \
         "${reference_dir}/${year}_cutflow_${dy_sample}_0.json"
-    cp "${f1_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
+    cp "$(find_cutflow_file "${f1_root}/${vbf_sample}/0" "${vbf_sample}")" \
         "${reference_dir}/${year}_cutflow_${vbf_sample}_0.json"
 done
