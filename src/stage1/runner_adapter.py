@@ -82,6 +82,7 @@ class CopperheadRunnerAdapter(ProcessorABC):
         if self._isCutflow and hasattr(processor, "cutflow"):
             write_cutflow_outputs(
                 processor.cutflow,
+                processor.cutflow_names,
                 self._save_path,
                 events.metadata["dataset"],
                 shard_id,
