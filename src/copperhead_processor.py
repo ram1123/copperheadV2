@@ -568,6 +568,9 @@ class EventProcessor(processor.ProcessorABC):
         # Reference: https://nbviewer.org/github/scikit-hep/coffea/blob/master/binder/packedselection.ipynb
         self.selection = {}
         self.cutflow = {}
+        self.cutflow_names = []  # in-order names passed to self.selection.cutflow(*names, ...);
+        # coffea's Cutflow.result() doesn't expose the names itself, so callers
+        # (e.g. src/stage1/cutflow_io.py::write_cutflow_outputs) need this too.
 
         self.pysr_configs = {}
         self.pysr_all_features = set()
@@ -2470,29 +2473,35 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Cutflow
         if self.isCutflow:
-            # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
             # Ensure all selections exist before calling cutflow
             # Add protection for the cutflow if the selection is not in the cutflow
             logger.info(f"selection: {self.selection}")
+            # NOTE: order matters -- PackedSelection.cutflow(*names) ANDs cuts
+            # cumulatively in the order given here, not in .add() registration
+            # order, so this list must match the actual .add() call sequence
+            # below for the per-step "individual"/"cumulative" numbers to mean
+            # anything (the final fully-AND'd count doesn't depend on order,
+            # but every intermediate row does). Keep in sync with the .add(...)
+            # call sites as this method evolves.
             all_required_selections = [
                 "TotalEntries",
                 "lumi_mask",
                 "LHE_cut",
                 "HLT_filter",
                 "event_quality_flags",
-                "PV_npvsGood",
                 "muon_pT_roch",
                 "muon_eta",
                 "muon_id",
                 "muon_isGlobal_or_Tracker",
                 "muon_selection",
                 "muon_iso",
-                "nmuons",
-                "mm_charge",
-                "electron_veto",
-                "HemVeto",
                 "trigger_match",
                 "leading_muon_pt",
+                "electron_veto",
+                "HemVeto",
+                "PV_npvsGood",
+                "nmuons",
+                "mm_charge",
                 "jet_veto_maps",
                 "dimuon_mass_window_76_106",
                 "h_peak_115_135",
@@ -2506,78 +2515,38 @@ class EventProcessor(processor.ProcessorABC):
                 # very old coffea versions might differ — fallback
                 available_cuts = set(getattr(self.selection, "_names", []))
 
-            # Start with "TotalEntries" explicitly, if you want it in the table
-            required_selections = []
-            if "TotalEntries" in all_required_selections:
-                required_selections.append("TotalEntries")
-
-            # Add only those cuts that actually exist in PackedSelection, preserving order
-            for cut in all_required_selections:
-                if cut == "TotalEntries":
-                    continue
-                if cut in available_cuts:
-                    required_selections.append(cut)
+            # Keep only the cuts that actually exist in PackedSelection (some
+            # are added conditionally, e.g. per year/data-vs-MC), preserving
+            # the order above -- including "TotalEntries" itself, so a future
+            # rename there gets the same graceful-skip treatment as everything
+            # else instead of a silent inconsistency.
+            required_selections = [cut for cut in all_required_selections if cut in available_cuts]
 
             logger.info(f"dynamic required_selections = {required_selections}")
 
             # Optional: warn about missing cuts
-            missing = [cut for cut in all_required_selections
-                    if cut not in available_cuts and cut != "TotalEntries"]
+            missing = [cut for cut in all_required_selections if cut not in available_cuts]
             if missing:
                 logger.warning(f"These requested cuts are not defined and will be skipped: {missing}")
 
+            self.cutflow_names = required_selections
+            # NOT passing weights= here: PackedSelection.cutflow(*names,
+            # weights=..., weightsmodifier=...) does support a weighted
+            # cutflow natively since coffea 2025.3.0 (confirmed present in the
+            # installed 2026.5.0, see
+            # https://coffea-hep.readthedocs.io/en/v2026.5.0/api/coffea.analysis_tools.Cutflow.html)
+            # -- but there is no valid same-length weights array available at
+            # this point in THIS pipeline to pass it. `events` (and hence
+            # `weights`, built from `len(events)` above) gets reduced to the
+            # already-selected population at `events = events[event_filter ==
+            # True]` (:1290), right after every selection here is registered;
+            # `self.selection`'s per-cut masks are all still sized to the
+            # original, pre-reduction chunk. Confirmed by hitting exactly this
+            # mismatch (IndexError, e.g. "size of axis is 148 but size of
+            # corresponding boolean axis is 5420") when this was tried via
+            # `scripts/update_sync_references.sh` on 2017 sync data (2026-09-09).
             self.cutflow = self.selection.cutflow(*required_selections)
-            logger.info(f"cutflow: {self.cutflow}")
-            logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
-
-            # logger.info(f"wgtcutflow: {wgtcutflow.print()}")
-
-            # self.nminusone = self.selection.nminusone(*required_selections)
-            # logger.info(f"self.cutflow.logger.info(): {self.nminusone.print()}")
-            # logger.info(f"self.cutflow.logger.info(): {self.cutflow.logger.info(weighted=False)}") # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
-            # logger.info(f"self.cutflow.result(): {self.cutflow.result()}")
-
-            # # --- FIXME: extra info for (unweighted + weighted + efficiencies)
-            # # n_total = len(events)
-            # n_total = int(dak.num(events, axis=0).compute())
-            # w_all  = weights.weight()
-            # mask_cum = dak.ones_like(w_all, dtype=bool)
-
-            # rows = []
-            # prev_n = n_total
-            # prev_w = float(dak.sum(w_all).compute())
-
-            # for name in required_selections:
-            #     # boolean mask for this single cut
-            #     mask_this = self.selection.all(name)
-            #     # update cumulative mask
-            #     mask_cum = mask_cum & mask_this
-
-            #     n_pass = int(ak.sum(mask_cum))
-            #     w_pass = float(ak.sum(w_all[mask_cum]))
-
-            #     eff_step     = n_pass / prev_n if prev_n > 0 else 0.0
-            #     eff_step_w   = w_pass / prev_w if prev_w > 0 else 0.0
-            #     eff_cum      = n_pass / n_total if n_total > 0 else 0.0
-            #     eff_cum_w    = w_pass / float(ak.sum(w_all)) if ak.sum(w_all) != 0 else 0.0
-
-            #     rows.append(
-            #         dict(
-            #             cut=name,
-            #             n_pass=n_pass,
-            #             w_pass=w_pass,
-            #             eff_step=eff_step,
-            #             eff_step_w=eff_step_w,
-            #             eff_cum=eff_cum,
-            #             eff_cum_w=eff_cum_w,
-            #         )
-            #     )
-
-            #     prev_n = n_pass
-            #     prev_w = w_pass
-
-            # self.cutflow_table = pd.DataFrame(rows)
-            # logger.info("\n" + str(self.cutflow_table))
+            self.cutflow.print()
         t22 = time.perf_counter()
         logger.info(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
 
