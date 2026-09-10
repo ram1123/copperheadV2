@@ -75,17 +75,18 @@ Modes (`-m`): `0|prestage`, `1|stage1`, `1a|compact`, `2|stage2`, `2p|stage2_plo
 VBF statistical pipeline (needs the `combine` pixi env, produced after stage-3 datacards exist):
 ```bash
 ./enter_pixi.sh combine
-bash run_stats_pipeline_VBF.sh -m 10 -y Run3 -l label_for_ntuple   # full stage2/stage3/stats chain
+bash run_stats_pipeline_VBF.sh -m 11 -y Run3 -l label_for_ntuple   # card+workspace+significance+limit, no stage2/3 rebuild
 ```
-Modes: `4` build VBF card/workspace (`-y` accepts a single year or a pseudo-year like
+Modes (as of the `4b57a44` renumbering, which superseded the numbering this doc previously had):
+`4` build VBF card/workspace (`-y` accepts a single year or a pseudo-year like
 `Run3`/`Run2`/`Run2Run3` to combine already-built per-year cards into one), `5` significance,
-`6` impacts, `7` likelihood scan, `8` build card/workspace + significance + collect summary,
-`9` collect significance summaries only, `10` full stage2/stage3/stats chain (misnomer:
-despite being named `vbf_limit` this runs significance, not `AsymptoticLimits`), `11` expected
-95% CL limit via `AsymptoticLimits --run blind` + collect summary. `-y` accepts a
-comma-separated list; each mode's steps run once per year in that list, so pass a single
-pseudo-year (e.g. `Run3`) rather than the list of individual years to get one combined result
-instead of per-year ones.
+`6` collect significance summaries only, `7` impacts, `8` likelihood scan, `9` build
+card/workspace + significance + collect summary, `10` expected 95% CL limit via
+`AsymptoticLimits --run blind` + collect limit summary, `11` mode 9 + mode 10 combined (card,
+workspace, significance, summary, expected limit, limit summary) — does **not** rebuild
+stage2/stage3; run those separately first. `-y` accepts a comma-separated list; each mode's
+steps run once per year in that list, so pass a single pseudo-year (e.g. `Run3`) rather than
+the list of individual years to get one combined result instead of per-year ones.
 
 The analysis is blinded, so `6` (impacts) and `11` (limit) never fit real data: impacts run
 twice per year — Asimov `r=1` (signal injected) and `r=0` (background-only) — instead of an

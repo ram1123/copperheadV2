@@ -125,6 +125,13 @@ lumi_syst = {
     "2024": {
         "lumi2024": 1.6,
     },
+    # LUM POG (LumiRecommendationsRun3, normtag_BRIL.json): 5%, preliminary (Z-counting vs
+    # partial vdM tension, updated Feb 2026), explicitly uncorrelated with 2022-2024 -> its
+    # own independent lnN nuisance rather than folding into the 2022-2024 lumi_1/2/3 scheme.
+    # See .claude/skills/cms-object-guidelines/references/lumi.md §2/§8.1.
+    "2025": {
+        "lumi2025": 5.0,
+    },
 }
 
 nuisance_titles = {
@@ -342,7 +349,18 @@ def print_mc(yield_df, var_name, region, channel, year, bin_name):
     #     for group, value in apply_to.items():
     #         mc_df.loc[mc_df.group == group, rate_unc] = str(value)
 
-    for lumi_unc, value in lumi_syst[year].items():
+    if year not in lumi_syst:
+        # No official CMS LUM luminosity uncertainty published for this year yet (see
+        # .claude/skills/cms-object-guidelines/references/lumi.md sections 2/8.1 -- e.g. 2026 has
+        # no LUM estimate available at all). Per that reference: flag the result rather than invent
+        # or reuse another year's value -- omit the lumi lnN nuisance and warn loudly instead of
+        # crashing, so the datacard still gets produced but is clearly marked incomplete.
+        logger.warning(
+            f"No lumi_syst entry for year '{year}' -- no official CMS LUM luminosity uncertainty "
+            "exists yet for this year. Omitting the lumi lnN nuisance from this datacard; treat "
+            "this result as missing its luminosity systematic until an official value is published."
+        )
+    for lumi_unc, value in lumi_syst.get(year, {}).items():
         if lumi_unc not in all_nuisances:
             all_nuisances.append(lumi_unc)
             nuisance_lines[lumi_unc] = "{:<20} {:<9}".format(lumi_unc, "lnN")

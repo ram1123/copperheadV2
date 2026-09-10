@@ -7,6 +7,11 @@ Usage: run_analysis_pipeline.sh [options]
 Modes:
   0|prestage
   1|stage1
+  cutflow_merge                Merges the per-chunk cutflow_*.npz shards from a stage-1
+                                -z/--isCutflow run into one whole-dataset cutflow per sample
+                                (scripts/merge_cutflow_npz_file.py), writing
+                                <save_path>/stage1_output/<year>/f1_0/<sample>/cutflow_merged_<sample>.json.
+                                Run after the stage1 -z run it merges, with the same -l/-y/-S.
   2|stage2
   2p|stage2_plot
   3|stage3
@@ -72,7 +77,10 @@ for year in "${years[@]}"; do
             ;;
         1a|compact)
             run_mode_from_nul < <(build_compact_cmd "${year}")
-            ;;            
+            ;;
+        cutflow_merge)
+            run_cutflow_merge "${year}"
+            ;;
         2|stage2)
             run_mode_from_nul < <(build_stage2_cmd "${year}")
             ;;
