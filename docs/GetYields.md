@@ -65,6 +65,55 @@ elif category == "ggh":
     )
 ```
 
+## Counting events in a custom mass window (no category / region cut)
+
+`get_yields.py` only reports the Higgs regions (h-peak `115 < m_mm < 135`, h-sidebands
+`110-115` & `135-150`) because `applyRegionCatCuts` hard-codes them. If you just want the
+number of events in some mass window (e.g. the Z window `70 < m_mm < 110`) with **no**
+ggH/VBF split and no region cut, use:
+
+- [count_dimuon_mass_window.py](../scripts/count_dimuon_mass_window.py)
+
+The compacted stage-1 parquet is **not** mass-window filtered — it holds the full
+`dimuon_mass` spectrum after the baseline dimuon selection (two good opposite-charge muons,
+trigger, PV, etc.). This script reads only the `dimuon_mass` column (fast, ~10 s for a full
+year of data, no Dask) and counts.
+
+```bash
+python scripts/count_dimuon_mass_window.py \
+   --input /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation/stage1_output \
+   -y 2025 --samples 'data_[C-G]' --mass-min 70 --mass-max 110 --breakdown
+```
+
+- `--input` — same as `get_yields.py`: point at `stage1_output`, it resolves the per-year
+  path and prefers `compacted/` over `f1_0/`.
+- `--samples` — sample-dir glob(s), default `data*`. Bracket classes work, so
+  `'data_[C-G]'` drops `data_B`.
+- `--mass-min` / `--mass-max` — window edges in GeV (default `70` / `110`).
+- `--field` — mass branch (default `dimuon_mass`).
+- `--breakdown` — also print a fixed mass-bin distribution table (useful sanity check: the
+  `[115,135)` bin equals `get_yields.py`'s "nocat h-peak", and `[110,115)+[135,150)` equals
+  "nocat h-sidebands").
+
+Example output (2025 data, eras C–G):
+
+```
+rows on disk (no window)  : 83718768
+count 70 < dimuon_mass < 110 : 75960754
+
+mass distribution (GeV bins):
+  [     0,     60) : 4201627
+  [    60,     70) : 1421618
+  [    70,     76) : 1359741
+  [    76,    106) : 74092153
+  [   106,    110) : 508860
+  [   110,    115) : 412255
+  [   115,    135) : 786345
+  [   135,    150) : 271462
+  [   150,    200) : 391710
+  [   200,    inf) : 272997
+```
+
 ## Comparing yields
 
 There is also [compare_yield_csv.py](../scripts/compare_yield_csv.py), which can be used to compare two CSV outputs produced by [get_yields.py](../scripts/get_yields.py). This is useful for checking whether two productions give consistent yields or for spotting regressions.

@@ -10,6 +10,16 @@ analysis:
   # score: use transf_vbf_score > transf_ggh_score for VBF assignment
   # auto: use transformer scores when available, otherwise fall back to cuts
   category_selection: "auto"
+  # Jet-eta topology of the VBF dijet pair to train on, passed through to
+  # applyRegionCatCuts (modules/selection.py). "all" (no restriction) or one of
+  # PAIR_JJ_ETA_REGIONS: jj_both_central, jj_non_central, jj_one_fwd25_one_central,
+  # jj_one_he_one_central, jj_one_fwd30_one_central, jj_both_fwd25, jj_both_he,
+  # jj_both_fwd30, jj_one_he_one_fwd30.
+  # This key is the source of truth: run_analysis_pipeline.sh reads it here for
+  # both the --jj-eta-region passthrough and the DNN output-directory-name suffix.
+  # Set the JJ_ETA_REGION env var to override it for a single run without editing
+  # this file. Also encoded into the DNN output directory name.
+  jj_eta_region: "all"
 
 data:
   mode: "glob"
@@ -126,7 +136,7 @@ model:
 
 training:
   epochs: 100
-  batch_size: 8192
+  batch_size: 1024
 
   dataloader:
     num_workers: 2
@@ -164,9 +174,9 @@ early_stopping:
   enable: true
   monitor: "val_auc_weighted" # "val_auc_weighted" or "val_loss"
   mode: "max" # when auc then max, with loss min
-  patience: 5
+  patience: 15
   min_delta: 1.0e-4
-  warmup_epochs: 3
+  warmup_epochs: 10
   restore_best: true
 
 metrics:
