@@ -6,7 +6,9 @@
 
 
 ```bash
-time bash run_analysis_pipeline.sh -y 2024 -k -l Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER -m compact
+time bash run_analysis_pipeline.sh -y 2025 -k -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Cutflow -m 1 -k -z -v 15
+
+bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml          -v 15 -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation          -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m dnn_hpo 
 
 bash scripts/run_scenario.sh \
     --profile nominal_nozpt_jme_reco \
@@ -14,6 +16,9 @@ bash scripts/run_scenario.sh \
     --years 2024,2025,2026 \
     --target all_stage1
     
+bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml \
+         -v 15 -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation \
+         -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m dnn -k
 ```
 
 # 23 Aug 2026

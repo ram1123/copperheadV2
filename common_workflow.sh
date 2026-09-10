@@ -221,7 +221,8 @@ append_stage1_args() {
         printf '%s\n' "--test_mode"
     fi
     if [[ "${is_sync}" == "1" ]]; then
-        printf '%s\n' "--sync" "--isCutflow"
+        # printf '%s\n' "--sync" "--isCutflow"
+        printf '%s\n' "--isCutflow"
     fi
 }
 
@@ -319,6 +320,33 @@ build_compact_cmd() {
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_gateway_args)
     printf '%s\0' "${cmd[@]}"
+}
+
+run_cutflow_merge() {
+    # Merges the per-chunk cutflow_*.npz shards stage-1 writes (-z/--isCutflow)
+    # into one whole-dataset cutflow per sample, via scripts/merge_cutflow_npz_file.py.
+    # Every sample directory lives under stage1_output/<year>/f1_0/<sample>/ --
+    # same layout build_stage1_cmd's --save_path writes to and every other
+    # f1_0-based reader in this repo (fetch_hists_for_zpt_weights.py,
+    # categorizer.py, ...) already assumes.
+    local year="$1"
+    local base_dir="${save_path}/stage1_output/${year}/f1_0"
+    if [[ ! -d "${base_dir}" ]]; then
+        log "No stage1 output at ${base_dir}; skipping cutflow merge for year ${year}."
+        return
+    fi
+    local sample_dir sample_name out_json found
+    for sample_dir in "${base_dir}"/*/; do
+        [[ -d "${sample_dir}" ]] || continue
+        sample_name="$(basename "${sample_dir}")"
+        found="$(find "${sample_dir}" -name 'cutflow_*.npz' -print -quit)"
+        if [[ -z "${found}" ]]; then
+            log "No cutflow_*.npz under ${sample_dir}; skipping ${sample_name} (${year})."
+            continue
+        fi
+        out_json="${sample_dir%/}/cutflow_merged_${sample_name}.json"
+        run_cmd python scripts/merge_cutflow_npz_file.py "${sample_dir}" -o "${out_json}"
+    done
 }
 
 build_pu_dnn_train_cmd() {
@@ -645,12 +673,16 @@ ensure_vbf_card() {
             ensure_vbf_card 2023
             ensure_vbf_card 2023BPix
             ensure_vbf_card 2024
+            ensure_vbf_card 2025
+            ensure_vbf_card 2026
             combine_vbf_cards "${card_dir}" "${stem}.txt" \
                 "y2022preEE=HMuMu_13TeV_2022preEE.txt" \
                 "y2022postEE=HMuMu_13TeV_2022postEE.txt" \
                 "y2023=HMuMu_13TeV_2023.txt" \
                 "y2023BPix=HMuMu_13TeV_2023BPix.txt" \
-                "y2024=HMuMu_13TeV_2024.txt"
+                "y2024=HMuMu_13TeV_2024.txt" \
+                "y2025=HMuMu_13TeV_2025.txt" \
+                "y2026=HMuMu_13TeV_2026.txt"
             ;;
         Run2Run3|run2run3|Run2+Run3|run2+run3)
             ensure_vbf_card Run2
@@ -692,7 +724,7 @@ collect_vbf_significance_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_significance_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 Run3)
+    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 Run3)
     local year stem sig_log stat_log sig_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"
@@ -726,7 +758,7 @@ collect_vbf_limit_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_limit_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 Run3)
+    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 Run3)
     local year stem lim_log stat_log lim_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"
