@@ -10,21 +10,22 @@ Modes:
                               year, or a pseudo-year like Run3/Run2/Run2Run3 to combine
                               already-built per-year cards into one).
   5|combine_vbf_significance Run signal / stat-only significance fits.
-  6|combine_vbf_impacts      Run nuisance-parameter impacts. Blinded, so no observed
+  6|combine_vbf_summary      (Re)collect the significance summary CSV only.
+  7|combine_vbf_impacts      Run nuisance-parameter impacts. Blinded, so no observed
                               scenario: runs Asimov r=1 (signal injected) and r=0
                               (background-only), each as its own impacts_..._r1/_r0 plot.
-  7|combine_vbf_lhscan       Run a 1D likelihood scan (Asimov, r=1 injected).
-  8|combine_vbf_all          combine_vbf + combine_vbf_significance, then collect the
+  8|combine_vbf_lhscan       Run a 1D likelihood scan (Asimov, r=1 injected).
+  9|combine_vbf_all          combine_vbf + combine_vbf_significance, then collect the
                               significance summary CSV.
-  9|combine_vbf_summary      (Re)collect the significance summary CSV only.
-  10|vbf_limit                Full chain: stage2 + stage2_plot + stage3 + combine_vbf_all.
-                              NOTE: despite the name this runs significance, not
-                              AsymptoticLimits — pre-existing naming leftover, kept
-                              as-is here. Use mode 11 for an actual expected limit.
-  11|combine_vbf_limit        Expected 95% CL limit via AsymptoticLimits --run blind
+  10|combine_vbf_limit        Expected 95% CL limit via AsymptoticLimits --run blind
                               (Asimov background-only dataset, no unblinding), with-syst
                               and stat-only variants; collects
                               vbf_expected_limit_summary_<save_postfix>.csv.
+  11|vbf_limit                combine_vbf_all + combine_vbf_limit combined: card + workspace +
+                              significance + summary + expected limit + limit summary, for -y.
+                              Does NOT rebuild stage2/stage3 (unlike the old same-named mode) --
+                              run those separately first if the histograms/datacards aren't
+                              already built for -y.
 
 Common options:
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 commands built by this wrapper.

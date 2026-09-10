@@ -84,6 +84,15 @@ SHIFTED_SELECTION_VARIABLES = {
 NOMINAL_SELECTION_VARIABLES = {
     "dimuon_mass",
     "event",
+}
+
+# Each of these is only read by applyRegionCatCuts under a condition this script
+# never triggers, so a stage1 output that lacks the column is fine:
+#   - gjj_mass: generator-level, DY MC only, and only when do_vbf_filter_study is set
+#   - nfatJets_drmuon, MET_pt: only read when do_VH_veto=True, which this script
+#     never passes (applyRegionCatCuts defaults it to False)
+# Include them opportunistically instead of requiring them.
+OPTIONAL_SELECTION_VARIABLES = {
     "gjj_mass",
     "nfatJets_drmuon",
     "MET_pt",
@@ -97,51 +106,36 @@ def resolve_variation_field(base, variation, fields):
         raise KeyError(f"Missing nominal selection field '{base}'")
 
     if base in SHIFTED_SELECTION_VARIABLES:
+        # Jet-derived columns (njets, nBtagLoose, ..., jet1_pt) only have a shifted
+        # variant for JES/JER-like variations. Muon-kinematic variations (mu_resol_*,
+        # mu_scale_*, mu_roccor_*) and "wgt_*" weight variations never touch jets, so
+        # fall back to the nominal jet column for those instead of raising.
         use_var = "nominal" if variation == "nominal" or variation.startswith("wgt") else variation
-        candidate = f"{base}_{use_var}"
-        if candidate in fields:
-            return candidate
+        for candidate in (f"{base}_{use_var}", f"{base}_nominal", base):
+            if candidate in fields:
+                return candidate
         raise KeyError(
-            f"Selection field '{candidate}' for variation '{variation}' is unavailable."
+            f"None of the candidate selection fields for '{base}' (variation '{variation}') are available."
         )
 
     raise KeyError(f"Unknown selection variable '{base}'")
 
 
-# def columns_for_selection(category, variation, fields):
-#     # minimal columns for cuts; add here if your selection changes
-#     base_names = [
-#         "event",
-#         "dimuon_mass",
-#         "njets",
-#         "nBtagLoose",
-#         "nBtagMedium",
-#         "jj_mass",
-#         "jj_dEta",
-#         "jet1_pt",
-#         "gjj_mass",
-#         "nfatJets_drmuon",
-#         "MET_pt",
-#     ]
-#     return [resolve_variation_field(name, variation, fields) for name in base_names]
-
-def columns_for_selection(category, variation):
+def columns_for_selection(category, variation, fields):
     # minimal columns for cuts; add here if your selection changes
-    use_var = "nominal" if variation.startswith("wgt") else variation
-    base = [
-        "dimuon_mass",
+    base_names = [
         "event",
-        f"njets_{use_var}",
-        "gjj_mass",
-        f"nBtagLoose_{use_var}",
-        f"nBtagMedium_{use_var}",
-        f"jj_mass_{use_var}",
-        f"jj_dEta_{use_var}",
-        f"jet1_pt_{use_var}",
-        "nfatJets_drmuon",
-        "MET_pt",
+        "dimuon_mass",
+        "njets",
+        "nBtagLoose",
+        "nBtagMedium",
+        "jj_mass",
+        "jj_dEta",
+        "jet1_pt",
     ]
-    return base
+    cols = [resolve_variation_field(name, variation, fields) for name in base_names]
+    cols += [name for name in OPTIONAL_SELECTION_VARIABLES if name in fields]
+    return cols
 
 
 class DNNWrapper(torch_wrapper):
@@ -481,14 +475,22 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if not variation:
                 continue
             category= "vbf"
-            sel_cols = columns_for_selection(category, variation)
+            sel_cols = columns_for_selection(category, variation, fields)
             needed_cols = set(sel_cols + [weight_variation])
+
+            # feature_variation must be resolved before building needed_cols: evaluate_scores()
+            # reads training-feature columns under feature_variation, not the raw shape
+            # `variation`, so needed_cols has to be built against the same variation or the
+            # column evaluate_scores asks for may have been filtered out.
+            feature_variation = (
+                "nominal" if self.use_nominal_dnn_features_for_systs else variation
+            )
 
             # ----------------------------------
             for feature in self.training_features:
                 source = feature_name_for_variation(
                     feature,
-                    variation,
+                    feature_variation,
                     fields,
                     allow_nominal_fallback=self.allow_nominal_feature_fallback,
                     nominal_only_features=self.no_scale_features,
@@ -515,11 +517,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 "Total_up",
             }
             # if variation in debug_variations:
-            feature_variation = (
-                "nominal" if self.use_nominal_dnn_features_for_systs else variation
-            )
             filtered_events = events[needed_cols]
-            fields = filtered_events.fields
             # if variation in debug_variations:
             #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {fields}")
             region_events = selection.applyRegionCatCuts(
