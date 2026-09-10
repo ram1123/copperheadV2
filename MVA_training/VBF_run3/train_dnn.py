@@ -22,8 +22,8 @@ Notes:
 
 python train_dnn.py \
   --config configs/dnn_run3_vbf.yaml \
-  --data-dir dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT> \
-  --out-dir   dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>/trained \
+  --data-dir dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>_<JJ_ETA_REGION> \
+  --out-dir   dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>_<JJ_ETA_REGION>/trained \
   --log-level INFO
 """
 

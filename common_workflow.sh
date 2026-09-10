@@ -66,6 +66,26 @@ parse_common_args() {
     dnn_years_csv="$(join_by "," "${years[@]}")"
     dnn_years_slug="${dnn_years_csv//,/-}"
     dnn_config="${DNN_CONFIG:-configs/dnn_run3_vbf.yaml}"
+    # Effective jet-eta topology the VBF DNN's dijet pair is restricted to
+    # ("all" = none, or one of modules/selection.py's PAIR_JJ_ETA_REGIONS, e.g.
+    # jj_both_central, jj_non_central, jj_both_he, ...). Source of truth is
+    # analysis.jj_eta_region in the DNN config YAML (${dnn_config}); the
+    # JJ_ETA_REGION env var, if set, overrides it. Resolved here so this wrapper
+    # and preprocess_dnn.py agree on the value that gets baked into dnn_base_dir
+    # below and passed via --jj-eta-region.
+    if [[ -n "${JJ_ETA_REGION:-}" ]]; then
+        dnn_jj_eta_region="${JJ_ETA_REGION}"
+    else
+        dnn_jj_eta_region="$(python3 -c '
+import sys, yaml
+try:
+    cfg = yaml.safe_load(open(sys.argv[1])) or {}
+    print((cfg.get("analysis") or {}).get("jj_eta_region") or "all")
+except Exception:
+    print("all")
+' "${dnn_config}" 2>/dev/null || echo all)"
+        dnn_jj_eta_region="${dnn_jj_eta_region:-all}"
+    fi
     dnn_hpo_folds="${HPO_FOLDS:-0,1,2,3}"
     dnn_hpo_trials="${HPO_TRIALS:-50}"
     dnn_hpo_label="${HPO_LABEL:-v1_multifold_050Trials}"
@@ -74,7 +94,7 @@ parse_common_args() {
     # trained) model than the years actually processed via -y; defaults to -y's years.
     dnn_model_years_csv="${MODEL_YEARS:-${dnn_years_csv}}"
     dnn_model_years_slug="${dnn_model_years_csv//,/-}"
-    dnn_base_dir="dnn/trained_models/${label}/${dnn_model_years_slug}_${region}_${category}"
+    dnn_base_dir="dnn/trained_models/${label}/${dnn_model_years_slug}_${region}_${category}_${dnn_jj_eta_region}"
     dnn_hpo_dir="${dnn_base_dir}/hpo_optuna/${dnn_hpo_label}"
     dnn_best_json="${OPTUNA_BEST_JSON:-${dnn_hpo_dir}/optuna_best.json}"
     dnn_model_path="./${dnn_base_dir}"
@@ -554,6 +574,7 @@ run_dnn_workflow_once() {
         --base-path "${save_path}/stage1_output/"
         --tag "${label}"
         --years "${dnn_years_csv}"
+        --jj-eta-region "${dnn_jj_eta_region}"
     )
     if [[ "${dask_gateway}" == "1" ]]; then
         pre_cmd+=(--use-dask-gateway)
@@ -583,6 +604,7 @@ run_dnn_workflow_once() {
 
     log "Running DNN workflow for years=${dnn_years_csv}"
     log "  DNN config: ${dnn_config}"
+    log "  DNN jj_eta_region: ${dnn_jj_eta_region}"
     log "  DNN base dir: ${dnn_base_dir}"
     log "  DNN HPO dir: ${dnn_hpo_dir}"
     log "  DNN best json: ${dnn_best_json}"

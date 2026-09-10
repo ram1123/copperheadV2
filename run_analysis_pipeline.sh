@@ -19,7 +19,7 @@ Modes:
   zpt_fit|zpt_fit0|zpt_fit1|zpt_fit2|zpt_fit12
   calib|calib_closure
   compact
-  dnn|dnn_pre|dnn_train|dnn_var_rank
+  dnn|dnn_pre|dnn_hpo|dnn_train|dnn_var_rank
   pu_dnn_train                VBF-category DNN above is unrelated to this: pu_dnn_train
                                runs MVA_training/pileup_dnn/train_pu_dnn.py, the per-jet
                                HS-vs-PU classifier consumed inside stage1 via
@@ -32,10 +32,22 @@ Options:
 
 Env vars:
   MODEL_YEARS   Comma-separated years used to build the DNN model directory name
-                (dnn/trained_models/<label>/<MODEL_YEARS>_<region>_<category>),
+                (dnn/trained_models/<label>/<MODEL_YEARS>_<region>_<category>_<JJ_ETA_REGION>),
                 independent of the years passed via -y. Defaults to -y's years.
                 Use this to run stage2/stage3 for one year (-y) while loading a
                 model trained on a different (e.g. combined) set of years.
+  JJ_ETA_REGION dnn/dnn_pre/dnn_train modes only: OVERRIDE for the jet-eta
+                topology the VBF DNN's dijet pair is restricted to. The default
+                comes from analysis.jj_eta_region in the DNN config YAML
+                (${DNN_CONFIG:-configs/dnn_run3_vbf.yaml}) -- edit that key to
+                change it persistently; set this env var only for a one-off
+                run. "all" (no restriction) or one of modules/selection.py's
+                PAIR_JJ_ETA_REGIONS (jj_both_central, jj_non_central,
+                jj_one_fwd25_one_central, jj_one_he_one_central,
+                jj_one_fwd30_one_central, jj_both_fwd25, jj_both_he,
+                jj_both_fwd30, jj_one_he_one_fwd30). The effective value is
+                encoded into the DNN output directory name above, so different
+                choices don't overwrite each other's output.
 
   pu_dnn_train mode (all optional, sensible defaults shown):
   PU_DNN_DY_GLOB       Compacted sample-name glob for the HS-jet proxy (default: dyTo2Mu_M-50_aMCatNLO)
@@ -114,7 +126,7 @@ for year in "${years[@]}"; do
         calib_closure)
             run_mode_from_nul < <(build_calib_cmd "${year}" "closure")
             ;;
-        dnn|dnn_pre|dnn_train|dnn_var_rank)
+        dnn|dnn_pre|dnn_hpo|dnn_train|dnn_var_rank)
             if [[ "${dnn_invoked}" == "1" ]]; then
                 log "DNN workflow already launched for years=${dnn_years_csv}; skipping duplicate invocation from year ${year}."
                 continue
