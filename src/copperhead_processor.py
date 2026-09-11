@@ -28,6 +28,7 @@ from modules.vector_operations import (
 
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import (
+    PDF_N_EIGENVECTOR_MEMBERS,
     add_pdf_variations,
     add_stxs_variations,
     btag_weights_jsonKeepDim,
@@ -1532,6 +1533,10 @@ class EventProcessor(processor.ProcessorABC):
         save_all_weight_variations = self.config["switches"].get("save_all_weight_variations", False)
         do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
         weights = Weights(len(events), storeIndividual=do_save_partial_weights) # none for dask awkward
+        # Set by the do_pdf block below, consumed where weight_dict is built.
+        pdf_member_ratios = None
+        pdf_central_weight = None
+        write_pdf_members = False
         # weights = Weights(len(events))
         if is_mc:
             gen_weight_ones = ak.ones_like(events.genWeight)
@@ -1674,27 +1679,94 @@ class EventProcessor(processor.ProcessorABC):
                 )
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            # add_pdf_variations implements the symmetric-Hessian prescription for the
+            # two 103-member `symmhessian+as` NNPDF3.1 sets, and raises on anything else:
+            #   LHA 306000-306102  NNPDF31_nnlo_hessian_pdfas
+            #   LHA 325300-325402  NNPDF31_nnlo_as_0118_mc_hessian_pdfas
+            # Reading the LHEPdfWeight branch title of every MC sample in
+            # configs/datasets/dataset_nanoAODv15_run{2,3}.yaml shows all of them carry
+            # one of those two, except the 11 samples listed below under "101-member
+            # sets", which carry:
+            #   LHA 325500-325600  NNPDF31_nnlo_as_0118_nf_4_mc_hessian
+            #                      (symmhessian but with no alpha_s members)
+            #   LHA 320900-321000  NNPDF31_nnlo_as_0118_nf_4
+            #                      (MC replicas -- needs the RMS prescription, not this one)
+            # So gate on an explicit exclusion list rather than a sample-name substring
+            # match: every supported sample gets PDF weights, and anything new whose set
+            # is not one of the two supported ones makes add_pdf_variations fail loudly
+            # instead of being silently skipped.
+            #
+            # The exclusion is Run2-only on purpose. These 101-member sets are a Run2 UL
+            # production artefact; the same sample names in Run3 carry the supported
+            # 325300-325402 set (checked for ww_2l2nu, wz_1l1nu2q and zz_2l2nu in the
+            # 2024 campaign), so applying the list there would drop PDF weights from
+            # samples that are perfectly fine.
+            pdf_unsupported_samples = {
+                # --- 101-member sets: the wrong number of members for the symmetric-
+                # --- Hessian layout add_pdf_variations assumes.
+                "st_schannel_had",
+                "st_schannel_lep",
+                "ww_1l1nu2q",
+                "ww_2l2nu",
+                "ww_4q",
+                "www",
+                "wwz",
+                "wz_1l1nu2q",
+                "wz_1l3nu",
+                "wz_2q2nu",
+                "zz_2l2nu",
+                # --- Correct 103-member set (325300-325402), but the stored weights are
+                # --- broken: member 0 is written as 1.0 while members 1-100 all sit at
+                # --- ~0.5, so w_k/w_0 - 1 ~ -0.5 for every eigenvector and the Hessian
+                # --- sum returns sigma ~ sqrt(100 * 0.25) = 5, i.e. a 500% uncertainty
+                # --- on every event. The members are self-consistent (per-event spread
+                # --- ~1e-3), so it is the stored central that is wrong, not the ensemble.
+                # --- Confirmed in all four Run2 eras (mean(members)/w_0 = 0.4999). The
+                # --- Run3 config has a tt_inclusive entry but its dataset path is null,
+                # --- so nothing is lost by scoping this exclusion to Run2 for now.
+                "tt_inclusive_amcatnlo",
+                # --- Single top t-channel and tW. Correct 103-member sets, but the
+                # --- stored LHE weights are unusable: surveying 100k events of the
+                # --- first file of each era finds a central member of exactly zero
+                # --- (1-2 events per 100k in st_tchannel_antitop, in all four eras,
+                # --- which makes add_pdf_variations raise), negative central members
+                # --- (8-40 per 100k in both t-channel samples), and near-zero ones
+                # --- (|w_0| < 0.1) that pass the zero check but blow sigma up. w_0
+                # --- ranges from -27.6 to +19.1 in st_tchannel_antitop 2018.
+                # --- st_tW_* are far milder (1 negative w_0 per 100k, no zeros) but
+                # --- are excluded with them so the whole single-top family is treated
+                # --- consistently.
+                "st_tchannel_antitop",
+                "st_tchannel_top",
+                "st_tW_antitop",
+                "st_tW_top",
+            }
             do_pdf = (
                 self.config["switches"]["do_pdf"]
                 and ("nominal" in pt_variations)
                 and ("LHEPdfWeight" in events.fields)
-                and (
-                    "dy" in dataset
-                    or "ewk" in dataset
-                    or "ggh" in dataset
-                    or "vbf" in dataset
-                )
-                and ("mg" not in dataset)
+                and not (is_run2(year) and dataset in pdf_unsupported_samples)
             )
+            # The 100 eigenvector members are carried to stage3 as separate weight
+            # columns and combined there per bin via PDF4LHC21 Eq. (6.5). They are
+            # deliberately NOT collapsed into a per-event envelope here: squaring
+            # before summing over events discards the x-space cancellation the
+            # eigenvector decomposition encodes. The columns are written where
+            # weight_dict is built, because each must multiply the *final* nominal
+            # weight and `weights` is still being filled at this point.
             if do_pdf:
                 logger.debug("doing pdf!")
-                # add_pdf_variations(events, self.weight_collection, self.config, dataset)
-                pdf_vars = add_pdf_variations(events, self.config, dataset)
-                weights.add("pdf_2rms",
-                    weight=ak.ones_like(pdf_vars["up"]),
-                    weightUp=pdf_vars["up"],
-                    weightDown=pdf_vars["down"]
+                pdf_member_ratios, pdf_central_weight = add_pdf_variations(
+                    events, self.config, dataset
                 )
+                write_pdf_members = True
+            else:
+                if self.config["switches"]["do_pdf"]: # for other mc samples with unsuppoorted NNPDF, we emit unity members
+                    # Unity members, so the per-group variation intersection in stage3
+                    # does not drop pdf_unc for every other dataset in the same group.
+                    # A unit ratio contributes exactly zero to F^(k) - F^(0).
+                    logger.debug("skip pdf! member ratios set to unity")
+                    write_pdf_members = True
         t15 = time.perf_counter()
         logger.info(f"[timing] some GEN event weights for syst time: {t15 - t14:.2f} seconds")
 
@@ -2385,6 +2457,39 @@ class EventProcessor(processor.ProcessorABC):
             for variation in weights.variations:
                 variation_name = "wgt_" + variation.replace("Up", "_up").replace("Down", "_down") # match the naming scheme of copperhead
                 weight_dict[variation_name] = weights.weight(variation)
+
+            # PDF eigenvector members. The `_up` suffix is what makes stage2's existing
+            # wgt_*_up/_down discovery pick them up and fill one histogram per member
+            # with no stage2 change; stage3 intercepts the `pdfMemberHessEig` prefix and
+            # collapses them via Eq. (6.5) instead of emitting 100 nuisances.
+            if write_pdf_members:
+                nominal_weight = weights.weight()
+                for k in range(PDF_N_EIGENVECTOR_MEMBERS):
+                    col = f"wgt_pdfMemberHessEig{k:03d}_up"
+                    if pdf_member_ratios is None:
+                        weight_dict[col] = nominal_weight
+                    else:
+                        weight_dict[col] = nominal_weight * pdf_member_ratios[:, k]
+
+                # Debug only -- nothing downstream reads this column. The members above
+                # are already divided by the central member per event, which forces
+                # w_0 to 1 and hides the cases where the stored value is not: NanoAOD
+                # truncates the LHE weight mantissa (w_0 = 0.99996948 for every
+                # TTTo2L2Nu event, and +-6e-5 in the MiNNLO samples), and the single-top
+                # t-channel records carry a w_0 running from -4.6 to +7.3. Saving the
+                # raw value keeps that visible in the stage1 output.
+                #
+                # NaN, not 1.0, for the samples the do_pdf gate excludes: their w_0 was
+                # never read, and writing 1.0 would claim it was measured and found
+                # unity. The name deliberately has no `wgt_` prefix and no `_up`
+                # suffix, so stage2's variation discovery leaves it alone.
+                _add_block(out_dict, {
+                    "pdf_central_member": (
+                        np.full(len(nominal_weight), np.nan)
+                        if pdf_central_weight is None
+                        else pdf_central_weight
+                    ),
+                })
 
         t20 = time.perf_counter()
         logger.info(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
