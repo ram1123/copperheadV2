@@ -2472,12 +2472,13 @@ class EventProcessor(processor.ProcessorABC):
                         weight_dict[col] = nominal_weight * pdf_member_ratios[:, k]
 
                 # Debug only -- nothing downstream reads this column. The members above
-                # are already divided by the central member per event, which forces
-                # w_0 to 1 and hides the cases where the stored value is not: NanoAOD
-                # truncates the LHE weight mantissa (w_0 = 0.99996948 for every
-                # TTTo2L2Nu event, and +-6e-5 in the MiNNLO samples), and the single-top
-                # t-channel records carry a w_0 running from -4.6 to +7.3. Saving the
-                # raw value keeps that visible in the stage1 output.
+                # are scaled by the inclusive S_0 / S_k, which is a per-member constant
+                # and so leaves each event's own w_0 nowhere in the output. w_0 is 1 by
+                # construction (the branch is already w_var/w_nominal) and the cases
+                # where it is not are worth being able to see: NanoAOD truncates the LHE
+                # weight mantissa (w_0 = 0.99996948 for every TTTo2L2Nu event, and
+                # +-6e-5 in the MiNNLO samples), and the single-top t-channel records
+                # carry a w_0 running from -4.6 to +7.3. Saving it keeps that visible.
                 #
                 # NaN, not 1.0, for the samples the do_pdf gate excludes: their w_0 was
                 # never read, and writing 1.0 would claim it was measured and found
