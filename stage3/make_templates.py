@@ -51,6 +51,28 @@ PDF_MEMBER_PREFIX = "wgt_pdfMemberHessEig"
 # src/corrections/evaluator.py; duplicated rather than imported so stage3 does not
 # pull in coffea.
 PDF_N_EIGENVECTOR_MEMBERS = 100
+# How the per-member bin deltas are collapsed into the single up/down pair:
+#
+#   "hessian"  delta = sqrt( sum_k (F_k - F_0)^2 )
+#              PDF4LHC21 (arXiv:2203.05506) Eq. (6.5). The estimator matched to the
+#              symmetric-Hessian set our samples actually carry, where members 1-100
+#              are orthogonal eigenvector directions and each contributes its full
+#              square.
+#
+#   "rms"      delta = sqrt( sum_k (F_k - F_0)^2 / (N - 1) )
+#              The sample standard deviation of the members about F_0, i.e. the
+#              estimator for a Monte-Carlo *replica* set, where the members are draws
+#              from a distribution rather than orthogonal directions. This is what
+#              osWW-VBS/PlottingCodes does -- see
+#              LimitCardGenerate/WVChannel_GetCard_WithHiggsDistributions.C:1100,
+#              which hardcodes the 1/99.
+#
+# Ours is `symmhessian+as` (the NanoAOD LHEPdfWeight branch title says so), for which
+# "hessian" is the physically matched choice; "rms" is smaller by exactly
+# sqrt(N - 1) = 9.9499 for our 100 members. Kept switchable rather than silently
+# replaced so a datacard can be traced to the estimator that produced it -- the
+# per-template debug line below names the mode and divisor.
+PDF_UNC_COMBINATION = "rms"
 
 shape_only = [
     "wgt_LHERen_up",
@@ -59,8 +81,16 @@ shape_only = [
     "wgt_LHEFac_down",
     "wgt_qgl_up",
     "wgt_qgl_down",
-    "wgt_pdf_unc_up",
-    "wgt_pdf_unc_down",
+    # Commented off 2026-09-11 by the analyst: a PDF variation changes the parton
+    # luminosity, so it moves the cross section by definition -- that rate shift is
+    # part of the uncertainty, not an artefact to be normalised away. With these out
+    # of the list the members enter the collapse below raw, matching the reference
+    # implementation (https://github.com/osWW-VBS/PlottingCodes/blob/master/LimitCardGenerate/WVChannel_GetCard_WithHiggsDistributions.C#L1100).
+    # Re-add both lines to go back to shape-only; nothing else reads them (the
+    # generic rescale near line 586 is keyed on stage2 column names, and no
+    # `wgt_pdf_unc_*` column exists -- the pair is synthesised below).
+    # "wgt_pdf_unc_up",
+    # "wgt_pdf_unc_down",
     "wgt_zpt_up",
     "wgt_zpt_down",
 ]
@@ -730,7 +760,8 @@ def make_templates(args, parameters={}):
                 }
             )
 
-        # ---- PDF4LHC21 Eq. (6.5), taken on the observable ----------------------
+        # ---- PDF member collapse, taken on the observable ----------------------
+        # Estimator selected by PDF_UNC_COMBINATION; the shape below is Eq. (6.5).
         # arXiv:2203.05506 Sect. 6.3.2 defines the symmetric-Hessian uncertainty on
         # the observable, not per event:
         #
@@ -773,20 +804,24 @@ def make_templates(args, parameters={}):
             pdf_hist_nominal, pdf_sumw2_nominal, pdf_edges, pdf_centers = pdf_nominal
             nominal_yield = pdf_hist_nominal.sum()
 
-            # `pdf_unc` is declared shape-only, so each member is renormalised to the
-            # nominal yield *before* entering the sum. Collapsing first and rescaling
-            # the resulting envelope afterwards is not the same operation: it would
-            # leak the members' yield spread into the shape.
+            # Driven by whether `pdf_unc` is listed in `shape_only`, which as of
+            # 2026-09-11 it is not -- see the note there. Currently False, so each
+            # member enters the sum raw and its yield shift is kept as part of the
+            # uncertainty.
+            #
+            # When True, each member is renormalised to the nominal yield *before* the
+            # delta is taken, so only the bin-to-bin redistribution survives.
+            # Collapsing first and rescaling the resulting envelope afterwards is not
+            # the same operation: `delta` is non-negative in every bin, so `up` always
+            # integrates above nominal by construction, and rescaling that away removes
+            # an artefact of the collapse rather than the members' real yield spread.
             #
             # DECISION PENDING (deferred by the analyst 2026-09-05, do not change
-            # unilaterally). The members are normalised here but the envelope below is
-            # not, and `up = H_0 + delta` with delta >= 0 integrates higher than
-            # nominal -- +0.23% measured on 2017 vbf_powheg_dipole. So this is a
-            # hybrid: the members' genuine yield spread (0.758%) is normalised away and
-            # a rate effect of different origin (bin-wise shape spread treated as fully
-            # correlated) is reintroduced. Strict shape-only, matching every other
-            # entry in `shape_only`, would additionally rescale up/down to
-            # pdf_hist_nominal.sum(). See the "DECISION PENDING" section of
+            # unilaterally) applies to the shape-only branch: it normalises the members
+            # but not the envelope, leaving `up` +0.23% over nominal on 2017
+            # vbf_powheg_dipole against a members' yield spread of 0.758%. Strict
+            # shape-only would additionally rescale up/down to pdf_hist_nominal.sum().
+            # See the "DECISION PENDING" section of
             # .agent-system/tasks/pdf_unc_hessian_implementation/HANDOFF.md.
             pdf_shape_only = "wgt_pdf_unc_up" in shape_only
 
@@ -798,7 +833,21 @@ def make_templates(args, parameters={}):
                     if member_yield != 0:
                         member_hist = member_hist * (nominal_yield / member_yield)
                 delta_sq += (member_hist - pdf_hist_nominal) ** 2
-            delta = np.sqrt(delta_sq)
+
+            # See PDF_UNC_COMBINATION at the top of the file. The divisor is taken
+            # from the live member count rather than a literal 99, so a differently
+            # sized set stays self-consistent; for our 100 members it is 99, matching
+            # the reference implementation.
+            if PDF_UNC_COMBINATION == "hessian":
+                pdf_divisor = 1.0
+            elif PDF_UNC_COMBINATION == "rms":
+                pdf_divisor = float(len(pdf_member_variations) - 1)
+            else:
+                raise ValueError(
+                    f"make_templates: PDF_UNC_COMBINATION is "
+                    f"{PDF_UNC_COMBINATION!r}; expected 'hessian' or 'rms'."
+                )
+            delta = np.sqrt(delta_sq / pdf_divisor)
 
             # Positivity per Sect. 6.3.2: the Gaussian interval is symmetric about the
             # nominal, and the truncation is applied to the observable -- i.e. here, at
@@ -830,7 +879,8 @@ def make_templates(args, parameters={}):
                     )
                     name = f"{group}_{variation_fixed}"
                     logger.debug(
-                        f"pdf_unc Eq.(6.5) {name}: nominal {nominal_yield:.6g}, "
+                        f"pdf_unc [{PDF_UNC_COMBINATION}, divisor {pdf_divisor:g}] "
+                        f"{name}: nominal {nominal_yield:.6g}, "
                         f"{direction} {pdf_hist.sum():.6g}"
                     )
                     # The members are the same events reweighted, so they add no
