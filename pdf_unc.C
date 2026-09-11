@@ -16,11 +16,12 @@
 #include <memory>
 #include <string>
 
-// NNPDF31_nnlo_as_0118_mc_hessian_pdfas only: 100 Hessian eigenvector members
-// (+ central if hasCentral). PDF-only SHAPE uncertainty on p_T(mumu) --
-// each variation is rescaled to the nominal yield, so normalization/rate is
-// removed by construction; use pdf_unc_yield.C for the total-yield number.
-void pdf_unc(const char* inputName, const char* outputName, bool hasCentral) {
+// NNPDF31_nnlo_as_0118_mc_hessian_pdfas only: LHEPdfWeight[0] is the central
+// member, [1..100] the 100 Hessian eigenvector members (101-102 are alphaS,
+// excluded here). PDF-only SHAPE uncertainty on p_T(mumu) -- each variation
+// is rescaled to the nominal yield, so normalization/rate is removed by
+// construction; use pdf_unc_yield.C for the total-yield number.
+void pdf_unc(const char* inputName, const char* outputName) {
     gROOT->SetBatch(kTRUE);
     gStyle->SetOptStat(0);
 
@@ -58,8 +59,8 @@ void pdf_unc(const char* inputName, const char* outputName, bool hasCentral) {
         mu2.SetPtEtaPhiM(pt[b], eta[b], phi[b], mass[b]);
         double x = std::min((mu1 + mu2).Pt(), edges[nbins] - 1e-6);
         double w = *genWeight;
-        nominal->Fill(x, w * (hasCentral ? pdf[0] : 1.0));
-        for (unsigned k = 0; k < up.size(); ++k) up[k]->Fill(x, w * pdf[k + hasCentral]);
+        nominal->Fill(x, w * pdf[0]);
+        for (unsigned k = 0; k < up.size(); ++k) up[k]->Fill(x, w * pdf[k + 1]);
     }
 
     auto band = hist("pdf_band");
@@ -74,23 +75,22 @@ void pdf_unc(const char* inputName, const char* outputName, bool hasCentral) {
         }
     }
 
-    // Top pad: nominal + band. Bottom pad: relative band around 1 (band is a
-    // few % of content, invisible against the full spectrum otherwise).
-    std::unique_ptr<TH1D> bandDraw(static_cast<TH1D*>(band->Clone()));
-    bandDraw->SetDirectory(nullptr);
-    bandDraw->SetTitle(";;Weighted events");
-    bandDraw->SetFillColorAlpha(kOrange + 1, 0.5);
-    bandDraw->SetLineColor(kOrange + 1);
-    bandDraw->SetMarkerSize(0);
-    bandDraw->SetMinimum(0);
-    bandDraw->SetMaximum(1.4 * bandDraw->GetMaximum());
-
+    // Top pad: nominal + band (styled in place; band's content/errors, and
+    // what gets Write()'n below, are unaffected by draw-style setters).
+    // Bottom pad: relative band around 1 (band is a few % of content,
+    // invisible against the full spectrum on the top pad's linear scale).
+    band->SetFillColorAlpha(kOrange + 1, 0.5);
+    band->SetLineColor(kOrange + 1);
+    band->SetMarkerSize(0);
+    band->SetMinimum(0);
+    band->SetMaximum(1.4 * band->GetMaximum());
     nominal->SetLineColor(kBlack);
     nominal->SetLineWidth(2);
     nominal->SetMarkerStyle(20);
 
     std::unique_ptr<TH1D> ratio(static_cast<TH1D*>(band->Clone()));
     ratio->SetDirectory(nullptr);
+    ratio->SetTitle(";p_{T}(#mu#mu) [GeV];Varied / nominal");
     double maxRel = 0;
     for (int bin = 1; bin <= nbins; ++bin) {
         double c = nominal->GetBinContent(bin);
@@ -99,10 +99,6 @@ void pdf_unc(const char* inputName, const char* outputName, bool hasCentral) {
         ratio->SetBinError(bin, rel);
         maxRel = std::max(maxRel, rel);
     }
-    ratio->SetTitle(";p_{T}(#mu#mu) [GeV];Varied / nominal");
-    ratio->SetFillColorAlpha(kOrange + 1, 0.5);
-    ratio->SetLineColor(kOrange + 1);
-    ratio->SetMarkerSize(0);
     ratio->SetMinimum(1 - 1.3 * maxRel);
     ratio->SetMaximum(1 + 1.3 * maxRel);
     ratio->GetYaxis()->SetNdivisions(505);
@@ -116,13 +112,13 @@ void pdf_unc(const char* inputName, const char* outputName, bool hasCentral) {
     p2.Draw();
 
     p1.cd();
-    bandDraw->Draw("E2");
+    band->Draw("E2");
     nominal->Draw("HIST SAME");
     nominal->Draw("E0 X0 SAME");
     TLegend legend(0.55, 0.75, 0.88, 0.88);
     legend.SetBorderSize(0);
     legend.AddEntry(nominal.get(), "Nominal", "lep");
-    legend.AddEntry(bandDraw.get(), Form("PDF unc. (max %.1f%%)", 100 * maxRel), "f");
+    legend.AddEntry(band.get(), Form("PDF unc. (max %.1f%%)", 100 * maxRel), "f");
     legend.Draw();
 
     p2.cd();

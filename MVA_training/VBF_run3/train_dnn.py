@@ -55,7 +55,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 
 # --------------------------------------------------------------------------------
@@ -476,26 +476,83 @@ class ParquetDataset(Dataset):
         )
 
 
+class InMemoryBatchLoader:
+    """
+    Vectorized replacement for `DataLoader(ParquetDataset(...), num_workers=0)`.
+
+    `ParquetDataset` already materializes the whole fold into `x`/`y`/`w` numpy
+    arrays (via `_load_fold_data_cached`), so the per-sample `Dataset.__getitem__`
+    + `DataLoader` collate path bought nothing: it does one Python-level function
+    call per *row* per epoch (not per batch), which dominates wall time once a
+    fold has millions of rows and starves the GPU. Profiled at 8% GPU utilization
+    training on a ~3.1M-row jj_non_central HPO fold (~6.5x jj_both_central's
+    ~476k rows, and ~8-11x slower per HPO trial) -- see
+    .claude/reports/implementations/2026-09-11_vectorized-in-memory-dataloader.md.
+    This produces every batch with a single vectorized tensor index instead: one
+    `torch.randperm`/`torch.arange` per epoch plus one fancy-index per batch, no
+    per-row Python loop and no worker processes needed (there is no I/O left to
+    overlap once the whole fold is already in RAM).
+
+    Reproduces the iteration contract `train_one_fold`/`evaluate` rely on: yields
+    `(x, y, w)` CPU tensors per batch, last (possibly smaller) batch included
+    (`DataLoader`'s `drop_last=False` equivalent), and shuffled draws come from
+    the same global torch RNG call (`torch.randperm(n)`, no explicit generator)
+    that `DataLoader(shuffle=True)`'s `RandomSampler` used -- so `set_seed(...)`
+    still makes iteration order reproducible.
+    """
+
+    def __init__(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        w: np.ndarray,
+        batch_size: int,
+        shuffle: bool,
+        pin_memory: bool = False,
+    ) -> None:
+        self.x = torch.from_numpy(x)
+        self.y = torch.from_numpy(y)
+        self.w = torch.from_numpy(w)
+        # NOTE: pinning is applied per-yielded-batch in __iter__, not here -- fancy
+        # indexing (self.x[idx]) always returns a fresh, unpinned tensor, so pinning
+        # the whole (dataset-sized) tensor once would never actually propagate to
+        # what gets returned per batch.
+        self.pin_memory = bool(pin_memory)
+        self.batch_size = int(batch_size)
+        self.shuffle = bool(shuffle)
+
+    def __len__(self) -> int:
+        n = self.x.shape[0]
+        bs = max(self.batch_size, 1)
+        return (n + bs - 1) // bs
+
+    def __iter__(self):
+        n = self.x.shape[0]
+        perm = torch.randperm(n) if self.shuffle else torch.arange(n)
+        for start in range(0, n, self.batch_size):
+            idx = perm[start : start + self.batch_size]
+            xb, yb, wb = self.x[idx], self.y[idx], self.w[idx]
+            if self.pin_memory:
+                xb, yb, wb = xb.pin_memory(), yb.pin_memory(), wb.pin_memory()
+            yield xb, yb, wb
+
+
 def make_dataloader(
-    ds: Dataset,
+    ds: "ParquetDataset",
     batch_size: int,
     shuffle: bool,
     num_workers: int,
     prefetch_factor: Optional[int],
     pin_memory: bool,
-) -> DataLoader:
-    kwargs: Dict[str, Any] = dict(
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        drop_last=False,
+) -> InMemoryBatchLoader:
+    # num_workers/prefetch_factor are accepted for call-site compatibility but no
+    # longer used: `ds` is always a fully in-memory ParquetDataset (see
+    # InMemoryBatchLoader's docstring above) -- worker processes only ever added
+    # multiprocessing overhead here, they never had real I/O to overlap.
+    del num_workers, prefetch_factor
+    return InMemoryBatchLoader(
+        ds.x, ds.y, ds.w, batch_size=batch_size, shuffle=shuffle, pin_memory=pin_memory
     )
-    # prefetch_factor must be None if num_workers == 0
-    if num_workers > 0:
-        kwargs["prefetch_factor"] = prefetch_factor if prefetch_factor is not None else 2
-        kwargs["persistent_workers"] = True
-    return DataLoader(ds, **kwargs)
 
 
 @lru_cache(maxsize=64)
@@ -1152,7 +1209,7 @@ class EarlyStopping:
 @torch.no_grad()
 def evaluate(
     model: nn.Module,
-    loader: DataLoader,
+    loader: InMemoryBatchLoader,
     device: torch.device,
     cfg: TrainConfig,
     pos_weight_t: Optional[torch.Tensor],
