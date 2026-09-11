@@ -1,11 +1,13 @@
 # Stage-1 runtime baseline — 2024 / NanoAODv15
 
-- Date: 2026-08-31
+- Date: 2026-08-31 (updated 2026-09-11 — see "2025 update" section below)
 - Type: Investigation
-- Status: Open (baseline only; MC samples not yet captured)
-- Applicable era: 2024
+- Status: 2024 section open (baseline only; MC samples not yet captured there). 2025
+  section closed for the config tested (chunksize 250k / `scale(98)` / `worker_cores=2`,
+  `worker_memory=10`) — three independent full-2025 runs measured, consistent results.
+- Applicable era: 2024 (original section), 2025 (2026-09-11 update)
 - NanoAOD campaign: v15 (`configs/datasets/dataset_nanoAODv15_run3.yaml`)
-- Relevant files: `run_stage1.py`, `src/stage1/runner_adapter.py`, `src/copperhead_processor.py`, `modules/dask_utils.py`
+- Relevant files: `run_stage1.py`, `src/stage1/runner_adapter.py`, `src/copperhead_processor.py`, `modules/dask_utils.py`, `DaskGatewaySLURM.ipynb`
 
 ## Question
 
@@ -197,3 +199,183 @@ tabulated here; all `FAILED: 0` in their `stage1_summary.log`.)
   - `chunksize` 100 k -> 250–400 k;
   - redirector fallback list (Purdue-local only, never XCache).
 - Keep appending rows here as more samples/years are measured.
+
+---
+
+## 2025 update — 2026-09-11: chunksize 250k + `scale(98)`/`worker_cores=2` measured
+
+- Date: 2026-09-11
+- Type: Investigation (live Dask Gateway monitoring across 4 separate full-2025 stage-1
+  runs, 2026-08-31 through 2026-09-11)
+- Applicable era: 2025
+- Status: Closed for the config tested below — three independent 250k runs agree to
+  within run-to-run noise; the `chunksize` A/B (100k vs 250k) is a clean same-input-file
+  comparison. One open item (`worker_cores` 1-vs-2 A/B) not yet run — see "Open items".
+
+### What changed since the Aug-31 (2024) baseline above
+
+The 2024 baseline table above was measured at `chunksize=100_000`, an *adaptive*
+Gateway cluster (`cluster.adapt(min, max)`), and `worker_cores=1`/`worker_memory=15`.
+Across this week the following were changed and tested on 2025 (`DaskGatewaySLURM.ipynb`,
+uncommitted local notebook state; `run_stage1.py:182`, **committed** as of `906d636`,
+2026-09-01):
+
+| Setting | Aug-31 baseline | Current (tested below) |
+|---|---|---|
+| `chunksize` (coffea `Runner`) | 100,000 | **250,000** (`run_stage1.py:182`, committed) |
+| Gateway scaling | `cluster.adapt(35, 399)` | **`cluster.scale(98)`** fixed (adapt line commented out) |
+| `worker_cores` | 1 | **2** |
+| `worker_memory` | 15 GiB | **10 GiB** |
+| `max_file_len` (per-dataset split) | 900 (data), auto per `DATASET_ELEMENT_LIMITS` (MC) | **50,000 for every dataset** — each dataset is one `file_idx` unit (one `.compute()`) instead of split into multiple |
+
+Motivation for `adapt`->`scale(98)`: `adapt(35,399)` oscillated the desired-worker count
+wildly (observed swings between 1 and 1000+) and mass-retired 20-40 workers every time the
+per-file task count dipped (e.g. between chunks, at sample boundaries), which repeatedly
+evicted in-flight reduction inputs and either stalled or crashed the run. A fixed pool
+removes that churn entirely. Motivation for `worker_cores` 1->2: single-threaded workers
+were read-bound (idle waiting on XRootD) with no way to overlap a stalled read against
+compute; two threads let one task compute while the other's read is in flight. Motivation
+for `max_file_len` 900->50000 (single unit per dataset): removes the idle gap at every
+file-to-file boundary within a dataset (previously the pool drained to near-zero between
+files); trades this off against a larger blast radius on failure (see "Reliability" below).
+
+### Per-sample runtimes, three independent full-2025 runs at the current config
+
+All three runs used `chunksize=250_000`, `scale(98)`, `worker_cores=2`, `worker_memory=10`,
+`max_file_len=50000`. Numbers are `done.ts - running.ts` per `(dataset, idx=0)` from each
+run's canonical `_status/job_status.jsonl` (not console-log scraping) — see the "Canonical
+source" note above; all three job_status.jsonl files were re-read directly for this update.
+Event counts are per-dataset totals (`meta.Processed events from stage-1`), identical
+across runs for the same `dataset` name since the raw NanoAOD inputs don't change with
+selection — confirms these are true same-input-file comparisons.
+
+| Dataset | Events | Sep 1 `FilterJets/DefaultjetPt25GeV` | Sep 2-3 `FilterEvents/OfficialRecomendation` | Sep 11 `..._MuonID-tightId` (+ `--isCutflow`) |
+|---|---:|---:|---:|---:|
+| data_B | 11,200,754 | 146.9 s | 183.3 s | 164.2 s |
+| data_C | 798,797,125 | 1568.7 s | 1562.7 s | 1509.6 s |
+| data_D | 959,319,428 | 1904.5 s | 1873.4 s | 1883.4 s |
+| data_E | 531,276,074 | 1100.6 s | 1102.6 s | 1121.2 s |
+| data_F | 1,041,242,824 | 2049.4 s | 2139.8 s | 2102.8 s |
+| data_G | 884,561,714 | 1721.1 s | 1868.4 s | 1911.2 s |
+| dyTo2Mu_M-50_aMCatNLO | 490,076,405 | 1097.8 s | 1144.9 s | 1196.4 s |
+| dy_VBF_filter | 94,375,156 | 292.3 s | 300.0 s | 308.4 s |
+| ewk_mmjj_mll_105_160 | 5,274,178 | 167.4 s | 265.4 s | 180.3 s |
+| ggh_powhegPS | 2,800,000 | 85.1 s | 100.1 s | 87.8 s |
+| ttjets_dl | 470,123,263 | 1598.0 s | 1887.1 s | 1788.4 s |
+| ttjets_sl | 484,475,057 | 1723.2 s | 1652.5 s | 2060.4 s |
+| vbf_aMCatNLO | 11,193,000 | 224.7 s | 216.6 s | 353.8 s |
+| vbf_powheg | 11,190,000 | 149.8 s | 154.6 s | 182.2 s |
+| ww_2l2nu | 239,943,886 | 767.0 s | 787.6 s | 903.0 s |
+| wz_1l1nu2q | 143,874,689 | 514.3 s | 619.1 s | 642.9 s |
+| wz_2l2q | 236,049,432 | 769.0 s | 861.1 s | 834.5 s |
+| wz_3lnu | 248,149,069 | 730.6 s | 910.5 s | 892.2 s |
+| zz_2l2nu | 188,715,312 | 646.5 s | 605.3 s | 582.3 s |
+| zz_2l2q | 171,627,615 | 634.3 s | 685.4 s | 722.7 s |
+| zz_4l | 236,757,511 | 699.0 s | 947.8 s | 782.4 s |
+
+Full-run totals (26/26 datasets each; data_A/H etc. not present for 2025 -> 21-23 datasets
+actually processed, rest instant `skip_sample`): Sep 1 = 5h47m; Sep 2-3 = 5h31m; Sep 11
+= 3h12m for the fresh-processed leg only (data eras B-G resumed from `.done` markers on a
+mid-run relaunch, so its wall clock is not comparable to the other two full-from-scratch
+totals — the per-sample table above is the valid comparison, not the run totals).
+
+### chunksize 100k -> 250k, same selection, same worker shape (clean A/B)
+
+The Sep 2-3 `FilterEvents/OfficialRecomendation` run reprocessed the *same label* as the
+very first 2025 stage-1 run (2026-08-31, chunksize 100k, also on a `scale(98)`/
+`worker_cores=2` cluster by that point — the `adapt`->`scale(98)` and `worker_cores=1->2`
+changes both predate the chunksize change, so this isolates chunksize alone). That
+original 100k run's `job_status.jsonl` was since overwritten by the 250k rerun (same
+label -> same file); the 100k numbers below are from direct live monitoring of that run's
+console log on 2026-08-31/09-01 (not re-derivable from `job_status.jsonl` now):
+
+| Sample | Events | chunksize 100k | chunksize 250k | Delta |
+|---|---:|---:|---:|---:|
+| data_G | 884,561,714 | 2098 s (421 k evt/s) | 1868.4 s (473 k evt/s) | **-11%** |
+| dyTo2Mu_M-50_aMCatNLO | 490,076,405 | 1234 s (397 k evt/s) | 1144.9 s (428 k evt/s) | **-7%** |
+
+Consistent with the mechanism: fewer/larger tasks -> less per-task and scheduler
+overhead. Worker CPU stayed ~50% (of the 2 available cores per worker, i.e. ~25% CPU
+utilization) at *both* chunksizes -- the gain is from cutting overhead, not from filling
+idle cores; the read-bound ceiling is unmoved (see "Open items").
+
+### Findings
+
+- **Run-to-run spread at fixed config is ~3-8%** across all three 250k runs, both
+  directions (e.g. data_G 1721/1868/1911 s; ttjets_sl 1723/1652/2060 s). This is larger
+  than any config change tested here and is consistent with XRootD/EOS read-latency
+  variance and shared-node contention on the k8s pool, not a further tuning signal —
+  see the recurring `eos slow on <node>` facility-health alerts below. Do not read a
+  <10% difference between two runs as meaningful without repeating it.
+- **The 2026-09-10 cutflow mass-region-rows fix (`isCutflow-mass-region-rows.md`) adds no
+  measurable overhead.** The Sep-11 run has `--isCutflow` active and its per-sample times
+  fall inside the same noise band as the other two runs with the flag off (e.g. data_C
+  1509.6 s vs 1562.7/1568.7 s -- the *fastest* of the three). Consistent with the change
+  being 4 extra vectorized boolean ANDs over already-computed arrays (see that report),
+  not new per-event work.
+- **Worker utilization ceiling is ~50% of 2 cores/worker (~25% CPU) at both chunksizes and
+  across all three runs.** Read-bound: sub-second per-chunk compute, workers idle waiting
+  on `root://eos.cms.rcac.purdue.edu/` reads. `worker_cores` 1->2 was intended to let one
+  task's compute overlap another's read, but the observed ~25%-of-2-cores utilization
+  (not closer to 50-100%) suggests either (a) Python-level GIL contention in
+  `EventProcessor` (awkward/numpy-heavy, some of it not GIL-releasing) capping effective
+  parallelism at ~1 core/worker regardless of thread count, or (b) an aggregate EOS
+  read-bandwidth ceiling that more concurrent streams from the same client can't beat.
+  **Not yet disambiguated** — see "Open items".
+- **Small-sample fixed-overhead floor persists at 250k, unchanged in character from the
+  2024 baseline table above.** `ggh_powhegPS` (85-100 s / 2.8 M evt), `vbf_powheg`
+  (150-182 s / 11.2 M evt), `vbf_aMCatNLO` (217-354 s, most variable of the set),
+  `ewk_mmjj_mll_105_160` (167-265 s / 5.3 M evt) are all dominated by per-`runner()`
+  graph-build + worker-warmup + tail-reduction, not throughput. `chunksize` doesn't touch
+  this; only reducing the *number* of `runner()` calls (batching datasets) would, and
+  isn't implemented.
+- **Reliability, `max_file_len=50000` (single unit per dataset) tradeoff**: on a clean run
+  this removed all mid-dataset idle gaps (confirmed: summed per-sample compute time ==
+  ~100% of the Sep-11 run's wall clock, no unaccounted idle). But it also means a
+  mid-dataset scheduler loss discards the *entire* dataset's progress, not one file's.
+  This was live during the week: repeated `scheduler-connection-lost` failures (2026-08-31
+  ~16:38, ~19:51 UTC; 2026-09-01 ~02:44, ~17:46 UTC) coincided with facility
+  `eos slow on <node>` alerts (node identified as **`paf-d01`** as of 2026-09-02 19:20
+  UTC; unnamed in earlier alerts). One of these (2026-09-01 17:46 UTC) was root-caused via
+  `distributed.scheduler`/`distributed.worker.memory` log lines to a **worker
+  unmanaged-memory cascade** (workers pinned 7-9 GiB of a 10 GiB limit, `Unmanaged memory
+  use is high` warnings, pause/resume thrash, then mass `Removing worker ... caused the
+  cluster to lose already computed task(s)`), triggered by starting a stage-1 run on a
+  Gateway cluster that had just served a plotting job (`validation_plotter_unified.py`)
+  without restarting it -- the plotting job's `client.compute()` calls embed ~22-25 MiB
+  graphs per call (`UserWarning: Sending large graph`) that Dask workers never fully
+  release back to the OS. **Mitigation confirmed effective**: start stage-1 on a freshly
+  created (or `client.restart()`ed) Gateway cluster, never one that just ran plotting.
+  Runs launched under `snakemake ... --restart-times 3` self-heal from a scheduler death;
+  runs launched by calling `run_analysis_pipeline.sh` directly do not and need a manual
+  relaunch (observed 2026-09-01: bare launch died and stayed dead until relaunched by the
+  user; the same day's snakemake-launched runs auto-recovered).
+- **Facility EOS reliability is the dominant external risk, not a stage-1 config
+  problem.** At least 4 scheduler-death incidents this week correlate with `eos slow on
+  <node>` facility-health alerts (mix of unnamed and `paf-d01`-named occurrences,
+  2026-08-31 through 2026-09-02); one incident's proximate cause was the memory cascade
+  above rather than EOS directly, but the slow reads that preceded it (data_B took
+  ~13x its normal wall time during that window) are the same facility issue. Worth
+  tracking with the facility team as a recurring `paf-d01` pattern rather than one-off
+  incidents.
+
+### Open items
+
+- **`worker_cores=1` + more workers (same total task-slot count) vs the current
+  `worker_cores=2` A/B, to settle GIL-vs-EOS-bandwidth** (see "Findings" above). E.g.
+  `worker_cores=1, scale(196)` vs the current `worker_cores=2, scale(98)` — both give 196
+  concurrent task slots; if throughput rises, it was GIL (go single-threaded/more
+  processes); if flat, it's an EOS bandwidth ceiling (stop tuning Dask, look at read
+  path). Not yet run.
+- `worker_memory` could likely drop 10 -> 6-8 GiB for stage-1-only use (observed peak
+  ~2.4 GiB/worker across all three runs here) — but only if the cluster is never shared
+  with a plotting job in the same session; keep it at 10 (or restart between workloads)
+  otherwise.
+- `chunksize` above 250k (e.g. 500k) untested; likely small further gain on large data
+  eras but shrinks task-per-worker-wave count on the smallest MC samples (e.g.
+  `ggh_powhegPS` at 2.8 M events would drop to ~6 tasks at 500k) — watch straggler
+  tolerance if tried.
+- No 2025 MC-only or Syst-variant scenario timing captured yet at the current config
+  (all three runs above are the nominal `OfficialRecomendation`/`DefaultjetPt25GeV`/
+  `MuonID-tightId` selections); the 2024-baseline table's "Syst costs ~+30%" finding has
+  not been re-verified at `chunksize=250k`.

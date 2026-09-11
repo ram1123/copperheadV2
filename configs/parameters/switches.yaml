@@ -196,18 +196,6 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
-    do_jet_veto_maps_filterJets: # remove the jets not events
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
         '2022preEE': true
         '2022postEE': true
         "2023": true
@@ -215,6 +203,18 @@ switches:
         "2024": true
         "2025": true
         "2026": true
+    do_jet_veto_maps_filterJets: # remove the jets not events
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_jet_horn_ptcut: # Applies ONLY to the HE region (2.5 < |eta| <= 3.0, see jetHorn_region in
         # jet_loop) -- it never touches HF (3 < |eta| < 5) regardless of value.
         # Official JME per-year/per-region guidance ("Mitigation techniques", Anna Benecke slide 14):
@@ -224,6 +224,33 @@ switches:
         #   2025/2026: per explicit user decision, treated the same as 2024 (HF: none via this
         #              switch; HE: 50) -- JME's own slide left 2025 as an open question ("Enough
         #              for analysers? please check!"), not a settled recommendation.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
+    add_pt_cut_for_HE_HF_jets:
+        # official recommendation:
+        # 2022 and 2023: HE and HF both >50 GeV
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': 50
+        '2022postEE': 50
+        "2023": 50
+        "2023BPix": 50
+        "2024": false
+        "2025": false
+        "2026": false
+    add_asymmetric_pt_cut_for_HE_HF_jets:
+        # available options: [35.0, 30.0] or false
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
@@ -280,33 +307,6 @@ switches:
         # Mutually exclusive with do_use_pySR_score. Model dir is per-year, see
         # "pu_dnn_model_dir" in configs/parameters/SF_filelist.yaml (2022/2023
         # models exclude puIdDisc, 2024/2025 models include it).
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
-    add_pt_cut_for_HE_HF_jets:
-        # official recommendation:
-        # 2022 and 2023: HE and HF both >50 GeV
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
-    add_asymmetric_pt_cut_for_HE_HF_jets:
-        # available options: [35.0, 30.0] or false
         '2016preVFP': false
         '2016postVFP': false
         '2017': false
