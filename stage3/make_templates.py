@@ -67,12 +67,14 @@ PDF_N_EIGENVECTOR_MEMBERS = 100
 #              LimitCardGenerate/WVChannel_GetCard_WithHiggsDistributions.C:1100,
 #              which hardcodes the 1/99.
 #
-# Ours is `symmhessian+as` (the NanoAOD LHEPdfWeight branch title says so), for which
-# "hessian" is the physically matched choice; "rms" is smaller by exactly
-# sqrt(N - 1) = 9.9499 for our 100 members. Kept switchable rather than silently
-# replaced so a datacard can be traced to the estimator that produced it -- the
-# per-template debug line below names the mode and divisor.
-PDF_UNC_COMBINATION = "rms"
+# Ours is `symmhessian+as` (the NanoAOD LHEPdfWeight branch title says so), so
+# "hessian" is the estimator PDF4LHC21 prescribes for it and is the default.
+# "rms" is smaller by exactly sqrt(N - 1) = 9.9499 for our 100 members; it is kept
+# available for comparison, not because it applies to a Hessian set. Switchable
+# rather than hard-coded so a datacard can be traced to the estimator that produced
+# it -- the per-template debug line below names the mode and divisor, and the
+# stage2/stage3 output directories carry it in their name.
+PDF_UNC_COMBINATION = "hessian"
 
 shape_only = [
     "wgt_LHERen_up",
