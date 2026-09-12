@@ -1248,6 +1248,8 @@ def build_argparser() -> argparse.ArgumentParser:
             "Stage-1 files read per background chunk. 0 (default) picks 50 for "
             "nominal-only and 25 when --include-systematic-variations is on. Lower "
             "this if Dask workers die, rather than raising worker_memory."
+        ),
+    )
     p.add_argument(
         "--jj-eta-region",
         default=None,
