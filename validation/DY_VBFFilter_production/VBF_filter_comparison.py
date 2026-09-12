@@ -524,7 +524,7 @@ def quickPlot_CoM(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=N
         canvas.Update()
         canvas.SaveAs(save_full_path)
 
-def quickPlotByHardProcess(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=None):
+def quickPlotByHardProcess(events, nbins_l, xlow, xhigh, save_path, save_fname, y_range=None, exclude=False):
     """
     simple plotter that plots directly with minimal selection
     """
@@ -532,7 +532,6 @@ def quickPlotByHardProcess(events, nbins_l, xlow, xhigh, save_path, save_fname, 
     dy_muon_filter = applyGenMuonCuts(genPart)
     dy_gen_muons  = genPart[dy_muon_filter]
     eta = (dy_gen_muons.eta).compute()
-    from_hardProcess = 
     nmuon = ak.num(eta, axis=1)# this is number of gen muons
     # print(f"eta: {eta}")
     # nmuon_edges = [0, 1, 2, 3]

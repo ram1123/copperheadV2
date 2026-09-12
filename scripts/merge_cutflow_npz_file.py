@@ -1,95 +1,136 @@
-import os
-import numpy as np
+#!/usr/bin/env python3
+"""
+Merge the per-chunk cutflow .npz shards stage-1 writes for every completed
+chunk (--isCutflow, see src/copperhead_processor.py's cutflow block and
+src/stage1/cutflow_io.py::write_cutflow_outputs) into one combined cutflow
+for a whole sample/dataset, and print it as a table.
+
+Each shard's .npz holds coffea's Cutflow.to_npz() output: `labels` (cut
+names, prefixed with a synthetic "initial" entry for the pre-any-cut
+baseline -- confirmed on real 2026-09 output: 21 labels for 20 registered
+cuts), `nevonecut` (event count passing that cut ALONE), `nevcutflow`
+(event count passing ALL cuts up to and including that one -- the
+"cumulative" column), plus `masksonecut`/`maskscutflow` (the underlying
+per-event boolean arrays, NOT merged here -- concatenating them across a
+whole dataset's chunks would be both huge and not particularly useful post-
+merge; only the summary counts are combined).
+
+Chunks are disjoint subsets of events, so simple element-wise summation of
+`nevonecut`/`nevcutflow` across all of a sample's shards gives the correct
+whole-dataset cutflow (cumulative-AND is computed per chunk, and summing a
+per-chunk cumulative count across disjoint chunks equals the same cumulative
+count over their union).
+
+Usage
+-----
+    python scripts/merge_cutflow_npz_file.py <dir_or_glob> [<dir_or_glob> ...] [-o OUT_JSON] [--out-npz OUT_NPZ]
+
+<dir_or_glob> is either a directory (searched recursively for
+cutflow_*.npz) or a glob pattern matching .npz files directly, e.g.:
+
+    # one sample, all its chunks
+    python scripts/merge_cutflow_npz_file.py \\
+        /work/projects/hmm/<user>/hmm_ntuples/copperheadV1clean/<label>/stage1_output/<year>/f1_0/data_C/0 \\
+        -o cutflow_data_C_merged.json
+
+    # every data era in one year (glob across sample dirs)
+    python scripts/merge_cutflow_npz_file.py \\
+        "/work/projects/hmm/<user>/hmm_ntuples/copperheadV1clean/<label>/stage1_output/<year>/f1_0/data_*/0" \\
+        -o cutflow_data_merged.json
+"""
+from __future__ import annotations
+
+import argparse
 import glob
+import os
+
+import numpy as np
 
 
-from pathlib import Path
-
-import ROOT
-
-ROOT.gROOT.SetBatch(False)  
-ROOT.gStyle.SetOptStat(0)
-
-# Enable JSROOT for Jupyter inline plots
-# ROOT.enableJSVis()
+def find_npz_files(target: str) -> list[str]:
+    if os.path.isdir(target):
+        return sorted(glob.glob(os.path.join(target, "**", "cutflow_*.npz"), recursive=True))
+    return sorted(glob.glob(target))
 
 
-def print_cutflow(npz_path):
-    cf = np.load(npz_path, allow_pickle=True)
-    labels     = cf["labels"]
-    nevonecut  = cf["nevonecut"].astype(np.int64)   # cumulative
-    nevcutflow = cf["nevcutflow"].astype(np.int64)  # per-cut
-
-    total = int(nevonecut[0])  # TotalEntries
-
-    print("Cutflow stats:")
-    for name, cum, per in zip(labels, nevonecut, nevcutflow):
-        eff      = 100.0 * per / total
-        cum_eff  = 100.0 * cum / total
-        print(
-            f"Cut {name:20s} :cumulative pass = {per:<8d} "
-            f"pass = {cum:<8d} all = {total:<8d} "
-            f"-- cumulative eff = {eff:4.1f} %                    "
-            f"-- eff = {cum_eff:4.1f} %"
-        )
-
-# example:
-npz_path0 = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_16Dec_NoJVM/stage1_output/2022preEE/f1_0/data_*/0/"
-npz_path1 = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_16Dec_NoJVM/stage1_output/2022preEE/f1_0/data_C/0/"
-print_cutflow(f"{npz_path1}/cutflow_data_C_0.npz")
-print("-"*51)
-npz_path2 = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_16Dec_NoJVM/stage1_output/2022preEE/f1_0/data_D/0/"
-print_cutflow(f"{npz_path2}/cutflow_data_D_0.npz")
-
-
-
-def merge_cutflows(pattern, out_path):
-    files = sorted(glob.glob(pattern))
-    print(files)
-    if not files:
-        raise RuntimeError(f"No files match pattern {pattern}")
+def merge_cutflows(paths: list[str]):
+    """Returns (labels, nevonecut, nevcutflow, n_files_merged)."""
+    if not paths:
+        raise RuntimeError("No .npz files to merge.")
 
     labels = None
-    sum_nevonecut  = None
+    sum_nevonecut = None
     sum_nevcutflow = None
 
-    for i, path in enumerate(files):
-        print(f"==> {i},  {path}")
-        cf = np.load(path, allow_pickle=True)
-
-        this_labels     = cf["labels"]
-        this_nevonecut  = cf["nevonecut"].astype(np.int64)
-        this_nevcutflow = cf["nevcutflow"].astype(np.int64)
+    for path in paths:
+        data = np.load(path, allow_pickle=True)
+        this_labels = data["labels"]
+        this_nevonecut = data["nevonecut"].astype(np.int64)
+        this_nevcutflow = data["nevcutflow"].astype(np.int64)
 
         if labels is None:
-            labels         = this_labels
-            sum_nevonecut  = this_nevonecut.copy()
+            labels = this_labels
+            sum_nevonecut = this_nevonecut.copy()
             sum_nevcutflow = this_nevcutflow.copy()
         else:
-            # sanity check: same cut ordering
-            if not np.all(this_labels == labels):
-                raise RuntimeError(f"Label mismatch in file {path}")
-            sum_nevonecut  += this_nevonecut
+            if not np.array_equal(this_labels, labels):
+                raise RuntimeError(
+                    f"Cut label/order mismatch in {path}: {list(this_labels)} != {list(labels)} "
+                    "-- shards from different scenarios/switch configs shouldn't be merged together."
+                )
+            sum_nevonecut += this_nevonecut
             sum_nevcutflow += this_nevcutflow
 
-    # save merged file
-    np.savez(out_path,
-             labels=labels,
-             nevonecut=sum_nevonecut,
-             nevcutflow=sum_nevcutflow)
+    return labels, sum_nevonecut, sum_nevcutflow, len(paths)
 
-    print(f"Merged {len(files)} files → {out_path}")
 
-# example: merge all chunks for data_C in 2017
-npz_path = "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_16Dec_NoJVM/stage1_output/2022preEE/f1_0"
+def print_cutflow(labels, nevonecut, nevcutflow):
+    total = int(nevonecut[0])  # "initial", before any cut
+    print(f"Cutflow stats ({total} events before any cut):")
+    for name, individual, cumulative in zip(labels, nevonecut, nevcutflow):
+        ind_eff = 100.0 * individual / total if total else float("nan")
+        cum_eff = 100.0 * cumulative / total if total else float("nan")
+        print(
+            f"  {name:28s} individual={individual:<10d} ({ind_eff:5.1f}%)   "
+            f"cumulative={cumulative:<10d} ({cum_eff:5.1f}%)"
+        )
 
-os.system(f"rm -f {npz_path}/cutflow_data_merged.npz")
-os.system(f"ls {npz_path}/cutflow_data_merged.npz")
 
-merge_cutflows(
-    "/depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_16Dec_NoJVM/stage1_output/2022preEE/f1_0/data_*/0/*.npz",
-    f"{npz_path}/cutflow_data_merged.npz"
-)
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("targets", nargs="+", help="directory (searched recursively) or glob pattern per sample/group")
+    ap.add_argument("-o", "--out-json", help="write the merged cutflow as JSON here")
+    ap.add_argument("--out-npz", help="also write the merged arrays back out as a .npz")
+    args = ap.parse_args()
 
-# then print merged result:
-print_cutflow(f"{npz_path}/cutflow_data_merged.npz")
+    paths = []
+    for target in args.targets:
+        found = find_npz_files(target)
+        if not found:
+            print(f"[WARN] no cutflow_*.npz found for target: {target}")
+        paths.extend(found)
+
+    labels, nevonecut, nevcutflow, n_files = merge_cutflows(paths)
+    print(f"Merged {n_files} shard(s):")
+    for p in paths:
+        print(f"  {p}")
+    print()
+    print_cutflow(labels, nevonecut, nevcutflow)
+
+    if args.out_json:
+        import json
+        combined = {
+            str(name): {"individual": int(ind), "cumulative": int(cum)}
+            for name, ind, cum in zip(labels, nevonecut, nevcutflow)
+        }
+        with open(args.out_json, "w") as handle:
+            json.dump(combined, handle, indent=2)
+        print(f"\nWrote merged JSON to {args.out_json}")
+
+    if args.out_npz:
+        np.savez(args.out_npz, labels=labels, nevonecut=nevonecut, nevcutflow=nevcutflow)
+        print(f"Wrote merged npz to {args.out_npz}")
+
+
+if __name__ == "__main__":
+    main()

@@ -183,7 +183,7 @@ snakemake -s workflow/Snakefile --rulegraph | dot -Tpdf > rulegraph.pdf
 
 ## Notes
 
-- The Snakemake workflow now uses [run_analysis_pipeline.sh](../run_analysis_pipeline.sh), not the legacy `stage1_loop_Improved.sh`, for analysis production.
+- The Snakemake workflow now uses [run_analysis_pipeline.sh](../run_analysis_pipeline.sh), not the legacy `run_analysis_pipeline.sh`, for analysis production.
 - `use_existing_stage1` in [workflow/config.yaml](../workflow/config.yaml) is useful when you want to reuse already produced stage-1 outputs instead of regenerating them.
 - Plotting, Z pT, and mass calibration should ideally consume explicit input paths from the workflow configuration or command construction rather than relying on unrelated defaults in external YAML files.
 

@@ -3,7 +3,7 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import numpy as np
 
-from plotter.validation_plotter_unified import applyRegionCatCuts
+from modules.selection import applyRegionCatCuts
 
 # Path to your Parquet file
 parquet_file_path = "/depot/cms/users/shar1172/hmm/copperheadV1clean/Run2_nanoAODv12_08June//stage1_output/2018/compacted_OLD_WithDNNScore_MassSetTo125/vbf_powheg_dipole/0/*.parquet"
@@ -16,8 +16,9 @@ events = applyRegionCatCuts(
     events,
     category="vbf",
     region_name="h-peak",
-    njets="inclusive",
     process="vbf_powheg_dipole",
+    variation="nominal",
+    njets_selection="inclusive",
     do_vbf_filter_study=False
 )
 

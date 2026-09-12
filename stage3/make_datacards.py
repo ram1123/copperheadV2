@@ -125,6 +125,9 @@ lumi_syst = {
     "2024": {
         "lumi2024": 1.6,
     },
+    "2025": {
+        "lumi2025": 5.0,
+    },
 }
 
 nuisance_titles = {
@@ -342,7 +345,13 @@ def print_mc(yield_df, var_name, region, channel, year, bin_name):
     #     for group, value in apply_to.items():
     #         mc_df.loc[mc_df.group == group, rate_unc] = str(value)
 
-    for lumi_unc, value in lumi_syst[year].items():
+    if year not in lumi_syst:
+        logger.warning(
+            f"No lumi_syst entry for year '{year}' -- no official CMS LUM luminosity uncertainty "
+            "exists yet for this year. Omitting the lumi lnN nuisance from this datacard; treat "
+            "this result as missing its luminosity systematic until an official value is published."
+        )
+    for lumi_unc, value in lumi_syst.get(year, {}).items():
         if lumi_unc not in all_nuisances:
             all_nuisances.append(lumi_unc)
             nuisance_lines[lumi_unc] = "{:<20} {:<9}".format(lumi_unc, "lnN")

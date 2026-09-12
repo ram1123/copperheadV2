@@ -3,6 +3,7 @@ import os
 import pickle
 import math
 import shutil
+import time
 from pathlib import Path
 
 import awkward as ak
@@ -10,6 +11,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 from distributed import wait
+from tqdm import tqdm
 from cli.common_argparser import build_common_parser
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus
@@ -137,7 +139,7 @@ def group_parquet_files(file_infos, target_n_final_files):
 
 
 def write_compacted_group(idx, group_files, compacted_path):
-    group_rows = sum(rows for _, rows in group_files)
+    group_rows = sum(rows for _, rows, _ in group_files)
     output_path = os.path.join(compacted_path, f"part{idx}.parquet")
     logger.debug(
         "Writing compacted part %s with %s input files and %s rows to %s",
@@ -146,118 +148,137 @@ def write_compacted_group(idx, group_files, compacted_path):
         group_rows,
         output_path,
     )
-    arrays = [ak.from_parquet(path) for path, _ in group_files]
+    arrays = [ak.from_parquet(path) for path, _, _ in group_files]
     events = arrays[0] if len(arrays) == 1 else ak.concatenate(arrays)
     ak.to_parquet(events, output_path)
     return idx, len(group_files), group_rows, output_path
 
-def _get_num_rows(path):
-    return pq.ParquetFile(path).metadata.num_rows
 
-def _get_file_info(path):
-    return path, pq.ParquetFile(path).metadata.num_rows
+# Target *uncompressed* (in-memory) size per compacted output file. Chosen instead
+# of a fixed row-count budget because different samples have very different
+# per-row memory footprints (jet multiplicity, jagged-array widths, which optional
+# branches got saved, etc.) -- row count alone is a poor proxy for that.
+DEFAULT_TARGET_MB_PER_FILE = 250.0
 
-def ensure_compacted(year, sample, input_path, compacted_path, client=None):
-    logger.info(f"year: {year}")
-    logger.info(f"samples: {sample}")
-    logger.info(f"input_path: {input_path}")
-    logger.info(f"Checking compacted dataset: {compacted_path}")
 
-    if not os.path.exists(compacted_path):
-        logger.info("No compacted dataset exists")
-        logger.debug(f"Compacted dataset not found: {compacted_path}")
+def _get_file_rows_and_bytes(path):
+    """Return (path, num_rows, total_uncompressed_bytes) from parquet metadata,
+    without reading the actual column data."""
+    meta = pq.ParquetFile(path).metadata
+    total_bytes = sum(meta.row_group(i).total_byte_size for i in range(meta.num_row_groups))
+    return path, meta.num_rows, total_bytes
 
-        orig_path = os.path.join(input_path, sample)
-        if not os.path.exists(orig_path):
-            logger.info(f"Original data not found at {orig_path}. Skipping.")
-            return
 
-        logger.debug(f"Reading data from {orig_path}")
-        # check if any parquet files exist (recursively)
-        parquet_files = glob.glob(os.path.join(orig_path, "**", "*.parquet"), recursive=True)
+def ensure_compacted(
+    year, sample, input_path, compacted_path, client=None,
+    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE,
+):
+    """Compact `sample`'s stage-1 parquet output into fewer, larger files.
 
-        if len(parquet_files) == 0:
-            logger.warning(f"No parquet files found under {orig_path}. Skipping.")
-            return
+    Returns a short status string for the caller to tally: "compacted",
+    "already_exists", "no_input_dir", "no_files", or "no_rows".
+    """
+    logger.debug(f"year: {year}, sample: {sample}, input_path: {input_path}")
 
-        futures = client.map(_get_num_rows, parquet_files)
-        total_rows = sum(client.gather(futures))
+    if os.path.exists(compacted_path):
+        logger.info(f"[{sample}] already compacted, skipping ({compacted_path})")
+        return "already_exists"
 
-        if total_rows == 0:
-            logger.warning(f"No rows found in parquet files under {orig_path}. Skipping.")
-            return
+    logger.debug(f"Compacted dataset not found: {compacted_path}")
 
-        if ("vbf_powheg" in sample):
-            logger.warning(f"Sample {sample} has high density (e.g. vbf signal), so, using a smaller maximum row count (10k) per compacted file.")
-            # max_num_of_rows = 100_000
-            max_num_of_rows = 10_000
-        elif ("top" in sample.lower()) or ("ttjets" in sample.lower()):
-            logger.warning(f"Sample {sample} has high memory usage (e.g. st_tchannel_antitop), so, using a smaller maximum row count per compacted file.")
-            max_num_of_rows = 1_000
-        else:
-            # max_num_of_rows = 300_000
-            max_num_of_rows = 30_000
+    orig_path = os.path.join(input_path, sample)
+    if not os.path.exists(orig_path):
+        logger.info(f"[{sample}] no stage-1 output at {orig_path}, skipping")
+        return "no_input_dir"
 
-        target_n_final_files = min(
-            len(parquet_files),
-            max(1, math.ceil(total_rows / max_num_of_rows)),
-        )
-        logger.info(
-            "Compacting %s rows from %s parquet files to %s final files",
-            total_rows,
-            len(parquet_files),
-            target_n_final_files,
-        )
-        parquet_files = sorted(parquet_files)
-        futures = client.map(_get_file_info, parquet_files) # TODO: merge _get_num_rows and _get_file_info, since they do the same thing.
-        file_infos = client.gather(futures)
-        grouped_files = group_parquet_files(file_infos, target_n_final_files)
-        # print(f"Grouped files: {grouped_files}")
-        logger.info(
-            "Writing compacted dataset as %s parquet files",
-            len(grouped_files),
-        )
-        os.makedirs(compacted_path, exist_ok=True)
-        if client is None:
-            logger.warning("No Dask client provided; writing compacted dataset sequentially")
-            results = [
-                write_compacted_group(idx, group_files, compacted_path)
-                for idx, group_files in enumerate(grouped_files)
-            ]
-        else:
-            n_workers = len(client.scheduler_info().get("workers", {}))
-            logger.info("Writing compacted dataset with Dask client (%s workers)", n_workers)
-            futures = [
-                client.submit(
-                    write_compacted_group,
-                    idx,
-                    group_files,
-                    compacted_path,
-                    pure=False, # Since it performs I/O, do not optimize it away as a reusable pure computation.
-                )
-                for idx, group_files in enumerate(grouped_files)
-            ]
-            results = client.gather(futures)
+    logger.debug(f"Reading data from {orig_path}")
+    # check if any parquet files exist (recursively)
+    parquet_files = glob.glob(os.path.join(orig_path, "**", "*.parquet"), recursive=True)
 
-        for idx, n_files, n_rows, output_path in sorted(results):
-            logger.debug(
-                "Finished compacted part %s with %s input files and %s rows at %s",
-                idx,
-                n_files,
-                n_rows,
-                output_path,
-            )
-        logger.info("Dataset successfully compacted.")
+    if len(parquet_files) == 0:
+        logger.warning(f"[{sample}] no parquet files found under {orig_path}, skipping")
+        return "no_files"
+
+    t_start = time.perf_counter()
+    parquet_files = sorted(parquet_files)
+    if client is None:
+        file_infos = [_get_file_rows_and_bytes(path) for path in parquet_files]
     else:
-        logger.warning(f"Compacted dataset already exists at {compacted_path}")
+        futures = client.map(_get_file_rows_and_bytes, parquet_files)
+        file_infos = client.gather(futures)
+    total_rows = sum(rows for _, rows, _ in file_infos)
+    total_bytes = sum(nbytes for _, _, nbytes in file_infos)
 
-def ensure_compacted_scaled(year, samples, input_path, compacted_dir, client=None, rerun=False):
+    if total_rows == 0:
+        logger.warning(f"[{sample}] no rows found in parquet files under {orig_path}, skipping")
+        return "no_rows"
+
+    avg_bytes_per_row = total_bytes / total_rows
+    target_bytes_per_file = target_mb_per_file * 1024 * 1024
+    max_num_of_rows = max(1, round(target_bytes_per_file / avg_bytes_per_row))
+    size_note = f"~{avg_bytes_per_row:.0f} B/row -> {max_num_of_rows:,} rows/file for {target_mb_per_file:.0f}MB target"
+
+    target_n_final_files = min(
+        len(parquet_files),
+        max(1, math.ceil(total_rows / max_num_of_rows)),
+    )
+    grouped_files = group_parquet_files(file_infos, target_n_final_files)
+
+    os.makedirs(compacted_path, exist_ok=True)
+    if client is None:
+        n_workers_note = "sequentially, no Dask client"
+        results = [
+            write_compacted_group(idx, group_files, compacted_path)
+            for idx, group_files in enumerate(grouped_files)
+        ]
+    else:
+        n_workers = len(client.scheduler_info().get("workers", {}))
+        n_workers_note = f"{n_workers} workers"
+        futures = [
+            client.submit(
+                write_compacted_group,
+                idx,
+                group_files,
+                compacted_path,
+                pure=False, # Since it performs I/O, do not optimize it away as a reusable pure computation.
+            )
+            for idx, group_files in enumerate(grouped_files)
+        ]
+        results = client.gather(futures)
+
+    for idx, n_files, n_rows, output_path in sorted(results):
+        logger.debug(
+            "Finished compacted part %s with %s input files and %s rows at %s",
+            idx,
+            n_files,
+            n_rows,
+            output_path,
+        )
+
+    elapsed = time.perf_counter() - t_start
+    logger.info(
+        "[%s] %s rows, %s files -> %s files (%s), %s, done in %.1fs",
+        sample,
+        f"{total_rows:,}",
+        len(parquet_files),
+        len(grouped_files),
+        n_workers_note,
+        size_note,
+        elapsed,
+    )
+    return "compacted"
+
+
+def ensure_compacted_scaled(
+    year, samples, input_path, compacted_dir, client=None, rerun=False,
+    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE,
+):
     """
     Batched sibling of ensure_compacted(): compacts many samples in one pass
-    by submitting the row-count/write work for every sample together and
+    by submitting the file-metadata/write work for every sample together and
     gathering once, instead of blocking on the cluster per sample.
-    ensure_compacted() itself is left untouched since other code depends on
-    its per-sample behavior.
+    ensure_compacted() itself is left untouched since other code (e.g.
+    plotter/validation_plotter_unified.py) depends on its per-sample behavior.
 
     Progress is tracked per sample under
     {input_path parent}/_status/compacted, using modules.job_status.JobStatus
@@ -268,6 +289,12 @@ def ensure_compacted_scaled(year, samples, input_path, compacted_dir, client=Non
     os.makedirs'd the target dir up front, before any part file existed).
     Pass rerun=True to bypass the done markers and force a full redo, mirroring
     run_stage1.py's --rerun.
+
+    Per-sample compaction sizing derives the row-count budget from each
+    sample's own average uncompressed bytes/row so every compacted file lands
+    near target_mb_per_file, rather than a fixed row count (which produced
+    wildly different file sizes across samples with different per-row
+    footprints -- see ensure_compacted()'s docstring/DEFAULT_TARGET_MB_PER_FILE).
     """
     logger.info(f"year: {year}")
     logger.info(f"samples: {samples}")
@@ -319,46 +346,48 @@ def ensure_compacted_scaled(year, samples, input_path, compacted_dir, client=Non
     for sample, (compacted_path, _) in pending_samples.items():
         jobstat.mark_running(sample, 0, meta={"path": compacted_path})
 
-    # Fetch (path, num_rows) for every file across every pending sample in a
-    # single round trip instead of one per sample.
+    t_run_start = time.perf_counter()
+
+    # Fetch (path, num_rows, num_bytes) for every file across every pending
+    # sample in a single round trip instead of one per sample.
     all_files = [
         path
         for _, parquet_files in pending_samples.values()
         for path in parquet_files
     ]
     if client is None:
-        file_infos = [_get_file_info(path) for path in all_files]
+        file_infos = [_get_file_rows_and_bytes(path) for path in all_files]
     else:
-        futures = client.map(_get_file_info, all_files)
+        futures = client.map(_get_file_rows_and_bytes, all_files)
         file_infos = client.gather(futures)
-    rows_by_path = dict(file_infos)
+    rows_bytes_by_path = {path: (rows, nbytes) for path, rows, nbytes in file_infos}
 
     write_jobs = []  # (sample, compacted_path, idx, group_files)
     for sample, (compacted_path, parquet_files) in pending_samples.items():
-        file_infos_sample = [(path, rows_by_path[path]) for path in parquet_files]
-        total_rows = sum(rows for _, rows in file_infos_sample)
+        file_infos_sample = [(path, *rows_bytes_by_path[path]) for path in parquet_files]
+        total_rows = sum(rows for _, rows, _ in file_infos_sample)
+        total_bytes = sum(nbytes for _, _, nbytes in file_infos_sample)
 
         if total_rows == 0:
             logger.warning(f"No rows found in parquet files for sample {sample}. Skipping.")
             jobstat.mark_failed(sample, 0, RuntimeError("no rows found in source parquet files"))
             continue
 
-        if "vbf_powheg" in sample:
-            logger.warning(f"Sample {sample} has high density (e.g. vbf signal), so, using a smaller maximum row count (10k) per compacted file.")
-            max_num_of_rows = 10_000
-        elif ("top" in sample.lower()) or ("ttjets" in sample.lower()):
-            logger.warning(f"Sample {sample} has high memory usage (e.g. st_tchannel_antitop), so, using a smaller maximum row count per compacted file.")
-            max_num_of_rows = 1_000
-        else:
-            max_num_of_rows = 30_000
+        avg_bytes_per_row = total_bytes / total_rows
+        target_bytes_per_file = target_mb_per_file * 1024 * 1024
+        max_num_of_rows = max(1, round(target_bytes_per_file / avg_bytes_per_row))
 
         target_n_final_files = min(
             len(parquet_files),
             max(1, math.ceil(total_rows / max_num_of_rows)),
         )
         logger.info(
-            "Compacting %s rows from %s parquet files to %s final files for sample %s",
-            total_rows,
+            "Compacting %s rows (~%.0f B/row -> %s rows/file for %.0fMB target) from %s parquet "
+            "files to %s final files for sample %s",
+            f"{total_rows:,}",
+            avg_bytes_per_row,
+            f"{max_num_of_rows:,}",
+            target_mb_per_file,
             len(parquet_files),
             target_n_final_files,
             sample,
@@ -382,7 +411,7 @@ def ensure_compacted_scaled(year, samples, input_path, compacted_dir, client=Non
     failed_samples = {}
     if client is None:
         logger.warning("No Dask client provided; writing compacted datasets sequentially")
-        for sample, compacted_path, idx, group_files in write_jobs:
+        for sample, compacted_path, idx, group_files in tqdm(write_jobs, desc="Compacting"):
             if sample in failed_samples:
                 continue
             try:
@@ -446,11 +475,14 @@ def ensure_compacted_scaled(year, samples, input_path, compacted_dir, client=Non
             },
         )
 
+    elapsed = time.perf_counter() - t_run_start
     logger.info(
-        "Datasets successfully compacted for %s samples (%s failed).",
+        "Datasets successfully compacted for %s samples (%s failed), done in %.1fs.",
         len(results_by_sample) - len(failed_samples),
         len(failed_samples),
+        elapsed,
     )
+
 
 def add_dnn_score(events_partition,
                 model_trained_path,
@@ -546,7 +578,6 @@ def add_dnn_score(events_partition,
         preview_df.insert(0, "event", event_numbers)
         with pd.option_context("display.max_columns", None, "display.width", 200):
             logger.debug(f"DNN input features (first {n_preview} events):\n{preview_df}")
-    
 
     dnn_vbf_logit = nan_val * ak.ones_like(events_partition.event)
     for fold in range(nfolds):
@@ -572,6 +603,7 @@ def add_dnn_score(events_partition,
     events_partition = ak.with_field(events_partition, dnn_vbf_logit, "dnn_vbf_logit")
     return events_partition
 
+
 def add_dnn_score_to_file(
     input_path,
     output_path,
@@ -595,6 +627,7 @@ def add_dnn_score_to_file(
     ak.to_parquet(events, output_path)
     return output_path
 
+
 def compact_and_add_dnn_score(
     year,
     sample,
@@ -606,6 +639,7 @@ def compact_and_add_dnn_score(
     fix_dimuon_mass=False,
     model_tag="",
     client=None,
+    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE,
 ):
     compacted_path = os.path.join(compacted_dir, sample, "0") # Added zero to match the original path structure
 
@@ -613,25 +647,25 @@ def compact_and_add_dnn_score(
     compacted_dir_tagged = f"{compacted_dir_tagged}_FixDimuonMass" if fix_dimuon_mass else compacted_dir_tagged
     compacted_path_DNN = os.path.join(compacted_dir_tagged, sample, "0")
 
-    logger.info(f"Checking compacted dataset for: {compacted_path}")
-
     # compact the dataset
-    ensure_compacted(year, sample, input_path, compacted_path, client=client)
+    status = ensure_compacted(
+        year, sample, input_path, compacted_path, client=client,
+        target_mb_per_file=target_mb_per_file,
+    )
 
     # Add the DNN score to the compacted dataset
     if not add_dnn_score_flag:
-        logger.info("Skipping DNN score addition as add_dnn_score is False.")
-        return
+        return status
 
-    logger.info(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
+    logger.debug(f"Checking compacted dataset with DNN score for: {compacted_path_DNN}")
     if not os.path.exists(compacted_path):
         logger.warning(f"Compacted dataset missing at {compacted_path}. Skipping DNN score addition.")
-        return
-    # List the compacted parquet files
+        return status
+
     parquet_files = sorted(glob.glob(os.path.join(compacted_path, "*.parquet")))
     if not parquet_files:
         logger.warning(f"No parquet files found under {compacted_path}. Skipping DNN score addition.")
-        return
+        return status
 
     # Load the DNN model
     logger.debug(f"Loading DNN model from {model_path}")
@@ -695,6 +729,8 @@ def compact_and_add_dnn_score(
         client.gather(futures)
 
     logger.info(f"Updated dataset with DNN score saved to {compacted_path_DNN}")
+    return status
+
 
 def add_dnn_score_scaled(
     year,
@@ -810,6 +846,7 @@ def add_dnn_score_scaled(
         for sample, (_, pairs) in pending_samples.items()
         for input_file, output_file in pairs
     ]
+    t_run_start = time.perf_counter()
     logger.info(
         "Adding DNN score to %s parquet files across %s samples",
         len(flat_jobs),
@@ -820,7 +857,7 @@ def add_dnn_score_scaled(
     failed_samples = {}
     if client is None:
         logger.warning("No Dask client provided; adding DNN score sequentially")
-        for sample, input_file, output_file in flat_jobs:
+        for sample, input_file, output_file in tqdm(flat_jobs, desc="Scoring"):
             if sample in failed_samples:
                 continue
             try:
@@ -883,12 +920,15 @@ def add_dnn_score_scaled(
             meta={"path": compacted_path_DNN, "n_files": succeeded_counts.get(sample, 0)},
         )
 
+    elapsed = time.perf_counter() - t_run_start
     logger.info(
-        "Updated datasets with DNN score saved under %s (%s samples, %s failed)",
+        "Updated datasets with DNN score saved under %s (%s samples, %s failed), done in %.1fs",
         compacted_dir_tagged,
         len(pending_samples) - len(failed_samples),
         len(failed_samples),
+        elapsed,
     )
+
 
 def compact_and_add_dnn_score_scaled(
     year,
@@ -902,13 +942,17 @@ def compact_and_add_dnn_score_scaled(
     model_tag="",
     client=None,
     rerun=False,
+    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE,
 ):
     """
     Batched sibling of compact_and_add_dnn_score(): compacts and scores all
     given samples for a single year together, so the cluster processes work
     across samples concurrently instead of one sample at a time.
     """
-    ensure_compacted_scaled(year, samples, input_path, compacted_dir, client=client, rerun=rerun)
+    ensure_compacted_scaled(
+        year, samples, input_path, compacted_dir, client=client, rerun=rerun,
+        target_mb_per_file=target_mb_per_file,
+    )
 
     if not add_dnn_score_flag:
         logger.info("Skipping DNN score addition as add_dnn_score is False.")
@@ -955,6 +999,16 @@ if __name__ == "__main__":
             "_status/compacted and reprocesses every sample from scratch."
         ),
     )
+    parser.add_argument(
+        "--target-mb-per-file",
+        type=float,
+        default=DEFAULT_TARGET_MB_PER_FILE,
+        help=(
+            "Target uncompressed size (MB) per compacted output file. Rows-per-file "
+            "is derived per sample from its actual average row size, instead of a "
+            "fixed row count."
+        ),
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -983,6 +1037,7 @@ if __name__ == "__main__":
     # samples = [s for s in samples if "dy_VBF_filter" in s]
     # samples = [s for s in samples if "DY" in s]
     logger.info(f"Processing {len(samples)} samples for year {args.year}: {samples}")
+    t_run_start = time.perf_counter()
     compact_and_add_dnn_score_scaled(
         args.year,
         samples,
@@ -995,6 +1050,9 @@ if __name__ == "__main__":
         args.model_tag,
         client=client,
         rerun=args.rerun,
+        target_mb_per_file=args.target_mb_per_file,
     )
+    elapsed = time.perf_counter() - t_run_start
+    logger.info("Total run time: %.1fs", elapsed)
 
     close_dask_client()

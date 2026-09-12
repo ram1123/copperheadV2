@@ -56,6 +56,7 @@ from src.corrections.jet import (
     getJecDataTag,
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib
+from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 from src.corrections.met_xy_correction import apply_puppi_met_xy_correction
 
@@ -567,6 +568,7 @@ class EventProcessor(processor.ProcessorABC):
         # Reference: https://nbviewer.org/github/scikit-hep/coffea/blob/master/binder/packedselection.ipynb
         self.selection = {}
         self.cutflow = {}
+        self.cutflow_names = []
 
         self.pysr_configs = {}
         self.pysr_all_features = set()
@@ -584,12 +586,46 @@ class EventProcessor(processor.ProcessorABC):
                 )
                 self.pysr_all_features.update(cfg["features"])
 
+        self.pu_dnn_configs = {}
+        if self.config["switches"].get("do_use_pu_dnn_score", False):
+            if self.config["switches"].get("do_use_pySR_score", False):
+                raise ValueError(
+                    "do_use_pySR_score and do_use_pu_dnn_score are alternative "
+                    "forward-jet PU cleanup models; only one can be enabled at once."
+                )
+            # do_use_pu_dnn_score enabled must have an explicit model dir.
+            if "pu_dnn_model_dir" not in self.config:
+                raise KeyError(
+                    "do_use_pu_dnn_score is enabled for this year, but no "
+                    "'pu_dnn_model_dir' entry was found in the config. Add one "
+                    "for this year in configs/parameters/SF_filelist.yaml."
+                )
+            pu_dnn_base_dir = self.config["pu_dnn_model_dir"]
+            self.pu_dnn_configs = load_pu_dnn_configs(pu_dnn_base_dir)
+            if not self.pu_dnn_configs:
+                raise FileNotFoundError(
+                    f"PU DNN scoring is enabled, but no region models were found under {pu_dnn_base_dir}."
+                )
+
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
         # application is in "do_jet_veto_maps_filterEvents" field in config.
         # If any jet in the event falls into the veto map region, the whole event is vetoed.
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Without this,
+        # a soft/loose-ID/high-EM-fraction jet landing in a vetoed region would
+        # trigger event rejection even though the recommendation says it shouldn't count.
         """
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jets = jets[min_sel]
+
         jet_veto_maps_path = self.config.get("jet_veto_maps", None)
         logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
         if jet_veto_maps_path is None:
@@ -669,6 +705,22 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
 
         jet_veto_mask = ak.unflatten(jet_veto_mask, counts)   # jagged, same shape as jets
+
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Force the mask
+        # to "not vetoed" (0.0) for jets failing this selection, so they're never
+        # counted for the event decision below nor removed by the jet-removal
+        # step further down -- without this, a soft/loose-ID/high-EM-fraction
+        # jet landing in a vetoed region would incorrectly count.
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jet_veto_mask = ak.where(min_sel, jet_veto_mask, 0.0)
+
         jet_veto_eventFilter = ak.any(jet_veto_mask != 0.0, axis=1)
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
 
@@ -1385,7 +1437,7 @@ class EventProcessor(processor.ProcessorABC):
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        logger.info(f"jets type before pad_none: {jets.type}")
+        logger.debug(f"jets type before pad_none: {jets.type}")
         logger.info(f"jets ndim: {jets.ndim}")
 
         jet_default = ak.pad_none(jets, target=4, axis=1)
@@ -1504,7 +1556,13 @@ class EventProcessor(processor.ProcessorABC):
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
             if is_mc and (self.config["switches"]["jer_strat"] >=0):
                 logger.debug("Applying JER smearing!")
-                jets = do_jer_smear(jets, self.config, events.event)
+                # Only build the up/down JER-smear columns when they will be used
+                # (do_jer_unc drives the pt_variations loop further below). On a
+                # nominal run this skips 2/3 of the JER correctionlib evaluations
+                # and the apply_jer_unc per-eta-bin columns, with no change to the
+                # skim output.
+                jer_syst_l = ["nom", "up", "down"] if do_jer_unc else ["nom"]
+                jets = do_jer_smear(jets, self.config, events.event, syst_l=jer_syst_l)
             else:
                 logger.debug(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
@@ -2262,6 +2320,8 @@ class EventProcessor(processor.ProcessorABC):
                     zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
+                
+                logger.warning(f"zpt weights: {zpt_cfg}")
 
                 zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv)
                 zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)
@@ -2411,29 +2471,35 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Cutflow
         if self.isCutflow:
-            # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
             # Ensure all selections exist before calling cutflow
             # Add protection for the cutflow if the selection is not in the cutflow
             logger.info(f"selection: {self.selection}")
+            # NOTE: order matters -- PackedSelection.cutflow(*names) ANDs cuts
+            # cumulatively in the order given here, not in .add() registration
+            # order, so this list must match the actual .add() call sequence
+            # below for the per-step "individual"/"cumulative" numbers to mean
+            # anything (the final fully-AND'd count doesn't depend on order,
+            # but every intermediate row does). Keep in sync with the .add(...)
+            # call sites as this method evolves.
             all_required_selections = [
                 "TotalEntries",
                 "lumi_mask",
                 "LHE_cut",
                 "HLT_filter",
                 "event_quality_flags",
-                "PV_npvsGood",
                 "muon_pT_roch",
                 "muon_eta",
                 "muon_id",
                 "muon_isGlobal_or_Tracker",
                 "muon_selection",
                 "muon_iso",
-                "nmuons",
-                "mm_charge",
-                "electron_veto",
-                "HemVeto",
                 "trigger_match",
                 "leading_muon_pt",
+                "electron_veto",
+                "HemVeto",
+                "PV_npvsGood",
+                "nmuons",
+                "mm_charge",
                 "jet_veto_maps",
                 "dimuon_mass_window_76_106",
                 "h_peak_115_135",
@@ -2447,78 +2513,38 @@ class EventProcessor(processor.ProcessorABC):
                 # very old coffea versions might differ — fallback
                 available_cuts = set(getattr(self.selection, "_names", []))
 
-            # Start with "TotalEntries" explicitly, if you want it in the table
-            required_selections = []
-            if "TotalEntries" in all_required_selections:
-                required_selections.append("TotalEntries")
-
-            # Add only those cuts that actually exist in PackedSelection, preserving order
-            for cut in all_required_selections:
-                if cut == "TotalEntries":
-                    continue
-                if cut in available_cuts:
-                    required_selections.append(cut)
+            # Keep only the cuts that actually exist in PackedSelection (some
+            # are added conditionally, e.g. per year/data-vs-MC), preserving
+            # the order above -- including "TotalEntries" itself, so a future
+            # rename there gets the same graceful-skip treatment as everything
+            # else instead of a silent inconsistency.
+            required_selections = [cut for cut in all_required_selections if cut in available_cuts]
 
             logger.info(f"dynamic required_selections = {required_selections}")
 
             # Optional: warn about missing cuts
-            missing = [cut for cut in all_required_selections
-                    if cut not in available_cuts and cut != "TotalEntries"]
+            missing = [cut for cut in all_required_selections if cut not in available_cuts]
             if missing:
                 logger.warning(f"These requested cuts are not defined and will be skipped: {missing}")
 
+            self.cutflow_names = required_selections
+            # NOT passing weights= here: PackedSelection.cutflow(*names,
+            # weights=..., weightsmodifier=...) does support a weighted
+            # cutflow natively since coffea 2025.3.0 (confirmed present in the
+            # installed 2026.5.0, see
+            # https://coffea-hep.readthedocs.io/en/v2026.5.0/api/coffea.analysis_tools.Cutflow.html)
+            # -- but there is no valid same-length weights array available at
+            # this point in THIS pipeline to pass it. `events` (and hence
+            # `weights`, built from `len(events)` above) gets reduced to the
+            # already-selected population at `events = events[event_filter ==
+            # True]` (:1290), right after every selection here is registered;
+            # `self.selection`'s per-cut masks are all still sized to the
+            # original, pre-reduction chunk. Confirmed by hitting exactly this
+            # mismatch (IndexError, e.g. "size of axis is 148 but size of
+            # corresponding boolean axis is 5420") when this was tried via
+            # `scripts/update_sync_references.sh` on 2017 sync data (2026-09-09).
             self.cutflow = self.selection.cutflow(*required_selections)
-            logger.info(f"cutflow: {self.cutflow}")
-            logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
-
-            # logger.info(f"wgtcutflow: {wgtcutflow.print()}")
-
-            # self.nminusone = self.selection.nminusone(*required_selections)
-            # logger.info(f"self.cutflow.logger.info(): {self.nminusone.print()}")
-            # logger.info(f"self.cutflow.logger.info(): {self.cutflow.logger.info(weighted=False)}") # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
-            # logger.info(f"self.cutflow.result(): {self.cutflow.result()}")
-
-            # # --- FIXME: extra info for (unweighted + weighted + efficiencies)
-            # # n_total = len(events)
-            # n_total = int(dak.num(events, axis=0).compute())
-            # w_all  = weights.weight()
-            # mask_cum = dak.ones_like(w_all, dtype=bool)
-
-            # rows = []
-            # prev_n = n_total
-            # prev_w = float(dak.sum(w_all).compute())
-
-            # for name in required_selections:
-            #     # boolean mask for this single cut
-            #     mask_this = self.selection.all(name)
-            #     # update cumulative mask
-            #     mask_cum = mask_cum & mask_this
-
-            #     n_pass = int(ak.sum(mask_cum))
-            #     w_pass = float(ak.sum(w_all[mask_cum]))
-
-            #     eff_step     = n_pass / prev_n if prev_n > 0 else 0.0
-            #     eff_step_w   = w_pass / prev_w if prev_w > 0 else 0.0
-            #     eff_cum      = n_pass / n_total if n_total > 0 else 0.0
-            #     eff_cum_w    = w_pass / float(ak.sum(w_all)) if ak.sum(w_all) != 0 else 0.0
-
-            #     rows.append(
-            #         dict(
-            #             cut=name,
-            #             n_pass=n_pass,
-            #             w_pass=w_pass,
-            #             eff_step=eff_step,
-            #             eff_step_w=eff_step_w,
-            #             eff_cum=eff_cum,
-            #             eff_cum_w=eff_cum_w,
-            #         )
-            #     )
-
-            #     prev_n = n_pass
-            #     prev_w = w_pass
-
-            # self.cutflow_table = pd.DataFrame(rows)
-            # logger.info("\n" + str(self.cutflow_table))
+            self.cutflow.print()
         t22 = time.perf_counter()
         logger.info(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
 
@@ -2675,6 +2701,13 @@ class EventProcessor(processor.ProcessorABC):
                 "hfsigmaPhiPhi",
                 "nConstituents",
                 "rawFactor",
+                # Needed by the PU-DNN model's feature list (see scaler.json
+                # under pu_dnn_model_dir) when do_use_pu_dnn_score is enabled.
+                "hfEmEF",
+                "hfHEF",
+                "nElectrons",
+                "nMuons",
+                "puIdDisc",
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
 
@@ -2735,6 +2768,16 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_ptcut = ak.ones_like(jets.pt, dtype="bool") # default value is True
         HE_HF_ptcut = ak.ones_like(jets.pt, dtype="bool")
         jetHorn_nConst_Cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        rawFactor_cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        if self.config["switches"]["do_reject_high_rawFactor_jets"]:
+            # Official JME mitigation for a rare L2Relative asymptotic-behavior known
+            # issue in Run3 (https://cms-jme-jerc.docs.cern.ch/recommendations/jes/#known-issues):
+            # in a very narrow pT bin the L2Relative JEC can blow up to anomalously
+            # large corrected jet pT (>10 TeV). Affects ~1e-7 to 1e-6 of events in the
+            # rare samples where it occurs at all; JME's own fix is to reject jets with
+            # Jet_rawFactor > 0.9.
+            logger.info("Applying Jet_rawFactor > 0.9 rejection (rare L2Relative asymptotic-JEC mitigation)")
+            rawFactor_cut = jets.rawFactor <= 0.9
         n_active = sum(bool(x) for x in [do_he_ptcut, add_hehf_ptcut, add_hehf_asym])
         if n_active > 1:
             raise ValueError(
@@ -2818,6 +2861,7 @@ class EventProcessor(processor.ProcessorABC):
             & jetHorn_ptcut
             & HE_HF_ptcut
             & jetHorn_nConst_Cut
+            & rawFactor_cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 
@@ -2830,6 +2874,12 @@ class EventProcessor(processor.ProcessorABC):
             jets = ensure_symbolic_features(jets, self.pysr_all_features)
             pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)
             jets = jets[pysr_dict["jet_pysr_pu_pass"]]
+
+        if_pu_dnn = self.config["switches"].get("do_use_pu_dnn_score", False)
+        if if_pu_dnn:
+            jets = add_dphi_met_jet_features(jets, events.PuppiMET.phi)
+            pu_dnn_out = eval_pu_dnn(jets, self.pu_dnn_configs)
+            jets = jets[pu_dnn_out["pu_dnn_pass"]]
 
         jets = ak.to_packed(jets)
 
@@ -3053,6 +3103,11 @@ class EventProcessor(processor.ProcessorABC):
                 "btagUParTAK4B",
                 "btagDeepB",
                 # "btagDeepFlavB",
+
+                # Needed to check do_reject_high_rawFactor_jets' rare L2Relative
+                # asymptotic-JEC mitigation (rejects Jet_rawFactor > 0.9) even when
+                # that switch (do_reject_high_rawFactor_jets) is off
+                "rawFactor",
                 ]
         jets_to_process = [jet1, jet2, jet3, jet4] if save_four_jets_kinematics else [jet1, jet2]
         for i, jet in enumerate(jets_to_process, start=1):
@@ -3082,7 +3137,7 @@ class EventProcessor(processor.ProcessorABC):
                 "hadronFlavour", "partonFlavour",
                 "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
                 "hfsigmaEtaEta", "hfsigmaPhiPhi",
-                "muonSubtrFactor", "rawFactor",
+                "muonSubtrFactor",
                 "puIdDisc"
             ]
 

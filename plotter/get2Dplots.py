@@ -6,7 +6,7 @@ from distributed import Client
 import ROOT
 import os
 
-from plotter.validation_plotter_unified import applyRegionCatCuts
+from modules.selection import applyRegionCatCuts
 
 ROOT.gROOT.SetBatch(True)
 
@@ -28,8 +28,9 @@ def main(args):
         events,
         category="vbf",
         region_name="signal",
-        njets="inclusive",
         process="vbf_powheg_dipole",
+        variation="nominal",
+        njets_selection="inclusive",
         do_vbf_filter_study=False
     )
 

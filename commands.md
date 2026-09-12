@@ -2,6 +2,38 @@
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
 
+# Compact command
+
+
+```bash
+time bash run_analysis_pipeline.sh -y 2025 -k -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Cutflow -m 1 -k -z -v 15
+
+bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml          -v 15 -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation          -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m dnn_hpo 
+
+bash scripts/run_scenario.sh \
+    --profile nominal_nozpt_jme_reco \
+    --run-tag FilterJets_Aug26_JMEreco \
+    --years 2024,2025,2026 \
+    --target all_stage1
+    
+bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml \
+         -v 15 -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation \
+         -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m dnn -k
+```
+
+# 23 Aug 2026
+
+```bash
+time bash run_analysis_pipeline.sh -y "2022preEE,2022postEE,2023,2023BPix,2024" -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE -m dnn
+time bash run_analysis_pipeline.sh -y "2022preEE,2022postEE,2023,2023BPix,2024" -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets -m dnn
+
+
+time MODEL_YEARS="2022preEE,2022postEE,2023,2023BPix,2024" bash run_analysis_pipeline.sh -y 2024 -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE -m all
+
+
+time bash run_stats_pipeline_VBF.sh -y "2022preEE,2022postEE,2023,2023BPix,2024" -k -l Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE -m 8
+```
+
 # 11 May 2026
 
 ```bash

@@ -67,13 +67,13 @@ python MVA_training/pileup_dnn/train_pu_dnn.py \
   -o validation/pu_dnn/run2024_dy_top_ewk_balanced \
   --regions HE HF
 
-python MVA_training/pileup_dnn/train_pu_dnn.py \
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
   -i \
-    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dy_M-50_aMCatNLO/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet" \
     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ttjets_*/*/*.parquet" \
     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/ewk_*/*/*.parquet" \
   --use-glob \
-  -o validation/pu_dnn/run2022postEE_dy_top_ewk_02June \
+  -o validation/pu_dnn/run2022postEE_dy_top_ewk_IDVarsOnly_13June \
   --regions HEpos HEneg HFpos HFneg
 ```
 

@@ -27,11 +27,11 @@ from modules import selection
 from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
+from modules.sample_config import get_bkg_sig_dicts, get_data_processes
 from configs.variables.variable_lists import get_all_vars
 from scripts.compact_parquet_data import ensure_compacted
 
-# Load CMS style including color-scheme once, regardless of which entry point
-# (standalone CLI or the bulk driver in run_plotter.py) is used.
+# Load CMS plotting style 
 plt.style.use(hep.style.CMS)
 
 DATASET_SEPARATOR = "::"
@@ -55,158 +55,35 @@ ZPT_POSTFIX_BY_OPTION = {
 bkg_MC_order = ["VV", "EWK",  "TOP", "DY", "DYVBF"]
 
 
-group_dict = {
-    "DATA": {
-        "2016preVFP": ["data_B", "data_C", "data_D", "data_E", "data_F"],
-        "2016postVFP": ["data_F", "data_G", "data_H"],
-        "2016": ["data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
-        "2017": ["data_B", "data_C", "data_D", "data_E", "data_F"],
-        "2018": ["data_A", "data_B", "data_C", "data_D"],
-        "run2": ["data_A", "data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
+# DY/DYVBF/EWK/TOP/VV/ggH/VBF/DATA process lists all live in
+# configs/samples/samples.yaml (read via get_bkg_sig_dicts/get_data_processes in
+# build_group_dict_for_year below).
+# Group names used throughout this script -> group names as defined in samples.yaml
+# (identity mapping unless listed here).
+YAML_GROUP_ALIASES = {"TOP": "TT", "ggH": "GGH"}
 
-        "2022preEE": ["data_C", "data_D"],
-        "2022postEE": ["data_E", "data_F", "data_G"],
-        "2023": ["data_C"],
-        "2023BPix": ["data_D"],
-        "2024": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
-        "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
-    },
-    "DY": {
-        "2016preVFP": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2016postVFP": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2017": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2018": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2022preEE": ["dyTo2L_M-50_incl"],
-        "2022postEE": ["dyTo2L_M-50_incl"],
-        "2023": ["dyTo2L_M-50_incl"],
-        "2023BPix": ["dyTo2L_M-50_incl"],
-        "2024": ["dyTo2Mu_M-50_aMCatNLO"],
-
-        # "2022preEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2022postEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023BPix": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2024": ["dyTo2Mu_M-50_aMCatNLO", "dy_VBF_filter"],
+# Fixed group-name list, independent of year -- used both for the Hist
+# category axis (which must be static) and to drive build_group_dict_for_year.
+ALL_GROUP_NAMES = ["DATA", "DY", "DYVBF", "EWK", "TOP", "VV", "ggH", "VBF"]
 
 
-        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-
-        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-    },
-    "DYVBF": {
-        "2016preVFP": ["dy_VBF_filter"],
-        "2016postVFP": ["dy_VBF_filter"],
-        "2017": ["dy_VBF_filter"],
-        "2018": ["dy_VBF_filter"],
-        "2022preEE": ["dy_VBF_filter"],
-        "2022postEE": ["dy_VBF_filter"],
-        "2023": ["dy_VBF_filter"],
-        "2023BPix": ["dy_VBF_filter"],
-        "2024": ["dy_VBF_filter"],
-    },
-    "EWK": {
-        "2016preVFP": ["ewk_zlljj"],
-        "2016postVFP": ["ewk_zlljj"],
-        "2017": ["ewk_zlljj"],
-        "2018": ["ewk_zlljj"],
-        "2022preEE": ["ewk_mmjj_mll_105_160"],
-        "2022postEE": ["ewk_mmjj_mll_105_160"],
-        "2023": ["ewk_mmjj_mll_105_160"],
-        "2023BPix": ["ewk_mmjj_mll_105_160"],
-        "2024": ["ewk_mmjj_mll_105_160"],
-    },
-    "TOP": [
-        # "tt_inclusive",
-        "ttjets_dl",
-        "ttjets_sl",
-        # "ttjets_fh",
-        # "st_tw_top",
-        # "st_tw_antitop",
-        # "st_t_top",
-        # "st_t_antitop",
-    ],
-    "VV": [
-        "ww_2l2nu",
-        "wz_3lnu",
-        "wz_2l2q",
-        "wz_1l1nu2q",
-        "zz_2l2q",
-        "zz_2l2u",
-        "zz_2l2nu",
-        "zz_4l",
-    ],
-    # "OTHER": ["www", "wwz", "wzz", "zzz"],
-    "ggH": ["ggh_powhegPS"],
-    "VBF": {
-        "2016preVFP": ["vbf_powheg_dipole"],
-        "2016postVFP": ["vbf_powheg_dipole"],
-        "2017": ["vbf_powheg_dipole"],
-        "2018": ["vbf_powheg_dipole"],
-        "2022preEE": ["vbf_powheg_dipole"],
-        "2022postEE": ["vbf_powheg_dipole"],
-        "2023": ["vbf_powheg"],
-        "2023BPix": ["vbf_powheg"],
-        "2024": ["vbf_powheg"],
-    },
-}
-
-def parseGroupProcesses(group_dict, year: str):
+def build_group_dict_for_year(year: str, sample_config_path: str) -> dict:
     """
-    helper function that simplifies group_dict to be
-    specific to one year.
+    Resolve the process-group -> [process names] mapping for one year, reading
+    everything from samples.yaml: DATA via get_data_processes, and DY/DYVBF/EWK/
+    TOP/VV/ggH/VBF via get_bkg_sig_dicts (the same helper scripts/get_yields.py
+    uses).
     """
-    year_specific_group_dict = {}
-    for group_name, processes in group_dict.items():
-        logger.debug(f"Group '{group_name}' processes (original): {processes}")
-        if type(processes) is dict:
-            if year not in processes:
-                raise KeyError(
-                    f"Year '{year}' is not configured for process group '{group_name}'."
-                )
-            processes = processes[year]
-        year_specific_group_dict[group_name] = processes
-    logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
-    return year_specific_group_dict
+    resolved = {"DATA": get_data_processes(sample_config_path, year)}
+    _, _, combined = get_bkg_sig_dicts(sample_config_path, year)
+    for name in ALL_GROUP_NAMES:
+        if name == "DATA":
+            continue
+        yaml_name = YAML_GROUP_ALIASES.get(name, name)
+        if yaml_name in combined:
+            resolved[name] = combined[yaml_name]
+    return resolved
+
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -430,6 +307,7 @@ def resolve_year_context(
     sig_samples,
     data_samples,
     do_vbf_filter_study,
+    sample_config_path="configs/samples/samples.yaml",
     lumi_override="",
 ):
     """
@@ -437,7 +315,7 @@ def resolve_year_context(
     the year-specific group_dict, lumi, center-of-mass energy, and the list of
     available (data + bkg + sig) process names.
     """
-    group_dict_year = parseGroupProcesses(group_dict, year)
+    group_dict_year = build_group_dict_for_year(year, sample_config_path)
 
     if is_run3(year):
         CM_energy = 13.6  # TeV
@@ -773,6 +651,7 @@ def _run_validation_scope(
     linear_scale,
     use_compacted,
     dry_run,
+    sample_config="configs/samples/samples.yaml",
     force_rerun=False,
 ):
     """
@@ -813,7 +692,11 @@ def _run_validation_scope(
         variables2plot += ["dimuon_mass_zpeak"]
     logger.info(f"variables2plot: {variables2plot}")
 
-    sample_groups = list(group_dict.keys()) + ["other"]
+    # sample_groups: fixed group-name list, independent of year (only the DYVBF
+    # removal rule -- itself independent of year -- can change it). The actual
+    # per-year process membership of each group is resolved dynamically from
+    # samples.yaml below (resolve_year_context -> build_group_dict_for_year).
+    sample_groups = list(ALL_GROUP_NAMES) + ["other"]
     if not do_vbf_filter_study and "DYVBF" in sample_groups:
         sample_groups.remove("DYVBF")
     logger.info(f"sample_groups: {sample_groups}")
@@ -835,7 +718,8 @@ def _run_validation_scope(
     for year in years:
         load_path = Path(str(load_path_template).format(year=year))
         year_ctx = resolve_year_context(
-            year, background_samples, sig_samples, data_samples, do_vbf_filter_study, lumi_override=""
+            year, background_samples, sig_samples, data_samples, do_vbf_filter_study,
+            sample_config_path=sample_config, lumi_override="",
         )
         group_dict_by_year[year] = year_ctx["group_dict"]
         lumi_by_year[year] = year_ctx["lumi"]
@@ -982,6 +866,7 @@ def run_bulk_validation(
     use_gateway=True,
     cluster_index=0,
     use_compacted="compacted",
+    sample_config="configs/samples/samples.yaml",
     dry_run=False,
     force_rerun=False,
 ):
@@ -1031,6 +916,7 @@ def run_bulk_validation(
             linear_scale,
             use_compacted,
             dry_run,
+            sample_config=sample_config,
             force_rerun=force_rerun,
         )
 
@@ -1153,23 +1039,31 @@ if __name__ == "__main__":
         "--jj-eta-region",
         dest="jj_eta_region",
         default="all",
-        choices=[
-            "all",
-            "jj_both_central",
-            "jj_non_central",
-            "jj_one_fwd25_one_central",
-            "jj_one_he_one_central",
-            "jj_one_fwd30_one_central",
-            "jj_both_fwd25",
-            "jj_both_he",
-            "jj_both_fwd30",
-            "jj_one_he_one_fwd30",
-        ],
+        choices=["all", *selection.PAIR_JJ_ETA_REGIONS, *selection.SINGLE_JET_ETA_REGIONS],
         help=(
             "Select dijet eta topology using jet1_eta/jet2_eta. "
             "'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
             "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
         ),
+    )
+    parser.add_argument(
+        "--he-pt-cut",
+        dest="he_pt_cut",
+        default=None,
+        type=float,
+        help=(
+            "Post-hoc HE-region (2.5<|eta|<=3.0) jet pT cut (GeV) this will"
+            "migrate the events from VBF to ggH. However it won't remove jets"
+            "kinematics from the ggH channel. I mean if the jet pT is < 50 GeV"
+            "for the ggH still that jet and its derived quantities will be present."
+        ),
+    )
+    parser.add_argument(
+        "--hf-pt-cut",
+        dest="hf_pt_cut",
+        default=None,
+        type=float,
+        help="Same as --he-pt-cut but for the HF region (|eta|>3.0). Default: off (no cut).",
     )
     # add dnn score to the plotting variable list
     parser.add_argument(
@@ -1246,7 +1140,7 @@ if __name__ == "__main__":
 
     # sample_groups: fixed group-name list, independent of year (only the DYVBF
     # removal rule -- itself independent of year -- can change it).
-    sample_groups = list(group_dict.keys()) + ["other"]
+    sample_groups = list(ALL_GROUP_NAMES) + ["other"]
     if not args.do_vbf_filter_study and "DYVBF" in sample_groups:
         sample_groups.remove("DYVBF")
     logger.info(f"sample_groups: {sample_groups}")
@@ -1280,6 +1174,7 @@ if __name__ == "__main__":
             args.sig_samples,
             args.data_samples,
             args.do_vbf_filter_study,
+            sample_config_path=args.sample_config,
             lumi_override=args.lumi,
         )
         group_dict_by_year[year] = year_ctx["group_dict"]

@@ -84,6 +84,7 @@ class PreprocessConfig:
 
     category: str
     region: str
+    jj_eta_region: str
 
     required_columns: List[str]
     allow_missing_columns: bool
@@ -133,6 +134,16 @@ def load_config(cfg_path: str) -> PreprocessConfig:
 
     category = str(cfg["analysis"]["category"])
     region = str(cfg["analysis"]["region"])
+    # Which jet(s)-eta topology to restrict the VBF dijet pair to, passed straight through
+    # to applyRegionCatCuts's jj_eta_region (modules/selection.py: "all" plus the
+    # PAIR_JJ_ETA_REGIONS names -- jj_both_central, jj_non_central, jj_one_fwd25_one_central,
+    # jj_one_he_one_central, jj_one_fwd30_one_central, jj_both_fwd25, jj_both_he,
+    # jj_both_fwd30, jj_one_he_one_fwd30). Invalid values raise ValueError there, not here.
+    # "all" here is only a fallback for configs predating this key;
+    # configs/dnn_run3_vbf.yaml defines analysis.jj_eta_region explicitly and is
+    # the source of truth (run_analysis_pipeline.sh's JJ_ETA_REGION env var, or
+    # this script's --jj-eta-region, override it per-run).
+    jj_eta_region = str(cfg["analysis"].get("jj_eta_region", "all"))
 
     required_columns = list(cfg["data"]["parquet"].get("required_columns", []))
     allow_missing_columns = bool(
@@ -159,6 +170,7 @@ def load_config(cfg_path: str) -> PreprocessConfig:
         dtype=dtype,
         category=category,
         region=region,
+        jj_eta_region=jj_eta_region,
         required_columns=required_columns,
         allow_missing_columns=allow_missing_columns,
         weight_col=weight_col,
@@ -454,6 +466,7 @@ def events_to_dataframe(
         variation="nominal",
         do_vbf_filter_study=False,
         do_VH_veto=False,
+        jj_eta_region=cfg.jj_eta_region,
     )
 
     arr = events.compute()
@@ -556,10 +569,10 @@ def _compute_fold_ids(
 
 
 def make_output_dir(
-    out_root: str, tag: str, years: str, region: str, category: str
+    out_root: str, tag: str, years: str, region: str, category: str, jj_eta_region: str
 ) -> str:
     years_slug = years.replace(",", "-").replace(" ", "")
-    out = Path(out_root) / tag / f"{years_slug}_{region}_{category}"
+    out = Path(out_root) / tag / f"{years_slug}_{region}_{category}_{jj_eta_region}"
     out.mkdir(parents=True, exist_ok=True)
     return str(out)
 
@@ -623,7 +636,10 @@ def preprocess(
 
     logger.info("[preprocess] years: %s", years_list)
     logger.info("[preprocess] base_path: %s", base_path)
-    logger.info("[preprocess] category=%s region=%s", cfg.category, cfg.region)
+    logger.info(
+        "[preprocess] category=%s region=%s jj_eta_region=%s",
+        cfg.category, cfg.region, cfg.jj_eta_region,
+    )
     logger.info("[preprocess] features2load: %s", features2load)
 
     if include_variations:
@@ -1090,6 +1106,7 @@ def preprocess(
         "base_path": str(base_path),
         "category": cfg.category,
         "region": cfg.region,
+        "jj_eta_region": cfg.jj_eta_region,
         "years": years_list,
         "n_folds": cfg.n_folds,
         "cv": {
@@ -1233,6 +1250,16 @@ def build_argparser() -> argparse.ArgumentParser:
             "this if Dask workers die, rather than raising worker_memory."
         ),
     )
+    p.add_argument(
+        "--jj-eta-region",
+        default=None,
+        help=(
+            "Override analysis.jj_eta_region from YAML. 'all' or one of "
+            "modules.selection.PAIR_JJ_ETA_REGIONS (e.g. jj_both_central, "
+            "jj_non_central, jj_both_he, ...); invalid values raise ValueError "
+            "inside applyRegionCatCuts."
+        ),
+    )
     return p
 
 
@@ -1250,6 +1277,10 @@ def main() -> None:
         object.__setattr__(
             cfg, "region", str(args.region)
         )  # pylint: disable=protected-access
+    if args.jj_eta_region is not None:
+        object.__setattr__(
+            cfg, "jj_eta_region", str(args.jj_eta_region)
+        )  # pylint: disable=protected-access
 
     out_dir = make_output_dir(
         out_root=args.out_root,
@@ -1257,11 +1288,13 @@ def main() -> None:
         years=args.years,
         region=cfg.region,
         category=cfg.category,
+        jj_eta_region=cfg.jj_eta_region,
     )
 
     logger.info("[main] Output directory: %s", out_dir)
     logger.info(
-        "[main] category=%s region=%s years=%s", cfg.category, cfg.region, args.years
+        "[main] category=%s region=%s jj_eta_region=%s years=%s",
+        cfg.category, cfg.region, cfg.jj_eta_region, args.years,
     )
 
     if args.include_systematic_variations:
