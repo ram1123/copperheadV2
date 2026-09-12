@@ -26,11 +26,56 @@ class Variable(object):
         self.xmax = xmax_
 
 decorrelation_scheme = {
-    "LHERen": ["DY", "EWK", "ggH", "TT+ST"],
-    "LHEFac": ["DY", "EWK", "ggH", "TT+ST"],
-    "pdf_2rms": ["DY", "VBF", "ggH"], # ["DY", "qqH_hmm", "ggH_hmm"],
-    # "pdf_2rms": ["DY", "qqH_hmm", "ggH_hmm"],
+    "LHERen": [
+        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "EWK", "TT+ST",
+    ],
+    "LHEFac": [
+        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "EWK", "TT+ST",
+    ],
+    "pdf_unc": [
+        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "EWK", "VBF", "ggH", "TT+ST",
+    ],
+    # "pdf_unc": ["DY", "qqH_hmm", "ggH_hmm"],
 }
+# Prefix of the per-eigenvector weight columns stage1 writes and stage2 fills one
+# histogram each for. They are collapsed into the single `pdf_unc` up/down pair by
+# Eq. (6.5) below and never reach the datacard under their own names -- the prefix
+# has to be intercepted before the generic `_up -> Up` rename further down, or 100
+# junk nuisances land in the card.
+PDF_MEMBER_PREFIX = "wgt_pdfMemberHessEig"
+# Number of eigenvector members in a 103-member NNPDF3.1 `symmhessian+as` set (the
+# alpha_s members are excluded). Must match PDF_N_EIGENVECTOR_MEMBERS in
+# src/corrections/evaluator.py; duplicated rather than imported so stage3 does not
+# pull in coffea.
+PDF_N_EIGENVECTOR_MEMBERS = 100
+# How the per-member bin deltas are collapsed into the single up/down pair:
+#
+#   "hessian"  delta = sqrt( sum_k (F_k - F_0)^2 )
+#              PDF4LHC21 (arXiv:2203.05506) Eq. (6.5). The estimator matched to the
+#              symmetric-Hessian set our samples actually carry, where members 1-100
+#              are orthogonal eigenvector directions and each contributes its full
+#              square.
+#
+#   "rms"      delta = sqrt( sum_k (F_k - F_0)^2 / (N - 1) )
+#              The sample standard deviation of the members about F_0, i.e. the
+#              estimator for a Monte-Carlo *replica* set, where the members are draws
+#              from a distribution rather than orthogonal directions. This is what
+#              osWW-VBS/PlottingCodes does -- see
+#              LimitCardGenerate/WVChannel_GetCard_WithHiggsDistributions.C:1100,
+#              which hardcodes the 1/99.
+#
+# Ours is `symmhessian+as` (the NanoAOD LHEPdfWeight branch title says so), so
+# "hessian" is the estimator PDF4LHC21 prescribes for it and is the default.
+# "rms" is smaller by exactly sqrt(N - 1) = 9.9499 for our 100 members; it is kept
+# available for comparison, not because it applies to a Hessian set. Switchable
+# rather than hard-coded so a datacard can be traced to the estimator that produced
+# it -- the per-template debug line below names the mode and divisor, and the
+# stage2/stage3 output directories carry it in their name.
+PDF_UNC_COMBINATION = "hessian"
+
 shape_only = [
     "wgt_LHERen_up",
     "wgt_LHERen_down",
@@ -38,8 +83,16 @@ shape_only = [
     "wgt_LHEFac_down",
     "wgt_qgl_up",
     "wgt_qgl_down",
-    "wgt_pdf_2rms_up",
-    "wgt_pdf_2rms_down",
+    # Commented off 2026-09-11 by the analyst: a PDF variation changes the parton
+    # luminosity, so it moves the cross section by definition -- that rate shift is
+    # part of the uncertainty, not an artefact to be normalised away. With these out
+    # of the list the members enter the collapse below raw, matching the reference
+    # implementation (https://github.com/osWW-VBS/PlottingCodes/blob/master/LimitCardGenerate/WVChannel_GetCard_WithHiggsDistributions.C#L1100).
+    # Re-add both lines to go back to shape-only; nothing else reads them (the
+    # generic rescale near line 586 is keyed on stage2 column names, and no
+    # `wgt_pdf_unc_*` column exists -- the pair is synthesised below).
+    # "wgt_pdf_unc_up",
+    # "wgt_pdf_unc_down",
     "wgt_zpt_up",
     "wgt_zpt_down",
 ]
@@ -301,7 +354,22 @@ def make_templates(args, parameters={}):
         # manually add parton shower variations end -------------------------------
         logger.debug(f"wgt_variations: {wgt_variations}")
 
-        for variation in wgt_variations:
+        # Hold the eigenvector members out of the normal template path: they are not
+        # nuisances, they are the 100 terms of the Eq. (6.5) sum that is taken after
+        # this loop. They still have to go *through* the loop body, which is what
+        # sums a group's datasets and projects the bins, so append them at the end
+        # (sorted, so the sum is order-deterministic) and intercept them just before
+        # a TH1 would be made.
+        pdf_member_variations = sorted(
+            v for v in wgt_variations if v.startswith(PDF_MEMBER_PREFIX)
+        )
+        wgt_variations = [
+            v for v in wgt_variations if not v.startswith(PDF_MEMBER_PREFIX)
+        ]
+        pdf_member_hists = {}
+        pdf_nominal = None
+
+        for variation in wgt_variations + pdf_member_variations:
             logger.debug(f"variation: {variation}")
             logger.debug(f"channel: {channel}")
 
@@ -595,6 +663,23 @@ def make_templates(args, parameters={}):
                 logger.debug(f"Sum of histogram for group {group} is zero in {year} for {region} and {channel}. Skipping!")
                 continue
 
+            # Keep the nominal group histogram: it is F^(0) of Eq. (6.5), and the
+            # members inherit its sumw2 (they are the same events reweighted, so they
+            # carry no independent MC statistics). Copy, because `group_hist` above is
+            # accumulated in place across the group's datasets.
+            if variation == "nominal":
+                pdf_nominal = (
+                    np.array(group_hist, dtype=np.float64),
+                    np.array(group_sumw2, dtype=np.float64),
+                    np.array(edges, dtype=np.float64),
+                    np.array(centers, dtype=np.float64),
+                )
+
+            # Intercept the eigenvector members before a TH1 is made for them.
+            if variation.startswith(PDF_MEMBER_PREFIX):
+                pdf_member_hists[variation] = np.array(group_hist, dtype=np.float64)
+                continue
+
             if group == "Data":
                 name = "data_obs"
             else:
@@ -627,9 +712,9 @@ def make_templates(args, parameters={}):
                         group_LHE = "ggH"
                     logger.debug(f"group_LHE after: {group_LHE}")
                     if group_LHE in decorrelation_scheme[variation_core]:
-                        if variation_core == "pdf_2rms" :
+                        if variation_core == "pdf_unc" :
                             suffix = "_"+group_LHE+str(year)
-                            logger.debug(f"pdf_2rms suffix: {suffix}")
+                            logger.debug(f"pdf_unc suffix: {suffix}")
                         else:
                             suffix = "_"+group_LHE
                     else:
@@ -676,6 +761,152 @@ def make_templates(args, parameters={}):
                     "yield": group_hist.sum(),
                 }
             )
+
+        # ---- PDF member collapse, taken on the observable ----------------------
+        # Estimator selected by PDF_UNC_COMBINATION; the shape below is Eq. (6.5).
+        # arXiv:2203.05506 Sect. 6.3.2 defines the symmetric-Hessian uncertainty on
+        # the observable, not per event:
+        #
+        #     delta F_b = sqrt( sum_{k=1..100} ( F_b^(k) - F_b^(0) )^2 )
+        #
+        # F_b^(k) is this group's bin-b yield reweighted by eigenvector member k, which
+        # is exactly the member histogram accumulated above. Squaring per event and
+        # summing over events -- what the code here used to do -- is a different
+        # operation: it throws away the cancellation between events that sit on
+        # opposite sides of an eigenvector's x-space rotation, and measured 2.0x (ggh)
+        # to 8.6x (vbf) too large. Only the two collapsed templates are emitted; the
+        # members themselves never become nuisances.
+        if pdf_member_hists:
+            missing = [v for v in pdf_member_variations if v not in pdf_member_hists]
+            if missing:
+                # A member that got dropped (empty or zero-sum group histogram) would
+                # silently drop its term from the sum and shrink the uncertainty, so
+                # refuse rather than emit a number that is quietly too small.
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) is "
+                    f"missing {len(missing)} PDF eigenvector member histogram(s), e.g. "
+                    f"{missing[:3]}; every member must contribute to Eq. (6.5)."
+                )
+            if len(pdf_member_variations) != PDF_N_EIGENVECTOR_MEMBERS:
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) has "
+                    f"{len(pdf_member_variations)} PDF eigenvector members, expected "
+                    f"{PDF_N_EIGENVECTOR_MEMBERS}. A partial set underestimates the "
+                    f"uncertainty; check that every dataset in the group carries all "
+                    f"'{PDF_MEMBER_PREFIX}NNN_up' columns (excluded samples carry them "
+                    f"set to unity so the per-group intersection keeps them)."
+                )
+            if pdf_nominal is None:
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) has "
+                    f"PDF eigenvector members but no nominal histogram; Eq. (6.5) is "
+                    f"defined relative to F^(0)."
+                )
+
+            pdf_hist_nominal, pdf_sumw2_nominal, pdf_edges, pdf_centers = pdf_nominal
+            nominal_yield = pdf_hist_nominal.sum()
+
+            # Driven by whether `pdf_unc` is listed in `shape_only`, which as of
+            # 2026-09-11 it is not -- see the note there. Currently False, so each
+            # member enters the sum raw and its yield shift is kept as part of the
+            # uncertainty.
+            #
+            # When True, each member is renormalised to the nominal yield *before* the
+            # delta is taken, so only the bin-to-bin redistribution survives.
+            # Collapsing first and rescaling the resulting envelope afterwards is not
+            # the same operation: `delta` is non-negative in every bin, so `up` always
+            # integrates above nominal by construction, and rescaling that away removes
+            # an artefact of the collapse rather than the members' real yield spread.
+            #
+            # DECISION PENDING (deferred by the analyst 2026-09-05, do not change
+            # unilaterally) applies to the shape-only branch: it normalises the members
+            # but not the envelope, leaving `up` +0.23% over nominal on 2017
+            # vbf_powheg_dipole against a members' yield spread of 0.758%. Strict
+            # shape-only would additionally rescale up/down to pdf_hist_nominal.sum().
+            # See the "DECISION PENDING" section of
+            # .agent-system/tasks/pdf_unc_hessian_implementation/HANDOFF.md.
+            pdf_shape_only = "wgt_pdf_unc_up" in shape_only
+
+            delta_sq = np.zeros_like(pdf_hist_nominal)
+            for member in pdf_member_variations:
+                member_hist = pdf_member_hists[member]
+                if pdf_shape_only:
+                    member_yield = member_hist.sum()
+                    if member_yield != 0:
+                        member_hist = member_hist * (nominal_yield / member_yield)
+                delta_sq += (member_hist - pdf_hist_nominal) ** 2
+
+            # See PDF_UNC_COMBINATION at the top of the file. The divisor is taken
+            # from the live member count rather than a literal 99, so a differently
+            # sized set stays self-consistent; for our 100 members it is 99, matching
+            # the reference implementation.
+            if PDF_UNC_COMBINATION == "hessian":
+                pdf_divisor = 1.0
+            elif PDF_UNC_COMBINATION == "rms":
+                pdf_divisor = float(len(pdf_member_variations) - 1)
+            else:
+                raise ValueError(
+                    f"make_templates: PDF_UNC_COMBINATION is "
+                    f"{PDF_UNC_COMBINATION!r}; expected 'hessian' or 'rms'."
+                )
+            delta = np.sqrt(delta_sq / pdf_divisor)
+
+            # Positivity per Sect. 6.3.2: the Gaussian interval is symmetric about the
+            # nominal, and the truncation is applied to the observable -- i.e. here, at
+            # the bin -- not to the per-event weight.
+            pdf_variations = {
+                "up": pdf_hist_nominal + delta,
+                "down": np.maximum(pdf_hist_nominal - delta, 0.0),
+            }
+
+            # Same decorrelation and naming the normal path applies to `wgt_pdf_unc_*`.
+            group_LHE = group
+            if group_LHE == "DYJ2" or group_LHE == "DYJ01":
+                group_LHE = "DY"
+            elif "qqH" in group_LHE:
+                group_LHE = "VBF"
+            elif "ggH" in group_LHE:
+                group_LHE = "ggH"
+
+            if group_LHE not in decorrelation_scheme["pdf_unc"]:
+                logger.debug(
+                    f"pdf_unc: group {group} (as {group_LHE}) is not in the "
+                    f"decorrelation scheme; not emitting a template."
+                )
+            else:
+                pdf_suffix = "_" + group_LHE + str(year)
+                for direction, pdf_hist in pdf_variations.items():
+                    variation_fixed = "pdf_unc" + pdf_suffix + (
+                        "Up" if direction == "up" else "Down"
+                    )
+                    name = f"{group}_{variation_fixed}"
+                    logger.debug(
+                        f"pdf_unc [{PDF_UNC_COMBINATION}, divisor {pdf_divisor:g}] "
+                        f"{name}: nominal {nominal_yield:.6g}, "
+                        f"{direction} {pdf_hist.sum():.6g}"
+                    )
+                    # The members are the same events reweighted, so they add no
+                    # independent MC statistics: carry the nominal sumw2 across.
+                    templates.append(
+                        getTH1D_from_numpy(
+                            pdf_hist,
+                            pdf_edges,
+                            pdf_sumw2_nominal,
+                            pdf_centers,
+                            name,
+                        )
+                    )
+                    yield_rows.append(
+                        {
+                            "var_name": var_name,
+                            "group": group,
+                            "region": region,
+                            "channel": channel,
+                            "year": year,
+                            "variation": variation_fixed,
+                            "yield": pdf_hist.sum(),
+                        }
+                    )
 
     if parameters["save_templates"]:
         out_dir = parameters["global_path"]
