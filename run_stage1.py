@@ -45,6 +45,7 @@ np.set_printoptions(threshold=sys.maxsize)
 ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
 
 MAX_FILE_LEN = 50000
+CHUNK_SIZE = 250_000
 DATASET_ELEMENT_LIMITS = {
     "data_": MAX_FILE_LEN,  # None means no limit (use uproot's default behavior)
     "dy": MAX_FILE_LEN,
@@ -179,7 +180,7 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
         # own worker-loss retry recover transparently.
         executor=coffea_processor_module.DaskExecutor(client=client, status=False),  # reuse existing client
         schema=NanoAODSchema,
-        chunksize=250_000,
+        chunksize=CHUNK_SIZE,
         skipbadfiles=False,
     )
 
@@ -595,8 +596,7 @@ if __name__ == "__main__":
     # CRAB-style processed-lumi report: merge the per-chunk processedlumis_*.json
     # shards (written for data only, see src/stage1/lumi_io.py) into one
     # processedLumis.json, and check it against this year's certified lumimask
-    # so completeness can be confirmed right after the run instead of as a
-    # separate manual step. Never fails the run itself.
+    # so we can ensure if the whole data processed successfully.
     try:
         lumi_report = build_processed_lumi_report(
             start_save_path,

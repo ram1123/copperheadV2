@@ -397,10 +397,20 @@ def plotDataMC_compare(
     data_total_err = float(np.sqrt(np.sum(data_hist_w2)))
     mc_total = float(np.sum(bkg_mc_sum))
     mc_total_err = float(np.sqrt(np.sum(bkg_mc_w2_sum)))
+    sig_hist_by_name = {
+        sig_mc_sample: sig_mc_sample_arrs["hist_arr"]
+        for sig_mc_sample, sig_mc_sample_arrs in sig_MC_dict.items()
+    }
+    bin_edges = np.asarray(binning, dtype=float)
 
     with open(save_full_path.replace(".pdf", ".txt"), "w") as f:
         f.write(f"# {title}\n" if title else "")
         f.write(f"n_bins: {n_bins}\n")
+        # record the exact bin edges used, so the yields/table below can be
+        # traced back to (and the binning re-used from) the histogram that
+        # produced them
+        f.write(f"Binning ({len(bin_edges) - 1} bins): ")
+        f.write("[" + ", ".join(f"{edge:.6g}" for edge in bin_edges) + "]\n")
         f.write("\n[Yields: value +/- stat. unc. (fraction of total bkg MC)]\n")
         f.write(f"Data: {data_total:.2f} +/- {data_total_err:.2f}\n")
         for bkg_mc_sample, bkg_mc_hist, bkg_mc_histw2 in zip(
@@ -451,6 +461,33 @@ def plotDataMC_compare(
                 f.write(f"Data vs. MC chi2/ndof (bins with data>0 and MC>0): {chi2:.2f} / {chi2_ndof} = {chi2 / chi2_ndof:.2f}\n")
             else:
                 f.write("Data vs. MC chi2/ndof: N/A (no bins with both data>0 and MC>0)\n")
+
+        # -----------------------------------------
+        # Bin-by-bin values, in their own section for readability. Reuses the
+        # same NaN-safe `ratio_hist` computed above for the ratio panel/chi2
+        # (NaN in bins where data or MC is zero) rather than a plain per-bin
+        # sum, which is always NaN for any histogram with a sparse bin.
+        # -----------------------------------------
+        col_width = 16
+
+        def _fmt_row(cells):
+            return "".join(f"{str(c):>{col_width}}" for c in cells)
+
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("Bin-by-bin values: Data, MC sample groups, Data/MC ratio\n")
+        f.write("=" * 80 + "\n")
+        header = ["bin_low", "bin_high", "Data"] + bkg_mc_sample_names + list(sig_hist_by_name.keys())
+        if plot_ratio:
+            header += ["Data/MC"]
+        f.write(_fmt_row(header) + "\n")
+        for i in range(len(binning) - 1):
+            row = [f"{binning[i]:.4g}", f"{binning[i+1]:.4g}", f"{data_hist[i]:.4g}"]
+            row += [f"{bkg_mc_hist[i]:.4g}" for bkg_mc_hist in bkg_MC_hist_l]
+            row += [f"{sig_hist[i]:.4g}" for sig_hist in sig_hist_by_name.values()]
+            if plot_ratio:
+                ratio_val = ratio_hist[i]
+                row.append(f"{ratio_val:.4g}" if np.isfinite(ratio_val) else "nan")
+            f.write(_fmt_row(row) + "\n")
     # logger.debug(f"Plot saved to {save_full_path} and raw event numbers saved to {save_full_path.replace('.pdf', '.txt')}")
 
 

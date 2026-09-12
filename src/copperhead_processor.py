@@ -568,9 +568,7 @@ class EventProcessor(processor.ProcessorABC):
         # Reference: https://nbviewer.org/github/scikit-hep/coffea/blob/master/binder/packedselection.ipynb
         self.selection = {}
         self.cutflow = {}
-        self.cutflow_names = []  # in-order names passed to self.selection.cutflow(*names, ...);
-        # coffea's Cutflow.result() doesn't expose the names itself, so callers
-        # (e.g. src/stage1/cutflow_io.py::write_cutflow_outputs) need this too.
+        self.cutflow_names = []
 
         self.pysr_configs = {}
         self.pysr_all_features = set()
@@ -614,12 +612,12 @@ class EventProcessor(processor.ProcessorABC):
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
         # application is in "do_jet_veto_maps_filterEvents" field in config.
         # If any jet in the event falls into the veto map region, the whole event is vetoed.
-        """
         # Official JME minimal selection before checking against the veto map
         # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
         # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Without this,
         # a soft/loose-ID/high-EM-fraction jet landing in a vetoed region would
         # trigger event rejection even though the recommendation says it shouldn't count.
+        """
         year = self.config["year"]
         min_sel = (
             (jets.pt > 15)

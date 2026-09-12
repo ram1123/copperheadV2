@@ -499,6 +499,16 @@ class InMemoryBatchLoader:
     the same global torch RNG call (`torch.randperm(n)`, no explicit generator)
     that `DataLoader(shuffle=True)`'s `RandomSampler` used -- so `set_seed(...)`
     still makes iteration order reproducible.
+
+    When the underlying dataset carries systematic-variation inputs (i.e. it was
+    built with ``variation_spec``, the ``--use_adversarial`` path), pass its
+    ``xvar``/``var_slot_idx``/``var_feat_idx``/``n_variations`` through so this
+    loader also yields the `[B, V, F]` variation tensor as a 4th batch element,
+    reproducing `ParquetDataset.__getitem__`'s per-row broadcast
+    (`xv[var_slot_idx, var_feat_idx] = xvar[idx]`) as one vectorized fancy-index
+    per batch instead of a per-row Python loop -- otherwise this loader would
+    silently drop the adversarial term's input and `train_one_fold`'s
+    ``batch[3]`` would index past the end of a 3-tuple.
     """
 
     def __init__(
@@ -509,6 +519,10 @@ class InMemoryBatchLoader:
         batch_size: int,
         shuffle: bool,
         pin_memory: bool = False,
+        xvar: Optional[np.ndarray] = None,
+        var_slot_idx: Optional[np.ndarray] = None,
+        var_feat_idx: Optional[np.ndarray] = None,
+        n_variations: int = 0,
     ) -> None:
         self.x = torch.from_numpy(x)
         self.y = torch.from_numpy(y)
@@ -521,6 +535,12 @@ class InMemoryBatchLoader:
         self.batch_size = int(batch_size)
         self.shuffle = bool(shuffle)
 
+        self.n_variations = int(n_variations)
+        if self.n_variations > 0:
+            self.xvar = torch.from_numpy(xvar)
+            self.var_slot_idx = torch.from_numpy(var_slot_idx)
+            self.var_feat_idx = torch.from_numpy(var_feat_idx)
+
     def __len__(self) -> int:
         n = self.x.shape[0]
         bs = max(self.batch_size, 1)
@@ -532,9 +552,18 @@ class InMemoryBatchLoader:
         for start in range(0, n, self.batch_size):
             idx = perm[start : start + self.batch_size]
             xb, yb, wb = self.x[idx], self.y[idx], self.w[idx]
-            if self.pin_memory:
-                xb, yb, wb = xb.pin_memory(), yb.pin_memory(), wb.pin_memory()
-            yield xb, yb, wb
+            if self.n_variations > 0:
+                # xb.repeat() (not .expand()) so the result is a real, writable
+                # tensor -- the fancy-index assignment below needs its own storage.
+                xvb = xb.unsqueeze(1).repeat(1, self.n_variations, 1)
+                xvb[:, self.var_slot_idx, self.var_feat_idx] = self.xvar[idx]
+                if self.pin_memory:
+                    xb, yb, wb, xvb = xb.pin_memory(), yb.pin_memory(), wb.pin_memory(), xvb.pin_memory()
+                yield xb, yb, wb, xvb
+            else:
+                if self.pin_memory:
+                    xb, yb, wb = xb.pin_memory(), yb.pin_memory(), wb.pin_memory()
+                yield xb, yb, wb
 
 
 def make_dataloader(
@@ -550,8 +579,13 @@ def make_dataloader(
     # InMemoryBatchLoader's docstring above) -- worker processes only ever added
     # multiprocessing overhead here, they never had real I/O to overlap.
     del num_workers, prefetch_factor
+    n_variations = getattr(ds, "n_variations", 0)
     return InMemoryBatchLoader(
-        ds.x, ds.y, ds.w, batch_size=batch_size, shuffle=shuffle, pin_memory=pin_memory
+        ds.x, ds.y, ds.w, batch_size=batch_size, shuffle=shuffle, pin_memory=pin_memory,
+        xvar=ds.xvar if n_variations > 0 else None,
+        var_slot_idx=ds.var_slot_idx if n_variations > 0 else None,
+        var_feat_idx=ds.var_feat_idx if n_variations > 0 else None,
+        n_variations=n_variations,
     )
 
 
