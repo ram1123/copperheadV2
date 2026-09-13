@@ -53,7 +53,7 @@ for year in "${years[@]}"; do
 
     case "$year" in
         2017)
-            data_sample="data_B"
+            data_sample="data_D"
             dy_sample="dy_M-50_aMCatNLO"
             ;;
         2022preEE)
@@ -97,7 +97,7 @@ for year in "${years[@]}"; do
     cp "${year_root}/${year}_vbf_eventKinematics.txt" "$reference_dir/"
     # The actual cutflow JSON filename embeds the input file's UUID + entry
     # range (see runner_adapter.py::_build_shard_id), not a literal "_0" file
-    # index -- e.g. cutflow_data_B_<uuid>_NanoAOD_0_5420.json. Glob for it
+    # index -- e.g. cutflow_data_D_<uuid>_NanoAOD_0_5420.json. Glob for it
     # rather than assuming the old literal name, same as
     # .github/workflows/sync-stage1.yml's find_cutflow_file() already does.
     # The *destination* name in test/reference/ stays the plain "_0.json"
