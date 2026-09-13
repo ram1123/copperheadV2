@@ -129,7 +129,7 @@ jobs:
 
             case "${{ matrix.year }}" in
               2017)
-                data_sample="data_B"
+                data_sample="data_D"
                 dy_sample="dy_M-50_aMCatNLO"
                 ;;
               2022preEE)
