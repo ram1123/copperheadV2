@@ -53,7 +53,7 @@ for year in "${years[@]}"; do
 
     case "$year" in
         2017)
-            data_sample="data_D"
+            data_sample="data_B"
             dy_sample="dy_M-50_aMCatNLO"
             ;;
         2022preEE)

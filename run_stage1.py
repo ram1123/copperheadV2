@@ -3,6 +3,7 @@ import copy
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -336,7 +337,12 @@ if __name__ == "__main__":
     else:
         yearForConfig = args.year
 
-    config = getParametersForYr("./configs/parameters/" , yearForConfig)
+    # Always print which switches file is in effect -- an explicit override
+    # via --switches-yaml, or (default) configs/parameters/switches.yaml
+    # picked up automatically by getParametersForYr's own glob.
+    switches_source_path = args.switches_yaml or "configs/parameters/switches.yaml"
+    logger.info(f"Switches yaml for this run: {switches_source_path}")
+    config = getParametersForYr("./configs/parameters/", yearForConfig, switches_path=args.switches_yaml)
     logger.debug(f"stage1 config: {config}")
 
     # Convert OmegaConf -> plain dict/list so the walker recurses correctly
@@ -385,6 +391,14 @@ if __name__ == "__main__":
             f.write(f"Branch name: {branch_name}\n")
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
+
+        # Save a literal copy of the switches yaml actually used for this run alongside `git_info_*.txt`. 
+        switches_used_path = os.path.join(start_save_path, f"switches_used_{timestamp}.yaml")
+        try:
+            shutil.copyfile(switches_source_path, switches_used_path)
+            logger.info(f"switches_used_path: {switches_used_path}")
+        except Exception as err:
+            logger.error(f"Could not save a copy of the switches yaml used (non-fatal): {err}")
 
         # if True:
         with optional_performance_report():

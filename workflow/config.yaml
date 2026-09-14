@@ -62,6 +62,16 @@ run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_MuonID-tight
 # run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN"
 # run_tag: "test"
 
+# Optional standalone switches yaml, stage-1 only (see run_stage1.py's
+# --switches-yaml / src/lib/get_parameters.py). Pins the `stage1` rule to a
+# named, independent switches configuration -- e.g.
+# configs/parameters/switches_official.yaml -- instead of whatever
+# configs/parameters/switches.yaml currently says, so you don't have to edit
+# the shared file in place per run_tag. 
+# Can also be set per-invocation without editing this file:
+#   snakemake ... --config switches_yaml=configs/parameters/switches_official.yaml
+switches_yaml: configs/parameters/switches_official.yaml
+
 # dask gateway
 use_gateway: true
 cluster_index: 0

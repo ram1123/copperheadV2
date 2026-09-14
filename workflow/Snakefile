@@ -144,6 +144,14 @@ def plot_base_for_year(year: str) -> str:
 USE_GW = bool(config.get("use_gateway", False))
 CLIDX  = str(config.get("cluster_index", 0))
 
+# Optional standalone switches yaml (see run_stage1.py --switches-yaml /
+# src/lib/get_parameters.py) for stage-1 only -- e.g.
+# "configs/parameters/switches_official.yaml", to pin the DAG's stage1 rule to
+# a named, independent switches configuration instead of whatever
+# configs/parameters/switches.yaml currently says. Unset/empty (default)
+# preserves prior behavior.
+SWITCHES_YAML = config.get("switches_yaml", None)
+
 ZPT = config["zpt"]
 ZPT_OUT = ZPT.get("outbase", "try_zpt_dnn")
 ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
@@ -156,6 +164,10 @@ def gw_flags():
 
 def gw_flags_plots():
     return f" --use_gateway --cluster_index {CLIDX} " if USE_GW else ""
+
+
+def switches_flag():
+    return f"-w {SWITCHES_YAML}" if SWITCHES_YAML else ""
 
 def _jet_region_targets_for(cat):
     """
@@ -266,6 +278,7 @@ rule stage1:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        switches=lambda wc: switches_flag(),
         summary=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
@@ -286,6 +299,7 @@ rule stage1:
           -y "{wildcards.year}" \
           -m 1 -z \
           {params.gw}  \
+          {params.switches}  \
           > {log} 2>&1
         summary="{params.summary}"
 

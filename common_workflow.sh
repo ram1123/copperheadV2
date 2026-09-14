@@ -21,6 +21,7 @@ common_defaults() {
     cluster_index="0"
     is_mc="0"
     is_sync="0"
+    switches_yaml_file=""
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
     do_vbf_filter_study="${DO_VBF_FILTER_STUDY:-0}"
@@ -30,7 +31,7 @@ common_defaults() {
 }
 
 parse_common_args() {
-    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:ksfzDV" opt; do
+    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:w:ksfzDV" opt; do
         case "${opt}" in
             h) usage ;;
             c) dataset_yaml="${OPTARG}" ;;
@@ -48,6 +49,7 @@ parse_common_args() {
             i) cluster_index="${OPTARG}" ;;
             M) is_mc="${OPTARG}" ;;
             S) save_root="${OPTARG}" ;;
+            w) switches_yaml_file="${OPTARG}" ;;
             k) dask_gateway="1" ;;
             s) skip_bad_files="1" ;;
             f) debug_fraction="1" ;;
@@ -132,7 +134,27 @@ setup_logging() {
 
     log_file="log_$(date +%Y%m%d_%H%M%S).txt"
     exec > >(tee -a "${log_file}") 2>&1
+    # `exec > >(...)`'s process substitution is a detached background job --
+    # bash does not wait for it automatically.
+    TEE_PID="$!"
     exec 3>>"${log_file}"
+}
+
+finish_logging() {
+    # Let setup_logging's tee flush and exit cleanly before this script's
+    # process — and whatever is capturing its stdout — tears down. Safe to
+    # call even if setup_logging was never invoked (TEE_PID unset).
+    if [[ -n "${TEE_PID:-}" ]]; then
+        exec 1>&- 2>&-  # close our end so tee's stdin sees EOF and it can exit
+        # Bounded: don't hang forever if something unexpected still holds the
+        # pipe open (e.g. a leaked fd in a backgrounded child) -- 10s is far
+        # more than tee needs to flush a plain text log file.
+        ( sleep 10; kill "${TEE_PID}" 2>/dev/null || true ) &
+        local watchdog_pid=$!
+        wait "${TEE_PID}" 2>/dev/null || true
+        kill "${watchdog_pid}" 2>/dev/null || true
+        wait "${watchdog_pid}" 2>/dev/null || true
+    fi
 }
 
 log() {
@@ -251,8 +273,17 @@ append_stage1_args() {
         printf '%s\n' "--test_mode"
     fi
     if [[ "${is_sync}" == "1" ]]; then
-        # printf '%s\n' "--sync" "--isCutflow"
-        printf '%s\n' "--isCutflow"
+        # --sync makes run_stage1.py read prestage_output/processor_samples_<year>_NanoAODv<v>_sync.json
+        # instead of the plain (non-suffixed) file -- its only effect (run_stage1.py:359-361). Without
+        # it, -z silently falls back to the plain file, which is NOT guaranteed to be the small sync
+        # sample set: both filenames are keyed only by year+NanoAODv, so a real/full prestage run for
+        # the same year+version overwrites the plain file with production-scale samples. Confirmed live:
+        # for 2022preEE v12 the plain file's data_C had 108 files / 158M events vs. the _sync.json's 3
+        # small samples -- update_sync_references.sh appeared to hang because stage-1 was actually
+        # processing 158M real events instead of ~1k sync events.
+        printf '%s\n' "--sync" "--isCutflow"
+        # BUG: --sync and --isCutflow should be separate.
+        #      as sync for the stage-1 is to read the sync pre-stage file
     fi
 }
 
@@ -320,6 +351,9 @@ build_stage1_cmd() {
         --skipSamples
         --log-level "$(debug_flag)"
     )
+    if [[ -n "${switches_yaml_file}" ]]; then
+        cmd+=(--switches-yaml "${switches_yaml_file}")
+    fi
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_stage1_args)
