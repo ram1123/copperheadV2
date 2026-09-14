@@ -26,9 +26,27 @@ Modes:
                               Does NOT rebuild stage2/stage3 (unlike the old same-named mode) --
                               run those separately first if the histograms/datacards aren't
                               already built for -y.
+  12|combine_vbf_jjregions    Combines the already-built jj_both_central and jj_non_central
+                              cards for -y into one card (two channels, exact partition of the
+                              VBF selection -- see ensure_vbf_jjcombined_card in
+                              common_workflow.sh), then significance + summary + expected limit
+                              + limit summary on the combined card. Independent of -- and does
+                              NOT read or need -- JJ_ETA_REGION below; it always targets both
+                              regions directly. Requires combine_vbf/combine_vbf_all/vbf_limit
+                              to have already been run for -y under JJ_ETA_REGION=jj_both_central
+                              and JJ_ETA_REGION=jj_non_central (so both per-region cards exist).
+  13|combine_vbf_jjregions_impacts
+                              Same jj-region combination as mode 12, then impacts (r=1/r=0,
+                              blinded) on the combined card instead of significance/limit.
 
 Common options:
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 commands built by this wrapper.
+
+Env vars:
+  JJ_ETA_REGION  Must match whatever the stage-2/3 run being targeted was built with (default
+                 "all"). This wrapper's own datacard/workspace paths are derived from -o's
+                 save_postfix plus this var (same mechanism as -o itself), so a mismatch here
+                 looks exactly like a wrong -o: "Missing VBF SR/SB datacards for <year>".
 EOF
     exit 1
 }
@@ -83,6 +101,13 @@ for year in "${years[@]}"; do
             collect_vbf_significance_summary
             run_vbf_limit "${year}"
             collect_vbf_limit_summary
+            ;;
+        12|combine_vbf_jjregions)
+            run_vbf_jjcombined_significance_and_limit "${year}"
+            collect_vbf_jjcombined_summaries
+            ;;
+        13|combine_vbf_jjregions_impacts)
+            run_vbf_jjcombined_impacts "${year}"
             ;;
         *)
             die "Invalid stats mode '${mode}'."

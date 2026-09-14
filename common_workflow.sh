@@ -99,6 +99,16 @@ except Exception:
     dnn_best_json="${OPTUNA_BEST_JSON:-${dnn_hpo_dir}/optuna_best.json}"
     dnn_model_path="./${dnn_base_dir}"
 
+    # jj_eta_region for the actual VBF stage-2 category selection / stage-3 datacards --
+    # independent of dnn_jj_eta_region above (that one is what phase-space subset the DNN was
+    # trained on; this one is what phase-space subset stage-2/3 restrict the VBF category to
+    # when filling histograms/building datacards -- the two are conceptually separate knobs
+    # and don't have to match, though a typical workflow sets them the same).  Same JJ_ETA_REGION
+    # env var as above is reused as the override for convenience, but there is no YAML
+    # source-of-truth fallback here since stage2/3 aren't driven by a persistent config file
+    # the way DNN training is -- unset means "all".
+    jj_eta_region="${JJ_ETA_REGION:-all}"
+
     # PU-DNN (jet-level HS-vs-PU classifier, MVA_training/pileup_dnn/train_pu_dnn.py)
     # is unrelated to the VBF category DNN above: it trains on stage1's own
     # compacted output and is consumed back inside stage1 (do_use_pu_dnn_score),
@@ -432,6 +442,9 @@ build_stage2_cmd() {
     if [[ "${do_vbf_filter_study}" == "1" ]]; then
         cmd+=(--vbf_filter_study)
     fi
+    if [[ "${jj_eta_region}" != "all" ]]; then
+        cmd+=(--jj_eta_region "${jj_eta_region}")
+    fi
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_gateway_args)
@@ -442,6 +455,9 @@ build_stage2_plot_cmd() {
     local year="$1"
     local region_name="$2"
     local stage2_suffix="$(variation_suffix)"
+    if [[ "${jj_eta_region}" != "all" ]]; then
+        stage2_suffix="_${jj_eta_region}${stage2_suffix}"
+    fi
     if [[ "${do_vbf_filter_study}" == "1" ]]; then
         stage2_suffix="_vbf_filter_study${stage2_suffix}"
     fi
@@ -478,7 +494,10 @@ build_stage3_cmd() {
     fi
     if [[ "${do_vbf_filter_study}" == "1" ]]; then
         cmd+=(--vbf_filter_study)
-    fi    
+    fi
+    if [[ "${jj_eta_region}" != "all" ]]; then
+        cmd+=(--jj_eta_region "${jj_eta_region}")
+    fi
     if [[ "${cluster_index}" != "0" ]]; then
         cmd+=(--cluster_index "${cluster_index}")
     fi
@@ -626,6 +645,9 @@ stage3_output_postfix() {
     if [[ "${do_vbf_filter_study}" == "1" ]]; then
         postfix="${postfix}_vbf_filter_study"
     fi
+    if [[ "${jj_eta_region}" != "all" ]]; then
+        postfix="${postfix}_${jj_eta_region}"
+    fi
     printf '%s' "${postfix}"
 }
 
@@ -719,6 +741,92 @@ ensure_vbf_card() {
     esac
 
     [[ -s "${card_path}" ]] || die "Failed to build non-empty VBF card ${card_path}"
+}
+
+JJ_CENTRAL_NONCENTRAL_REGIONS=(jj_both_central jj_non_central)
+
+# --- VBF jj-eta-region (central + non-central) combination --------------------------------
+# Combines the already-built jj_both_central and jj_non_central per-year cards into one card,
+# treating the two phase spaces as separate channels 
+#
+# "jj_combined" is a bash-only pseudo-value for ${jj_eta_region}, recognized only by these
+# functions (via vbf_card_dir()/stage3_output_postfix()) -- it is never a valid
+# run_stage2_vbf.py/run_stage3_vbf.py --jj_eta_region choice, since stage2/3 always need one
+# real phase space to select events by. Works for any year token ensure_vbf_card accepts,
+# including pseudo-years like Run3 -- combines that region's own Run3-combined card.
+ensure_vbf_jjcombined_card() {
+    local year="$1"
+    local saved_jj_eta_region="${jj_eta_region}"
+    jj_eta_region="jj_combined"
+
+    local combined_dir
+    combined_dir="$(vbf_card_dir)"
+    mkdir -p "${combined_dir}"
+    local stem
+    stem="$(vbf_card_stem "${year}")"
+    local card_path="${combined_dir}/${stem}.txt"
+
+    if [[ -s "${card_path}" ]]; then
+        jj_eta_region="${saved_jj_eta_region}"
+        return 0
+    fi
+    rm -f "${card_path}"
+
+    local region region_dir region_card rel_path
+    local -a combine_args=()
+    for region in "${JJ_CENTRAL_NONCENTRAL_REGIONS[@]}"; do
+        jj_eta_region="${region}"
+        ensure_vbf_card "${year}"
+        region_dir="$(vbf_card_dir)"
+        region_card="${region_dir}/${stem}.txt"
+        [[ -f "${region_card}" ]] || die "Missing ${region} VBF card for ${year}: ${region_card}"
+        rel_path="$(realpath --relative-to="${combined_dir}" "${region_card}")"
+        combine_args+=("${region}=${rel_path}")
+    done
+
+    jj_eta_region="jj_combined"
+    combine_vbf_cards "${combined_dir}" "${stem}.txt" "${combine_args[@]}"
+    [[ -s "${card_path}" ]] || die "Failed to build non-empty combined jj-region VBF card ${card_path}"
+
+    jj_eta_region="${saved_jj_eta_region}"
+}
+
+# Runs card+workspace+significance+limit under jj_eta_region="jj_combined" for one year, then
+# restores the caller's jj_eta_region. Reuses ensure_vbf_workspace/run_vbf_significance/
+# run_vbf_limit unchanged: since ensure_vbf_jjcombined_card already wrote the combined card,
+# their own internal ensure_vbf_card call just finds it already there and returns immediately.
+run_vbf_jjcombined_significance_and_limit() {
+    local year="$1"
+    local saved_jj_eta_region="${jj_eta_region}"
+    jj_eta_region="jj_combined"
+
+    ensure_vbf_jjcombined_card "${year}"
+    ensure_vbf_workspace "${year}"
+    run_vbf_significance "${year}"
+    run_vbf_limit "${year}"
+
+    jj_eta_region="${saved_jj_eta_region}"
+}
+
+run_vbf_jjcombined_impacts() {
+    local year="$1"
+    local saved_jj_eta_region="${jj_eta_region}"
+    jj_eta_region="jj_combined"
+
+    ensure_vbf_jjcombined_card "${year}"
+    run_vbf_impacts "${year}"
+
+    jj_eta_region="${saved_jj_eta_region}"
+}
+
+collect_vbf_jjcombined_summaries() {
+    local saved_jj_eta_region="${jj_eta_region}"
+    jj_eta_region="jj_combined"
+
+    collect_vbf_significance_summary
+    collect_vbf_limit_summary
+
+    jj_eta_region="${saved_jj_eta_region}"
 }
 
 ensure_vbf_workspace() {
@@ -895,5 +1003,6 @@ print_run_configuration() {
     echo "  Region: ${region}"
     echo "  Category: ${category}"
     echo "  VBF filter study: ${do_vbf_filter_study}"
+    echo "  jj_eta_region (stage2/3): ${jj_eta_region}"
     echo "  isMC: ${is_mc}"
 }

@@ -20,16 +20,22 @@ parser.add_argument(
     action=argparse.BooleanOptionalAction,
     help="If true, runs with all variations, otherwise only nominal",
 )
+parser.add_argument(
+    "--jj_eta_region",
+    dest="jj_eta_region",
+    default="all",
+    action="store",
+    help=(
+        "Must match the --jj_eta_region a stage-2 run for this label/save_postfix was built "
+        "with (default 'all'): only used to locate the matching stage2_histograms/stage3_ "
+        "datacards output directory."
+    ),
+)
 args = parser.parse_args()
 
 years = args.years if args.years else [args.year]
 
-# Use the exact year string (e.g. "2016preVFP", "2016postVFP") to resolve
-# sample groups, instead of collapsing to a bare "2016" that matches no
-# `processes_per_year` key in samples.yaml and silently falls back to
-# group defaults that may not exist on disk (e.g. DY's "dyTo2L_M-50_incl",
-# EWK's "ewk_mmjj_mll_105_160" for 2016preVFP/2016postVFP).
-year = years[0] # TODO: update this fixed year portion in the future into something more robust.
+year = years[0]
 
 stage2_model_suffix = args.save_postfix if args.save_postfix else ""
 if args.do_vbf_filter_study:
@@ -37,6 +43,12 @@ if args.do_vbf_filter_study:
         f"{stage2_model_suffix}_vbf_filter_study"
         if stage2_model_suffix
         else "vbf_filter_study"
+    )
+if args.jj_eta_region != "all":
+    stage2_model_suffix = (
+        f"{stage2_model_suffix}_{args.jj_eta_region}"
+        if stage2_model_suffix
+        else args.jj_eta_region
     )
 
 # global parameters

@@ -21,6 +21,7 @@ from omegaconf import OmegaConf
 
 from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from modules.dask_utils import close_dask_client, get_dask_client
+from modules.git_utils import get_git_state
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 
@@ -37,9 +38,43 @@ def _count_events_for_file(fname):
 
 def _minnlo_genweight_metadata_for_file(args):
     fname, uproot_options = args
+    sum_gen_wgts = 0.0
+    n_gen_evts = 0
+    pdf_sumw = None
+
+    # The per-member sums are built here from the Events tree with sign(genWeight),
+    # NOT taken from the Runs-tree LHEPdfSumw branch, even though that branch exists
+    # and is far cheaper to read. LHEPdfSumw is weighted by the raw genWeight, and
+    # that is exactly the quantity this path exists to discard: four files of
+    # dyTo2Mu_M-50_MiNNLO 2017 carry a genEventSumw of ~1e18-1e19, 4.3 billion times
+    # the per-file median of 2.2e9. They dominate every S_k, and their internal
+    # near-cancellations leave S_0 / S_k running from -1.27 to +5.19 instead of
+    # sitting within 1%. Using the signs keeps the sums consistent with sumGenWgts
+    # above and reproduces the honest ratios.
+    #
+    # (A single file of DYJetsToMuMu_M-100to200 agrees to 2e-6 between the two
+    # methods, so a spot check on one well-behaved file does NOT establish that the
+    # Runs tree is safe here -- the pathology is per-file and rare.)
+    #
+    # Read in batches: one MiNNLO file is ~500k events x 103 members, which is
+    # ~400 MB as float64, and this runs under a 20-way process pool.
     with uproot.open(f"{fname}:Events", **uproot_options) as tree:
-        gen_wgt = tree["genWeight"].array()
-        return float(ak.sum(np.sign(gen_wgt))), len(gen_wgt)
+        has_pdf = "LHEPdfWeight" in tree.keys()
+        branches = ["genWeight"] + (["LHEPdfWeight"] if has_pdf else [])
+        for batch in tree.iterate(branches, step_size="100 MB"):
+            signs = np.sign(ak.to_numpy(batch["genWeight"]).astype(np.float64))
+            sum_gen_wgts += float(signs.sum())
+            n_gen_evts += len(signs)
+            if has_pdf:
+                members = ak.to_numpy(
+                    ak.to_regular(batch["LHEPdfWeight"])
+                ).astype(np.float64)
+                contribution = (members * signs[:, None]).sum(axis=0)
+                pdf_sumw = (
+                    contribution if pdf_sumw is None else pdf_sumw + contribution
+                )
+
+    return sum_gen_wgts, n_gen_evts, (None if pdf_sumw is None else pdf_sumw.tolist())
 
 
 def merge_with_existing_json_dict(filename, updates):
@@ -59,6 +94,80 @@ def merge_with_existing_json_dict(filename, updates):
     return existing
 
 
+def _pdf_sumw_for_runs_tree(tree, keys):
+    """Inclusive sum of genWeight * LHEPdfWeight[k] over the runs in one file.
+
+    The LHEPdfSumw branch title is "Sum of genEventWeight * LHEPdfWeight[i],
+    divided by genEventSumw" -- divided by *that run's* genEventSumw -- so each
+    run is multiplied back by it before the runs are added. Skipping that step
+    would weight a short run the same as a long one, which matters for the
+    samples split across several runs.
+
+    Only the ratios S_0 / S_k are used downstream (add_pdf_variations scales
+    member k by S_0 / S_k), so the overall scale is irrelevant here -- which is
+    why this is not rescaled by the deprecated --fraction option the way
+    sumGenWgts is.
+
+    Returns a plain list of floats for JSON, or None when the file carries no
+    LHE PDF weights; add_pdf_variations is never reached for those samples.
+    """
+    if "LHEPdfSumw" not in keys:
+        return None
+
+    gen_key = "genEventSumw" if "genEventSumw" in keys else "genEventSumw_"
+    if gen_key not in keys:
+        return None
+
+    pdf_sumw = tree["LHEPdfSumw"].array()
+    n_members = np.unique(ak.to_numpy(ak.num(pdf_sumw, axis=1))).tolist()
+    if len(n_members) != 1:
+        raise ValueError(
+            f"[prestage] LHEPdfSumw has inconsistent member counts {n_members} "
+            f"across the runs of one file; it was produced with more than one "
+            f"PDF set and cannot be summed."
+        )
+
+    members = ak.to_numpy(ak.to_regular(pdf_sumw)).astype(np.float64)
+    weights = ak.to_numpy(tree[gen_key].array()).astype(np.float64)
+    return (members * weights[:, None]).sum(axis=0).tolist()
+
+
+def _accumulate_pdf_sumw(total, addition):
+    """Add one file's per-member sums into the running total across files."""
+    if addition is None:
+        return total
+    if total is None:
+        return list(addition)
+    if len(total) != len(addition):
+        raise ValueError(
+            f"[prestage] files of one sample disagree on LHEPdfSumw length "
+            f"({len(total)} vs {len(addition)}); they were produced with "
+            f"different PDF sets."
+        )
+    return [a + b for a, b in zip(total, addition)]
+
+
+def lhepdf_weight_title_with_redirector(fnames, host_prefix, attempt, uproot_options):
+    """
+    Best-effort read of the LHEPdfWeight branch title from the Events tree of
+    the first file of a sample (uniform across a sample's files, so one file
+    is enough). NanoAOD documents the LHA ID range / PDF set there, e.g.
+    "LHE pdf variation weights (w_var / w_nominal) for LHA IDs 325300 - 325402"
+    (confirmed on a real 2025 dyTo2Mu_M-50_aMCatNLO file) -- this is read
+    directly from the file, not invented. Purely documentation for
+    sumLHEPdfWgts; returns None (never raises past this) if the file/branch
+    isn't reachable or doesn't exist, since it's not required for the sums
+    themselves.
+    """
+    normalized = normalize_paths(fnames[:1], host_prefix)
+    if not normalized:
+        return None
+    with uproot.open(f"{normalized[0]}:Events", **uproot_options) as tree:
+        if "LHEPdfWeight" not in tree.keys():
+            return None
+        return tree["LHEPdfWeight"].title
+
+
 def _runs_tree_metadata_for_file(args):
     fname, uproot_options = args
     with uproot.open(f"{fname}:Runs", **uproot_options) as tree:
@@ -69,7 +178,7 @@ def _runs_tree_metadata_for_file(args):
         else:  # nanoAODv6
             sum_gen_wgts = float(ak.sum(tree["genEventSumw_"].array()))
             n_gen_evts = int(ak.sum(tree["genEventCount_"].array()))
-        return sum_gen_wgts, n_gen_evts
+        return sum_gen_wgts, n_gen_evts, _pdf_sumw_for_runs_tree(tree, keys)
 
 
 def _with_redirector_retries(sample_name: str, kind: str, fn):
@@ -107,6 +216,7 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
     """
     sum_gen_wgts = 0.0
     n_gen_evts = 0
+    sum_pdf_wgts = None
 
     normalized_fnames = normalize_paths(fnames, host_prefix)
     if len(normalized_fnames) == 0:
@@ -114,6 +224,7 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
         return {
             "sumGenWgts": sum_gen_wgts,
             "nGenEvts": n_gen_evts,
+            "sumLHEPdfWgts": sum_pdf_wgts,
         }
 
     max_n_workers = 20  # NOTE added as a soft cap for stability. Increase if higher throughput is needed.
@@ -124,12 +235,13 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
     )
     worker_args = [(fname, uproot_options) for fname in normalized_fnames]
     with multiprocessing.Pool(processes=n_workers) as pool:
-        for file_sum_gen_wgts, file_n_gen_evts in pool.imap_unordered(
+        for file_sum_gen_wgts, file_n_gen_evts, file_pdf_wgts in pool.imap_unordered(
             _runs_tree_metadata_for_file,
             worker_args,
         ):
             sum_gen_wgts += file_sum_gen_wgts
             n_gen_evts += file_n_gen_evts
+            sum_pdf_wgts = _accumulate_pdf_sumw(sum_pdf_wgts, file_pdf_wgts)
 
     logger.info(
         f"[prestage] Runs-tree attempt {attempt} succeeded to read metadata with {host_prefix}"
@@ -137,6 +249,7 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
     return {
         "sumGenWgts": sum_gen_wgts,
         "nGenEvts": n_gen_evts,
+        "sumLHEPdfWgts": sum_pdf_wgts,
     }
 
 
@@ -149,6 +262,7 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
     """
     sum_gen_wgts = 0.0
     n_gen_evts = 0
+    sum_pdf_wgts = None
 
     logger.info(f"[prestage] MiNNLO attempt {attempt} using redirector {host_prefix}")
     normalized_fnames = normalize_paths(fnames, host_prefix)
@@ -157,6 +271,7 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
         return {
             "sumGenWgts": sum_gen_wgts,
             "nGenEvts": n_gen_evts,
+            "sumLHEPdfWgts": sum_pdf_wgts,
         }
 
     max_n_workers = 20  # NOTE added as a soft cap for stability. Increase if higher throughput is needed.
@@ -167,12 +282,13 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
     )
     worker_args = [(fname, uproot_options) for fname in normalized_fnames]
     with multiprocessing.Pool(processes=n_workers) as pool:
-        for file_sum_gen_wgts, file_n_gen_evts in pool.imap_unordered(
+        for file_sum_gen_wgts, file_n_gen_evts, file_pdf_wgts in pool.imap_unordered(
             _minnlo_genweight_metadata_for_file,
             worker_args,
         ):
             sum_gen_wgts += file_sum_gen_wgts
             n_gen_evts += file_n_gen_evts
+            sum_pdf_wgts = _accumulate_pdf_sumw(sum_pdf_wgts, file_pdf_wgts)
 
     logger.info(
         f"[prestage] MiNNLO attempt {attempt} succeeded to read genWeight metadata with {host_prefix}"
@@ -180,6 +296,7 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
     return {
         "sumGenWgts": sum_gen_wgts,
         "nGenEvts": n_gen_evts,
+        "sumLHEPdfWgts": sum_pdf_wgts,
     }
 
 
@@ -281,7 +398,7 @@ def getBadFileParallelizeDask(filelist):
 def removeBadFiles(filelist):
     bad_filelist = getBadFileParallelizeDask(filelist)
     clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
-    return clean_filtlist
+    return clean_filtlist, bad_filelist
 
 
 def getDatasetRootFilesViaDasgoclient(single_dataset_name: str) -> list:
@@ -435,6 +552,31 @@ if __name__ == "__main__":
     if args.fraction is None: # do the normal prestage setup
         total_events = 0
 
+        # Per-run code provenance, computed once and stamped onto every sample
+        # this run touches (NOT a single top-level JSON key: merge_with_existing_json_dict
+        # does a plain dict.update, so a top-level block would get silently
+        # overwritten by the next incremental run and misattribute every
+        # sample already in the file to the wrong commit/diff). Written under
+        # a run-unique subdirectory of prestage_output so concurrent/successive
+        # runs (different years, or --sync vs not) never clobber each other's
+        # git_diff.patch.
+        run_timestamp = time.strftime("%Y%m%d_%H%M%S")
+        provenance_rel_dir = os.path.join(
+            "_provenance",
+            f"{year}_NanoAODv{args.NanoAODv}{'_sync' if args.sync else ''}_{run_timestamp}",
+        )
+        git_state = get_git_state(os.path.join(args.prestage_output, provenance_rel_dir))
+        run_provenance = {
+            "timestamp": run_timestamp,
+            "commit": git_state["commit"],
+            "dirty": git_state["dirty"],
+            "diff_file": (
+                os.path.join(provenance_rel_dir, git_state["diff_file"])
+                if git_state["diff_file"]
+                else None
+            ),
+        }
+
         client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
 
         big_sample_info = {}
@@ -555,20 +697,24 @@ if __name__ == "__main__":
 
             # resolve files
             fnames = []
+            das_datasets_used = []  # only the ones actually queried, "None" entries excluded
             for single_dataset_name in ds_list:
                 if single_dataset_name is None or single_dataset_name == "None":
                     logger.warning(f"Sample {sample_name} has 'None' dataset; skipping.")
                     continue
+                das_datasets_used.append(single_dataset_name)
                 fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
             if len(fnames) == 0:
                 logger.error(f"No files found for sample {sample_name}. Skipping this sample.")
                 continue
 
+            n_files_requested = len(fnames)
+            bad_files = []
             if args.skipBadFiles: # if we want to skip bad files
                 logger.info("Skipping bad files")
                 logger.info(f"Number of files before removing bad files: {len(fnames)}")
-                fnames = removeBadFiles(fnames)
+                fnames, bad_files = removeBadFiles(fnames)
                 logger.info(f"Number of files after removing bad files: {len(fnames)}")
 
             # convert to xcachce paths if requested
@@ -589,9 +735,34 @@ if __name__ == "__main__":
             run through each file and collect total number of
             """
             preprocess_metadata = {
+                # Per-member inclusive sum of weights, from the Runs-tree LHEPdfSumw
+                # branch. add_pdf_variations scales eigenvector member k by S_0 / S_k
+                # with it. Stays None for data and for MC carrying no LHE PDF weights.
+                # Deliberately not rescaled by --fraction below, unlike sumGenWgts:
+                # only the ratios S_0 / S_k are used downstream.
+                "sumLHEPdfWgts" : None,
+                # Best-effort documentation for sumLHEPdfWgts, read directly from the
+                # LHEPdfWeight branch title (e.g. "... for LHA IDs 325300 - 325402") --
+                # see lhepdf_weight_title_with_redirector. None for data, for MC with
+                # no LHE PDF weights, or if the title couldn't be read.
+                "lhe_pdf_weight_title" : None,
+                "n_pdf_members" : None,
                 "sumGenWgts" : None,
                 "nGenEvts" : None,
                 "data_entries" : None,
+                # Files actually queried for this sample (DAS/eos paths from the
+                # dataset YAML, "None" placeholder entries excluded) and file-count
+                # bookkeeping around --skipBadFiles, so a normalization discrepancy
+                # can be traced back to which/how many files were actually used.
+                "das_datasets" : das_datasets_used,
+                "n_files_requested" : n_files_requested,
+                "n_files_used" : len(fnames),
+                "bad_files" : bad_files,
+                # Code state for this run (git_diff.patch path is relative to
+                # args.prestage_output) -- see the run_provenance block above the
+                # sample loop for why this is per-sample rather than a single
+                # top-level JSON key.
+                "provenance" : run_provenance,
             }
             if is_data:  # data sample
                 def _read_data_entries(host_prefix, attempt):
@@ -633,6 +804,24 @@ if __name__ == "__main__":
                 mc_metadata = _with_redirector_retries(sample_name, "MC sample", _read_mc_metadata)
                 preprocess_metadata["sumGenWgts"] = mc_metadata["sumGenWgts"]
                 preprocess_metadata["nGenEvts"] = mc_metadata["nGenEvts"]
+                preprocess_metadata["sumLHEPdfWgts"] = mc_metadata["sumLHEPdfWgts"]
+                if mc_metadata["sumLHEPdfWgts"] is not None:
+                    preprocess_metadata["n_pdf_members"] = len(mc_metadata["sumLHEPdfWgts"])
+                    try:
+                        preprocess_metadata["lhe_pdf_weight_title"] = _with_redirector_retries(
+                            sample_name,
+                            "LHEPdfWeight title",
+                            lambda host_prefix, attempt: lhepdf_weight_title_with_redirector(
+                                fnames, host_prefix, attempt, {"timeout": 4 * 2400}
+                            ),
+                        )
+                    except Exception as e:
+                        # Documentation only -- never let a title-read failure take
+                        # down a prestage run that otherwise succeeded.
+                        logger.warning(
+                            f"[prestage] {sample_name}: could not read LHEPdfWeight "
+                            f"title: {type(e).__name__}: {e}"
+                        )
                 logger.info(f"[prestage] MC sample {sample_name}: success")
 
                 total_events += preprocess_metadata["nGenEvts"]
