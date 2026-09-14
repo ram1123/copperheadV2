@@ -8,6 +8,8 @@ hmm_base: /work/projects/hmm
 # )
 
 # what to run
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE", "2023BPix", "2024"]
@@ -15,8 +17,10 @@ hmm_base: /work/projects/hmm
 # years: ["2022preEE", "2022postEE"]
 # years: ["2022preEE"]
 # years: ["2022postEE"]
+# years: ["2024", "2025", "2026"]
 # years: ["2024"]
-years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
+years: ["2025"]
+# years: ["2024", "2025"]
 # years: ["2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017", "2018"]
 # run_tag: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2"
@@ -48,8 +52,15 @@ years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
 # run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024_Syst"
 # run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024"
 
-run_tag: "FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets_Syst"
+# run_tag: "FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets_Syst"
 # run_tag: "FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets"
+
+# run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_AddHE50"
+# run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation"
+run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_MuonID-tightId"
+# run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV"
+# run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN"
+# run_tag: "test"
 
 # dask gateway
 use_gateway: true

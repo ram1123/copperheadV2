@@ -48,6 +48,16 @@ time python MVA_training/pileup_dnn/train_pu_dnn.py \
   --use-glob \
   -o validation/pu_dnn/run2024_dy_top_ewk_OnlyIDVarsAndOthersNopTrelated_NopuIdDisc \
   --regions HEpos HEneg HFpos HFneg  
+
+
+time python MVA_training/pileup_dnn/train_pu_dnn.py \
+  -i \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets/stage1_output/2025/compacted/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets/stage1_output/2025/compacted/ttjets_*/*/*.parquet" \
+    "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets/stage1_output/2025/compacted/ewk_*/*/*.parquet" \
+  --use-glob \
+  -o validation/pu_dnn/run2025_dy_top_ewk_allvars_25Aug \
+  --regions HEpos HEneg HFpos HFneg    
 """
 
 from __future__ import annotations
@@ -142,7 +152,7 @@ MODEL_FEATURES = [
     # "otherJetPt",
     # "jetPtOverOtherJetPt",
 
-    # "puIdDisc",
+    "puIdDisc",
 
     "chEmEF", "chHEF",
     "neEmEF", "neHEF",

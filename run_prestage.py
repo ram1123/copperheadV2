@@ -21,6 +21,7 @@ from omegaconf import OmegaConf
 
 from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from modules.dask_utils import close_dask_client, get_dask_client
+from modules.git_utils import get_git_state
 from modules.utils import logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
 
@@ -356,7 +357,7 @@ def getBadFileParallelizeDask(filelist):
 def removeBadFiles(filelist):
     bad_filelist = getBadFileParallelizeDask(filelist)
     clean_filtlist = list(set(filelist) - set(bad_filelist)) # remove bad files from the filelist
-    return clean_filtlist
+    return clean_filtlist, bad_filelist
 
 
 def getDatasetRootFilesViaDasgoclient(single_dataset_name: str) -> list:
@@ -510,6 +511,31 @@ if __name__ == "__main__":
     if args.fraction is None: # do the normal prestage setup
         total_events = 0
 
+        # Per-run code provenance, computed once and stamped onto every sample
+        # this run touches (NOT a single top-level JSON key: merge_with_existing_json_dict
+        # does a plain dict.update, so a top-level block would get silently
+        # overwritten by the next incremental run and misattribute every
+        # sample already in the file to the wrong commit/diff). Written under
+        # a run-unique subdirectory of prestage_output so concurrent/successive
+        # runs (different years, or --sync vs not) never clobber each other's
+        # git_diff.patch.
+        run_timestamp = time.strftime("%Y%m%d_%H%M%S")
+        provenance_rel_dir = os.path.join(
+            "_provenance",
+            f"{year}_NanoAODv{args.NanoAODv}{'_sync' if args.sync else ''}_{run_timestamp}",
+        )
+        git_state = get_git_state(os.path.join(args.prestage_output, provenance_rel_dir))
+        run_provenance = {
+            "timestamp": run_timestamp,
+            "commit": git_state["commit"],
+            "dirty": git_state["dirty"],
+            "diff_file": (
+                os.path.join(provenance_rel_dir, git_state["diff_file"])
+                if git_state["diff_file"]
+                else None
+            ),
+        }
+
         client = get_dask_client(args.use_gateway, cluster_index=args.cluster_index)
 
         big_sample_info = {}
@@ -630,20 +656,24 @@ if __name__ == "__main__":
 
             # resolve files
             fnames = []
+            das_datasets_used = []  # only the ones actually queried, "None" entries excluded
             for single_dataset_name in ds_list:
                 if single_dataset_name is None or single_dataset_name == "None":
                     logger.warning(f"Sample {sample_name} has 'None' dataset; skipping.")
                     continue
+                das_datasets_used.append(single_dataset_name)
                 fnames += getDatasetRootFiles(single_dataset_name, allowlist_sites)
 
             if len(fnames) == 0:
                 logger.error(f"No files found for sample {sample_name}. Skipping this sample.")
                 continue
 
+            n_files_requested = len(fnames)
+            bad_files = []
             if args.skipBadFiles: # if we want to skip bad files
                 logger.info("Skipping bad files")
                 logger.info(f"Number of files before removing bad files: {len(fnames)}")
-                fnames = removeBadFiles(fnames)
+                fnames, bad_files = removeBadFiles(fnames)
                 logger.info(f"Number of files after removing bad files: {len(fnames)}")
 
             # convert to xcachce paths if requested
@@ -668,6 +698,19 @@ if __name__ == "__main__":
                 "sumGenWgts" : None,
                 "nGenEvts" : None,
                 "data_entries" : None,
+                # Files actually queried for this sample (DAS/eos paths from the
+                # dataset YAML, "None" placeholder entries excluded) and file-count
+                # bookkeeping around --skipBadFiles, so a normalization discrepancy
+                # can be traced back to which/how many files were actually used.
+                "das_datasets" : das_datasets_used,
+                "n_files_requested" : n_files_requested,
+                "n_files_used" : len(fnames),
+                "bad_files" : bad_files,
+                # Code state for this run (git_diff.patch path is relative to
+                # args.prestage_output) -- see the run_provenance block above the
+                # sample loop for why this is per-sample rather than a single
+                # top-level JSON key.
+                "provenance" : run_provenance,
             }
             if is_data:  # data sample
                 def _read_data_entries(host_prefix, attempt):

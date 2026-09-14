@@ -46,6 +46,13 @@ ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
 
 MAX_FILE_LEN = 50000
 CHUNK_SIZE = 250_000
+# Retries against the *same* redirector before giving up on it / moving to the next
+# one in AAA_REDIRECTORS. Needed because AAA_REDIRECTORS currently has only one
+# entry, which made the old "cycle to next redirector on tls_bad" logic a no-op --
+# any transient read error (even a spurious FileNotFoundError from a momentary
+# EOS/XRootD hiccup) permanently failed the whole dataset with zero retries.
+MAX_ATTEMPTS_PER_REDIRECTOR = 3
+RETRY_BACKOFF_SECONDS = 20
 DATASET_ELEMENT_LIMITS = {
     "data_": MAX_FILE_LEN,  # None means no limit (use uproot's default behavior)
     "dy": MAX_FILE_LEN,
@@ -438,100 +445,54 @@ if __name__ == "__main__":
                             "git_branch": branch_name,
                             "git patch path": git_info_path,
                             })
+                    file_idx_succeeded = False
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
-                        try:
-                            logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
-                            # build fresh file list with this redirector
-                            alt_sample = copy.deepcopy(smaller_sample)
-                            # logger.info(f"alt_sample['files']: {alt_sample['files']}")
+                        for retry_num in range(1, MAX_ATTEMPTS_PER_REDIRECTOR + 1):
+                            try:
+                                logger.info(f"[resume] attempt {attempt} (retry {retry_num}/{MAX_ATTEMPTS_PER_REDIRECTOR}) for {dataset}[{idx}] using {host_prefix}")
+                                # build fresh file list with this redirector
+                                alt_sample = copy.deepcopy(smaller_sample)
+                                # logger.info(f"alt_sample['files']: {alt_sample['files']}")
 
-                            alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
+                                alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
 
-                            logger.debug(f"alt_sample['files']: {alt_sample['files']}")
+                                logger.debug(f"alt_sample['files']: {alt_sample['files']}")
 
-                            # clean partial output from previous tries
-                            save_dir_path = Path(save_path)
-                            if save_dir_path.is_dir():
-                                time.sleep(30) # NOTE: wait 30 seconds if removing directory. If immediately re-running run_stage1.py after crash, it may return `Directory not empty` error because there's still some parquet files being saved.
-                                os.system(f"rm -rf '{save_path}'") 
-                                logger.info(f"rm command executed for: {save_path}")
-                            eos_mkdirs(save_path)
+                                # clean partial output from previous tries
+                                save_dir_path = Path(save_path)
+                                if save_dir_path.is_dir():
+                                    time.sleep(30) # NOTE: wait 30 seconds if removing directory. If immediately re-running run_stage1.py after crash, it may return `Directory not empty` error because there's still some parquet files being saved.
+                                    os.system(f"rm -rf '{save_path}'")
+                                    logger.info(f"rm command executed for: {save_path}")
+                                eos_mkdirs(save_path)
 
-                            # rebuild the events/out collections for this attempt
-                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file, client=client)
+                                # rebuild the events/out collections for this attempt
+                                processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file, client=client)
 
-                            logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
-                            logger.info(f"Processed events: {processed_event_count}")
+                                logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
+                                logger.info(f"Processed events: {processed_event_count}")
 
-                            # to_persist = to_persist.persist()
-                            # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
-                            # to_persist.to_parquet(save_path)
+                                # to_persist = to_persist.persist()
+                                # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
+                                # to_persist.to_parquet(save_path)
 
-                            if not _parquet_dir_has_files(save_path):
-                                raise RuntimeError("Parquet write produced no files.")
+                                if not _parquet_dir_has_files(save_path):
+                                    raise RuntimeError("Parquet write produced no files.")
 
-                            if ExpectedEvents_from_prestage != processed_event_count:
-                                raise ValueError(
-                                    f"Number of processed events does not match expected events: "
-                                    f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
-                                    f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
-                                )
+                                if ExpectedEvents_from_prestage != processed_event_count:
+                                    raise ValueError(
+                                        f"Number of processed events does not match expected events: "
+                                        f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
+                                        f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
+                                    )
 
-                            jobstat.mark_done(
-                                dataset,
-                                idx,
-                                meta={
-                                    "split count": len(smaller_files),
-                                    "attempt": attempt,
-                                    "max_attempts": len(AAA_REDIRECTORS),
-                                    "args.max_file_len": args.max_file_len,
-                                    "redirector": host_prefix,
-                                    "path": save_path,
-                                    "git_commit_hash": git_commit_hash,
-                                    "git_branch": branch_name,
-                                    "git patch path": git_info_path,
-                                    "Expected events from pre-stage": ExpectedEvents_from_prestage,
-                                    "Processed events from stage-1": processed_event_count,
-                                },
-                            )
-                            logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
-                            break  # stop trying once successful
-
-                        except Exception as e:
-                            msg = str(e)
-                            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-                            logger.warning(
-                                f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
-                                f"({type(e).__name__}: {e})"
-                            )
-                            # save the list of files that were attempted in this failure for debugging,
-                            # with the redirector info in the filename
-                            # as well as the error message for this failure
-                            timestamp = time.strftime("%Y%m%d-%H%M%S")
-                            error_info_path = os.path.join(
-                                start_save_path,
-                                "_status",
-                                f"error_{dataset}_{idx}_{timestamp}.txt",
-                            )
-                            with open(error_info_path, "w") as f:
-                                f.write(f"Error message: {msg}\n")
-                                f.write(f"Attempted files with {host_prefix}:\n")
-                                f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
-                                for i, file in enumerate(alt_sample["files"]):
-                                    f.write(f"{i:4}: {file}\n")
-                            logger.info(f"Saved error info to {error_info_path}")
-
-                            if attempt < len(AAA_REDIRECTORS) and tls_bad:
-                                logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
-                                continue  # next redirector in list
-                            else:
-                                jobstat.mark_failed(
+                                jobstat.mark_done(
                                     dataset,
                                     idx,
-                                    e,
                                     meta={
                                         "split count": len(smaller_files),
                                         "attempt": attempt,
+                                        "retry": retry_num,
                                         "max_attempts": len(AAA_REDIRECTORS),
                                         "args.max_file_len": args.max_file_len,
                                         "redirector": host_prefix,
@@ -543,12 +504,80 @@ if __name__ == "__main__":
                                         "Processed events from stage-1": processed_event_count,
                                     },
                                 )
-                                logger.exception(
-                                    f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
+                                logger.info(f"[resume] success on attempt {attempt} retry {retry_num} with {host_prefix}")
+                                file_idx_succeeded = True
+                                break  # stop retrying this redirector once successful
+
+                            except Exception as e:
+                                msg = str(e)
+                                tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                                logger.warning(
+                                    f"[resume] attempt {attempt} retry {retry_num} failed for {dataset}[{idx}] "
+                                    f"({type(e).__name__}: {e})"
                                 )
+                                # save the list of files that were attempted in this failure for debugging,
+                                # with the redirector info in the filename
+                                # as well as the error message for this failure
+                                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                                error_info_path = os.path.join(
+                                    start_save_path,
+                                    "_status",
+                                    f"error_{dataset}_{idx}_{timestamp}.txt",
+                                )
+                                with open(error_info_path, "w") as f:
+                                    f.write(f"Error message: {msg}\n")
+                                    f.write(f"Attempted files with {host_prefix}:\n")
+                                    f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
+                                    for i, file in enumerate(alt_sample["files"]):
+                                        f.write(f"{i:4}: {file}\n")
+                                logger.info(f"Saved error info to {error_info_path}")
+
+                                is_last_retry_for_redirector = retry_num == MAX_ATTEMPTS_PER_REDIRECTOR
+                                is_last_redirector = attempt == len(AAA_REDIRECTORS)
+
+                                if not is_last_retry_for_redirector:
+                                    # Retry the same redirector -- most failures seen in practice
+                                    # (including a plain FileNotFoundError on a file that is
+                                    # actually readable) are transient EOS/XRootD hiccups, not a
+                                    # genuinely missing file, so it's always worth a couple more
+                                    # tries before concluding otherwise.
+                                    logger.warning(
+                                        f"Retrying {dataset}[{idx}] with same redirector {host_prefix} "
+                                        f"in {RETRY_BACKOFF_SECONDS}s (retry {retry_num + 1}/{MAX_ATTEMPTS_PER_REDIRECTOR}) ..."
+                                    )
+                                    time.sleep(RETRY_BACKOFF_SECONDS)
+                                    continue  # next retry, same redirector
+                                elif not is_last_redirector and tls_bad:
+                                    logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
+                                    break  # exhaust retries for this redirector, move to next one
+                                else:
+                                    jobstat.mark_failed(
+                                        dataset,
+                                        idx,
+                                        e,
+                                        meta={
+                                            "split count": len(smaller_files),
+                                            "attempt": attempt,
+                                            "retry": retry_num,
+                                            "max_attempts": len(AAA_REDIRECTORS),
+                                            "args.max_file_len": args.max_file_len,
+                                            "redirector": host_prefix,
+                                            "path": save_path,
+                                            "git_commit_hash": git_commit_hash,
+                                            "git_branch": branch_name,
+                                            "git patch path": git_info_path,
+                                            "Expected events from pre-stage": ExpectedEvents_from_prestage,
+                                            "Processed events from stage-1": processed_event_count,
+                                        },
+                                    )
+                                    logger.exception(
+                                        f"[resume] write failed after {attempt} redirector(s) x {retry_num} retries for {dataset}[{idx}]"
+                                    )
+                        if file_idx_succeeded:
+                            break  # stop trying other redirectors once successful
 
                     var_elapsed = round(time.time() - var_step, 3)
-                    logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
+                    logger.info(f"Finished file_idx {idx} in {var_elapsed} s. (success={file_idx_succeeded})")
                 sample_elapsed = round(time.time() - sample_step, 3)
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
                 t6 = time.perf_counter()

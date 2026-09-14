@@ -83,6 +83,7 @@ def applyRegionCatCuts(
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
     year: str | None = None,
+    vbf_he_hf_ptcut: float | None = None,
 ):
     use_var = (
         "nominal"
@@ -157,6 +158,37 @@ def applyRegionCatCuts(
 
         vbf_cut = (jj_mass > 400) & (jj_dEta > 2.5) & (jet1_pt > 35)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
+
+        # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`
+        # itself (opt-in via vbf_he_hf_ptcut, default None/off -- every other
+        # caller is unaffected). Placed here, before the category branch, so
+        # BOTH `category=="vbf"` (uses vbf_cut) and `category=="ggh"` (uses
+        # ~vbf_cut) see the tightened definition: an event whose jet1/jet2
+        # pair no longer qualifies as VBF-quality falls back to ggH (if it
+        # clears ggH's own cuts) rather than being excluded from both.
+        # HE/HF boundaries match apply_jet_horn_ptcut / jetHorn_region in
+        # src/copperhead_processor.py's jet_loop: HE = 2.5 < |eta| <= 3.0,
+        # HF = |eta| > 3.0. Only jet1/jet2 (the pair that already defines
+        # jj_mass/jj_dEta/vbf_cut) are checked -- no jet reshuffling, so
+        # jj_mass etc. stay exactly as already computed.
+        if vbf_he_hf_ptcut is not None:
+            jet2_pt = varcol("jet2_pt")
+            jet1_eta = varcol("jet1_eta")
+            jet2_eta = varcol("jet2_eta")
+
+            def _passes_he_hf_ptcut(pt, eta):
+                abs_eta = abs(eta)
+                in_he = (abs_eta > 2.5) & (abs_eta <= 3.0)
+                in_hf = abs_eta > 3.0
+                fails = (in_he | in_hf) & (pt < vbf_he_hf_ptcut)
+                return ~fails
+
+            vbf_he_hf_pass = ak.fill_none(
+                _passes_he_hf_ptcut(jet1_pt, jet1_eta)
+                & _passes_he_hf_ptcut(jet2_pt, jet2_eta),
+                value=False,
+            )
+            vbf_cut = vbf_cut & vbf_he_hf_pass
 
         if category == "vbf":
             # print("vbf mode!")
@@ -707,39 +739,8 @@ binning_DNN_HIG19006 = np.array([
     2.8,
 ])
 
-
-# ------------------------------------------------------------------
-# Active DNN binning.
-# Derived by MVA_training/VBF_run3/scan_bins_for_dnn.py and persisted to
-# configs/MVA/VBF/dnn_binning.yaml, so re-running the significance scan
-# updates the binning here without editing this file. The overhead on the
-# upper-most edge is already baked into the YAML.
-# ------------------------------------------------------------------
-def load_dnn_binning(path=DNN_BINNING_YAML):
-    """
-    Load the VBF DNN bin edges from the YAML config.
-
-    Parameters:
-    - path: YAML file holding an `edges` list (see scan_bins_for_dnn.py)
-    Returns:
-    - edges: np.ndarray of strictly increasing bin edges
-    """
-    path = Path(path)
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"DNN binning config not found: {path}. "
-            "Generate it by running MVA_training/VBF_run3/scan_bins_for_dnn.py."
-        )
-    with open(path) as f:
-        cfg = yaml.safe_load(f) or {}
-
-    edges = cfg.get("edges")
-    if edges is None or len(edges) < 2:
-        raise ValueError(f"'edges' is missing or has fewer than 2 entries in {path}")
-    edges = np.asarray(edges, dtype=float)
-    if np.any(np.diff(edges) <= 0):
-        raise ValueError(f"'edges' in {path} must be strictly increasing: {edges}")
-    return edges
-
-
-binning = load_dnn_binning()
+# binning = binning_HPScan_21bins
+# binning = binning_HPScan_13bins
+# binning = binning_HPScan_17bins
+# binning = binning_based_on_significanceScan
+binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.

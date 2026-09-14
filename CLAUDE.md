@@ -84,13 +84,18 @@ Modes (as of the `4b57a44` renumbering, which superseded the numbering this doc 
 card/workspace + significance + collect summary, `10` expected 95% CL limit via
 `AsymptoticLimits --run blind` + collect limit summary, `11` mode 9 + mode 10 combined (card,
 workspace, significance, summary, expected limit, limit summary) — does **not** rebuild
-stage2/stage3; run those separately first. `-y` accepts a comma-separated list; each mode's
-steps run once per year in that list, so pass a single pseudo-year (e.g. `Run3`) rather than
-the list of individual years to get one combined result instead of per-year ones.
+stage2/stage3; run those separately first. `12` combines the already-built `jj_both_central` +
+`jj_non_central` cards for `-y` into one two-channel card (exact partition of the VBF
+selection — recovers the unrestricted phase space without an `all`-phase-space stage2/3
+rerun), then significance + summary + limit + limit summary on the combined card (requires
+mode 9/11 already run under both `JJ_ETA_REGION` values first); `13` is the same jj-region
+combination but runs impacts instead. `-y` accepts a comma-separated list; each mode's steps
+run once per year in that list, so pass a single pseudo-year (e.g. `Run3`) rather than the list
+of individual years to get one combined result instead of per-year ones.
 
-The analysis is blinded, so `6` (impacts) and `11` (limit) never fit real data: impacts run
-twice per year — Asimov `r=1` (signal injected) and `r=0` (background-only) — instead of an
-observed scenario, and the limit is the expected (Asimov, `--run blind`) limit.
+The analysis is blinded, so `7`/`13` (impacts) and `10`/`11`/`12` (limit) never fit real data:
+impacts run twice per year — Asimov `r=1` (signal injected) and `r=0` (background-only) —
+instead of an observed scenario, and the limit is the expected (Asimov, `--run blind`) limit.
 
 Control/validation plots — edit input/output paths and dataset lists in `run_plotter.py` and
 `plotter/validation_plotter_unified.py` first, then:
