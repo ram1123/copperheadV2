@@ -33,6 +33,7 @@ from src.corrections.evaluator import (
     add_stxs_variations,
     btag_weights_jsonKeepDim,
     get_jetpuid_weights_eta_dependent,
+    get_pdf_lha_id_range,
     lhe_weights,
     nnlops_weights,
     pu_evaluator,
@@ -1683,69 +1684,35 @@ class EventProcessor(processor.ProcessorABC):
             # two 103-member `symmhessian+as` NNPDF3.1 sets, and raises on anything else:
             #   LHA 306000-306102  NNPDF31_nnlo_hessian_pdfas
             #   LHA 325300-325402  NNPDF31_nnlo_as_0118_mc_hessian_pdfas
-            # Reading the LHEPdfWeight branch title of every MC sample in
-            # configs/datasets/dataset_nanoAODv15_run{2,3}.yaml shows all of them carry
-            # one of those two, except the 11 samples listed below under "101-member
-            # sets", which carry:
+            # Gate on the set the sample actually carries, read from its LHEPdfWeight
+            # branch title, rather than on a list of sample names. The accepted sets are
+            # listed per year under `pdf_supported_lha_ids` in
+            # configs/parameters/switches.yaml. Samples on any other
+            # set get unity members below. In configs/datasets/ those are the Run2
+            # 101-member sets
             #   LHA 325500-325600  NNPDF31_nnlo_as_0118_nf_4_mc_hessian
             #                      (symmhessian but with no alpha_s members)
             #   LHA 320900-321000  NNPDF31_nnlo_as_0118_nf_4
             #                      (MC replicas -- needs the RMS prescription, not this one)
-            # So gate on an explicit exclusion list rather than a sample-name substring
-            # match: every supported sample gets PDF weights, and anything new whose set
-            # is not one of the two supported ones makes add_pdf_variations fail loudly
-            # instead of being silently skipped.
+            # carried by ww_*, wz_1l1nu2q, wz_1l3nu, wz_2q2nu, www, wwz, zz_2l2nu and
+            # st_schannel_*. The same sample names in Run3 carry 325300 and pass.
             #
-            # The exclusion is Run2-only on purpose. These 101-member sets are a Run2 UL
-            # production artefact; the same sample names in Run3 carry the supported
-            # 325300-325402 set (checked for ww_2l2nu, wz_1l1nu2q and zz_2l2nu in the
-            # 2024 campaign), so applying the list there would drop PDF weights from
-            # samples that are perfectly fine.
-            pdf_unsupported_samples = {
-                # --- 101-member sets: the wrong number of members for the symmetric-
-                # --- Hessian layout add_pdf_variations assumes.
-                "st_schannel_had",
-                "st_schannel_lep",
-                "ww_1l1nu2q",
-                "ww_2l2nu",
-                "ww_4q",
-                "www",
-                "wwz",
-                "wz_1l1nu2q",
-                "wz_1l3nu",
-                "wz_2q2nu",
-                "zz_2l2nu",
-                # --- Correct 103-member set (325300-325402), but the stored weights are
-                # --- broken: member 0 is written as 1.0 while members 1-100 all sit at
-                # --- ~0.5, so w_k/w_0 - 1 ~ -0.5 for every eigenvector and the Hessian
-                # --- sum returns sigma ~ sqrt(100 * 0.25) = 5, i.e. a 500% uncertainty
-                # --- on every event. The members are self-consistent (per-event spread
-                # --- ~1e-3), so it is the stored central that is wrong, not the ensemble.
-                # --- Confirmed in all four Run2 eras (mean(members)/w_0 = 0.4999). The
-                # --- Run3 config has a tt_inclusive entry but its dataset path is null,
-                # --- so nothing is lost by scoping this exclusion to Run2 for now.
-                "tt_inclusive_amcatnlo",
-                # --- Single top t-channel and tW. Correct 103-member sets, but the
-                # --- stored LHE weights are unusable: surveying 100k events of the
-                # --- first file of each era finds a central member of exactly zero
-                # --- (1-2 events per 100k in st_tchannel_antitop, in all four eras,
-                # --- which makes add_pdf_variations raise), negative central members
-                # --- (8-40 per 100k in both t-channel samples), and near-zero ones
-                # --- (|w_0| < 0.1) that pass the zero check but blow sigma up. w_0
-                # --- ranges from -27.6 to +19.1 in st_tchannel_antitop 2018.
-                # --- st_tW_* are far milder (1 negative w_0 per 100k, no zeros) but
-                # --- are excluded with them so the whole single-top family is treated
-                # --- consistently.
-                "st_tchannel_antitop",
-                "st_tchannel_top",
-                "st_tW_antitop",
-                "st_tW_top",
-            }
+            # A supported set does not guarantee usable weights. Samples whose stored LHE
+            # weights are broken (st_tchannel_*, tt_inclusive_amcatnlo) are skipped in the
+            # Run2 dataset yaml, with the reasons next to them, rather than special-cased
+            # here: this gate has no way to keep them with PDF switched off.
+            pdf_lha_ids = get_pdf_lha_id_range(events)
+            logger.debug(f"{dataset} ({year}): LHEPdfWeight LHA IDs {pdf_lha_ids}")
+            if pdf_lha_ids is None and ("LHEPdfWeight" in events.fields):
+                logger.warning(
+                    f"{dataset} ({year}): LHEPdfWeight title carries no LHA ID range, "
+                    f"so PDF members are set to unity"
+                )
             do_pdf = (
                 self.config["switches"]["do_pdf"]
                 and ("nominal" in pt_variations)
-                and ("LHEPdfWeight" in events.fields)
-                and not (is_run2(year) and dataset in pdf_unsupported_samples)
+                and pdf_lha_ids is not None
+                and pdf_lha_ids[0] in self.config["switches"]["pdf_supported_lha_ids"]
             )
             # The 100 eigenvector members are carried to stage3 as separate weight
             # columns and combined there per bin via PDF4LHC21 Eq. (6.5). They are

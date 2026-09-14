@@ -1,3 +1,5 @@
+import re
+
 import awkward as ak
 import numpy as np
 import uproot
@@ -915,15 +917,16 @@ def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup
 # by more than 1e-3, but that tail reaches several percent). Dividing by w_0 removes
 # the offset, so sigma is measured about the set's own central member either way.
 #
-# Two other NNPDF3.1 sets do exist in configs/datasets/, both with 101 members, but
-# only in samples the `do_pdf` gate excludes, so they never reach this function today:
+# Two other NNPDF3.1 sets do exist in configs/datasets/, both with 101 members, and the
+# `do_pdf` gate excludes them by LHA ID, so they never reach this function today:
 #
 #   LHA 325500-325600   NNPDF31_nnlo_as_0118_nf_4_mc_hessian   (symmhessian, no alpha_s)
 #                       -> ww_*, wz_*, www, wwz, st_schannel_*
 #   LHA 320900-321000   NNPDF31_nnlo_as_0118_nf_4              (MC REPLICAS)
 #                       -> ww_2l2nu, zz_2l2nu
 #
-# If the `do_pdf` gate is ever widened to cover them, they must not be run through the
+# If `pdf_supported_lha_ids` in configs/parameters/switches.yaml is ever widened to
+# cover them, they must not be run through the
 # code below as-is: 325500 is symmetric-Hessian but has no alpha_s members, and 320900
 # is an MC-replica set whose 68% CL is the RMS over members, not a quadrature sum --
 # applying the Hessian formula to it would overestimate sigma by roughly sqrt(N).
@@ -940,6 +943,31 @@ PDF_N_EIGENVECTOR_MEMBERS = 100
 # run_prestage.py from the Runs-tree `LHEPdfSumw` branch. Module level so prestage
 # and the consumer name the same key.
 PDF_SUMW_METADATA_KEY = "sumLHEPdfWgts"
+
+
+def get_pdf_lha_id_range(events):
+    """(first, last) LHA IDs named in the LHEPdfWeight branch title, or None.
+
+    NanoAOD writes the PDF set into the branch title, e.g.
+    "LHE pdf variation weights (w_var / w_nominal) for LHA IDs 306000 - 306102",
+    and coffea NanoEvents keeps every branch title as the `__doc__` parameter of the
+    array, so reading it costs no file access. Returns None when the branch is absent
+    or its title carries no ID range.
+    """
+    if "LHEPdfWeight" not in events.fields:
+        return None
+    # The title sits on the float content, not on the list that wraps it. Walk down
+    # instead of hardcoding the depth, which event masking can change.
+    layout = events.LHEPdfWeight.layout
+    title = None
+    while layout is not None and title is None:
+        title = layout.parameters.get("__doc__")
+        layout = getattr(layout, "content", None)
+    match = re.search(r"(\d+)\s*-\s*(\d+)", title or "")
+    if match is None:
+        return None
+    first, last = map(int, match.groups())
+    return first, last
 
 
 def add_pdf_variations(events, config, dataset):
@@ -1014,11 +1042,13 @@ def add_pdf_variations(events, config, dataset):
     """
     # Member layout of a 103-member `symmhessian+as` NNPDF3.1 set. Both supported sets
     # share this layout exactly, so the indices are hardcoded rather than configured.
-    # That is a deliberate assumption, not a fallback: every sample the `do_pdf` gate
-    # lets through was checked to carry either NNPDF31_nnlo_hessian_pdfas (LHA
-    # 306000-306102) or NNPDF31_nnlo_as_0118_mc_hessian_pdfas (LHA 325300-325402).
-    # Anything else reaching this point means the sample list changed underneath the
-    # assumption, so refuse to produce a number rather than silently apply the
+    # That is a deliberate assumption, not a fallback: the `do_pdf` gate only lets
+    # through samples whose LHEPdfWeight title names NNPDF31_nnlo_hessian_pdfas (LHA
+    # 306000-306102) or NNPDF31_nnlo_as_0118_mc_hessian_pdfas (LHA 325300-325402), see
+    # `pdf_supported_lha_ids` in configs/parameters/switches.yaml. Anything else
+    # reaching this point means the gate was
+    # bypassed or the title does not match the stored weights, so refuse to produce a
+    # number rather than silently apply the
     # symmetric-Hessian prescription to a set it does not describe -- for an
     # MC-replica set that would be wrong by a factor of ~sqrt(N_members).
     PDF_N_MEMBERS_SYMMHESSIAN_AS = 103
@@ -1053,7 +1083,7 @@ def add_pdf_variations(events, config, dataset):
             f"{n_bad_central} event(s) whose central PDF member "
             f"LHEPdfWeight[{PDF_CENTRAL_MEMBER}] is zero or non-finite; the Hessian "
             f"sum is defined relative to it. Seen in the single-top t-channel samples "
-            f"(excluded from the do_pdf gate for this reason); a corrupt LHE weight "
+            f"(skipped in the Run2 dataset yaml for this reason); a corrupt LHE weight "
             f"record."
         )
 
