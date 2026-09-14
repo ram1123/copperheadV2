@@ -939,6 +939,10 @@ def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup
 # add_pdf_variations is never called.
 PDF_N_EIGENVECTOR_MEMBERS = 100
 
+# LHEPdfWeight indices of the two alpha_s members, alpha_s(M_Z) = 0.116 and 0.120.
+# Module level because copperhead_processor names the stage1 columns after them.
+PDF_ALPHA_S_MEMBER_INDICES = (101, 102)
+
 # Dataset-metadata key holding the inclusive per-member sum of weights, filled by
 # run_prestage.py from the Runs-tree `LHEPdfSumw` branch. Module level so prestage
 # and the consumer name the same key.
@@ -973,12 +977,15 @@ def get_pdf_lha_id_range(events):
 def add_pdf_variations(events, config, dataset):
     """Per-event eigenvector member weights for the NNPDF3.1 `symmhessian+as` sets.
 
-    Returns `(members, central)`:
+    Returns `(members, alpha_s, central)`:
       members : (nevents, 100) eigenvector member weights w_1 .. w_100, each scaled
                 by S_0 / S_k (see below)
+      alpha_s : (nevents, 2)   alpha_s member weights w_101 (alpha_s = 0.116) and
+                w_102 (alpha_s = 0.120), scaled the same way. stage3 combines them per
+                PDF4LHC15 (arXiv:1510.03865) Eqs. (27)-(28).
       central : (nevents,)     the central member weight w_0, unscaled
 
-    Each member is normalised by the inclusive sum of weights of that same member:
+    Each member, alpha_s members included, is normalised by the inclusive sum of weights of that same member:
 
         members[:, k] = LHEPdfWeight[k] * S_0 / S_k,   S_k = sum_events gw * w_k
 
@@ -1053,10 +1060,13 @@ def add_pdf_variations(events, config, dataset):
     # MC-replica set that would be wrong by a factor of ~sqrt(N_members).
     PDF_N_MEMBERS_SYMMHESSIAN_AS = 103
     PDF_CENTRAL_MEMBER = 0
-    # Members 101 and 102 are the alpha_s variations. They are deliberately left out
-    # for now: this stays a pure PDF-eigenvector nuisance, and alpha_s is covered
-    # separately. That is why the slice stops at 101 rather than running to the end.
+    # Members 101 and 102 are the alpha_s variations. They are returned separately, not
+    # as eigenvectors: the Hessian quadrature sum runs over members 1-100 only, and the
+    # alpha_s term is a half-difference added in quadrature afterwards (stage3).
     PDF_EIGENVECTOR_MEMBERS = slice(1, 101)
+    PDF_ALPHA_S_MEMBERS = slice(
+        PDF_ALPHA_S_MEMBER_INDICES[0], PDF_ALPHA_S_MEMBER_INDICES[-1] + 1
+    )
 
     pdf_wgts = events.LHEPdfWeight
     n_members = np.unique(ak.to_numpy(ak.num(pdf_wgts, axis=1))).tolist()
@@ -1098,6 +1108,17 @@ def add_pdf_variations(events, config, dataset):
             f"{n_bad_member} non-finite eigenvector member weight(s) in "
             f"LHEPdfWeight[{PDF_EIGENVECTOR_MEMBERS.start}:"
             f"{PDF_EIGENVECTOR_MEMBERS.stop}]; a corrupt LHE weight record."
+        )
+
+    # Same guard for the alpha_s members, for the same reason.
+    alpha_s = ak.values_astype(pdf_wgts[:, PDF_ALPHA_S_MEMBERS], np.float64)
+    n_bad_alpha_s = int(ak.sum(ak.sum(~np.isfinite(alpha_s), axis=1)))
+    if n_bad_alpha_s > 0:
+        raise ValueError(
+            f"add_pdf_variations: '{dataset}' ({config['year']}) has "
+            f"{n_bad_alpha_s} non-finite alpha_s member weight(s) in "
+            f"LHEPdfWeight[{PDF_ALPHA_S_MEMBERS.start}:"
+            f"{PDF_ALPHA_S_MEMBERS.stop}]; a corrupt LHE weight record."
         )
 
     # Inclusive per-member sum of weights, S_k = sum over all generated events of
@@ -1144,9 +1165,13 @@ def add_pdf_variations(events, config, dataset):
     # float64 so the result does not depend on the float32 storage.
     member_norm = sumw[PDF_CENTRAL_MEMBER] / sumw[PDF_EIGENVECTOR_MEMBERS]
     eigen = eigen * np.broadcast_to(member_norm, (len(eigen), member_norm.size)) # -> LHEPdfWeight[k] * LHEPdfSumw[0] / LHEPdfSumw[k]
+    # The alpha_s members get the same S_0 / S_k, so they too keep only their
+    # acceptance and shape variation, not the inclusive cross-section shift.
+    alpha_s_norm = sumw[PDF_CENTRAL_MEMBER] / sumw[PDF_ALPHA_S_MEMBERS]
+    alpha_s = alpha_s * np.broadcast_to(alpha_s_norm, (len(alpha_s), alpha_s_norm.size))
 
     # w_central is returned alongside purely so stage1 can save it for debugging
-    return eigen, w_central
+    return eigen, alpha_s, w_central
 
 
 # QGL SF-------------------------------------------------------------------------

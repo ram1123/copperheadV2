@@ -331,6 +331,16 @@ switches:
         "2023": [306000, 325300]
         "2023BPix": [306000, 325300]
         "2024": [306000, 325300]
+    split_pdf_alpha_s: # true: alpha_s_unc is its own nuisance next to pdf_unc; false: one combined pdf_alpha_s_unc (stage3/make_templates.py)
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
     do_THU:
         '2016preVFP': true
         '2016postVFP': true

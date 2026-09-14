@@ -28,6 +28,7 @@ from modules.vector_operations import (
 
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import (
+    PDF_ALPHA_S_MEMBER_INDICES,
     PDF_N_EIGENVECTOR_MEMBERS,
     add_pdf_variations,
     add_stxs_variations,
@@ -1536,6 +1537,7 @@ class EventProcessor(processor.ProcessorABC):
         weights = Weights(len(events), storeIndividual=do_save_partial_weights) # none for dask awkward
         # Set by the do_pdf block below, consumed where weight_dict is built.
         pdf_member_ratios = None
+        pdf_alpha_s_ratios = None
         pdf_central_weight = None
         write_pdf_members = False
         # weights = Weights(len(events))
@@ -1723,7 +1725,7 @@ class EventProcessor(processor.ProcessorABC):
             # weight and `weights` is still being filled at this point.
             if do_pdf:
                 logger.debug("doing pdf!")
-                pdf_member_ratios, pdf_central_weight = add_pdf_variations(
+                pdf_member_ratios, pdf_alpha_s_ratios, pdf_central_weight = add_pdf_variations(
                     events, self.config, dataset
                 )
                 write_pdf_members = True
@@ -2437,6 +2439,17 @@ class EventProcessor(processor.ProcessorABC):
                         weight_dict[col] = nominal_weight
                     else:
                         weight_dict[col] = nominal_weight * pdf_member_ratios[:, k]
+
+                # The two alpha_s members, LHEPdfWeight[101] and [102]. Their own prefix
+                # keeps them out of stage3's 100-member count; stage3 combines them per
+                # PDF4LHC15 Eqs. (27)-(28). Unity for the gated-out samples, for the same
+                # group-intersection reason as the members above.
+                for j, index in enumerate(PDF_ALPHA_S_MEMBER_INDICES):
+                    col = f"wgt_pdfAlphaS{index}_up"
+                    if pdf_alpha_s_ratios is None:
+                        weight_dict[col] = nominal_weight
+                    else:
+                        weight_dict[col] = nominal_weight * pdf_alpha_s_ratios[:, j]
 
                 # Debug only -- nothing downstream reads this column. The members above
                 # are scaled by the inclusive S_0 / S_k, which is a per-member constant
