@@ -1,3 +1,4 @@
+figs
 validation/pu_dnn/
 validation/muon_*/
 *.patch

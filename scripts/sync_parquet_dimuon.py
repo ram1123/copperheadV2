@@ -10,6 +10,7 @@ Example:
 
     time python ./scripts/sync_parquet_dimuon.py  /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_Peking_sync/stage1_output/2022preEE/f1_0/data_C/0/
 
+    time python ./scripts/sync_parquet_dimuon.py "$OLD" "$NEW" -o /tmp/dy_2026_sync_compare.txt --process dy > /tmp/dy_2026_sync_compare.log 2>&1
 """
 
 import json
@@ -19,8 +20,10 @@ from pathlib import Path
 from typing import List, Optional
 
 import awkward as ak
+import dask.dataframe as dd
 import dask_awkward as dak
 import pandas as pd
+import pyarrow.parquet as pq
 
 from modules.dask_utils import close_dask_client, get_dask_client
 
@@ -160,17 +163,23 @@ def load_dir_to_df(
         if c not in cols:
             cols.append(c)
 
-    # dask_awkward lazy collection
-    events_lazy = dak.from_parquet(pattern)
-
-    # Restrict to columns that actually exist
-    available = [c for c in cols if c in events_lazy.fields]
-    missing = [c for c in cols if c not in events_lazy.fields]
+    # Determine which requested columns actually exist by inspecting one
+    # file's schema directly (cheap, no data read). This lets us pass an
+    # explicit `columns=` to dak.from_parquet below, which prunes columns at
+    # the parquet-reader level -- without it, dak.from_parquet(pattern) reads
+    # every column in the file (stage-1 skims here are ~113 columns wide)
+    # before the `events_lazy[available]` slice ever gets a chance to matter,
+    # which OOMs the driver process on any production-scale sample.
+    sample_file = next(iter(glob.glob(pattern)))
+    schema_fields = set(pq.ParquetFile(sample_file).schema_arrow.names)
+    available = [c for c in cols if c in schema_fields]
+    missing = [c for c in cols if c not in schema_fields]
 
     if missing:
         print(f"[WARNING] Missing columns in {directory}: {missing}")
 
-    events_lazy = events_lazy[available]
+    # dask_awkward lazy collection, pruned to only the columns we need
+    events_lazy = dak.from_parquet(pattern, columns=available)
 
     # Materialize to awkward Array
     events = events_lazy.compute()
@@ -299,6 +308,43 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
 # ----------------------------------------------------------------------
 # Two-dir comparison
 # ----------------------------------------------------------------------
+def load_dir_to_ddf(directory: str):
+    """
+    Lazily open all parquet files in `directory` as a dask.dataframe, pruned
+    to the SYNCVARLIST columns that actually exist.
+
+    Unlike load_dir_to_df (dask_awkward + .compute() + ak.to_list()), nothing
+    here is materialized -- dask.dataframe operations stay out-of-core
+    (partition-by-partition, spilling to disk as needed) all the way through
+    to whatever the caller eventually .compute()s. This matters for
+    production-scale directories (10s-100s of millions of rows): forcing a
+    full materialization of both sides at once, as the dask_awkward path
+    does, reliably OOMs the driver process regardless of local vs. gateway
+    workers, since gathering the *result* back into one process is the
+    expensive step, not the distributed read itself.
+
+    Returns (ddf, available_columns).
+    """
+    pattern = find_parquet_pattern(directory)
+    print(f"[INFO] Reading parquet pattern (lazy, dask.dataframe): {pattern}")
+
+    cols = []
+    for c in SYNCVARLIST:
+        if c not in cols:
+            cols.append(c)
+
+    sample_file = next(iter(glob.glob(pattern)))
+    schema_fields = set(pq.ParquetFile(sample_file).schema_arrow.names)
+    available = [c for c in cols if c in schema_fields]
+    missing = [c for c in cols if c not in schema_fields]
+
+    if missing:
+        print(f"[WARNING] Missing columns in {directory}: {missing}")
+
+    ddf = dd.read_parquet(pattern, columns=available)
+    return ddf, available
+
+
 def compare_two_dirs(
     dir1: str,
     dir2: str,
@@ -309,78 +355,96 @@ def compare_two_dirs(
     process: str = "data",
 ) -> None:
     """
-    Compare two directories of parquet files by (run, luminosityBlock, event).
+    Compare two directories of parquet files by (run, luminosityBlock, event),
+    out-of-core via dask.dataframe.
 
-    For matching events, compare dimuon variables and write only mismatches.
+    For matching events, compare dimuon/etc. variables and write only
+    mismatches. Only the final mismatch rows are ever materialized into a
+    pandas DataFrame -- everything before that (read, dedup-index, merge,
+    tolerance filter) stays lazy/partitioned, so this scales to
+    production-size directories that would OOM a full in-memory comparison.
 
     Output columns:
       run, luminosityBlock, event,
-      dimuon_pt_1, dimuon_pt_2, delta_dimuon_pt,
-      dimuon_mass_1, dimuon_mass_2, delta_dimuon_mass,
-      dimuon_eta_1, dimuon_eta_2, delta_dimuon_eta
+      <var>_1, <var>_2, delta_<var>  for each comparable var in SYNCVARLIST
     """
-    print(f"[INFO] Loading directory 1: {dir1}")
-    df1 = load_dir_to_df(dir1, category=category, region=region, process=process)
+    print(f"[INFO] Loading directory 1 (lazy): {dir1}")
+    ddf1, cols1 = load_dir_to_ddf(dir1)
 
-    print(f"[INFO] Loading directory 2: {dir2}")
-    df2 = load_dir_to_df(dir2, category=category, region=region, process=process)
+    print(f"[INFO] Loading directory 2 (lazy): {dir2}")
+    ddf2, cols2 = load_dir_to_ddf(dir2)
 
-    df1 = _with_occurrence_index(df1, f"dir1 ({dir1})")
-    df2 = _with_occurrence_index(df2, f"dir2 ({dir2})")
+    missing_keys = [c for c in KEY_VARS if c not in cols1 or c not in cols2]
+    if missing_keys:
+        raise RuntimeError(f"Missing key columns {missing_keys} in one of the two directories")
 
-    common_idx = df1.index.intersection(df2.index)
-    only1 = df1.index.difference(df2.index)
-    only2 = df2.index.difference(df1.index)
+    # (run, luminosityBlock, event) triples are expected to be unique per
+    # directory in practice (duplicates would mean multiple selected dimuon
+    # pairs in one event, which is rare). Rather than paying for a mandatory
+    # full-dataset groupby().cumcount() shuffle upfront just to guard against
+    # that rare case -- which OOMs gateway workers at production scale, since
+    # it's an extra full shuffle on top of the join's own shuffle -- merge
+    # directly on the key columns and detect/report duplicate-driven blowup
+    # from the resulting row counts instead.
+    merge_keys = KEY_VARS
 
-    print(f"[INFO] Common events: {len(common_idx)}")
-    print(f"[INFO] Events only in dir1: {len(only1)}")
-    print(f"[INFO] Events only in dir2: {len(only2)}")
+    common_vars = [c for c in SYNCVARLIST if c not in KEY_VARS and c in cols1 and c in cols2]
 
-    if len(common_idx) == 0:
+    merged = ddf1.merge(ddf2, on=merge_keys, how="outer", suffixes=("_1", "_2"), indicator=True)
+
+    counts = merged["_merge"].value_counts().compute()
+    n_common = int(counts.get("both", 0))
+    n_only1 = int(counts.get("left_only", 0))
+    n_only2 = int(counts.get("right_only", 0))
+
+    print(f"[INFO] Common events: {n_common}")
+    print(f"[INFO] Events only in dir1: {n_only1}")
+    print(f"[INFO] Events only in dir2: {n_only2}")
+
+    n1, n2 = len(ddf1), len(ddf2)
+    if n_common > min(n1, n2):
+        print(
+            f"[WARNING] Common-event count ({n_common}) exceeds min(len(dir1)={n1}, "
+            f"len(dir2)={n2}); this means duplicate (run, luminosityBlock, event) keys "
+            "within one or both directories produced a cross-product in the join. "
+            "Mismatch counts below may be overcounted for those duplicate groups."
+        )
+
+    if n_common == 0:
         print("[WARNING] No common events found; nothing to compare.")
         return
 
-    c1 = df1.loc[common_idx]
-    c2 = df2.loc[common_idx]
+    matched = merged[merged["_merge"] == "both"]
 
-    rows: List[dict] = []
+    mismatch_mask = None
+    delta_cols = []
+    for var in common_vars:
+        c1, c2 = f"{var}_1", f"{var}_2"
+        if c1 not in matched.columns or c2 not in matched.columns:
+            continue
+        delta_col = f"delta_{var}"
+        matched = matched.assign(**{delta_col: matched[c2] - matched[c1]})
+        delta_cols.append(delta_col)
+        cond = matched[delta_col].abs() > tolerance
+        mismatch_mask = cond if mismatch_mask is None else (mismatch_mask | cond)
 
-    for idx in common_idx:
-        row1 = c1.loc[idx]
-        row2 = c2.loc[idx]
+    if mismatch_mask is None:
+        print("[WARNING] No comparable variables found between the two directories.")
+        return
 
-        record = {
-            "run": idx[0],
-            "luminosityBlock": idx[1],
-            "event": idx[2],
-            "_sync_instance": idx[3],
-        }
+    mismatches = matched[mismatch_mask]
 
-        mismatch = False
+    out_cols = list(KEY_VARS)
+    for var in common_vars:
+        out_cols += [f"{var}_1", f"{var}_2", f"delta_{var}"]
+    out_cols = [c for c in out_cols if c in mismatches.columns]
 
-        for var in SYNCVARLIST:
-            if var not in row1 or var not in row2:
-                continue
+    df_out = mismatches[out_cols].compute()
 
-            v1 = row1[var]
-            v2 = row2[var]
-            delta = v2 - v1
-
-            record[f"{var}_1"] = v1
-            record[f"{var}_2"] = v2
-            record[f"delta_{var}"] = delta
-
-            if abs(delta) > tolerance:
-                mismatch = True
-
-        if mismatch:
-            rows.append(record)
-
-    if not rows:
+    if len(df_out) == 0:
         print("[INFO] No mismatches found (within tolerance).")
         return
 
-    df_out = pd.DataFrame(rows)
     df_out.to_csv(out_path, index=False)
     print(f"[INFO] Wrote {len(df_out)} mismatching events to {out_path}")
 
@@ -687,6 +751,25 @@ def parse_args():
         default="data",
         help="Process name passed to selection.applyRegionCatCuts (default: 'data').",
     )
+    parser.add_argument(
+        "--use_gateway",
+        dest="use_gateway",
+        default=False,
+        action="store_true",
+        help=(
+            "Use an existing Dask Gateway cluster instead of a local cluster. "
+            "Keeps parquet decode/materialization off this session's own pod "
+            "memory, which matters for production-scale (not just CI sync) "
+            "directories."
+        ),
+    )
+    parser.add_argument(
+        "--cluster_index",
+        dest="cluster_index",
+        default=0,
+        type=int,
+        help="Index of the Dask Gateway cluster to connect to (default: 0).",
+    )
     return parser.parse_args()
 
 
@@ -708,7 +791,7 @@ def main():
             out_path = Path(args.out)
 
         print(f"[INFO] Output path: {out_path}")
-        get_dask_client()
+        get_dask_client(use_gateway=args.use_gateway, cluster_index=args.cluster_index)
         try:
             df = load_dir_to_df(
                 directory,
@@ -747,7 +830,7 @@ def main():
 
         # Otherwise treat as directories (existing behavior)
         dir1, dir2 = file1, file2
-        get_dask_client()
+        get_dask_client(use_gateway=args.use_gateway, cluster_index=args.cluster_index)
         try:
             compare_two_dirs(
                 dir1=dir1,
