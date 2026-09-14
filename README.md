@@ -52,13 +52,13 @@ The GitHub sync workflow compares stage-1 outputs against text snapshots in `tes
 To refresh those reference txt files after an intentional stage-1 change, run:
 
 ```bash
-bash scripts/update_sync_references.sh
+bash scripts/update_sync_references.sh --use-reference-switches
 ```
 
 Or regenerate a single year:
 
 ```bash
-bash scripts/update_sync_references.sh 2017
+bash scripts/update_sync_references.sh 2017  --use-reference-switches
 ```
 
 This script reruns the sync stage-1 samples, rebuilds the `*_eventKinematics.txt` files with
