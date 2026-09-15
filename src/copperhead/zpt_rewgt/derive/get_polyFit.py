@@ -1,12 +1,20 @@
 import array
+import json
 import os
+from datetime import datetime, timezone
 
 import ROOT
 import yaml
 import poly_utils
 from cli.common_argparser import build_common_parser
+from modules.git_utils import get_git_state
 from modules.utils import logger
 from omegaconf import OmegaConf
+from sample_resolution import (
+    collect_process_paths,
+    resolve_dy_processes,
+    resolve_stage1_base_path,
+)
 
 # Run in batch mode and disable statistics box
 ROOT.gROOT.SetBatch(True)
@@ -25,35 +33,54 @@ def eval_polynomial(coeffs, xval):
     return sum(coeff * (xval ** idx) for idx, coeff in enumerate(coeffs))
 
 
-def make_combined_function_reduced(f0_coeffs, f1_coeffs, xmin, xmax, base_tail_slope):
+def eval_polynomial_derivative(coeffs, xval):
+    return sum(idx * coeff * (xval ** (idx - 1)) for idx, coeff in enumerate(coeffs) if idx >= 1)
+
+
+def make_combined_function_reduced(f0_coeffs, f1_coeffs, xmin, xmax):
     """
-    Builds a reduced-parameter piecewise function:
-    - frozen low-range polynomial, plus a common vertical shift
-    - frozen mid-range polynomial, plus a small linear tilt around xmin
-    - linear tail beyond xmax, with only the slope adjusted in the final refit
+    Builds a reduced-parameter piecewise function with exact C0 (value) continuity
+    at both xmin and xmax, AND exact C1 (slope) continuity at xmax by construction:
+    the tail's slope/intercept are derived analytically from f1's own fit at xmax
+    (not from an unrelated, independently-fit flat-line tail), so a delta_tail_slope
+    of 0 already joins smoothly instead of leaving a visible corner. f0 gets its own
+    tilt (mirroring f1's), so a single shared vertical shift no longer has to serve
+    both regions at once - the previous single-shift design otherwise pulls whichever
+    region has the most fit weight (usually f1/tail) at the expense of the other.
 
     Free parameters:
-    - par[0]: common vertical shift applied to low/mid regions
-    - par[1]: extra mid-range tilt multiplying (x - xmin)
-    - par[2]: delta on the tail slope relative to the local tail fit
+    - par[0]: common_shift - vertical shift applied to the low-range polynomial
+              (propagated into the mid-range join via continuity)
+    - par[1]: low_tilt - extra low-range tilt multiplying (x - xmin); vanishes at
+              x=xmin, so xmin-continuity is unaffected by its value
+    - par[2]: mid_tilt - extra mid-range tilt multiplying (x - xmin)
+    - par[3]: delta_tail_slope - small deviation from f1's own analytic slope at xmax
     """
+    f1_prime_xmax = eval_polynomial_derivative(f1_coeffs, xmax)
+
     def func(x, par):
         xx = x[0]
         common_shift = par[0]
-        mid_tilt = par[1]
-        tail_slope = base_tail_slope + par[2]
+        low_tilt = par[1]
+        mid_tilt = par[2]
+        delta_tail_slope = par[3]
 
-        low_xmin = eval_polynomial(f0_coeffs, xmin) + common_shift
+        def eval_low(xlow):
+            return eval_polynomial(f0_coeffs, xlow) + common_shift + low_tilt * (xlow - xmin)
+
+        low_xmin = eval_low(xmin)
         mid_xmin_raw = eval_polynomial(f1_coeffs, xmin)
         mid_shift = low_xmin - mid_xmin_raw
 
         def eval_mid(xmid):
             return eval_polynomial(f1_coeffs, xmid) + mid_shift + mid_tilt * (xmid - xmin)
 
+        tail_slope = f1_prime_xmax + mid_tilt + delta_tail_slope
+
         if xx < 0.0:
             return 0.0
         elif xx <= xmin:
-            return eval_polynomial(f0_coeffs, xx) + common_shift
+            return eval_low(xx)
         elif xx < xmax:
             return eval_mid(xx)
         else:
@@ -108,19 +135,26 @@ def build_final_piecewise_coefficients(f0_coeffs, f0_errors, order0, f1_coeffs, 
     piecewise coefficients expected by stage1. f0_coeffs/f0_errors and
     f1_coeffs/f1_errors are the monomial-in-x coefficients (and their
     uncertainties) coming from poly_utils.fit_chebyshev_poly()'s basis
-    conversion - not read off a monomial-parametrized TF1 directly.
+    conversion - not read off a monomial-parametrized TF1 directly. f_flat (the
+    independent tail-only fit) is unused here - the tail slope/intercept are
+    now derived analytically from f1 at xmax1 for exact C1 continuity there,
+    see make_combined_function_reduced().
     """
     common_shift = f_comb.GetParameter(0)
     common_shift_err = f_comb.GetParError(0)
-    mid_tilt = f_comb.GetParameter(1)
-    mid_tilt_err = f_comb.GetParError(1)
-    delta_tail_slope = f_comb.GetParameter(2)
-    delta_tail_slope_err = f_comb.GetParError(2)
+    low_tilt = f_comb.GetParameter(1)
+    low_tilt_err = f_comb.GetParError(1)
+    mid_tilt = f_comb.GetParameter(2)
+    mid_tilt_err = f_comb.GetParError(2)
+    delta_tail_slope = f_comb.GetParameter(3)
+    delta_tail_slope_err = f_comb.GetParError(3)
 
     final_f0_coeffs = list(f0_coeffs)
     final_f0_errors = list(f0_errors)
-    final_f0_coeffs[0] += common_shift
-    final_f0_errors[0] = (final_f0_errors[0] ** 2 + common_shift_err ** 2) ** 0.5
+    final_f0_coeffs[0] += common_shift - low_tilt * xmin1
+    final_f0_coeffs[1] += low_tilt
+    final_f0_errors[0] = (final_f0_errors[0] ** 2 + common_shift_err ** 2 + (xmin1 * low_tilt_err) ** 2) ** 0.5
+    final_f0_errors[1] = (final_f0_errors[1] ** 2 + low_tilt_err ** 2) ** 0.5
 
     low_xmin_nominal = eval_polynomial(f0_coeffs, xmin1)
     mid_xmin_nominal = eval_polynomial(f1_coeffs, xmin1)
@@ -133,16 +167,21 @@ def build_final_piecewise_coefficients(f0_coeffs, f0_errors, order0, f1_coeffs, 
     final_f1_errors[0] = (final_f1_errors[0] ** 2 + common_shift_err ** 2 + (xmin1 * mid_tilt_err) ** 2) ** 0.5
     final_f1_errors[1] = (final_f1_errors[1] ** 2 + mid_tilt_err ** 2) ** 0.5
 
-    final_tail_slope = f_flat.GetParameter(0) + delta_tail_slope
-    final_tail_slope_err = (f_flat.GetParError(0) ** 2 + delta_tail_slope_err ** 2) ** 0.5
+    # Tail slope: f1's own analytic derivative at xmax1 (guarantees C1 continuity
+    # when delta_tail_slope == 0) plus the small MINUIT-fitted correction.
+    f1_prime_xmax = eval_polynomial_derivative(f1_coeffs, xmax1)
+    final_tail_slope = f1_prime_xmax + mid_tilt + delta_tail_slope
+    # Diagonal (uncorrelated) quadrature approximation, consistent with the rest
+    # of this function's error propagation.
+    f1_prime_xmax_err = sum(
+        (idx * (xmax1 ** (idx - 1)) * err) ** 2 for idx, err in enumerate(f1_errors) if idx >= 1
+    ) ** 0.5
+    final_tail_slope_err = (f1_prime_xmax_err ** 2 + mid_tilt_err ** 2 + delta_tail_slope_err ** 2) ** 0.5
+
     y_at_xmax = eval_polynomial(final_f1_coeffs, xmax1)
     tail_intercept = y_at_xmax - final_tail_slope * xmax1
-    tail_intercept_err = (
-        f_flat.GetParError(1) ** 2
-        + common_shift_err ** 2
-        + ((xmax1 - xmin1) * mid_tilt_err) ** 2
-        + (xmax1 * delta_tail_slope_err) ** 2
-    ) ** 0.5
+    y_at_xmax_err = sum((xmax1 ** idx * err) ** 2 for idx, err in enumerate(final_f1_errors)) ** 0.5
+    tail_intercept_err = (y_at_xmax_err ** 2 + (xmax1 * final_tail_slope_err) ** 2) ** 0.5
 
     return {
         "f0_coeffs": final_f0_coeffs,
@@ -154,6 +193,7 @@ def build_final_piecewise_coefficients(f0_coeffs, f0_errors, order0, f1_coeffs, 
         "tail_intercept": tail_intercept,
         "tail_intercept_err": tail_intercept_err,
         "common_shift": common_shift,
+        "low_tilt": low_tilt,
         "mid_tilt": mid_tilt,
         "delta_tail_slope": delta_tail_slope,
     }
@@ -175,33 +215,36 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     logger.debug(f"Fitting mid range: {xmin1} to {xmax1} with order {order1}")
     f1_result = fit_polynomial(hist_sf, order1, xmin1, xmax1, "f1_local")
 
-    # 3) High-range flat fit
+    # 3) High-range flat fit - kept only as an independent diagnostic reference
+    # (e.g. to sanity-check the analytic tail slope below); it is no longer the
+    # tail's baseline, since matching an independently-fit line's value but not
+    # its slope is exactly what produced the visible "kink" at xmax1.
     logger.debug(f"Fitting high range: {xmax1} to {global_xmax} with flat line")
     f_flat = fit_flat_line(hist_sf, xmax1, global_xmax)
 
     # Build reduced-parameter combined TF1 using the stable local fits as anchors.
     f0_coeffs = list(f0_result["coeffs_x"])
     f1_coeffs = list(f1_result["coeffs_x"])
-    base_tail_slope = f_flat.GetParameter(0)
-    logger.debug("Creating reduced-parameter combined function with 3 parameters")
+    logger.debug("Creating reduced-parameter combined function with 4 parameters")
 
     comb_func = make_combined_function_reduced(
         f0_coeffs=f0_coeffs,
         f1_coeffs=f1_coeffs,
         xmin=xmin1,
         xmax=xmax1,
-        base_tail_slope=base_tail_slope,
     )
     logger.debug("Prepared reduced-parameter combined function for fitting")
 
-    f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, 3)
+    f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, 4)
     f_combined.SetParName(0, "common_shift")
-    f_combined.SetParName(1, "mid_tilt")
-    f_combined.SetParName(2, "delta_tail_slope")
+    f_combined.SetParName(1, "low_tilt")
+    f_combined.SetParName(2, "mid_tilt")
+    f_combined.SetParName(3, "delta_tail_slope")
     f_combined.SetParameter(0, 0.0)
     f_combined.SetParameter(1, 0.0)
     f_combined.SetParameter(2, 0.0)
-    # These 3 parameters are small corrections around the (already stable)
+    f_combined.SetParameter(3, 0.0)
+    # These 4 parameters are small corrections around the (already stable)
     # local anchor fits, so generous - not razor-tight - bounds are enough to
     # keep MIGRAD from running away; overly tight limits (as before) push the
     # minimum onto a bound, where MINUIT's internal boundary transform makes
@@ -209,6 +252,7 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     f_combined.SetParLimits(0, -2.0, 2.0)
     f_combined.SetParLimits(1, -0.5, 0.5)
     f_combined.SetParLimits(2, -0.5, 0.5)
+    f_combined.SetParLimits(3, -0.5, 0.5)
 
     # Perform final reduced refit: a single proper chi2 fit against hist_sf's
     # own bin errors (not the Poisson log-likelihood option "L", which is not
@@ -429,6 +473,14 @@ def main():
     save_dict = {}
     global_fit_xmax = 200.0
 
+    # Provenance for the fit step itself (produced once per script run, not
+    # per year) - who ran get_polyFit.py, when, and against which git state.
+    # Folded per-year below alongside step 0's own provenance.json (sample
+    # resolution), when present, so the final YAML carries a full trail.
+    in_dir_yaml = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
+    os.makedirs(in_dir_yaml, exist_ok=True)
+    fit_git_state = get_git_state(in_dir_yaml)
+
     for year in years:
         in_dir = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
         save_dir = f"{in_dir}/gof_{out_append}"
@@ -533,6 +585,7 @@ def main():
             )
             logger.debug(
                 f"combined adjustments: common_shift={final_piecewise['common_shift']}, "
+                f"low_tilt={final_piecewise['low_tilt']}, "
                 f"mid_tilt={final_piecewise['mid_tilt']}, "
                 f"delta_tail_slope={final_piecewise['delta_tail_slope']}"
             )
@@ -550,6 +603,59 @@ def main():
             year_dict[f"njet_{njet}"] = {"function": params_dict}
             print(f"Using custom binning with {nbins_new} bins: {edges}")
 
+        metadata = {
+            "step2_derived_at": datetime.now(timezone.utc).isoformat(),
+            "step2_derived_by": os.getenv("USER", "unknown"),
+            "step2_git_commit": fit_git_state["commit"],
+            "step2_git_dirty": fit_git_state["dirty"],
+            "step2_git_diff_file": fit_git_state["diff_file"],
+            "run_label": run_label,
+            # Output-directory tag for this derivation run, not the physical
+            # DY MC sample(s) actually used - see dy_mc_samples below.
+            "dy_sample_label": args.dy_sample,
+            "save_postfix": out_append,
+        }
+
+        # The actual DY MC sample(s) read from the stage1 output, resolved
+        # the same way save_SF_rootFiles.py does (sample_resolution.py) -
+        # just the cheap glob/YAML lookup, no parquet read, so this doesn't
+        # need step0 to have been rerun with provenance capture. Requires
+        # --input_path (the stage1 output base) to have been passed through;
+        # degrades to a logged note, not a crash, if it wasn't.
+        if args.input_path:
+            try:
+                stage1_base_path = resolve_stage1_base_path(args.input_path, year)
+                dy_processes = resolve_dy_processes(year, args.sample_config)
+                _, matched_dy_processes, missing_dy_processes = collect_process_paths(
+                    stage1_base_path, dy_processes
+                )
+                metadata["dy_mc_samples"] = {
+                    "stage1_base_path": stage1_base_path,
+                    "sample_config": args.sample_config,
+                    "matched": matched_dy_processes,
+                    "missing": missing_dy_processes,
+                }
+            except Exception as exc:
+                logger.warning(f"Could not resolve actual DY MC sample(s) for {year}: {exc}")
+        else:
+            logger.debug(
+                "No --input_path given; cannot resolve the actual DY MC sample(s) "
+                "for metadata.dy_mc_samples (dy_sample_label is only the output-dir tag)."
+            )
+
+        # save_SF_rootFiles.py (step 0) writes this alongside the per-year ROOT
+        # files: when it ran, by whom, and the same Data/DY resolution above
+        # (redundant with dy_mc_samples but captured at step0 time). Fold it
+        # in here so the final YAML carries the full trail even though step 0
+        # and step 2 run as separate processes.
+        prov_path = f"{in_dir}/provenance.json"
+        if os.path.isfile(prov_path):
+            with open(prov_path) as prov_file:
+                metadata["step0"] = json.load(prov_file)
+        else:
+            logger.debug(f"No step0 provenance.json found at {prov_path}")
+        year_dict["metadata"] = metadata
+
         save_dict[year] = year_dict
 
     # Merge with existing YAML or create fresh
@@ -557,14 +663,19 @@ def main():
     # ------------------------------------------------------------------
     # Save YAML with top-level keys = years
     # ------------------------------------------------------------------
-    in_dir_yaml = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
-    os.makedirs(in_dir_yaml, exist_ok=True)
     yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
 
     new_cfg = OmegaConf.create(save_dict)
 
     if os.path.isfile(yaml_path):
         existing = OmegaConf.load(yaml_path)
+        # `metadata` must fully replace, not deep-merge, for any year this run
+        # touches - otherwise a renamed/removed field (e.g. dy_sample ->
+        # dy_sample_label) lingers forever alongside its replacement, since
+        # OmegaConf.merge only adds/overwrites keys, never drops them.
+        for year in save_dict:
+            if year in existing and "metadata" in existing[year]:
+                del existing[year]["metadata"]
         merged = OmegaConf.merge(existing, new_cfg)  # merge year-by-year (and njet-by-njet)
     else:
         merged = new_cfg
