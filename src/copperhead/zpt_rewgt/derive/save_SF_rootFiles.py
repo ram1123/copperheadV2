@@ -1,6 +1,8 @@
+import json
 import os
 import sys
 from array import array
+from datetime import datetime, timezone
 import glob
 
 import awkward as ak
@@ -11,7 +13,8 @@ from cli.common_argparser import build_common_parser
 from modules import classify_year, selection
 from modules.dask_utils import get_dask_client
 from modules.dask_utils import close_dask_client
-from modules.sample_config import get_sample_dict
+from modules.git_utils import get_git_state
+from sample_resolution import collect_process_paths, resolve_dy_processes
 
 def zipAndCompute(events, fields2load):
     zpt_wgt_name = "separate_wgt_zpt_wgt"
@@ -22,40 +25,6 @@ def zipAndCompute(events, fields2load):
         field : events[field] for field in fields2load
     })
     return return_zip.compute() # compute and return
-
-
-def resolve_dy_processes(year, sample_config_path):
-    bkg_dict = get_sample_dict(
-        yaml_path=sample_config_path,
-        section="background",
-        year=str(year),
-        selected_groups=["DY"],
-    )
-    dy_processes = bkg_dict.get("DY", [])
-    if not dy_processes:
-        raise ValueError(
-            f"No DY processes resolved from sample config '{sample_config_path}' for year '{year}'."
-        )
-    return dy_processes
-
-
-def collect_process_paths(base_path, process_names):
-    parquet_paths = []
-    matched_processes = []
-    missing_processes = []
-    for process in process_names:
-        pattern = f"{base_path}/{process}/*/*.parquet"
-        found = sorted(glob.glob(pattern))
-        if found:
-            parquet_paths.extend(found)
-            matched_processes.append(process)
-        else:
-            missing_processes.append(process)
-    if not parquet_paths:
-        raise RuntimeError(
-            f"No parquet files found for DY processes {process_names} under base path: {base_path}"
-        )
-    return parquet_paths, matched_processes, missing_processes
 
 if __name__ == "__main__":
     """
@@ -107,6 +76,38 @@ if __name__ == "__main__":
         if missing_dy_processes:
             print(f"WARNING: Missing DY processes under {base_path}: {missing_dy_processes}")
         print(f"Total DY parquet files found: {len(dy_paths)}")
+
+        # Provenance for future reference: when/by whom/from which inputs this
+        # year's Data and DY histograms (and hence everything downstream in
+        # get_polyFit.py) were produced.
+        matched_data_dirs = sorted(
+            os.path.basename(p) for p in glob.glob(f"{base_path}/data_*") if os.path.isdir(p)
+        )
+        git_state = get_git_state(plot_path)
+        provenance = {
+            "step": "save_SF_rootFiles.py",
+            "produced_at": datetime.now(timezone.utc).isoformat(),
+            "produced_by": user_name,
+            "year": year,
+            "run_label": run_label,
+            # This is the output-directory tag chosen for this derivation run
+            # (--dy_sample on the CLI), *not* the physical DY MC sample(s)
+            # actually read - those are resolved independently from
+            # sample_config below and recorded in matched_dy_processes.
+            "dy_sample_label": args.dy_sample,
+            "input_path": args.input_path,
+            "stage1_base_path": base_path,
+            "sample_config": args.sample_config,
+            "matched_data_dirs": matched_data_dirs,
+            "matched_dy_processes": matched_dy_processes,
+            "missing_dy_processes": missing_dy_processes,
+            "git_commit": git_state["commit"],
+            "git_dirty": git_state["dirty"],
+            "git_diff_file": git_state["diff_file"],
+        }
+        with open(f"{plot_path}/provenance.json", "w") as prov_file:
+            json.dump(provenance, prov_file, indent=2)
+
         dy_events = dak.from_parquet(dy_paths)
         # apply z-peak region filter and nothing else
         _, data_events = selection.filterRegion(data_events, region="z-peak")
