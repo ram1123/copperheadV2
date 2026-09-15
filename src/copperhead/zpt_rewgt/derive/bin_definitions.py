@@ -39,32 +39,69 @@ poly_fit_ranges = {
         "njet2": [10, 120],
     },
     "2023BPix": {
-        "njet0": [10, 110],
+        "njet0": [10, 80],
         "njet1": [21, 80],
         "njet2": [10, 120],
     },
     "2024": {
-        "njet0": [15, 75],
+        "njet0": [15, 150],
         "njet1": [21, 120],
-        "njet2": [15, 145],
+        "njet2": [15, 170],
     },
-    # 2025/2026 had no entries yet - start from the closest existing Run3
-    # year (2024, post-njet1-range-fix) and adjust below once the actual
-    # fits/pulls for these years have been inspected.
     "2025": {
-        "njet0": [15, 75],
+        "njet0": [15, 110],
         "njet1": [21, 120],
-        "njet2": [15, 110],
+        "njet2": [15, 120],
     },
     "2026": {
-        "njet0": [15, 75],
-        "njet1": [21, 120],
-        "njet2": [15, 145],
+        "njet0": [15, 110],
+        "njet1": [21, 100],
+        "njet2": [15, 110],
     },
 }
 
 
-def define_custom_binning(njets="1"):
+# Per-(year, njet) overrides of the segments_map below
+YEAR_NJET_BINNING_OVERRIDES = {
+    ("2023", "2"): [
+        (10.0, 2.0),
+        (30.0, 2.0),
+        (60.0, 2.0),
+        (80.0, 2.5),
+        (120.0, 10.0),
+        (200.0, 25.0),
+    ],
+    ("2023BPix", "0"): [
+        (10.0, 0.2),
+        (30.0, 1.0),
+        (50.0, 2.0),
+        (80.0, 2.5),
+        (110.0, 30.0),
+        (120.0, 10.0),
+        (200.0, 25.0),
+    ],
+    ("2026", "2"): [
+        (10.0, 1.0),
+        (30.0, 1.0),
+        (60.0, 2.0),
+        (80.0, 2.5),
+        (120.0, 10.0),
+        (145.0, 5.0),
+        (170.0, 10.0),
+        (200.0, 25.0),
+    ],
+    ("2024", "0"): [
+        (15.0, 0.2),
+        (30.0, 0.5),
+        (50.0, 1.0),
+        (80.0, 2.5),
+        (150.0, 10.0),
+        (200.0, 25.0),
+    ],
+}
+
+
+def define_custom_binning(njets="1", year=None):
     """
     Returns an array of custom bin edges:
     Build variable bin edges using (x_end, step) segments.
@@ -105,11 +142,12 @@ def define_custom_binning(njets="1"):
     }
 
     nj = str(njets)
+    segments = YEAR_NJET_BINNING_OVERRIDES.get((str(year), nj), segments_map[nj])
 
     edges = [0.0]
     x = 0.0
 
-    for x_end, step in segments_map[nj]:
+    for x_end, step in segments:
         while x + step < x_end + 1e-12:
             x += step
             edges.append(x)

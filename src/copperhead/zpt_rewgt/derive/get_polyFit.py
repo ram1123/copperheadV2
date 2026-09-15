@@ -102,12 +102,21 @@ def rebin_histogram(hist, edges):
     return rebinned
 
 
-def make_confidence_band(hist_sf, fit_result, confidence_level, name):
-    band = hist_sf.Clone(name)
-    band.SetDirectory(0)
-    band.Reset("ICESM")
-    ROOT.TVirtualFitter.GetFitter().GetConfidenceIntervals(band, confidence_level)
-    return band
+def make_confidence_band(global_xmax, confidence_level, name, npoints=400):
+    """
+    Confidence band as a fine TGraphErrors spanning [0, global_xmax], not a
+    clone of hist_sf: TH1's "E3" fill only spans the first-to-last bin
+    *center*, not the true axis edges, so a wide last bin (e.g. the [170,200]
+    tail bin, center 185) leaves a visible gap at the very end - a fine grid
+    of points decouples the band's resolution from the (necessarily coarse,
+    sparse-stats) tail binning. Draw with option "3 SAME".
+    """
+    xs = array.array('d', [global_xmax * i / (npoints - 1) for i in range(npoints)])
+    ys = array.array('d', [0.0] * npoints)
+    graph = ROOT.TGraphErrors(npoints, xs, ys)
+    graph.SetName(name)
+    ROOT.TVirtualFitter.GetFitter().GetConfidenceIntervals(graph, confidence_level)
+    return graph
 
 def fit_polynomial(hist_sf, order, xmin, xmax, name):
     """
@@ -282,24 +291,29 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
     canv.Divide(1, 2)
 
     # --- Upper pad: SF histogram and fits ---
-    canv.cd(1)
-    # Force X-axis range from 0 to global_xmax and draw full axis
+    pad1 = canv.cd(1)
+    # Force X-axis range from 0 to global_xmax
     hist_sf.GetXaxis().SetRangeUser(0.0, global_xmax)
     hist_sf.SetTitle(f"Year {year}, njet={njet}, bins={nbins}")
     hist_sf.SetLineColor(ROOT.kBlue)
-    # Draw only the axis first to fix the range
+    hist_sf.SetMarkerColor(ROOT.kBlue)
+    hist_sf.SetMarkerStyle(20)
+    hist_sf.SetMarkerSize(0.6)
     hist_sf.Draw("axis")
+    pad1.Update()
+    ymin_auto = pad1.GetUymin()
+    ymax_auto = pad1.GetUymax()
 
     band95 = None
     band68 = None
     if fit_result and int(fit_result.Status()) == 0:
-        band95 = make_confidence_band(hist_sf, fit_result, 0.95, f"band95_{year}_{njet}")
+        band95 = make_confidence_band(global_xmax, 0.95, f"band95_{year}_{njet}")
         band95.SetFillColorAlpha(ROOT.kAzure - 9, 0.35)
         band95.SetLineColor(ROOT.kAzure - 9)
         band95.SetLineWidth(0)
         band95.SetMarkerSize(0)
 
-        band68 = make_confidence_band(hist_sf, fit_result, 0.68, f"band68_{year}_{njet}")
+        band68 = make_confidence_band(global_xmax, 0.68, f"band68_{year}_{njet}")
         band68.SetFillColorAlpha(ROOT.kOrange - 2, 0.45)
         band68.SetLineColor(ROOT.kOrange - 2)
         band68.SetLineWidth(0)
@@ -310,17 +324,29 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
     f_combined.SetNpx(5000)   # or 10000 if you want it super smooth
     f_combined.SetLineColor(ROOT.kRed)
 
-    # Finally draw the histogram and the combined fit
+    # Rebuild the pad's frame explicitly at exactly [0, global_xmax] - bypasses
+    # TH1's automatic (padded) frame sizing entirely, unlike SetRangeUser or
+    # SetNdivisions(optimize=False), neither of which affected the actual
+    # rendered frame edge when tried here.
     hist_sf.GetListOfFunctions().Clear()  # remove attached
-    hist_sf.Draw("axis")
+    pad1.Clear()
+    frame = pad1.DrawFrame(0.0, ymin_auto, global_xmax, ymax_auto)
+    frame.SetTitle(hist_sf.GetTitle())
+    frame.GetXaxis().SetTitle(hist_sf.GetXaxis().GetTitle())
+    frame.GetYaxis().SetTitle(hist_sf.GetYaxis().GetTitle())
     if band95:
-        band95.Draw("E3 SAME")
+        band95.Draw("3 SAME")
     if band68:
-        band68.Draw("E3 SAME")
-    hist_sf.Draw("same E")
+        band68.Draw("3 SAME")
+    # "P" (points at bin centers) instead of plain "E" (which also draws a
+    # connecting step outline - i.e. a flat horizontal segment across each
+    # bin's full width). The tail bins are tens of GeV wide, so that flat
+    # segment visibly diverges from the smoothly-varying fit curve/band,
+    # looking like a sharp discontinuity that isn't actually there (the fit
+    # itself and its confidence band are smooth - verified numerically).
+    hist_sf.Draw("same P E1")
     f_combined.Draw("SAME")
-    ROOT.gPad.Update()
-
+    pad1.Update()
 
     txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     # Legend
@@ -383,7 +409,7 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     elif year == "2023BPix":
-        if njet == 2  or njet == 0:
+        if njet == 2:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
@@ -433,8 +459,8 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
     txt.Draw()
 
     # --- Lower pad: Pull distribution ---
-    canv.cd(2)
-    ROOT.gPad.SetGrid()
+    pad2 = canv.cd(2)
+    pad2.SetGrid()
 
     nbins_hist = hist_sf.GetNbinsX()
     xmin_hist = hist_sf.GetXaxis().GetXmin()
@@ -454,7 +480,21 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
         pull_hist.SetBinContent(i, pull)
 
     pull_hist.SetMarkerStyle(20)
+    pull_hist.SetMarkerColor(ROOT.kBlack)  # pull_hist is a hist_sf clone; keep its own look, not hist_sf's blue
+    pull_hist.GetXaxis().SetRangeUser(0.0, global_xmax)
     pull_hist.Draw("P")
+    pad2.Update()
+    # Rebuild the frame at exactly [0, global_xmax] - see the upper panel's
+    # comment for why (TH1's automatic frame sizing pads past the request).
+    ymin_auto = pad2.GetUymin()
+    ymax_auto = pad2.GetUymax()
+    pad2.Clear()
+    pad2.SetGrid()
+    frame2 = pad2.DrawFrame(0.0, ymin_auto, global_xmax, ymax_auto)
+    frame2.SetTitle(pull_hist.GetTitle())
+    frame2.GetXaxis().SetTitle(pull_hist.GetXaxis().GetTitle())
+    frame2.GetYaxis().SetTitle(pull_hist.GetYaxis().GetTitle())
+    pull_hist.Draw("P SAME")
 
     # Save the canvas
     for ext in ("pdf", "png", "root"):

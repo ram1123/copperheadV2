@@ -134,13 +134,35 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
     optimized_orders = {}
     print(f"Performing F-test for {year} njet{njet} with {target_nbins} bins; outtext: {outtext}")
     fit_order_start = 1 if outtext == "f0" else 2
+
+    # Cap the searchable order so the higher-order candidate in each F-test
+    # comparison always keeps a minimum number of degrees of freedom.
+    # Without this, a narrow fit range with few bins lets the F-test chase
+    # individual bin fluctuations, since a sufficiently flexible polynomial
+    # can bend to match almost any target value - not a real improvement,
+    # just overfitting (observed directly: order 7-8 fits on ~9-10-bin
+    # ranges producing wild edge oscillation to match one noisy point).
+    n_bins_in_range = sum(
+        1 for ib in range(1, hist_SF.GetNbinsX() + 1)
+        if fit_xmin <= hist_SF.GetBinCenter(ib) <= fit_xmax
+    )
+    min_ndf = 4
+    max_order_high = min(8, n_bins_in_range - 1 - min_ndf)
+    order_loop_stop = max(fit_order_start, max_order_high)
+    if order_loop_stop < 8:
+        logger.debug(
+            f"{year} njet{njet} {outtext}: only {n_bins_in_range} bins in "
+            f"[{fit_xmin},{fit_xmax}] - capping F-test order search at "
+            f"order_high<={order_loop_stop} (min_ndf={min_ndf}) instead of the default 8"
+        )
+
     key = (year, njet, target_nbins)
     selected_order = fit_order_start
     selected_fit_func = None
     selected_fit_result = None
     selected_polynomial_expr = None
 
-    for order in range(fit_order_start, 8):
+    for order in range(fit_order_start, order_loop_stop):
         order_low, order_high = order, order + 1
         print(f"min: {fit_xmin}, max: {fit_xmax}, order: {order}")
 
@@ -269,7 +291,7 @@ for njet in args.njet:
         hist_dy = workspace.obj("hist_dy").Clone("hist_dy_clone")
 
         # Define custom bin edges: adaptive binning with finer bins near zero and coarser bins at higher pt
-        edges = define_custom_binning(njet)
+        edges = define_custom_binning(njet, year=year)
 
         nbins_new = len(edges) - 1
         xbins = array.array('d', edges)
