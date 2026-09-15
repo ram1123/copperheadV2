@@ -261,6 +261,12 @@ rule all_stage1:
         PLOT_DONE,
         # f"{STATEDIR}/summary.done"
 
+rule DY_ReRun:
+    input:
+        # (1) stage1 for all years
+        INITIAL_STAGE1_DONE,
+        # (2) stage1Compact for all years
+        INITIAL_STAGE1_COMPACT_DONE,
 
 
 # ---------------------------------------

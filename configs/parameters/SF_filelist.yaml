@@ -123,15 +123,10 @@ muSFFileList:
         iso: NUM_LoosePFIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
 new_zpt_weights_file_aMCatNLO:
-    # do_zpt is false for 2025 so this value isn't actually read yet; placeholder
-    # copied from 2024 only so getParametersForYr's per-year key lookup doesn't crash.
-    "2025": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
-    # do_zpt is also false for 2026 (mirrors 2025); placeholder copied from 2025/2024
-    "2026": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
-    "2018": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
-    "2017": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2016preVFP": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2016postVFP": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
+    "2017": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
+    "2018": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2022preEE": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
     "2022postEE": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
     "2023": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
