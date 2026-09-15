@@ -1,4 +1,7 @@
 import re
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
 
 AAA_REDIRECTORS = [
     "root://eos.cms.rcac.purdue.edu/",                  # 2
@@ -79,6 +82,10 @@ def _replace_host(url: str, host_prefix: str) -> str:
             tail = url[len("/eos/purdue/") :]  # becomes 'store/...'
             return _join_prefix(host_prefix, tail)
         return url
+
+    # A bare relative path (e.g. "test/data/..." )
+    if not url.startswith("/") and "://" not in url:
+        return str(_REPO_ROOT / url)
 
     # Not a ROOT/STORE path; leave unchanged
     return url
