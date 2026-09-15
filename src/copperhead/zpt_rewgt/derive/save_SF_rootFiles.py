@@ -143,6 +143,12 @@ if __name__ == "__main__":
             # Step 2: Create the histogram with variable bin widths
             hist_data = ROOT.TH1F("hist_data", "Data", len(binning_array) - 1, binning_array)
             hist_dy = ROOT.TH1F("hist_dy", "DY", len(binning_array) - 1, binning_array)
+            # Sumw2 must be enabled *before* filling with per-event weights, otherwise
+            # ROOT falls back to sqrt(bin content) bin errors, which is wrong for a
+            # weighted MC histogram (and biases the Data/DY ratio errors used by every
+            # downstream fit).
+            hist_data.Sumw2()
+            hist_dy.Sumw2()
 
             #  Step 3: Fill the histogram with data
             # Convert the values and weights to arrays
@@ -300,6 +306,7 @@ if __name__ == "__main__":
 
             # Save the canvas as an image
             canvas.SaveAs(f"{plot_path}/dataOverDY_{year}_njet{njet}.pdf")
+            canvas.SaveAs(f"{plot_path}/dataOverDY_{year}_njet{njet}.png")
 
     if client is not None:
         close_dask_client()

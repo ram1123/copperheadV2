@@ -30,7 +30,7 @@ poly_fit_ranges = {
     },
     "2022postEE": {
         "njet0": [15, 80.5],
-        "njet1": [20, 80.5],
+        "njet1": [20, 100],
         "njet2": [20, 110.0],
     },
     "2023": {
@@ -39,14 +39,27 @@ poly_fit_ranges = {
         "njet2": [10, 120],
     },
     "2023BPix": {
-        "njet0": [10, 80],
+        "njet0": [10, 110],
         "njet1": [21, 80],
         "njet2": [10, 120],
     },
     "2024": {
         "njet0": [15, 75],
-        "njet1": [21, 90],
+        "njet1": [21, 120],
+        "njet2": [15, 145],
+    },
+    # 2025/2026 had no entries yet - start from the closest existing Run3
+    # year (2024, post-njet1-range-fix) and adjust below once the actual
+    # fits/pulls for these years have been inspected.
+    "2025": {
+        "njet0": [15, 75],
+        "njet1": [21, 120],
         "njet2": [15, 110],
+    },
+    "2026": {
+        "njet0": [15, 75],
+        "njet1": [21, 120],
+        "njet2": [15, 145],
     },
 }
 
@@ -77,9 +90,14 @@ def define_custom_binning(njets="1"):
         ],
 
         "2": [
-            (10.0, 0.5),
-            (30.0, 0.5),
-            (50.0, 1.0),
+            # njet2 has lower statistics than njet0/njet1, so below 60 GeV
+            # use wider bins than the njet0/1 default (halves the bin count
+            # in [0,60] vs. the old (10,0.5)/(30,0.5)/(50,1.0) segments) to
+            # keep per-bin errors reasonable instead of dominating the fit
+            # with noisy, barely-populated points.
+            (10.0, 1.0),
+            (30.0, 1.0),
+            (60.0, 2.0),
             (80.0, 2.5),
             (120.0, 10.0),
             (200.0, 25.0),
