@@ -3,6 +3,7 @@ import os
 
 import ROOT
 import yaml
+import poly_utils
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
 from omegaconf import OmegaConf
@@ -81,21 +82,19 @@ def make_confidence_band(hist_sf, fit_result, confidence_level, name):
     ROOT.TVirtualFitter.GetFitter().GetConfidenceIntervals(band, confidence_level)
     return band
 
-def fit_polynomial(hist_sf, order, xmin, xmax, fit_opts="L S Q"):
+def fit_polynomial(hist_sf, order, xmin, xmax, name):
     """
-    Fits a polynomial of degree 'order' to hist_sf between [xmin, xmax].
-    Returns the TF1 polynomial object.
+    Fits a polynomial of degree 'order' to hist_sf between [xmin, xmax] using a
+    numerically stable, centered/scaled Chebyshev basis (see poly_utils.py),
+    then converts back to plain monomial-in-x coefficients + covariance.
+    Returns the poly_utils.fit_chebyshev_poly() result dict.
     """
-    expr = " + ".join(f"[{i}]*x**{i}" for i in range(order + 1))
-    func = ROOT.TF1(f"poly{order}", expr, xmin, xmax)
-    hist_sf.Fit(func, fit_opts, "", xmin, xmax)
-    hist_sf.Fit(func, fit_opts, "", xmin, xmax)
-    hist_sf.Fit(func, "L S R", "", xmin, xmax)
-    return func
+    return poly_utils.fit_chebyshev_poly(hist_sf, order, xmin, xmax, name)
 
-def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
+def fit_flat_line(hist_sf, xmin, xmax, fit_opts="S R Q"):
     """
-    Fits a constant line to hist_sf between [xmin, xmax].
+    Fits a straight line (slope, intercept) to hist_sf between [xmin, xmax]
+    using a proper chi-square fit against the histogram's own bin errors.
     Returns the TF1 object for that line.
     """
     func = ROOT.TF1("flat_line", "[0]*x + [1]", xmin, xmax)
@@ -103,10 +102,13 @@ def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
     return func
 
 
-def build_final_piecewise_coefficients(f0, order0, f1, order1, f_flat, f_comb, xmin1, xmax1):
+def build_final_piecewise_coefficients(f0_coeffs, f0_errors, order0, f1_coeffs, f1_errors, order1, f_flat, f_comb, xmin1, xmax1):
     """
     Convert the reduced-parameter combined refit back into the full set of
-    piecewise coefficients expected by stage1.
+    piecewise coefficients expected by stage1. f0_coeffs/f0_errors and
+    f1_coeffs/f1_errors are the monomial-in-x coefficients (and their
+    uncertainties) coming from poly_utils.fit_chebyshev_poly()'s basis
+    conversion - not read off a monomial-parametrized TF1 directly.
     """
     common_shift = f_comb.GetParameter(0)
     common_shift_err = f_comb.GetParError(0)
@@ -114,11 +116,6 @@ def build_final_piecewise_coefficients(f0, order0, f1, order1, f_flat, f_comb, x
     mid_tilt_err = f_comb.GetParError(1)
     delta_tail_slope = f_comb.GetParameter(2)
     delta_tail_slope_err = f_comb.GetParError(2)
-
-    f0_coeffs = [f0.GetParameter(i) for i in range(order0 + 1)]
-    f0_errors = [f0.GetParError(i) for i in range(order0 + 1)]
-    f1_coeffs = [f1.GetParameter(i) for i in range(order1 + 1)]
-    f1_errors = [f1.GetParError(i) for i in range(order1 + 1)]
 
     final_f0_coeffs = list(f0_coeffs)
     final_f0_errors = list(f0_errors)
@@ -165,26 +162,26 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     """
     Runs the three-step fits: 1) poly(order0) on [0, xmax0], 2) poly(order1) on [xmin1, xmax1],
     3) flat line on [xmax1, global_xmax]. Then creates and fits the combined TF1 over [0, global_xmax].
-    Returns all TF1s: (f0, f1, f_flat, f_combined).
+    Returns (f0_result, f1_result, f_flat, f_combined, final_fit), where f0_result/f1_result are the
+    dicts from poly_utils.fit_chebyshev_poly() (Chebyshev TF1 + converted monomial coeffs/errors).
     """
     logger.info(f"Performing piecewise fits with orders {order0} and {order1}")
 
     # 1) Low-range fit
     logger.debug(f"Fitting low range: 0 to {xmax0} with order {order0}")
-    f0 = fit_polynomial(hist_sf, order0, 0.0, xmax0, fit_opts="L S Q")
+    f0_result = fit_polynomial(hist_sf, order0, 0.0, xmax0, "f0_local")
 
     # 2) Mid-range fit
     logger.debug(f"Fitting mid range: {xmin1} to {xmax1} with order {order1}")
-    f1 = fit_polynomial(hist_sf, order1, xmin1, xmax1, fit_opts="L I S Q")
+    f1_result = fit_polynomial(hist_sf, order1, xmin1, xmax1, "f1_local")
 
     # 3) High-range flat fit
     logger.debug(f"Fitting high range: {xmax1} to {global_xmax} with flat line")
-    f_flat = fit_flat_line(hist_sf, xmax1, global_xmax, fit_opts="L I S R")
-    # f_flat = fit_polynomial(hist_sf, order1, xmax1, global_xmax, fit_opts="L I S R")
+    f_flat = fit_flat_line(hist_sf, xmax1, global_xmax)
 
     # Build reduced-parameter combined TF1 using the stable local fits as anchors.
-    f0_coeffs = [f0.GetParameter(i) for i in range(order0 + 1)]
-    f1_coeffs = [f1.GetParameter(i) for i in range(order1 + 1)]
+    f0_coeffs = list(f0_result["coeffs_x"])
+    f1_coeffs = list(f1_result["coeffs_x"])
     base_tail_slope = f_flat.GetParameter(0)
     logger.debug("Creating reduced-parameter combined function with 3 parameters")
 
@@ -204,17 +201,24 @@ def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xma
     f_combined.SetParameter(0, 0.0)
     f_combined.SetParameter(1, 0.0)
     f_combined.SetParameter(2, 0.0)
-    f_combined.SetParLimits(0, -0.5, 0.5)
-    f_combined.SetParLimits(1, -0.02, 0.02)
-    f_combined.SetParLimits(2, -0.02, 0.02)
+    # These 3 parameters are small corrections around the (already stable)
+    # local anchor fits, so generous - not razor-tight - bounds are enough to
+    # keep MIGRAD from running away; overly tight limits (as before) push the
+    # minimum onto a bound, where MINUIT's internal boundary transform makes
+    # HESSE/MINOS errors unreliable (often artificially huge or asymmetric).
+    f_combined.SetParLimits(0, -2.0, 2.0)
+    f_combined.SetParLimits(1, -0.5, 0.5)
+    f_combined.SetParLimits(2, -0.5, 0.5)
 
-    # Perform final reduced refit
-    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
-    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
-    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    # Perform final reduced refit: a single proper chi2 fit against hist_sf's
+    # own bin errors (not the Poisson log-likelihood option "L", which is not
+    # appropriate for an already-computed Data/MC ratio histogram).
+    final_fit = hist_sf.Fit(f_combined, "S R Q", "", 0.0, global_xmax)
+    if final_fit and int(final_fit.Status()) != 0:
+        final_fit = hist_sf.Fit(f_combined, "S R Q", "", 0.0, global_xmax)
     logger.debug(f"Final fit result: {final_fit}")
 
-    return f0, f1, f_flat, f_combined, final_fit
+    return f0_result, f1_result, f_flat, f_combined, final_fit
 
 def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
                       xmin0, xmax0, xmin1, xmax1, global_xmax,
@@ -321,26 +325,47 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     elif year == "2022postEE":
-        if njet == 2 or njet == 1:
+        if njet == 2 or njet == 1 or njet == 0:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     elif year == "2023":
-        if njet == 2 or njet == 1 or njet == 0:
+        if njet == 2 or njet == 0:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
-            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     elif year == "2023BPix":
-        if njet == 2 or njet == 1 or njet == 0:
+        if njet == 2  or njet == 0:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
+    elif year == "2024":
+        if njet == 2  or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")      
+    elif year == "2025":
+        if njet == 2  or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")    
+    elif year == "2026":
+        if njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")                              
     else:
         leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
         txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
@@ -445,13 +470,14 @@ def main():
             # Removed previous call to h_SF.GetXaxis().SetRangeUser(0.0, global_fit_xmax)
 
             # Perform the piecewise fits
-            f0, f1, f_flat, f_comb, fit_result = perform_fits(
+            f0_result, f1_result, f_flat, f_comb, fit_result = perform_fits(
                 h_SF, order0, xmin0, xmax0, order1, xmin1, xmax1, global_fit_xmax
             )
 
-            # Plot the SF and pull distributions
+            # Plot the SF and pull distributions (f0/f1 TF1s are the Chebyshev-
+            # parametrized fits - same curve/chi2/ndf as the monomial form)
             plot_sf_and_pulls(
-                h_SF, f0, f1, f_flat, f_comb, fit_result,
+                h_SF, f0_result["tf1"], f1_result["tf1"], f_flat, f_comb, fit_result,
                 xmin0, xmax0, xmin1, xmax1, global_fit_xmax,
                 year, njet, nbins_new, save_dir
             )
@@ -469,9 +495,11 @@ def main():
                 logger.debug(f"f_comb parameter {i}: {f_comb.GetParameter(i)} +/- {f_comb.GetParError(i)}")
 
             final_piecewise = build_final_piecewise_coefficients(
-                f0=f0,
+                f0_coeffs=list(f0_result["coeffs_x"]),
+                f0_errors=list(f0_result["errors_x"]),
                 order0=order0,
-                f1=f1,
+                f1_coeffs=list(f1_result["coeffs_x"]),
+                f1_errors=list(f1_result["errors_x"]),
                 order1=order1,
                 f_flat=f_flat,
                 f_comb=f_comb,
@@ -484,7 +512,7 @@ def main():
                 params_dict[f"f0_p{i}_err"] = final_piecewise["f0_errors"][i]
                 logger.debug(
                     f"f0 parameter {i}: {final_piecewise['f0_coeffs'][i]} "
-                    f"(local={f0.GetParameter(i)}) +/- {final_piecewise['f0_errors'][i]}"
+                    f"(local={f0_result['coeffs_x'][i]}) +/- {final_piecewise['f0_errors'][i]}"
                 )
 
             for i in range(order1 + 1):
@@ -492,7 +520,7 @@ def main():
                 params_dict[f"f1_p{i}_err"] = final_piecewise["f1_errors"][i]
                 logger.debug(
                     f"f1 parameter {i}: {final_piecewise['f1_coeffs'][i]} "
-                    f"(local={f1.GetParameter(i)}) +/- {final_piecewise['f1_errors'][i]}"
+                    f"(local={f1_result['coeffs_x'][i]}) +/- {final_piecewise['f1_errors'][i]}"
                 )
 
             logger.debug(
@@ -510,7 +538,9 @@ def main():
             )
 
             params_dict["horizontal_mx"] = final_piecewise["tail_slope"]
+            params_dict["horizontal_mx_err"] = final_piecewise["tail_slope_err"]
             params_dict["horizontal_c0"] = final_piecewise["tail_intercept"]
+            params_dict["horizontal_c0_err"] = final_piecewise["tail_intercept_err"]
             params_dict["polynomial_range"] = {"xlow": 0.0, "xmin1": xmin1, "xmax1": xmax1, "xhigh": global_fit_xmax}
             params_dict["total_bins"] = nbins_new
             params_dict["fit_orders"] = {"f0_order": order0, "f1_order": order1}

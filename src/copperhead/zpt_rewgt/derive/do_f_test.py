@@ -4,6 +4,7 @@ import os
 from collections import defaultdict
 
 import ROOT
+import poly_utils
 from bin_definitions import define_custom_binning, poly_fit_ranges
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
@@ -126,6 +127,7 @@ def save_histogram(
     print(f"{save_path}/fit_best_{year}_njet{njet}_{target_nbins}_order{order_high}_{outtext}.pdf")
 
     canvas.SaveAs(f"{save_path}/fit_best_{year}_njet{njet}_{target_nbins}_order{order_high}_{outtext}.pdf")
+    canvas.SaveAs(f"{save_path}/fit_best_{year}_njet{njet}_{target_nbins}_order{order_high}_{outtext}.png")
 
 
 def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outTextFile, outTextFile_keys, year, njet, outtext=""):
@@ -142,19 +144,25 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
         order_low, order_high = order, order + 1
         print(f"min: {fit_xmin}, max: {fit_xmax}, order: {order}")
 
-        polynomial_expr_low = " + ".join([f"[{i}]*x**{i}" for i in range(order_low + 1)])
-        fit_func_low = ROOT.TF1(f"poly{order}_{outtext}_low", polynomial_expr_low, fit_xmin, fit_xmax)
-        _ = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
-        _ = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
-        fit_low = hist_SF.Fit(fit_func_low, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        # Proper chi-square fits (against the histogram's own Gaussian, error-
+        # propagated bin errors) in a well-conditioned Chebyshev basis - see
+        # poly_utils.py. The old "L" (Poisson log-likelihood) option is wrong
+        # for an already-computed Data/MC ratio histogram and, combined with
+        # the raw high-order monomial basis, is what produced pathological
+        # chi2/ndf ~ 1e-5 and huge, meaningless coefficient uncertainties.
+        result_low = poly_utils.fit_chebyshev_poly(
+            hist_SF, order_low, fit_xmin, fit_xmax, f"poly{order}_{outtext}_low"
+        )
+        fit_func_low = result_low["tf1"]
+        fit_low = result_low["fit_result"]
         chi2_low = fit_func_low.GetChisquare()
         ndf_low = fit_func_low.GetNDF()
 
-        polynomial_expr_high = " + ".join([f"[{i}]*x**{i}" for i in range(order_high + 1)])
-        fit_func_high = ROOT.TF1(f"poly{order}_{outtext}_high", polynomial_expr_high, fit_xmin, fit_xmax)
-        _ = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
-        _ = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
-        fit_high = hist_SF.Fit(fit_func_high, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
+        result_high = poly_utils.fit_chebyshev_poly(
+            hist_SF, order_high, fit_xmin, fit_xmax, f"poly{order}_{outtext}_high"
+        )
+        fit_func_high = result_high["tf1"]
+        fit_high = result_high["fit_result"]
         chi2_high = fit_func_high.GetChisquare()
         ndf_high = fit_func_high.GetNDF()
 
@@ -182,29 +190,26 @@ def perform_f_test(hist_SF, fit_xmin, fit_xmax, target_nbins, bin_array, outText
             outTextFile_keys.write(f"{year} {njet} {target_nbins} {order_high} {order_low}\n")
             optimized_orders[key] = order_high
             selected_order = order_high
-            selected_fit_func = fit_func_high.Clone(
-                f"{fit_func_high.GetName()}_{year}_{njet}_{outtext}_selected"
-            )
+            # Each candidate order already gets its own uniquely-named TF1
+            # above, so we can keep the reference directly - Clone() on a
+            # Python-callable TF1 (as used by poly_utils for the numerically
+            # stable Chebyshev basis) is not guaranteed to preserve the
+            # callable across PyROOT versions.
+            selected_fit_func = fit_func_high
             selected_fit_result = fit_high
-            selected_polynomial_expr = polynomial_expr_high
+            selected_polynomial_expr = f"chebyshev(order={order_high})"
 
     if key not in optimized_orders:
         logger.info(
             f"No significant higher-order improvement found; using base polynomial order {selected_order}."
         )
-        base_expr = " + ".join([f"[{i}]*x**{i}" for i in range(selected_order + 1)])
-        base_fit_func = ROOT.TF1(
-            f"poly_base_{year}_{njet}_{outtext}", base_expr, fit_xmin, fit_xmax
+        base_result = poly_utils.fit_chebyshev_poly(
+            hist_SF, selected_order, fit_xmin, fit_xmax,
+            f"poly_base_{year}_{njet}_{outtext}",
         )
-        _ = hist_SF.Fit(base_fit_func, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
-        _ = hist_SF.Fit(base_fit_func, "L I S R", xmin=fit_xmin, xmax=fit_xmax)
-        selected_fit_result = hist_SF.Fit(
-            base_fit_func, "L I S R", xmin=fit_xmin, xmax=fit_xmax
-        )
-        selected_fit_func = base_fit_func.Clone(
-            f"{base_fit_func.GetName()}_{year}_{njet}_{outtext}_selected"
-        )
-        selected_polynomial_expr = base_expr
+        selected_fit_func = base_result["tf1"]
+        selected_fit_result = base_result["fit_result"]
+        selected_polynomial_expr = f"chebyshev(order={selected_order})"
         optimized_orders[key] = selected_order
         outTextFile.write(
             f"{year} njet{njet} {target_nbins} bins: No significant F-test improvement; using base order {selected_order}.\n"
