@@ -201,10 +201,23 @@ def build_final_piecewise_coefficients(f0_coeffs, f0_errors, order0, f1_coeffs, 
         "tail_slope_err": final_tail_slope_err,
         "tail_intercept": tail_intercept,
         "tail_intercept_err": tail_intercept_err,
+        # The 4 parameters MINUIT actually fit independently (see
+        # make_combined_function_reduced) -- saved alongside their own fit
+        # errors so a consumer can build a proper up/down envelope by
+        # perturbing these 4 (genuinely close to independent, since low_tilt/
+        # mid_tilt/delta_tail_slope are defined to vanish at their respective
+        # anchor points) instead of the 14 per-order f0_pN/f1_pN coefficients,
+        # whose _err fields mix this same combined-fit uncertainty with the
+        # local Chebyshev fit's own (strongly correlated) per-order errors --
+        # see copperhead_processor.py's getZptWgts_3region for the consumer.
         "common_shift": common_shift,
+        "common_shift_err": common_shift_err,
         "low_tilt": low_tilt,
+        "low_tilt_err": low_tilt_err,
         "mid_tilt": mid_tilt,
+        "mid_tilt_err": mid_tilt_err,
         "delta_tail_slope": delta_tail_slope,
+        "delta_tail_slope_err": delta_tail_slope_err,
     }
 
 def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xmax):
@@ -634,6 +647,19 @@ def main():
             params_dict["horizontal_mx_err"] = final_piecewise["tail_slope_err"]
             params_dict["horizontal_c0"] = final_piecewise["tail_intercept"]
             params_dict["horizontal_c0_err"] = final_piecewise["tail_intercept_err"]
+            # The 4 actual MINUIT-fit combined-refit parameters + their own
+            # fit errors (see build_final_piecewise_coefficients) -- consumed
+            # by copperhead_processor.py's getZptWgts_3region to build the
+            # up/down systematic envelope from 4 near-independent parameters
+            # instead of the 14 per-order f0_pN/f1_pN coefficients above.
+            params_dict["common_shift"] = final_piecewise["common_shift"]
+            params_dict["common_shift_err"] = final_piecewise["common_shift_err"]
+            params_dict["low_tilt"] = final_piecewise["low_tilt"]
+            params_dict["low_tilt_err"] = final_piecewise["low_tilt_err"]
+            params_dict["mid_tilt"] = final_piecewise["mid_tilt"]
+            params_dict["mid_tilt_err"] = final_piecewise["mid_tilt_err"]
+            params_dict["delta_tail_slope"] = final_piecewise["delta_tail_slope"]
+            params_dict["delta_tail_slope_err"] = final_piecewise["delta_tail_slope_err"]
             params_dict["polynomial_range"] = {"xlow": 0.0, "xmin1": xmin1, "xmax1": xmax1, "xhigh": global_fit_xmax}
             params_dict["total_bins"] = nbins_new
             params_dict["fit_orders"] = {"f0_order": order0, "f1_order": order1}
