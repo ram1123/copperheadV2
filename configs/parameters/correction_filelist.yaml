@@ -33,27 +33,24 @@ BS_res_calib_path:
   2016_RERECO: dummy
   '2017_RERECO': dummy
   '2018_RERECO': dummy
-  2022preEE: # EBE/BS calibration derived from data; same JSON used for MC and Data
+  2022preEE:
     MC: data/res_calib/res_calib_BS_correction_2022preEE_MC_nanoAODv12.json
     Data: data/res_calib/res_calib_BS_correction_2022preEE_Data_nanoAODv12.json
-  2022postEE: # EBE/BS calibration derived from data; same JSON used for MC and Data
+  2022postEE:
     MC: data/res_calib/res_calib_BS_correction_2022postEE_MC_nanoAODv12.json
     Data: data/res_calib/res_calib_BS_correction_2022postEE_Data_nanoAODv12.json
-  "2023": # EBE/BS calibration derived from data; same JSON used for MC and Data
+  "2023":
     MC: data/res_calib/res_calib_BS_correction_2023_MC_nanoAODv12.json
     Data: data/res_calib/res_calib_BS_correction_2023_Data_nanoAODv12.json
-  2023BPix: # EBE/BS calibration derived from data; same JSON used for MC and Data
+  2023BPix:
     MC: data/res_calib/res_calib_BS_correction_2023BPix_MC_nanoAODv12.json
     Data: data/res_calib/res_calib_BS_correction_2023BPix_Data_nanoAODv12.json
-  "2024": # EBE/BS calibration derived from data; same JSON used for MC and Data
-    MC: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
+  "2024":
+    MC: data/res_calib/res_calib_BS_correction_2024_MC_nanoAODv15.json
     Data: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
   "2025":
-    # Copied from 2024 until the EBE mass-resolution calibration pipeline is rerun
-    MC: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
-    Data: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
+    MC: data/res_calib/res_calib_BS_correction_2025_MC_nanoAODv15.json
+    Data: data/res_calib/res_calib_BS_correction_2025_Data_nanoAODv15.json
   "2026":
-    # PLACEHOLDER: EBE mass-resolution calibration pipeline has not been rerun for 2026;
-    # copied from 2024 (same placeholder 2025 is using).
-    MC: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
-    Data: data/res_calib/res_calib_BS_correction_2024_Data_nanoAODv15.json
+    MC: data/res_calib/res_calib_BS_correction_2026_MC_nanoAODv15.json
+    Data: data/res_calib/res_calib_BS_correction_2026_Data_nanoAODv15.json
