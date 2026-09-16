@@ -319,7 +319,7 @@ switches:
         "2024": false
         "2025": false
         "2026": false
-    do_jet_horn_puid: # Cut only for HE
+    do_jet_horn_puid:
         '2016preVFP': false # For nanoAODv12, do_jet_horn_puid should be true
         '2016postVFP': false # For nanoAODv12, do_jet_horn_puid should be true
         '2017': false # For nanoAODv12, do_jet_horn_puid should be true
@@ -328,7 +328,7 @@ switches:
         '2022postEE': false
         "2023": false
         "2023BPix": false
-        "2024": 50
+        "2024": false
         "2025": false
         "2026": false
     do_jec:
