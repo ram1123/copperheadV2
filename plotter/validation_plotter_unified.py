@@ -448,17 +448,21 @@ def build_fileset_for_year(year, load_path, available_processes, use_compacted):
             pool.map(lambda p: (p,) + _glob_process_files(load_path, p), available_processes),
             total=len(available_processes),
         ))
+    n_skipped = 0
     for process, full_load_path, files in glob_results:
-        logger.info(f"length of files: {len(files)}")
-        logger.info(f"full_load_path: {full_load_path}")
+        logger.debug(f"{process}: {len(files)} file(s) at {full_load_path}")
         if len(files) == 0:
             logger.warning("full_load_path: %s Not available. Skipping", full_load_path)
+            n_skipped += 1
             continue
         fileset[process] = {
             "files": files,
             "treename": "Events",
             "metadata": {"year": year, "sample": process},
         }
+    n_files = sum(len(entry["files"]) for entry in fileset.values())
+    skip_note = f", {n_skipped} process(es) skipped (no files found)" if n_skipped else ""
+    logger.info(f"Fileset for {year}: {len(fileset)} process(es), {n_files} file(s) total{skip_note}")
     return fileset
 
 
@@ -787,7 +791,8 @@ def _run_validation_scope(
         variables2plot += ["jj_mass_nominal_range2"]
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"]
-    logger.info(f"variables2plot: {variables2plot}")
+    logger.debug(f"variables2plot: {variables2plot}")
+    logger.info(f"{len(variables2plot)} variable(s) to plot")
 
     # sample_groups: fixed group-name list, independent of year (only the DYVBF
     # removal rule -- itself independent of year -- can change it). The actual
@@ -821,7 +826,8 @@ def _run_validation_scope(
         group_dict_by_year[year] = year_ctx["group_dict"]
         lumi_by_year[year] = year_ctx["lumi"]
         CM_energy_by_year[year] = year_ctx["CM_energy"]
-        logger.info(f"{year} available_processes: {year_ctx['available_processes']}")
+        logger.debug(f"{year} available_processes: {year_ctx['available_processes']}")
+        logger.info(f"{year}: {len(year_ctx['available_processes'])} available process(es) resolved")
 
         year_fileset = build_fileset_for_year(
             year, load_path, year_ctx["available_processes"], use_compacted
@@ -1255,7 +1261,8 @@ if __name__ == "__main__":
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
-    logger.info(f"variables2plot: {variables2plot}")
+    logger.debug(f"variables2plot: {variables2plot}")
+    logger.info(f"{len(variables2plot)} variable(s) to plot")
 
     # sample_groups: fixed group-name list, independent of year (only the DYVBF
     # removal rule -- itself independent of year -- can change it).
@@ -1299,7 +1306,8 @@ if __name__ == "__main__":
         group_dict_by_year[year] = year_ctx["group_dict"]
         lumi_by_year[year] = year_ctx["lumi"]
         CM_energy_by_year[year] = year_ctx["CM_energy"]
-        logger.info(f"available_processes: {year_ctx['available_processes']}")
+        logger.debug(f"{year} available_processes: {year_ctx['available_processes']}")
+        logger.info(f"{year}: {len(year_ctx['available_processes'])} available process(es) resolved")
 
         year_fileset = build_fileset_for_year(
             year, args.load_path, year_ctx["available_processes"], args.use_compacted
