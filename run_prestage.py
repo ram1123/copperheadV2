@@ -41,22 +41,9 @@ def _minnlo_genweight_metadata_for_file(args):
     n_gen_evts = 0
     pdf_sumw = None
 
-    # The per-member sums are built here from the Events tree with sign(genWeight),
-    # NOT taken from the Runs-tree LHEPdfSumw branch, even though that branch exists
-    # and is far cheaper to read. LHEPdfSumw is weighted by the raw genWeight, and
-    # that is exactly the quantity this path exists to discard: four files of
-    # dyTo2Mu_M-50_MiNNLO 2017 carry a genEventSumw of ~1e18-1e19, 4.3 billion times
-    # the per-file median of 2.2e9. They dominate every S_k, and their internal
-    # near-cancellations leave S_0 / S_k running from -1.27 to +5.19 instead of
-    # sitting within 1%. Using the signs keeps the sums consistent with sumGenWgts
-    # above and reproduces the honest ratios.
-    #
-    # (A single file of DYJetsToMuMu_M-100to200 agrees to 2e-6 between the two
-    # methods, so a spot check on one well-behaved file does NOT establish that the
-    # Runs tree is safe here -- the pathology is per-file and rare.)
-    #
-    # Read in batches: one MiNNLO file is ~500k events x 103 members, which is
-    # ~400 MB as float64, and this runs under a 20-way process pool.
+    # Sum PDF members with sign(genWeight) to match the MiNNLO normalisation;
+    # extreme raw weights in some files distort the Runs-tree LHEPdfSumw ratios.
+    # ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
     with uproot.open(f"{fname}:Events", **uproot_options) as tree:
         has_pdf = "LHEPdfWeight" in tree.keys()
         branches = ["genWeight"] + (["LHEPdfWeight"] if has_pdf else [])
@@ -98,15 +85,8 @@ def _pdf_sumw_for_runs_tree(tree, keys):
 
     The LHEPdfSumw branch title is "Sum of genEventWeight * LHEPdfWeight[i],
     divided by genEventSumw" -- divided by *that run's* genEventSumw -- so each
-    run is multiplied back by it before the runs are added. Skipping that step
-    would weight a short run the same as a long one, which matters for the
-    samples split across several runs.
-
-    Only the ratios S_0 / S_k are used downstream (add_pdf_variations scales
-    member k by S_0 / S_k), so the overall scale is irrelevant here -- which is
-    why this is not rescaled by the deprecated --fraction option the way
-    sumGenWgts is.
-
+    run is multiplied back by it before the runs are added. 
+    
     Returns a plain list of floats for JSON, or None when the file carries no
     LHE PDF weights; add_pdf_variations is never reached for those samples.
     """
@@ -684,11 +664,6 @@ if __name__ == "__main__":
             run through each file and collect total number of
             """
             preprocess_metadata = {
-                # Per-member inclusive sum of weights, from the Runs-tree LHEPdfSumw
-                # branch. add_pdf_variations scales eigenvector member k by S_0 / S_k
-                # with it. Stays None for data and for MC carrying no LHE PDF weights.
-                # Deliberately not rescaled by --fraction below, unlike sumGenWgts:
-                # only the ratios S_0 / S_k are used downstream.
                 "sumLHEPdfWgts" : None,
                 "sumGenWgts" : None,
                 "nGenEvts" : None,
@@ -700,13 +675,6 @@ if __name__ == "__main__":
                     logger.info(
                         f"[prestage] data sample {sample_name}: attempt {attempt} using {host_prefix}"
                     )
-                    # Read entry counts directly with uproot rather than
-                    # NanoEventsFactory.from_root: its default mode="virtual" (as of
-                    # the latest coffea) routes through uproot.open(), which only
-                    # accepts a single file or a length-1 dict of {file: treename},
-                    # breaking for any multi-file sample. Farmed out over the
-                    # existing Dask client (local or Gateway) instead of a serial
-                    # loop, since per-file XRootD opens are the bottleneck here.
                     logger.debug(f"file_input: {file_input}")
                     futures = client.map(_count_events_for_file, file_input)
                     return sum(client.gather(futures))
