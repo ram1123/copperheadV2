@@ -75,6 +75,7 @@ for year in "${years[@]}"; do
         -y "$year" \
         -m 1 \
         -z \
+        -Z \
         -S "$output_root"
 
     year_root="${output_root}/${label}/stage1_output/${year}"

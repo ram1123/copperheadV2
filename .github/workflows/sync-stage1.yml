@@ -99,6 +99,7 @@ jobs:
               -y "${{ matrix.year }}" \
               -m 1 \
               -z \
+              -Z \
               -S test/output
           '
 

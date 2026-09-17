@@ -299,7 +299,7 @@ rule stage1:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
-          -m 1 -z \
+          -m 1 -Z \
           {params.gw}  \
           {params.switches}  \
           > {log} 2>&1
