@@ -7,16 +7,21 @@ import logging
 import os
 import time
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import awkward as ak
 import hist
 import numpy as np
+import pyarrow.parquet as pq
 import tqdm
 from coffea import processor
 from coffea.nanoevents import BaseSchema
 
 import matplotlib
+matplotlib.use("Agg")  # must be set before pyplot import; also required so
+# worker processes spawned by _render_combo_plots_parallel() below don't each
+# try (and fail) to pick an interactive backend.
 import matplotlib.pyplot as plt
 import mplhep as hep
 
@@ -119,6 +124,42 @@ def getPlotVar(var_param: str):
     return plot_var
 
 
+def _value_var_for(var: str) -> str:
+    """Strip the plot-only '_range2'/'_zpeak' suffixes to get the underlying parquet field name."""
+    if "_range2" in var:
+        return var.replace("_range2", "")
+    if "_zpeak" in var:
+        return var.replace("_zpeak", "")
+    return var
+
+
+def _warn_missing_vars_once(fileset, variables2plot):
+    """
+    One-time, driver-side check of each dataset's parquet schema against the
+    variables the plotter will try to histogram. ValidationHistProcessor.process()
+    runs as a separate Dask task per chunk (often on separate worker processes),
+    so an in-`process()` warning fires once per chunk/worker with no way to
+    dedupe across the whole run; this instead peeks at one file's schema per
+    dataset up front and logs each missing variable exactly once.
+    """
+    value_vars = sorted({_value_var_for(v) for v in variables2plot})
+    for dataset_key, entry in fileset.items():
+        files = entry.get("files")
+        if not files:
+            continue
+        try:
+            schema_fields = set(pq.ParquetFile(files[0]).schema_arrow.names)
+        except Exception as e:
+            logger.debug(f"Could not read parquet schema for {dataset_key} ({files[0]}): {e}")
+            continue
+        missing = [v for v in value_vars if v not in schema_fields]
+        if missing:
+            logger.warning(
+                f"Dataset '{dataset_key}': {len(missing)} plotted variable(s) not found in "
+                f"parquet schema, will be skipped: {missing}"
+            )
+
+
 class ValidationHistProcessor(processor.ProcessorABC):
     """
     Fill per-(category, njets, zpt_option, variable) validation histograms for one
@@ -214,18 +255,14 @@ class ValidationHistProcessor(processor.ProcessorABC):
                             )
 
                     for var in templates:
-                        if "_range2" in var:
-                            value_var = var.replace("_range2", "")
-                        elif "_zpeak" in var:
-                            value_var = var.replace("_zpeak", "")
-                        else:
-                            value_var = var
+                        value_var = _value_var_for(var)
 
                         if value_var not in region_events.fields:
-                            logger.warning(
-                                f"Variable '{value_var}' not found for process '{dataset_key}' "
-                                f"in region '{region_name}'. Skipping histogram fill for '{var}'."
-                            )
+                            # Missing-variable warnings are issued once, up front,
+                            # by _warn_missing_vars_once() -- this runs as a
+                            # separate Dask task per chunk, often on different
+                            # worker processes, so a warning here can't be
+                            # deduped across the run.
                             continue
 
                         values = ak.to_numpy(ak.fill_none(region_events[value_var], value=-999.0))
@@ -397,7 +434,8 @@ def build_fileset_for_year(year, load_path, available_processes, use_compacted):
         compacted_base_path = load_path.replace("f1_0", use_compacted)
         for process in available_processes:
             compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
-            ensure_compacted(year, process, load_path, compacted_path_DNN)
+            if not os.path.exists(compacted_path_DNN):
+                ensure_compacted(year, process, load_path, compacted_path_DNN)
         load_path = compacted_base_path
 
     logger.info(f"Using parquet files from {load_path}")
@@ -446,7 +484,7 @@ def generate_combo_plots(
     zpt_option,
     region_name,
     var,
-    sample_hist_lookup,
+    sample_hist,
     sample_groups,
     plot_settings,
     save_path,
@@ -458,20 +496,21 @@ def generate_combo_plots(
     jj_eta_region,
 ):
     """
-    Project the accumulated histograms for one (year, category, njets, zpt_option,
+    Project the accumulated histogram for one (year, category, njets, zpt_option,
     region, var) combo into Data/bkg-MC/sig-MC arrays and save the PDF+txt pair.
     Returns the save directory on success, or None if there was nothing to plot.
 
-    sample_hist_lookup is keyed as sample_hist_lookup[year][var] -> hist.Hist,
-    already scoped by the caller to the current (category, njets) -- category and
-    njets are only needed here for the projection/file-naming below, not as
-    additional lookup levels.
+    sample_hist is the already-resolved hist.Hist for this (year, var) -- i.e.
+    the caller's sample_hist_lookup[year][var], already scoped to the current
+    (category, njets). Taking just the one Hist needed (rather than the whole
+    lookup dict) keeps this function's argument list cheap to pickle, since
+    _render_combo_plots_parallel() dispatches calls to it across worker
+    processes.
     """
     data_dict = {}
     bkg_MC_dict = {}
     sig_MC_dict = {}
 
-    sample_hist = sample_hist_lookup[year][var]
     if sample_hist is None:
         logger.debug(f"no histograms found for {year} {category} {njets} {var}, skipping!")
         return None
@@ -569,8 +608,7 @@ def generate_combo_plots(
     else:
         full_save_path = f"{save_path}/{year}/mplhep/Reg_{region_name}/Cat_{category}/njet_{njets}/{zpt_postfix}"
 
-    if not os.path.exists(full_save_path):
-        os.makedirs(full_save_path)
+    os.makedirs(full_save_path, exist_ok=True)
     full_save_fname = f"{full_save_path}/{var}.pdf"
 
     plot_var = getPlotVar(var)
@@ -616,6 +654,36 @@ def generate_combo_plots(
     return full_save_path
 
 
+def _render_combo_plots_parallel(combo_args_list, max_workers=None):
+    """
+    Run generate_combo_plots() once per entry in combo_args_list (each entry is
+    that function's positional-argument tuple), across worker processes instead
+    of one at a time in the calling process.
+
+    This is the actual serial hot path in a plotting run: histogram projection
+    is cheap, but matplotlib rendering (plotDataMC_compare, called twice per
+    combo for log/linear scale) is not, and generate_combo_plots() was
+    previously called in a plain Python loop -- one PDF+txt pair at a time,
+    regardless of how many CPU cores were available. Diagnosed via a standalone
+    monitored run: ~90 s wall for one (category, njets) sub-pass was ~40 s
+    client startup + ~43 s of purely serial rendering on a session with 128
+    cores sitting idle.
+
+    Falls back to sequential execution when there's nothing to gain from a
+    process pool (0-1 combos, or max_workers resolves to 1).
+    """
+    if not combo_args_list:
+        return []
+    if max_workers is None:
+        max_workers = min(len(combo_args_list), os.cpu_count() or 1)
+    if max_workers <= 1:
+        return [generate_combo_plots(*combo_args) for combo_args in combo_args_list]
+
+    with ProcessPoolExecutor(max_workers=max_workers) as pool:
+        futures = [pool.submit(generate_combo_plots, *combo_args) for combo_args in combo_args_list]
+        return [future.result() for future in futures]
+
+
 def _derive_zpt_options(remove_zpt_weights_options, add_dnn_zpt_weights_options):
     """Map (remove_zpt_weights, use_dnn_zpt_weights) boolean-list config into the
     "default"/"no_zpt"/"dnn_zpt" enum ValidationHistProcessor expects."""
@@ -653,6 +721,7 @@ def _run_validation_scope(
     dry_run,
     sample_config="configs/samples/samples.yaml",
     force_rerun=False,
+    plot_workers=None,
 ):
     """
     Run one consolidated Dask pass (year x category x njets x zpt_option, all
@@ -663,6 +732,9 @@ def _run_validation_scope(
     --rerun): useful when the underlying samples/config changed since a
     (category, njets) sub-pass was last marked done, since done-marker checks
     are purely file-existence-based and won't detect that on their own.
+
+    plot_workers is forwarded to _render_combo_plots_parallel() -- None (the
+    default) auto-sizes the pool to min(number of PDF combos, cpu_count()).
     """
     # if vbf_filter_study: remove z-peak from region (same rule as before)
     fill_regions = [r for r in region_list if not (do_vbf_filter_study and r == "z-peak")]
@@ -732,6 +804,7 @@ def _run_validation_scope(
         for process, entry in year_fileset.items():
             fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
     logger.info(f"finished building fileset! ({len(fileset)} datasets across {len(years)} year(s))")
+    _warn_missing_vars_once(fileset, variables2plot)
 
     # Resumability: each (category, njets) sub-pass below is its own coffea Runner
     # call (potentially the most expensive single step -- a full pass over the
@@ -812,29 +885,32 @@ def _run_validation_scope(
                             slot[var] += h
 
                 logger.info(f"Generating plots for category={category} njets={njets}...")
-                for year in years:
-                    for zpt_option in zpt_options:
-                        for region_name in fill_regions:
-                            for var in scoped_templates:
-                                sub_pass_plots += 1
-                                generate_combo_plots(
-                                    year,
-                                    category,
-                                    njets,
-                                    zpt_option,
-                                    region_name,
-                                    var,
-                                    sub_pass_hist_lookup,
-                                    sample_groups,
-                                    plot_settings,
-                                    str(save_path),
-                                    lumi_by_year[year],
-                                    status,
-                                    CM_energy_by_year[year],
-                                    not linear_scale,
-                                    do_vbf_filter_study,
-                                    jj_eta_region,
-                                )
+                combo_args_list = [
+                    (
+                        year,
+                        category,
+                        njets,
+                        zpt_option,
+                        region_name,
+                        var,
+                        sub_pass_hist_lookup[year].get(var),
+                        sample_groups,
+                        plot_settings,
+                        str(save_path),
+                        lumi_by_year[year],
+                        status,
+                        CM_energy_by_year[year],
+                        not linear_scale,
+                        do_vbf_filter_study,
+                        jj_eta_region,
+                    )
+                    for year in years
+                    for zpt_option in zpt_options
+                    for region_name in fill_regions
+                    for var in scoped_templates
+                ]
+                sub_pass_plots += len(combo_args_list)
+                _render_combo_plots_parallel(combo_args_list, max_workers=plot_workers)
             except Exception as exc:
                 jobstat.mark_failed(job_key, 0, exc)
                 raise
@@ -869,6 +945,7 @@ def run_bulk_validation(
     sample_config="configs/samples/samples.yaml",
     dry_run=False,
     force_rerun=False,
+    plot_workers=None,
 ):
     """
     Run the full validation-plot sweep: every (jj_eta_region, vbf_filter_study,
@@ -886,6 +963,11 @@ def run_bulk_validation(
     crash partway through doesn't lose already-completed Dask compute on rerun.
     Pass force_rerun=True (e.g. from --force) to bypass those done markers, such
     as after adding new samples to an already-"done" combo.
+
+    plot_workers controls the process-pool size used to render PDFs/txt tables
+    in parallel (see _render_combo_plots_parallel) -- None (default) auto-sizes
+    per sub-pass; pass an explicit int to cap it, e.g. if concurrent
+    run_plotter.py-driven jobs are already contending for the session's cores.
     """
     scopes = list(itertools.product(jj_eta_regions, vbf_filter_study_options, region_options))
     logger.info(f"Running {len(scopes)} (jj_eta_region, vbf_filter_study, region_list) scope(s).")
@@ -918,6 +1000,7 @@ def run_bulk_validation(
             dry_run,
             sample_config=sample_config,
             force_rerun=force_rerun,
+            plot_workers=plot_workers,
         )
 
     if not dry_run:
@@ -1087,6 +1170,17 @@ if __name__ == "__main__":
         type=str,
        help="Path to the compacted parquet files"
     )
+    parser.add_argument(
+        "--plot-workers",
+        dest="plot_workers",
+        default=None,
+        type=int,
+        help=(
+            "Number of worker processes to render PDF/txt plots in parallel "
+            "(see _render_combo_plots_parallel). Default: auto-size to "
+            "min(number of plots, cpu_count())."
+        ),
+    )
 
     # ---------------------------------------------------------
     # gather arguments
@@ -1188,6 +1282,7 @@ if __name__ == "__main__":
         for process, entry in year_fileset.items():
             fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
     logger.info("finished building fileset!")
+    _warn_missing_vars_once(fileset, variables2plot)
 
     # fill the histograms: one coffea Runner pass, chunked and dask-parallelized,
     # filling every (category, njets, zpt_option, variable) combo per chunk (eager
@@ -1229,35 +1324,37 @@ if __name__ == "__main__":
     logger.info("{style}Generating plots.{style}".format(
         style="\n" + "="*50 + "\n",))
     last_save_path = args.save_path
-    for year in years:
-        for category in categories:
-            plot_settings = plot_settings_by_category[category]
-            for njets in njets_options:
-                if category == "vbf" and njets != "inclusive":
-                    continue
-                for zpt_option in zpt_options:
-                    for region_name in args.regions:
-                        for var in tqdm.tqdm(hist_templates_by_category[category]):
-                            result_path = generate_combo_plots(
-                                year,
-                                category,
-                                njets,
-                                zpt_option,
-                                region_name,
-                                var,
-                                sample_hist_lookup,
-                                sample_groups,
-                                plot_settings,
-                                args.save_path,
-                                lumi_by_year[year],
-                                status,
-                                CM_energy_by_year[year],
-                                do_logscale,
-                                args.do_vbf_filter_study,
-                                args.jj_eta_region,
-                            )
-                            if result_path:
-                                last_save_path = result_path
+    combo_args_list = [
+        (
+            year,
+            category,
+            njets,
+            zpt_option,
+            region_name,
+            var,
+            sample_hist_lookup[year].get(var),
+            sample_groups,
+            plot_settings_by_category[category],
+            args.save_path,
+            lumi_by_year[year],
+            status,
+            CM_energy_by_year[year],
+            do_logscale,
+            args.do_vbf_filter_study,
+            args.jj_eta_region,
+        )
+        for year in years
+        for category in categories
+        for njets in njets_options
+        if not (category == "vbf" and njets != "inclusive")
+        for zpt_option in zpt_options
+        for region_name in args.regions
+        for var in hist_templates_by_category[category]
+    ]
+    result_paths = _render_combo_plots_parallel(combo_args_list, max_workers=args.plot_workers)
+    for result_path in result_paths:
+        if result_path:
+            last_save_path = result_path
 
     close_dask_client()
     logger.info("Plots are saved to %s", last_save_path)
