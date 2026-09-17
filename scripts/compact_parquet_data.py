@@ -171,9 +171,12 @@ def _get_file_rows_and_bytes(path):
 
 def ensure_compacted(
     year, sample, input_path, compacted_path, client=None,
-    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE,
+    target_mb_per_file=DEFAULT_TARGET_MB_PER_FILE, force=False,
 ):
     """Compact `sample`'s stage-1 parquet output into fewer, larger files.
+
+    force=True removes an existing compacted_path and redoes it from scratch,
+    mirroring ensure_compacted_scaled()'s rerun= behavior.
 
     Returns a short status string for the caller to tally: "compacted",
     "already_exists", "no_input_dir", "no_files", or "no_rows".
@@ -181,8 +184,11 @@ def ensure_compacted(
     logger.debug(f"year: {year}, sample: {sample}, input_path: {input_path}")
 
     if os.path.exists(compacted_path):
-        logger.info(f"[{sample}] already compacted, skipping ({compacted_path})")
-        return "already_exists"
+        if not force:
+            logger.info(f"[{sample}] already compacted, skipping ({compacted_path})")
+            return "already_exists"
+        logger.warning(f"[{sample}] force=True; removing existing compacted dataset at {compacted_path} and recompacting.")
+        shutil.rmtree(compacted_path)
 
     logger.debug(f"Compacted dataset not found: {compacted_path}")
 

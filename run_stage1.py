@@ -362,7 +362,7 @@ if __name__ == "__main__":
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
-        sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
+        sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         if args.sync:
             sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path
         logger.debug(f"Sample path: {sample_path}")
@@ -404,22 +404,21 @@ if __name__ == "__main__":
         with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                    logger.warning(f"Skipping Year: {args.year:10}, dataset: {dataset}")
+                    logger.info(f"Skipping year={args.year}, dataset={dataset} (excluded by --skipSamples/run-list)")
                     continue
 
-                logger.info("{}{}".format("\n" * 2, "=" * 51))
-                logger.info(f"===         Processing dataset: {dataset}       ===")
-                logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
-                logger.info(f"===         Year: {args.year}                        ===")
-                logger.info("{}{}".format("=" * 51, "\n" * 2))
+                logger.info(
+                    "\n%s\n===         Processing dataset: %-20s ===\n"
+                    "===         NanoAODv: %-2s                    ===\n"
+                    "===         Year: %-10s                   ===\n%s\n",
+                    "=" * 51, dataset, args.NanoAODv, args.year, "=" * 51,
+                )
 
                 sample_step = time.time()
                 if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
                     args.max_file_len = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset][0]]
-                    logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
                     args.max_file_len = MAX_FILE_LEN
-                logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
 
                 # split the sample files into smaller chunks of size args.max_file_len
                 # # use only 1/4 of the total files available in sample for test mode
@@ -431,7 +430,9 @@ if __name__ == "__main__":
                 #     sample["files"] = test_files
                 #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                logger.info(f"len(smaller_files): {len(smaller_files)}")
+                logger.info(
+                    f"{dataset}: max_file_len={args.max_file_len}, split into {len(smaller_files)} chunk group(s)"
+                )
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     # Skip if already done (unless user wants a full rerun)
                     if not args.rerun and not jobstat.should_run(dataset, idx):
@@ -591,11 +592,9 @@ if __name__ == "__main__":
                             break  # stop trying other redirectors once successful
 
                     var_elapsed = round(time.time() - var_step, 3)
-                    logger.info(f"Finished file_idx {idx} in {var_elapsed} s. (success={file_idx_succeeded})")
+                    logger.info(f"{dataset}[{idx}]: finished in {var_elapsed} s. (success={file_idx_succeeded})")
                 sample_elapsed = round(time.time() - sample_step, 3)
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
-                t6 = time.perf_counter()
-                logger.info(f"[Timing] Time taken to process sample {dataset}: {round(t6 - t2, 3)} seconds")
 
     else:
         # FIXME: update this for /store usage

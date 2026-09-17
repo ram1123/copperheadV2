@@ -80,6 +80,13 @@ switches_yaml: configs/parameters/switches_official_systematics.yaml
 use_gateway: true
 cluster_index: 0
 
+# Delete the raw stage-1 f1_0 output for a year once its compacted output has
+# been written AND validated by scripts/compact_sanity_check.py (row/size
+# checks passing). Off by default since this is irreversible; f1_0 is kept
+# forever otherwise (compaction never deletes it on its own). Only takes
+# effect for the Snakemake-driven stage1Compact rule.
+cleanup_f1_0_after_compact: false
+
 # plotting workflow
 plot_vbf_filter_study: true
 
@@ -97,6 +104,7 @@ plot_categories: ["vbf", "ggh"]
 # A category listed in plot_categories but absent from this map defaults to
 # ["inclusive"] (a single inclusive overview plot -- the historical default).
 plot_njets_plots:
+  vbf: ["inclusive"]
   ggh: ["inclusive"]
   nocat: ["inclusive"]
 # plot_njets_plots:
