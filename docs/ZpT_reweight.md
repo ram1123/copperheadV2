@@ -24,6 +24,35 @@ Before running the Z-pT derivation, you need:
    - Run-3: usually `INCamcatnloFXFX`
    - 2024 special case in the code uses `dyTo2Mu_M-50_aMCatNLO`
 
+# Re-running Only DY For A New Derivation
+
+Deriving new Z-pT weights only needs the DY sample reprocessed, not a full
+stage-1 rerun of every sample. Run stage-1 for DY under its own new
+`run_tag`/label, keeping the old DY output untouched so the new and old
+weights/histograms can be compared and should come out identical if nothing
+but the intended change was made.
+
+Once the new DY output exists, splice it into the existing label's tree with
+[splice_sample_across_years.py](../scripts/splice_sample_across_years.py)
+(documented in [Additional_Scripts.md](Additional_Scripts.md)) so the Step 0-2
+commands below can keep pointing at the one label they already use, without
+copying data or editing sample lists:
+
+```bash
+python scripts/splice_sample_across_years.py \
+  --save-root /work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean \
+  --old-run-tag <existing_run_tag> \
+  --new-run-tag <new_DY-only_run_tag> \
+  --sample <dy_sample> \
+  --yes
+```
+
+It renames the old DY sample directory aside (per year, at both `f1_0` and
+`compacted`) rather than deleting it, then symlinks in the new DY output in
+its place -- so the old DY stays on disk for the old-vs-new comparison, and
+`save_SF_rootFiles.py` (Step 0 below) transparently picks up the new DY
+without any path changes.
+
 # Step 0: Save Data And DY Histograms
 
 This step reads stage-1 parquet files, removes any already-applied Z-pT weight from DY, makes `Data`, `DY`, and `Data / DY` histograms in each jet bin, and saves them into ROOT workspaces.

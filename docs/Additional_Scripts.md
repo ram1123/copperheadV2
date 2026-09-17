@@ -80,3 +80,49 @@ Feed the combined file to `brilcalc` for the actual processed luminosity:
 ```bash
 brilcalc lumi -i <stage1_output_dir>/_status/processedLumis_certified.json -u /pb --normtag <normtag.json>
 ```
+
+# Splice a re-run sample into an existing label (`splice_sample_across_years.py`)
+
+When one sample (e.g. DY, after deriving new Z-pT weights) is reprocessed
+under its own separate `run_tag`, this script merges it back into an
+existing label's tree so every downstream step (compact, stage2/3, z-pT
+derivation, ...) that expects one label directory per year keeps working
+unmodified -- without editing any of those scripts or their sample lists.
+
+**How it works**
+
+For each year, it renames the old sample directory aside with a timestamp
+suffix (never deletes -- the old version stays on disk for comparison) and
+creates an absolute symlink at the freed path pointing at the new run's
+version of that sample. `glob`/`os.listdir` follow directory symlinks the
+same as real directories, so nothing downstream needs to know the splice
+happened. It handles both `f1_0` (raw stage-1 output) and `compacted` in one
+command, since a sample normally needs both spliced together for downstream
+steps to see a consistent picture; `compacted` is skipped (not an error) if
+the new run hasn't been compacted yet, while `f1_0` is required.
+
+Years are auto-discovered by default: every year for which the old label
+already has `stage1_output/<year>/f1_0/<sample>` on disk (override with
+`--years`). The full per-year label (e.g.
+`Run3_nanoAODv15_<run_tag>`) is derived from the `--old-run-tag`/
+`--new-run-tag` you give it, using a hand-kept mirror of
+`workflow/Snakefile`'s `YEAR_META`/`label_for_year()` -- update the
+script's own `YEAR_META` if a new year/NanoAOD version is added there.
+
+Dry-run by default (prints the full rename+symlink plan, changes nothing);
+pass `--yes` to actually apply it.
+
+**Usage Example**
+
+```bash
+python scripts/splice_sample_across_years.py \
+  --save-root /work/projects/hmm/<user>/hmm_ntuples/copperheadV1clean \
+  --old-run-tag FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation \
+  --new-run-tag FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_DYReRun \
+  --sample dyTo2Mu_M-50_aMCatNLO \
+  --yes
+```
+
+A single-`(old_base, new_base)`-pair bash equivalent, `scripts/splice_sample_dir.sh`,
+also still exists for a one-year/one-path-pair splice without the
+run_tag/`YEAR_META` templating.
