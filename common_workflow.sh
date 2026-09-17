@@ -22,6 +22,7 @@ common_defaults() {
     is_mc="0"
     is_sync="0"
     is_cutflow="0"
+    force_compact="0"
     switches_yaml_file=""
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
@@ -32,7 +33,7 @@ common_defaults() {
 }
 
 parse_common_args() {
-    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:w:ksfzZDV" opt; do
+    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:w:ksfzZFDV" opt; do
         case "${opt}" in
             h) usage ;;
             c) dataset_yaml="${OPTARG}" ;;
@@ -56,6 +57,7 @@ parse_common_args() {
             f) debug_fraction="1" ;;
             z) is_sync="1" ;;
             Z) is_cutflow="1" ;;
+            F) force_compact="1" ;;
             D) compact_add_dnn_score="1" ;;
             V) do_vbf_filter_study="1" ;;
             *) usage ;;
@@ -385,6 +387,9 @@ build_compact_cmd() {
             --fix_dimuon_mass
             --save_postfix "${save_postfix}"
         )
+    fi
+    if [[ "${force_compact}" == "1" ]]; then
+        cmd+=(--rerun)
     fi
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")

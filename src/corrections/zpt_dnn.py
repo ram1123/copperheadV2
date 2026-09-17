@@ -235,7 +235,7 @@ def eval_zpt_torchscript_by_njet(
     feat_rec = ak.zip(
         {k: ak.fill_none(v, 0.0) for k, v in features.items()}, depth_limit=1
     )
-    logger.info(f"eval_zpt_torchscript_by_njet: feat_rec.fields={feat_rec.fields}, njets.fields={njets.fields}")
+    logger.debug(f"eval_zpt_torchscript_by_njet: feat_rec.fields={feat_rec.fields}, njets.fields={njets.fields}")
 
     # If dask input: do per-partition inference
     if isinstance(feat_rec, dak.Array) or isinstance(njets, dak.Array):

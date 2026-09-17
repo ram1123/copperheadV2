@@ -7,6 +7,7 @@ HMM_BASE = config.get("hmm_base", f"/work/projects/hmm")
 HMM_USER = os.environ["USER"]
 
 USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
+CLEANUP_F1_0_AFTER_COMPACT = config.get("cleanup_f1_0_after_compact", False)
 
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
@@ -357,6 +358,7 @@ rule stage1Compact:
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
         ),
+        cleanup_f1_0="1" if CLEANUP_F1_0_AFTER_COMPACT else "0",
     resources:
         gateway=1,
     shell:
@@ -381,6 +383,18 @@ rule stage1Compact:
             echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
             echo "stage1Compact year={wildcards.year} attempt= FAILED" >> {FAIL_LOG}
             exit 1
+        fi
+
+        # -----------------------------
+        # Optional cleanup: once compact_sanity_check.py above has confirmed
+        # every sample's compacted output matches f1_0 (row counts/sizes),
+        # f1_0 is a fully-redundant duplicate of data now safely held in
+        # compacted/ -- opt-in via cleanup_f1_0_after_compact in config.yaml
+        # since this is irreversible (f1_0 is otherwise never deleted).
+        # -----------------------------
+        if [[ "{params.cleanup_f1_0}" == "1" ]]; then
+            echo "cleanup_f1_0_after_compact enabled; removing $BASE/f1_0"
+            rm -rf "$BASE/f1_0"
         fi
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}

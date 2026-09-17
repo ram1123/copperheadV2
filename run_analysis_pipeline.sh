@@ -33,6 +33,8 @@ Options:
         (see cutflow_merge above). Independent of -z -- pass both for a
         sync-sample cutflow run (e.g. the CI regression test), or -Z alone
         for a cutflow run against the full/production sample list.
+  -F    Force compact: redo compaction from scratch (compact mode only) even
+        if a compacted output already exists on disk for a sample.
   -D    Add DNN score during the compact step. Default is off.
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 workflow.
   -w    Path to a standalone switches yaml (stage-1 only), e.g.

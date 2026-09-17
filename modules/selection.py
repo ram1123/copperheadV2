@@ -5,6 +5,7 @@ import awkward as ak
 import pandas as pd
 import yaml
 from modules.classify_year import is_run3
+from modules.utils import logger
 
 # repo_root/modules/selection.py -> repo_root
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -142,7 +143,7 @@ def applyRegionCatCuts(
         prod_cat_cut = prod_cat_cut  # no additional cut
     else:  # VBF or ggH
         if do_VH_veto:
-            print("Applying VH veto!")
+            logger.debug("Applying VH veto!")
             # NOTE: fatjet and MET veto for VH: nfatJets_drmuon == 0 and MET_pt < 150 GeV
             fatjet_veto = ak.fill_none((events.nfatJets_drmuon == 0), value=False)
             met_veto = ak.fill_none((events.MET_pt < 150), value=False)

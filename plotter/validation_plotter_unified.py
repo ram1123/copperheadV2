@@ -417,12 +417,15 @@ def resolve_year_context(
     }
 
 
-def build_fileset_for_year(year, load_path, available_processes, use_compacted):
+def build_fileset_for_year(year, load_path, available_processes, use_compacted, force_compact=False):
     """
     Build the coffea fileset entries (one per process) for one year, bootstrapping
     the compacted parquet path via ensure_compacted() when requested. Returns a
     dict keyed by plain process name; the caller prefixes keys with the year for
     cross-year fileset merging.
+
+    force_compact=True always calls ensure_compacted(force=True), even when
+    compacted_path_DNN already exists, to redo a stale/suspect compaction.
     """
     load_path = str(load_path)
     if use_compacted != "":
@@ -435,8 +438,8 @@ def build_fileset_for_year(year, load_path, available_processes, use_compacted):
         compacted_base_path = load_path.replace("f1_0", use_compacted)
         for process in available_processes:
             compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
-            if not os.path.exists(compacted_path_DNN):
-                ensure_compacted(year, process, load_path, compacted_path_DNN)
+            if force_compact or not os.path.exists(compacted_path_DNN):
+                ensure_compacted(year, process, load_path, compacted_path_DNN, force=force_compact)
         load_path = compacted_base_path
 
     logger.info(f"Using parquet files from {load_path}")
@@ -751,11 +754,16 @@ def _run_validation_scope(
     sample_config="configs/samples/samples.yaml",
     force_rerun=False,
     plot_workers=None,
+    force_compact=False,
 ):
     """
     Run one consolidated Dask pass (year x category x njets x zpt_option, all
     computed together) for a single fixed (jj_eta_region, vbf_filter_study,
     region_list) scope. `client` is None during a dry run.
+
+    force_compact=True redoes compaction from scratch (see
+    build_fileset_for_year/ensure_compacted) even if a compacted_path already
+    exists on disk -- for recovering from a stale/suspect compaction.
 
     force_rerun bypasses the `_status` done markers (mirrors run_stage1.py's
     --rerun): useful when the underlying samples/config changed since a
@@ -830,7 +838,8 @@ def _run_validation_scope(
         logger.info(f"{year}: {len(year_ctx['available_processes'])} available process(es) resolved")
 
         year_fileset = build_fileset_for_year(
-            year, load_path, year_ctx["available_processes"], use_compacted
+            year, load_path, year_ctx["available_processes"], use_compacted,
+            force_compact=force_compact,
         )
         for process, entry in year_fileset.items():
             fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
@@ -977,6 +986,7 @@ def run_bulk_validation(
     dry_run=False,
     force_rerun=False,
     plot_workers=None,
+    force_compact=False,
 ):
     """
     Run the full validation-plot sweep: every (jj_eta_region, vbf_filter_study,
@@ -1032,6 +1042,7 @@ def run_bulk_validation(
             sample_config=sample_config,
             force_rerun=force_rerun,
             plot_workers=plot_workers,
+            force_compact=force_compact,
         )
 
     if not dry_run:
@@ -1202,6 +1213,13 @@ if __name__ == "__main__":
        help="Path to the compacted parquet files"
     )
     parser.add_argument(
+        "--force-compact",
+        dest="force_compact",
+        action="store_true",
+        default=False,
+        help="Redo compaction from scratch even if a compacted output already exists on disk",
+    )
+    parser.add_argument(
         "--plot-workers",
         dest="plot_workers",
         default=None,
@@ -1310,7 +1328,8 @@ if __name__ == "__main__":
         logger.info(f"{year}: {len(year_ctx['available_processes'])} available process(es) resolved")
 
         year_fileset = build_fileset_for_year(
-            year, args.load_path, year_ctx["available_processes"], args.use_compacted
+            year, args.load_path, year_ctx["available_processes"], args.use_compacted,
+            force_compact=args.force_compact,
         )
         for process, entry in year_fileset.items():
             fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry

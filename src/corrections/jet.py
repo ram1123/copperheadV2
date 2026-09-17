@@ -586,12 +586,15 @@ def getHemVetoRunFilter(run, event_num, config, is_mc: bool, NanoAODv: int):
     hemvetoRatioConfig = config["HemVeto_ratio"]
     if is_mc:
         try: # see if the nanoAODV distinction exists
-            logger.info(f"nanoAODv{NanoAODv}")
             prob = config["HemVeto_ratio"][f"nanoAODv{NanoAODv}"] # ratio of HemVeto applicable run / total nevents for 2018UL
-        except:
+        except (KeyError, TypeError):
+            logger.warning(
+                f"HemVeto_ratio has no per-nanoAODv entry for nanoAODv{NanoAODv}; "
+                f"falling back to the flat HemVeto_ratio value {hemvetoRatioConfig!r}"
+            )
             prob = config["HemVeto_ratio"]
 
-        logger.info(f"HEMveto prob: {prob}")
+        logger.debug(f"nanoAODv{NanoAODv} HEMveto prob: {prob}")
         # intialize random number generator
         resrng = cs.Correction(
             name="resrng",
