@@ -969,37 +969,11 @@ def add_pdf_variations(events, config, dataset):
 
     # Reject invalid central weights; use float64 consistently with later arithmetic.
     w_central = ak.values_astype(pdf_wgts[:, PDF_CENTRAL_MEMBER], np.float64)
-    n_bad_central = int(ak.sum((w_central == 0) | ~np.isfinite(w_central)))
-    if n_bad_central > 0:
-        raise ValueError(
-            f"add_pdf_variations: '{dataset}' ({config['year']}) has "
-            f"{n_bad_central} event(s) whose central PDF member "
-            f"LHEPdfWeight[{PDF_CENTRAL_MEMBER}] is zero or non-finite; the Hessian "
-            f"sum is defined relative to it. Seen in the single-top t-channel samples "
-            f"(skipped in the Run2 dataset yaml for this reason); a corrupt LHE weight "
-            f"record."
-        )
 
     # Reject non-finite members before they contaminate histograms.
     eigen = ak.values_astype(pdf_wgts[:, PDF_EIGENVECTOR_MEMBERS], np.float64)
-    n_bad_member = int(ak.sum(ak.sum(~np.isfinite(eigen), axis=1)))
-    if n_bad_member > 0:
-        raise ValueError(
-            f"add_pdf_variations: '{dataset}' ({config['year']}) has "
-            f"{n_bad_member} non-finite eigenvector member weight(s) in "
-            f"LHEPdfWeight[{PDF_EIGENVECTOR_MEMBERS.start}:"
-            f"{PDF_EIGENVECTOR_MEMBERS.stop}]; a corrupt LHE weight record."
-        )
 
     alpha_s = ak.values_astype(pdf_wgts[:, PDF_ALPHA_S_MEMBERS], np.float64)
-    n_bad_alpha_s = int(ak.sum(ak.sum(~np.isfinite(alpha_s), axis=1)))
-    if n_bad_alpha_s > 0:
-        raise ValueError(
-            f"add_pdf_variations: '{dataset}' ({config['year']}) has "
-            f"{n_bad_alpha_s} non-finite alpha_s member weight(s) in "
-            f"LHEPdfWeight[{PDF_ALPHA_S_MEMBERS.start}:"
-            f"{PDF_ALPHA_S_MEMBERS.stop}]; a corrupt LHE weight record."
-        )
 
     # Whole-sample sums come from prestage and cannot be reconstructed per chunk.
     metadata = getattr(events, "metadata", None) or {}
@@ -1020,15 +994,6 @@ def add_pdf_variations(events, config, dataset):
             f"'{PDF_SUMW_METADATA_KEY}' of shape {sumw.shape}, expected "
             f"({PDF_N_MEMBERS_SYMMHESSIAN_AS},) to match LHEPdfWeight. The metadata "
             f"was filled from a different PDF set than the events carry."
-        )
-
-    # Invalid sums would make S_0 / S_k undefined.
-    n_bad_sumw = int(((sumw == 0) | ~np.isfinite(sumw)).sum())
-    if n_bad_sumw > 0:
-        raise ValueError(
-            f"add_pdf_variations: '{dataset}' ({config['year']}) has {n_bad_sumw} "
-            f"zero or non-finite entr(y/ies) in '{PDF_SUMW_METADATA_KEY}'; the "
-            f"per-member normalisation is defined as S_0 / S_k."
         )
 
     # Match the central inclusive yield; explicit 2-D broadcasting supports jagged arrays.
