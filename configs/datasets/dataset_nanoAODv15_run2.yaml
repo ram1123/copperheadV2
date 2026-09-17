@@ -264,11 +264,8 @@ years:
                     - null
 
         Top:
-            # SKIPPED: PDF central weight is 1.0 but members are ~0.5, giving invalid variations.
-            # The LHA-ID gate keeps PDFs enabled, so the sample is excluded.
-            # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
             tt_inclusive_amcatnlo:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
                 cross_section_pb: null
@@ -345,11 +342,8 @@ years:
                 references:
                     - null
 
-            # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-            # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-            # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
             st_tchannel_top:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
                 cross_section_pb: 136.02
@@ -361,11 +355,8 @@ years:
                 references:
                     - null
 
-            # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-            # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-            # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
             st_tchannel_antitop:
-                skip_sample: True
+                skip_sample: False
                 datasets:
                     - /ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL17NanoAODv15-150X_mc2017_realistic_v1-v1/NANOAODSIM
                 cross_section_pb: 80.95
@@ -670,7 +661,7 @@ years:
                 filter_efficiency: 1.0
                 references:
                 - null
-    "2018": # FIXME: From here onwards below is the automated version of chatGPT from codimd doc (https://codimd.web.cern.ch/aK_Yxu91QHqpsjeWaa4aIw#Parts-missing). So there's a good chance that there's errors
+    "2018":
       Data:
         total_lumi_pb: 59830.0
         data_A:
@@ -863,11 +854,8 @@ years:
           references: [null]
 
       Top:
-        # SKIPPED: PDF central weight is 1.0 but members are ~0.5, giving invalid variations.
-        # The LHA-ID gate keeps PDFs enabled, so the sample is excluded.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         tt_inclusive_amcatnlo:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv15-150X_mc2018_realistic_v1-v1/NANOAODSIM
           cross_section_pb: null
@@ -926,11 +914,8 @@ years:
           filter_efficiency: null
           references: [null]
 
-        # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-        # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         st_tchannel_top:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL18NanoAODv15-150X_mc2018_realistic_v1-v1/NANOAODSIM
           cross_section_pb: 136.02
@@ -939,11 +924,8 @@ years:
           filter_efficiency: null
           references: [null]
 
-        # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-        # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         st_tchannel_antitop:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL18NanoAODv15-150X_mc2018_realistic_v1-v1/NANOAODSIM
           cross_section_pb: 80.95
@@ -1252,11 +1234,8 @@ years:
           references: [null]
 
       Top:
-        # SKIPPED: PDF central weight is 1.0 but members are ~0.5, giving invalid variations.
-        # The LHA-ID gate keeps PDFs enabled, so the sample is excluded.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         tt_inclusive_amcatnlo:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
           cross_section_pb: null
@@ -1315,11 +1294,8 @@ years:
           filter_efficiency: null
           references: [null]
 
-        # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-        # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         st_tchannel_top:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
           cross_section_pb: 136.02
@@ -1328,11 +1304,8 @@ years:
           filter_efficiency: null
           references: [null]
 
-        # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-        # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         st_tchannel_antitop:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL16NanoAODv15-150X_mcRun2_asymptotic_v1-v1/NANOAODSIM
           cross_section_pb: 80.95
@@ -1664,11 +1637,8 @@ years:
           references: [null]
 
       Top:
-        # SKIPPED: PDF central weight is 1.0 but members are ~0.5, giving invalid variations.
-        # The LHA-ID gate keeps PDFs enabled, so the sample is excluded.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         tt_inclusive_amcatnlo:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v2/NANOAODSIM
           cross_section_pb: null
@@ -1727,11 +1697,8 @@ years:
           filter_efficiency: null
           references: [null]
 
-        # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-        # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         st_tchannel_top:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v1/NANOAODSIM
           cross_section_pb: 136.02
@@ -1740,11 +1707,8 @@ years:
           filter_efficiency: null
           references: [null]
 
-        # SKIPPED (2026-09-14): invalid PDF weights; antitop w0=0 breaks PDF variations.
-        # Skip both t-channel samples consistently; the LHA-ID gate keeps PDFs enabled.
-        # Survey: .agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md
         st_tchannel_antitop:
-          skip_sample: True
+          skip_sample: False
           datasets:
             - /ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL16NanoAODAPVv15-150X_mcRun2_asymptotic_preVFP_v1-v1/NANOAODSIM
           cross_section_pb: 80.95

@@ -102,6 +102,32 @@ The main code for plotting is in the [plotter/validation_plotter_unified.py](plo
 python run_plotter.py
 ```
 
+## Known PDF-weight problems in the Run2 NanoAODv15 samples
+
+Three `Top` samples in [configs/datasets/dataset_nanoAODv15_run2.yaml](configs/datasets/dataset_nanoAODv15_run2.yaml)
+carry LHE PDF weights that cannot be turned into valid PDF variations. The problem is in
+the samples themselves, in all four Run2 eras (2016preVFP, 2016postVFP, 2017, 2018):
+
+| Sample | Dataset | Problem |
+|---|---|---|
+| `tt_inclusive_amcatnlo` | `/TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8/...` | The PDF central weight is 1.0 while the members are ~0.5, so member/central ratios are meaningless. |
+| `st_tchannel_top` | `/ST_t-channel_top_4f_InclusiveDecays_.../...` | Invalid PDF weights; skipped together with the antitop sample so the t-channel is treated consistently. |
+| `st_tchannel_antitop` | `/ST_t-channel_antitop_4f_InclusiveDecays_.../...` | The antitop sample has `w0 = 0`, which breaks the PDF variations (division by the central weight). |
+
+The per-sample survey these findings come from is
+`.agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md`.
+
+This is not caught automatically. The LHA-ID gate (`pdf_supported_lha_ids` in
+[configs/parameters/switches.yaml](configs/parameters/switches.yaml)) only checks *which*
+PDF set a sample stores, not whether its weights are usable, so it keeps PDFs enabled for
+all three. These samples were excluded by hand with `skip_sample: True` on 2026-09-14.
+
+**Current state: all three are set back to `skip_sample: False`, i.e. they are processed.**
+If you run stage1 with `do_pdf` on for these eras, their `pdf_unc` (and `alpha_s_unc`)
+templates are derived from the broken weights and should not be trusted. Set
+`skip_sample: True` for these samples again to reproduce the earlier excluded-sample
+production.
+
 ## Per-event mass calibration
 
 ```bash

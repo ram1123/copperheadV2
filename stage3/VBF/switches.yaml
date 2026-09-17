@@ -1,0 +1,17 @@
+# Stage3-only switches for the VBF channel, read directly by run_stage3_vbf.py (not by
+# src/lib/get_parameters.py, which only globs configs/parameters/*.yaml).
+# Same shape as configs/parameters/switches.yaml: one per-era block per switch.
+switches:
+    # true: alpha_s is its own nuisance, `alpha_s_unc`, next to `pdf_unc`.
+    # false: one combined `pdf_alpha_s_unc` (PDF4LHC15 Eq. 28).
+    # Consumed by stage3/make_templates.py, which raises if an era is missing.
+    split_pdf_alpha_s:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false

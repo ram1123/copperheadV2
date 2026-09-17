@@ -12,7 +12,7 @@ from stage3.edit_datacard4DY_matchedJets import (
 from stage3.make_datacards import build_datacards
 from stage3.make_templates import to_templates
 from modules.sample_config import get_all_dicts
-from src.lib.get_parameters import getParametersForYr
+from omegaconf import OmegaConf
 parser = build_common_parser()
 parser.add_argument(
     "-nv",
@@ -75,16 +75,16 @@ _, _, parameters["grouping"] = get_all_dicts(
 )
 
 # Whether alpha_s is emitted as its own `alpha_s_unc` nuisance next to `pdf_unc`, or
-# combined with it into `pdf_alpha_s_unc`. Per era, from configs/parameters/switches.yaml;
-# stage3/make_templates.py raises if an era is missing.
-parameters["split_pdf_alpha_s"] = {
-    y: bool(
-        getParametersForYr(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs/parameters/"),
-            y,
-        )["switches"]["split_pdf_alpha_s"]
+# combined with it into `pdf_alpha_s_unc`. Per era, from stage3/VBF/switches.yaml
+# (stage3-only switches, kept out of configs/parameters/); stage3/make_templates.py
+# raises if an era is missing.
+stage3_switches = OmegaConf.load(
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "stage3", "VBF", "switches.yaml"
     )
-    for y in years
+)["switches"]
+parameters["split_pdf_alpha_s"] = {
+    y: bool(stage3_switches["split_pdf_alpha_s"][y]) for y in years
 }
 
 stage2_histogram_path = stage2_histogram_directory(

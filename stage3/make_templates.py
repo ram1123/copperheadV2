@@ -231,14 +231,14 @@ def to_templates(parameters, hist_df=None):
 
 def _split_pdf_alpha_s(parameters, year):
     """`split_pdf_alpha_s` for one era, as run_stage3_vbf.py read it from
-    configs/parameters/switches.yaml. Raises rather than defaulting, because the two
-    settings produce differently named nuisances."""
+    stage3/VBF/switches.yaml. Raises rather than defaulting, because the two settings
+    produce differently named nuisances."""
     per_year = parameters.get("split_pdf_alpha_s")
     if per_year is None or year not in per_year:
         raise ValueError(
             f"make_templates: parameters['split_pdf_alpha_s'] has no entry for {year}; "
-            f"it is read per year from configs/parameters/switches.yaml by "
-            f"run_stage3_vbf.py and decides whether alpha_s is its own nuisance."
+            f"it is read per year from stage3/VBF/switches.yaml by run_stage3_vbf.py and "
+            f"decides whether alpha_s is its own nuisance."
         )
     return bool(per_year[year])
 

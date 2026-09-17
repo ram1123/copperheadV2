@@ -68,6 +68,29 @@ def add_transformer_score(events, year):
 # --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
 
 
+def load_stage2_switches():
+    """Per-era stage2 switches from stage2/VBF/switches.yaml, next to this script.
+
+    Kept out of configs/parameters/ (which src/lib/get_parameters.py globs for stages 1
+    and 3) because these switches only steer what stage2 writes."""
+    path = Path(__file__).resolve().parent / "stage2" / "VBF" / "switches.yaml"
+    with open(path) as switch_file:
+        return yaml.safe_load(switch_file)["switches"]
+
+
+def divide_dy_for_year(switch_per_year, year):
+    """`divide_dy_into_matched_jets` for one era. Raises rather than defaulting, because
+    the setting decides how many histogram files each DY sample produces, and stage3
+    infers the split from those files."""
+    if not switch_per_year or year not in switch_per_year:
+        raise ValueError(
+            f"divide_dy_into_matched_jets has no entry for {year}; it is read per year "
+            f"from stage2/VBF/switches.yaml and decides whether DY histograms are split "
+            f"into matched2J/matched01J."
+        )
+    return bool(switch_per_year[year])
+
+
 def is_dy_sample(sample_name):
     """Return whether a Stage-1 sample name belongs to the DY family."""
     return sample_name.lower().startswith("dy")
@@ -336,7 +359,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         score_name,
         no_variations=False,
         do_vbf_filter_study=False,
-        divide_dy_into_matched_jets=False,
+        divide_dy_by_year=None,
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
         use_transformer_vbf_channel=False,
@@ -351,7 +374,9 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.score_name = score_name
         self.no_variations = no_variations
         self.do_vbf_filter_study = do_vbf_filter_study
-        self.divide_dy_into_matched_jets = divide_dy_into_matched_jets
+        # Per-era `divide_dy_into_matched_jets`; one stage2 run can span several eras,
+        # so the switch is resolved per dataset in process(), not here.
+        self.divide_dy_by_year = divide_dy_by_year
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
         self.use_transformer_vbf_channel = use_transformer_vbf_channel
@@ -553,8 +578,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 .Double()
             )
 
-        divide_dy_sample = (
-            self.divide_dy_into_matched_jets and is_dy_sample(sample_type)
+        divide_dy_sample = is_dy_sample(sample_type) and divide_dy_for_year(
+            self.divide_dy_by_year, year
         )
         histogram_categories = (
             DY_MATCH_CATEGORIES if divide_dy_sample else ("hist",)
@@ -944,21 +969,16 @@ if __name__ == "__main__":
             "ensemble is 2017-trained and carries no year feature."
         ),
     )
-    parser.add_argument(
-        "--divideDY_intoMatachedJets",
-        dest="divide_dy_into_matched_jets",
-        default=True,
-        action="store_true",
-        help=(
-            "Split every DY sample histogram using gjj_mass > 0 into "
-            "<sample>_matched2J_hist.pkl and <sample>_matched01J_hist.pkl."
-        ),
-    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
     t1 = time.perf_counter()
     logger.info(f"[timing] Argument parsing time: {t1 - t0:.2f} seconds")
+
+    # Per-era stage2 switches (e.g. divide_dy_into_matched_jets); no CLI equivalent, so
+    # that a produced set of histograms always matches a recorded configuration.
+    stage2_switches = load_stage2_switches()
+    logger.info(f"stage2 switches (stage2/VBF/switches.yaml): {stage2_switches}")
 
     start_time = time.time()
     client = get_dask_client(
@@ -1056,7 +1076,7 @@ if __name__ == "__main__":
                 hist_save_path / output_name
                 for output_name in histogram_output_names(
                     sample_type,
-                    args.divide_dy_into_matched_jets,
+                    divide_dy_for_year(stage2_switches["divide_dy_into_matched_jets"], year),
                 )
             ]
             existing_output_paths = [
@@ -1106,7 +1126,7 @@ if __name__ == "__main__":
                 score_name=f"score_{args.label}",
                 no_variations=args.no_variations,
                 do_vbf_filter_study=args.do_vbf_filter_study,
-                divide_dy_into_matched_jets=args.divide_dy_into_matched_jets,
+                divide_dy_by_year=stage2_switches["divide_dy_into_matched_jets"],
                 allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
                 use_transformer_vbf_channel=args.use_transformer_vbf_channel,
