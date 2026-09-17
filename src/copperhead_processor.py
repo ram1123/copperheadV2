@@ -1682,27 +1682,11 @@ class EventProcessor(processor.ProcessorABC):
                 )
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
-            # add_pdf_variations implements the symmetric-Hessian prescription for the
-            # two 103-member `symmhessian+as` NNPDF3.1 sets, and raises on anything else:
-            #   LHA 306000-306102  NNPDF31_nnlo_hessian_pdfas
-            #   LHA 325300-325402  NNPDF31_nnlo_as_0118_mc_hessian_pdfas
-            # Gate on the set the sample actually carries, read from its LHEPdfWeight
-            # branch title, rather than on a list of sample names. The accepted sets are
-            # listed per year under `pdf_supported_lha_ids` in
-            # configs/parameters/switches.yaml. Samples on any other
-            # set get unity members below. In configs/datasets/ those are the Run2
-            # 101-member sets
-            #   LHA 325500-325600  NNPDF31_nnlo_as_0118_nf_4_mc_hessian
-            #                      (symmhessian but with no alpha_s members)
-            #   LHA 320900-321000  NNPDF31_nnlo_as_0118_nf_4
-            #                      (MC replicas -- needs the RMS prescription, not this one)
-            # carried by ww_*, wz_1l1nu2q, wz_1l3nu, wz_2q2nu, www, wwz, zz_2l2nu and
-            # st_schannel_*. The same sample names in Run3 carry 325300 and pass.
-            #
-            # A supported set does not guarantee usable weights. Samples whose stored LHE
-            # weights are broken (st_tchannel_*, tt_inclusive_amcatnlo) are skipped in the
-            # Run2 dataset yaml, with the reasons next to them, rather than special-cased
-            # here: this gate has no way to keep them with PDF switched off.
+            # Gate by branch-title LHA IDs using pdf_supported_lha_ids in switches.yaml.
+            # Only 103-member NNPDF3.1 symmhessian+as sets (306000/325300) are supported;
+            # other sets receive unity weights because they need different prescriptions.
+            # Supported sets with corrupt weights (st_tchannel_*, tt_inclusive_amcatnlo)
+            # are excluded in the Run2 dataset YAML.
             pdf_lha_ids = get_pdf_lha_id_range(events)
             logger.debug(f"{dataset} ({year}): LHEPdfWeight LHA IDs {pdf_lha_ids}")
             if pdf_lha_ids is None and ("LHEPdfWeight" in events.fields):
@@ -1717,12 +1701,6 @@ class EventProcessor(processor.ProcessorABC):
                 and pdf_lha_ids[0] in self.config["switches"]["pdf_supported_lha_ids"]
             )
             # The 100 eigenvector members are carried to stage3 as separate weight
-            # columns and combined there per bin via PDF4LHC21 Eq. (6.5). They are
-            # deliberately NOT collapsed into a per-event envelope here: squaring
-            # before summing over events discards the x-space cancellation the
-            # eigenvector decomposition encodes. The columns are written where
-            # weight_dict is built, because each must multiply the *final* nominal
-            # weight and `weights` is still being filled at this point.
             if do_pdf:
                 logger.debug("doing pdf!")
                 pdf_member_ratios, pdf_alpha_s_ratios, pdf_central_weight = add_pdf_variations(
@@ -2451,19 +2429,9 @@ class EventProcessor(processor.ProcessorABC):
                     else:
                         weight_dict[col] = nominal_weight * pdf_alpha_s_ratios[:, j]
 
-                # Debug only -- nothing downstream reads this column. The members above
-                # are scaled by the inclusive S_0 / S_k, which is a per-member constant
-                # and so leaves each event's own w_0 nowhere in the output. w_0 is 1 by
-                # construction (the branch is already w_var/w_nominal) and the cases
-                # where it is not are worth being able to see: NanoAOD truncates the LHE
-                # weight mantissa (w_0 = 0.99996948 for every TTTo2L2Nu event, and
-                # +-6e-5 in the MiNNLO samples), and the single-top t-channel records
-                # carry a w_0 running from -4.6 to +7.3. Saving it keeps that visible.
-                #
-                # NaN, not 1.0, for the samples the do_pdf gate excludes: their w_0 was
-                # never read, and writing 1.0 would claim it was measured and found
-                # unity. The name deliberately has no `wgt_` prefix and no `_up`
-                # suffix, so stage2's variation discovery leaves it alone.
+                # Save raw w_0 for debugging precision offsets or corrupt weights.
+                # Use NaN when the PDF gate skips reading it; unity would imply a measurement.
+                # Omit wgt_/_up naming so stage2 does not treat it as a variation.
                 _add_block(out_dict, {
                     "pdf_central_member": (
                         np.full(len(nominal_weight), np.nan)
