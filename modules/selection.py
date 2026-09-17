@@ -83,7 +83,8 @@ def applyRegionCatCuts(
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
     year: str | None = None,
-    vbf_he_hf_ptcut: float | None = None,
+    vbf_he_ptcut: float | None = None,
+    vbf_hf_ptcut: float | None = None,
 ):
     use_var = (
         "nominal"
@@ -160,18 +161,21 @@ def applyRegionCatCuts(
         vbf_cut = ak.fill_none(vbf_cut, value=False)
 
         # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`
-        # itself (opt-in via vbf_he_hf_ptcut, default None/off -- every other
-        # caller is unaffected). Placed here, before the category branch, so
-        # BOTH `category=="vbf"` (uses vbf_cut) and `category=="ggh"` (uses
-        # ~vbf_cut) see the tightened definition: an event whose jet1/jet2
-        # pair no longer qualifies as VBF-quality falls back to ggH (if it
-        # clears ggH's own cuts) rather than being excluded from both.
+        # itself (opt-in via vbf_he_ptcut/vbf_hf_ptcut, each independently
+        # None/off by default -- every other caller is unaffected). Placed
+        # here, before the category branch, so BOTH `category=="vbf"` (uses
+        # vbf_cut) and `category=="ggh"` (uses ~vbf_cut) see the tightened
+        # definition: an event whose jet1/jet2 pair no longer qualifies as
+        # VBF-quality falls back to ggH (if it clears ggH's own cuts) rather
+        # than being excluded from both.
         # HE/HF boundaries match apply_jet_horn_ptcut / jetHorn_region in
         # src/copperhead_processor.py's jet_loop: HE = 2.5 < |eta| <= 3.0,
         # HF = |eta| > 3.0. Only jet1/jet2 (the pair that already defines
         # jj_mass/jj_dEta/vbf_cut) are checked -- no jet reshuffling, so
-        # jj_mass etc. stay exactly as already computed.
-        if vbf_he_hf_ptcut is not None:
+        # jj_mass etc. stay exactly as already computed. HE and HF thresholds
+        # are independent: set only vbf_he_ptcut for HE-only, only
+        # vbf_hf_ptcut for HF-only, or both for the combined cut.
+        if vbf_he_ptcut is not None or vbf_hf_ptcut is not None:
             jet2_pt = varcol("jet2_pt")
             jet1_eta = varcol("jet1_eta")
             jet2_eta = varcol("jet2_eta")
@@ -180,8 +184,9 @@ def applyRegionCatCuts(
                 abs_eta = abs(eta)
                 in_he = (abs_eta > 2.5) & (abs_eta <= 3.0)
                 in_hf = abs_eta > 3.0
-                fails = (in_he | in_hf) & (pt < vbf_he_hf_ptcut)
-                return ~fails
+                fail_he = (in_he & (pt < vbf_he_ptcut)) if vbf_he_ptcut is not None else (in_he & False)
+                fail_hf = (in_hf & (pt < vbf_hf_ptcut)) if vbf_hf_ptcut is not None else (in_hf & False)
+                return ~(fail_he | fail_hf)
 
             vbf_he_hf_pass = ak.fill_none(
                 _passes_he_hf_ptcut(jet1_pt, jet1_eta)

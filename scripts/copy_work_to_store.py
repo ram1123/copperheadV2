@@ -65,7 +65,13 @@ def compute_local_adler32(file_path: str, timeout: int = 120) -> Optional[str]:
 
 
 def eos_query_adler32(store_path: str, timeout: int = 60) -> Optional[str]:
-    """Query EOS checksum metadata: xrdfs <host> query checksum <path>."""
+    """Query EOS checksum metadata: xrdfs <host> query checksum <path>.
+
+    Returns None if no checksum could be obtained. A destination file simply
+    not existing yet (e.g. the skip-existing pre-check on a file this run
+    hasn't copied yet) is an expected outcome, not a failure, and is not
+    logged; any other error is.
+    """
     try:
         rc, out, err = run_cmd(
             ["xrdfs", EOS_HOST, "query", "checksum", store_path], timeout=timeout
@@ -77,7 +83,10 @@ def eos_query_adler32(store_path: str, timeout: int = 60) -> Optional[str]:
             return toks[1].strip()
         return toks[-1].strip() if toks else None
     except Exception as e:
-        sys.stderr.write(f"[eos-checksum-fail] {store_path}: {e}\n")
+        msg = str(e).lower()
+        is_missing = "no such file" in msg or "not found" in msg
+        if not is_missing:
+            sys.stderr.write(f"[eos-checksum-fail] {store_path}: {e}\n")
         return None
 
 
@@ -228,7 +237,7 @@ def main():
         help="Destination EOS store path prefix, e.g. /store/user/<cern-username>/some_dir",
     )
     ap.add_argument("-o", "--outdir", default="copy_out", help="Output directory for manifest/logs")
-    ap.add_argument("-w", "--workers", type=int, default=6, help="Parallel workers (4-8 recommended)")
+    ap.add_argument("-w", "--workers", type=int, default=50, help="Parallel workers (4-8 recommended)")
     ap.add_argument("--max-retries", type=int, default=3, help="Max copy attempts per file")
     ap.add_argument("--copy-timeout", type=int, default=7200, help="Seconds for xrdcp timeout")
     ap.add_argument("--checksum-timeout", type=int, default=60, help="Seconds for checksum queries")
@@ -310,7 +319,7 @@ def main():
             else:
                 ok_rows.append(out)
 
-            if done % 50 == 0 or done == len(futs):
+            if done % 1000 == 0 or done == len(futs):
                 print(
                     f"[progress] {done}/{len(futs)} ok={len(ok_rows)} "
                     f"skipped={len(skipped_rows)} failed={len(fail_rows)}"
