@@ -170,6 +170,23 @@ as event weights.
 | 2025 / 2026 placeholders | Rochester JSON, BS/EBE calibration, and `muon_Z.json.gz` for 2026 all reuse earlier years |
 | 2017 trigger SF | `muSFFileList["2017"]` marked `FIXME: input binning error` |
 
+### 7.1 Additional findings — `.claude/reports/registry.md`
+
+A dedicated read‑only review, `investigations/2026-08-31_muon-selection-review.md`,
+found **10 confirmed defects** against this same selection, only some of which are
+reflected above (the IP‑cut gap and the `pt_raw` cut were both already known to that
+review too). Not yet re‑verified or incorporated into this file — read the full
+report rather than assuming the summary below is current:
+
+cutflow/mask mismatch; **loose trigger matching via a hardcoded `filterBits & 8`**;
+missing IP cuts (§2.2 above); `is_run2` **RERECO misclassification**; a dead
+correction config entry; **chunk‑biased 2017 trigger SF**; `pt_raw` thresholds
+(§7 above); a **MuonScaRe 26 GeV floor**; `doing_BS_correction` **decoupling**
+(interacts with the EBE calibration gating in `corrections/ebe-mass-calibration.md`
+§2 — the exact nature of the decoupling defect is in the full report, not
+summarized here); era‑asymmetric systematics. Status as of the report: open, no code
+changed.
+
 ---
 
 ## 8. Evidence summary

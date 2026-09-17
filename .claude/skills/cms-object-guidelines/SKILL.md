@@ -17,10 +17,16 @@ Use this skill for work involving:
 - object corrections and scale factors;
 - object-related systematic uncertainties;
 - integrated luminosity and lumimask;
-- pileup reweighting and the pileup-jet-ID DNN;
-- the ggH BDT and VBF DNN analysis discriminants.
+- pileup reweighting.
 
-Photons and taus are not part of the H→μμ analysis and have no reference file.
+Photons and taus are not part of the H→μμ analysis and have no reference file. The
+ggH BDT and VBF DNN discriminants, event-level category cuts (VBF/ggH/veto), Z-pT
+reweighting, event-by-event mass calibration, the pileup-jet-ID DNN, plotting
+conventions, and the Combine/RooFit stats pipeline are **not** covered here — see the
+`mva`, `event-selection`, `corrections`, `plotting`, and `stats` skills respectively.
+
+Before treating a finding as new, check `.claude/reports/registry.md` for an existing
+investigation on the same object/era — several of these files already cite one.
 
 ## Required context
 
@@ -48,17 +54,19 @@ Read only the relevant reference files:
 - `references/b-tagging.md`
 - `references/met.md` — includes MET noise / event filters
 - `references/lumi.md` — integrated luminosity, golden JSON, lumi uncertainty
-- `references/pileup.md` — pileup reweighting + the forward pileup-jet-ID DNN
-- `references/ggh-bdt.md` — ggH-channel BDT discriminant (analysis-specific)
-- `references/vbf-dnn.md` — VBF-channel DNN discriminant (analysis-specific)
+- `references/pileup.md` — pileup reweighting (MC/data profile matching)
 
 Do not load every reference automatically. Overlap removal and trigger-object
 matching are covered inside each object file (e.g. muon trigger matching in
 `muons.md`, muon–jet cleaning in `jets.md`). Photons and taus are not part of
 the H→μμ analysis; no reference file exists for them — treat any such request as
-`Authoritative CMS verification required`. `ggh-bdt.md` and `vbf-dnn.md` document
-analysis-specific ML discriminants — there is no CMS-POG recommendation for them;
-use those files to check internal consistency, not compliance.
+`Authoritative CMS verification required`.
+
+Related skills for adjacent topics: `mva` (ggH BDT / VBF DNN discriminants),
+`event-selection` (vetoes + VBF/ggH category cuts, built on top of the objects here),
+`corrections` (Z-pT reweighting, event-by-event mass calibration, the
+pileup-jet-ID DNN), `plotting` (validation-plot conventions), `stats` (datacards,
+RooFit, systematics).
 
 ## Review checklist
 

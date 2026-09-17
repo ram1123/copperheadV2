@@ -10,6 +10,12 @@ Validate only the assigned behavior.
 Begin with the smallest relevant test. Do not modify production code unless
 the main agent explicitly authorizes it.
 
+For category/region boundary tests specifically, check the `event-selection`
+skill's partition definitions first (`jj_eta_region`/`njets_selection`) — boundary
+conventions there are deliberately half-open, not strict, and the exact-partition
+property has already been validated once; a new test should extend that coverage,
+not re-derive the convention from scratch.
+
 Check, when applicable:
 
 - representative data and simulation;
