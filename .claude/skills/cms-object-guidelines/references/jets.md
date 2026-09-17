@@ -308,8 +308,8 @@ the JVM object selection in `src/copperhead_processor.py` (repo commits `89cd723
 - Run 3 **PUPPI** jets: pileup is handled by the PUPPI weights; there is no separate
   legacy PU jet ID WP. This repo additionally develops a **pileup‑jet‑ID DNN**
   (`MVA_training/pileup_dnn/`, applied via `src/corrections/pu_dnn.py`) — an
-  **[Implementation]** discriminant, not a JME product. The switch comment notes model
-  variants differ by whether `puIdDisc` is an input (2024/2025 include it).
+  **[Implementation]** discriminant, not a JME product, documented in the
+  `corrections` skill (`references/pileup-jet-dnn.md`), not here.
 
 ---
 
@@ -359,6 +359,28 @@ the S1/S2 snapshot); the Run 3 CAT metadata snapshots are 2025‑09‑23 → 202
 2022/2023 and 2026‑07‑16 for 2024/2025. The 2026 JER `RunC` low‑PU split (S2) is **not**
 separately selectable in this config (single tag per year bucket — documented limitation
 in `jec.yaml`).
+
+### 10.1 Known open findings — `.claude/reports/registry.md`
+
+These are separate from the JEC/JER tag table above (different config keys) and were
+found by earlier registry-logged investigations, not this file's own review. Check
+`registry.md` for whether either has since been fixed before assuming the state below
+is current:
+
+- **`do_jet_horn_ptcut` regression**: as of the 2026‑09‑09 crosscheck
+  (`investigations/2026-09-09_2025-2026-full-crosscheck.md`), this switch is `false`
+  for 2024–2026 despite its own comment (and §5 of this file) saying `50` — the HE
+  region currently has **no** forward-jet pT mitigation at all for those years. First
+  found one switch earlier, in `investigations/2026-09-03_stage1-corrections-run3-2024-2026.md`
+  (`do_jet_horn_ptcut` 2024=50 vs 2025/2026=false, "comment says parity").
+- **2025 `jec_unc_to_consider` labels**: still reuse `*_2024` source labels — latent
+  (harmless while `do_jec_unc` stays off), but live once `switches_profiles/syst.yaml`
+  is applied for a 2025 systematics run, where it would silently mis-apply JES
+  sources (`investigations/2026-09-09_2025-2026-full-crosscheck.md`). Cross-ref
+  `stats/references/systematics.md`.
+- **`ecalBadCalibFilter`** in `event_flags` differs between 2024 and 2025/2026
+  (`investigations/2026-09-03_stage1-corrections-run3-2024-2026.md`) — relevant to
+  `met.md`'s noise-filter section as well.
 
 ---
 

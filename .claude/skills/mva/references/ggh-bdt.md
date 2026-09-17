@@ -67,7 +67,7 @@ Training samples (`training_samples`): background = DY (aMC@NLO + inclusive), tt
   `BDT_edges.yaml` (`load_or_create_bdt_edges`; a **dummy** edges file is auto‑created
   if none exists — a real one must be produced by `BDT_edgeCalculator.ipynb`, C3).
 - Subcategorised templates feed the ggH datacards (`stage2/ggH_datacard/`,
-  `docs/ggH_dataCardGeneration.md`).
+  `docs/ggH_dataCardGeneration.md`) — see the `stats` skill for the datacard side.
 
 ---
 

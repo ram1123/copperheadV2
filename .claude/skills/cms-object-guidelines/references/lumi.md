@@ -262,6 +262,18 @@ per‑era **luminosity values** for normalisation come from §4.2 / `lumi.yaml`.
 `docs/Run3_all_basic_Information.md` for some eras (older slide values). The PdmV S4
 numbers in §4.2 supersede those — update the docs to match `lumi.yaml` + §4.2.
 
+### 8.4 Independent registry corroboration
+
+`investigations/2026-09-03_run3-datasets-lumi-2024-2026.md` (`.claude/reports/
+registry.md`) found the same 2025 discrepancy from a third angle: `lumi.yaml`'s
+`total_lumi_pb` (110840 pb⁻¹) does not equal the **sum of that report's own per‑era
+dataset‑list lumi values** (110850 pb⁻¹) — a 10 pb⁻¹ gap, independent of the PdmV
+comparison in §8.1. Reconfirmed unchanged as of the 2026‑09‑09 crosscheck
+(`investigations/2026-09-09_2025-2026-full-crosscheck.md`). That same 2026‑09‑09
+report is also where the `lumi_syst["2025"]` `KeyError` in `stage3/make_datacards.py`
+was fixed, adding the 5%‑uncorrelated value sourced from this file's §2 — see
+`stats/references/template-fit.md`.
+
 ---
 
 ## 9. POG entry points for Run 3 (S4, PdmV "Notes from POGs")

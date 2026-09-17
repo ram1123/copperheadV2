@@ -37,6 +37,10 @@ Scripts that need a specific env's dependencies (e.g. `torch`, `ROOT`) will fail
 if run with the wrong interpreter — check which pixi environment provides what in `pixi.toml`
 (`[feature.*.dependencies]` blocks) rather than assuming.
 
+`enter_pixi.sh` always ends with `exec bash`, so from a non-interactive context (a background job, an
+agent invocation) it just hangs waiting on stdin. Use `./run_in_pixi.sh <env> <command> [args...]` instead —
+same env setup (proxy reuse, `cmsset_default`, `PYTHONPATH`), but runs one command and exits with its status.
+
 ## Common commands
 
 Lint:
@@ -136,11 +140,25 @@ Client"; remember to run the teardown cells when done to free gateway resources.
 - Individual `run_*.py` scripts — argparse entry points invoked by the shell layer; can also be run directly
   for debugging a single step.
 
+**Switches profiles**: `configs/parameters/switches.yaml` is one file shared by every year/rule in the
+Snakemake DAG, so it can't be toggled per-rule mid-DAG — parallel rules racing to rewrite it would corrupt
+it. `scripts/apply_switches_profile.py` applies a named profile from
+`configs/parameters/switches_profiles/*.yaml` onto `switches.yaml` as a text-level edit of just the
+affected `(key, year)` tokens (not a YAML parse/re-dump, which would lose the file's inline comments).
+`scripts/run_scenario.sh` applies a profile once, then runs the whole Snakemake DAG under a
+scenario-specific `run_tag` (passed via `--config`, leaving the checked-in `workflow/config.yaml`
+untouched) — treat "apply a profile, then run the DAG" as one atomic step, never run two of these
+concurrently against the same `switches.yaml`. `scripts/reset_stage1_chunk.sh` /
+`reset_stage1_samples.sh` clear stage-1's resumability markers for one chunk or one sample so a targeted
+rerun (e.g. a corrupt parquet file, or reprocessing DY after deriving a new Z-pT correction) reprocesses
+only what's reset and skips everything else already done.
+
 **Config layout** (`configs/`): `datasets/*.yaml` (per-nanoAOD-version, per-run dataset lists incl. `sync_*`
 used by CI), `parameters/*.yaml` (JEC, muon, electron, trigger, cross sections, luminosity,
-`switches.yaml` for year-keyed feature flags, `correction_filelist.yaml`/`SF_filelist.yaml` pointing at
-correction payloads), `categories/` (category cut definitions), `variables/variable_lists.py`, `samples/`,
-`MVA/` (BDT subcategory calculation configs).
+`switches.yaml` for year-keyed feature flags plus `switches_profiles/` — see above,
+`correction_filelist.yaml`/`SF_filelist.yaml` pointing at correction payloads), `categories/` (category
+cut definitions), `variables/variable_lists.py`, `samples/`, `MVA/` (BDT subcategory calculation configs),
+`skip_stage1_run.py` (`samples_to_run`/`samples_to_skip` allow/deny list consulted by stage-1 driving code).
 
 **Shared utilities** (`modules/`): generic, stage-agnostic helpers — `dask_utils.py` (client setup/teardown),
 `xrootd_utils.py` (redirector fallback/normalization for AAA errors), `correctionlib_file_cache.py`,
@@ -207,9 +225,24 @@ interchangeable.
 - Report commands executed and their results.
 - Do not commit, push, merge, or delete files unless explicitly requested.
 
-## CMS recommendations
+## CMS recommendations and analysis skills
 
-For work involving physics objects, invoke the `cms-object-guidelines` skill.
+Route the request to the skill that owns the topic — don't load one skill's
+reference files to answer a question that belongs to another:
+
+- `cms-object-guidelines` — muon/electron/jet/b-tag/MET object selection and
+  corrections, plus luminosity and pileup reweighting.
+- `event-selection` — the b-veto, the optional VH veto, and the VBF/ggH/nocat/
+  bJetVeto category cuts (`configs/categories/`, `modules/selection.py`).
+- `corrections` — Z-pT reweighting and event-by-event dimuon mass-resolution
+  calibration (dimuon-level corrections that don't belong to one object).
+- `mva` — the ggH BDT and VBF DNN discriminants (analysis-specific; no POG applies).
+- `plotting` — control/validation-plot conventions (`run_plotter.py`,
+  `validation_plotter_unified.py`, PyROOT style).
+- `stats` — Combine datacard generation (template and parametric), the VBF stats
+  pipeline, and how systematic variations flow into a datacard.
+
+For work involving physics objects specifically, invoke `cms-object-guidelines`.
 
 Distinguish clearly among:
 
@@ -247,13 +280,3 @@ Before reporting that work is complete:
 - run broader validation when practical;
 - distinguish successful tests from tests that could not be run;
 - identify assumptions that were not verified.
-
-## Repository commands
-
-Add this project's actual commands here, for example:
-
-- Environment setup: `source ...`
-- Build: `...`
-- Unit tests: `...`
-- Analysis test: `...`
-- Formatting: `...`

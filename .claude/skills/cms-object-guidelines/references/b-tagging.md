@@ -102,6 +102,11 @@ established** from stored material. **[Verify]**
 | `btag_sf_csv` Run 3 | 2018 UL CSV reused, `# FIXME: Update SF` |
 | `btag_sf_json` 2026 | reuses 2025 `btagging.json.gz` |
 
+These placeholders are independently reconfirmed in `.claude/reports/registry.md`,
+`investigations/2026-09-09_2025-2026-full-crosscheck.md` ("all 2025/2026 MUO/LUM/
+b-tag/PU-DNN/Z-pT placeholders") — check that report and any later registry entry
+before assuming a real Run‑3 WP/SF derivation has since landed.
+
 ---
 
 ## 7. Evidence summary

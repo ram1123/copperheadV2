@@ -19,6 +19,13 @@ consistency, not compliance.
 
 Classification tags: **[Analysis‑specific]**, **[Implementation]**, **[Verify]**.
 
+Known open item (see `.claude/reports/registry.md`, 2026‑09‑09 / 2026‑09‑10 entries):
+`preprocess_dnn.py` currently hardcodes `jj_eta_region` at training time (previously
+`"jj_both_central"`, later made configurable via `analysis.jj_eta_region` /
+`JJ_ETA_REGION` — check which region the model actually in use was trained on before
+trusting its score outside that region). This ties directly to the region-partition
+logic documented in the `event-selection` skill.
+
 ---
 
 ## 1. Model
@@ -37,7 +44,8 @@ Classification tags: **[Analysis‑specific]**, **[Implementation]**, **[Verify]
 
 - Dimuon: `dimuon_mass`, `dimuon_pt`, `dimuon_pt_log`, `dimuon_rapidity`,
   `dimuon_cos_theta_cs`, `dimuon_phi_cs`
-- EBE mass resolution: `dimuon_ebe_mass_res`, `dimuon_ebe_mass_res_rel`
+- EBE mass resolution: `dimuon_ebe_mass_res`, `dimuon_ebe_mass_res_rel` — produced by
+  the event-by-event mass calibration correction, see the `corrections` skill
 - Jets: `jet1_pt/eta/phi`, `jet2_pt/eta/phi`, `jet1_qgl`, `jet2_qgl`
 - Dijet: `jj_mass`, `jj_mass_log`, `jj_dEta`
 - Soft activity: `htsoft2`, `nsoftjets5`
@@ -63,7 +71,7 @@ Standardised to mean 0 / std 1 **except `year` and `nsoftjets5`** (kept raw) —
   are evaluated with the **nominal** DNN inputs — a documented approximation.
 - DNN score → VBF subcategory bin edges (`scan_bins_for_dnn.py`,
   `configs/MVA/MVA_subCat_calculation/`); subcategorised templates feed the VBF
-  datacards and `run_stats_pipeline_VBF.sh`.
+  datacards — see the `stats` skill (`run_stats_pipeline_VBF.sh`).
 
 ---
 
@@ -79,6 +87,8 @@ Standardised to mean 0 / std 1 **except `year` and `nsoftjets5`** (kept raw) —
    approximation is acceptable for the systematics in play.
 6. Bin edges from `scan_bins_for_dnn.py` are current for this model.
 7. Preprocessing validated (C5): post‑preprocessing features ≈ mean 0 / std 1.
+8. The model's training `jj_eta_region` matches the region of the events it's scoring
+   (see the open item above).
 
 ---
 
@@ -91,6 +101,7 @@ Standardised to mean 0 / std 1 **except `year` and `nsoftjets5`** (kept raw) —
 | Score transform (sigmoid → arctanh/clip) | implementation | C3 | yes |
 | Systematics use nominal DNN inputs (default) | implementation | C3 | yes — documented approximation |
 | Subcategory bin edges | analysis MVA | C4 | procedure exists; edges must match the model |
+| Training `jj_eta_region` scope | implementation | registry 2026‑09‑09/10 | tracked as an open item |
 | Any CMS‑POG recommendation | — | — | **none — analysis‑specific discriminant** |
 
 ## Last verified

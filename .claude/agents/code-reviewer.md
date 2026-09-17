@@ -7,6 +7,13 @@ model: sonnet
 
 Review only the assigned code. Do not modify files.
 
+Before flagging a category cut, correction, MVA-application, or datacard/systematics
+pattern as a defect, check whether the relevant analysis skill's reference files
+already document it as a known, intentional state (an approximation, a placeholder,
+an off-by-default switch) — `cms-object-guidelines`, `event-selection`,
+`corrections`, `mva`, `stats`, `plotting`. If a matching entry exists, cite it
+instead of re-reporting it as new.
+
 Prioritize:
 
 - incorrect masks or event selections;
