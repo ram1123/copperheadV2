@@ -9,9 +9,9 @@
     dy_sample_label: IncDY_aMCatNLO_PySR07MayV2
     run_label: Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
     save_postfix: Sep14_2026
-    step2_derived_at: '2026-09-15T18:00:44.634382+00:00'
+    step2_derived_at: '2026-09-16T04:23:01.159409+00:00'
     step2_derived_by: shar1172
-    step2_git_commit: a1d720a15db33b14558ac491921b4716ac9c59df
+    step2_git_commit: a3794591fd016185cf6815d052b1ce465de24f6e
     step2_git_diff_file: git_diff.patch
     step2_git_dirty: true
   njet_0:
@@ -162,6 +162,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.005265927137128685
+      common_shift_err: 0.0007669500660400118
+      delta_tail_slope: 0.002997680933173984
+      delta_tail_slope_err: 0.0008951352976102282
       f0_p0: 1.1384771360658787
       f0_p0_err: 0.008628307340097438
       f0_p1: -0.001866073300702173
@@ -213,6 +217,10 @@
       horizontal_c0_err: 59.97658728490744
       horizontal_mx: 0.0026965802556716853
       horizontal_mx_err: 0.7170931068839772
+      low_tilt: 0.0005366729659796379
+      low_tilt_err: 9.163960597321537e-05
+      mid_tilt: 0.00036169973261682587
+      mid_tilt_err: 7.026232823050899e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -280,6 +288,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.020635481294787573
+      common_shift_err: 0.0012762047326112854
+      delta_tail_slope: -0.0042345933347497896
+      delta_tail_slope_err: 0.00011753919974146626
       f0_p0: 0.91014317632045
       f0_p0_err: 0.022999183320259783
       f0_p1: -0.027731623443856206
@@ -331,6 +343,10 @@
       horizontal_c0_err: 4.566429770565763
       horizontal_mx: -0.0007568440157186248
       horizontal_mx_err: 0.04515161186386123
+      low_tilt: 0.001597351766473472
+      low_tilt_err: 0.00017464909854784916
+      mid_tilt: 0.00012326287698760673
+      mid_tilt_err: 4.1662603845687356e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -401,6 +417,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: -0.021937409550390356
+      common_shift_err: 0.002595173741947232
+      delta_tail_slope: -0.0022275034437509583
+      delta_tail_slope_err: 0.00016903101379590175
       f0_p0: 0.999048542937498
       f0_p0_err: 0.02732821353487408
       f0_p1: -0.09217213992718849
@@ -452,6 +472,10 @@
       horizontal_c0_err: 8.584704706254717
       horizontal_mx: -0.00046734140825465016
       horizontal_mx_err: 0.07344523989492441
+      low_tilt: -0.0017173318094931827
+      low_tilt_err: 0.00034176467535424403
+      mid_tilt: -6.207328060446783e-05
+      mid_tilt_err: 6.0602935211438185e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -469,9 +493,9 @@
     dy_sample_label: IncDY_aMCatNLO_PySR07MayV2
     run_label: Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
     save_postfix: Sep14_2026
-    step2_derived_at: '2026-09-15T18:00:04.925641+00:00'
+    step2_derived_at: '2026-09-16T04:22:52.286864+00:00'
     step2_derived_by: shar1172
-    step2_git_commit: a1d720a15db33b14558ac491921b4716ac9c59df
+    step2_git_commit: a3794591fd016185cf6815d052b1ce465de24f6e
     step2_git_diff_file: git_diff.patch
     step2_git_dirty: true
   njet_0:
@@ -622,6 +646,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.002282224208351571
+      common_shift_err: 0.0013948383128431895
+      delta_tail_slope: 0.012537169459210221
+      delta_tail_slope_err: 0.0013981432644979818
       f0_p0: 1.1307011549668908
       f0_p0_err: 0.012528609723887744
       f0_p1: -0.0004103163735547318
@@ -673,6 +701,10 @@
       horizontal_c0_err: 12.223053350191764
       horizontal_mx: -0.0004650125408346851
       horizontal_mx_err: 0.14444159185718772
+      low_tilt: 0.0002323539230186848
+      low_tilt_err: 0.00016648661593593716
+      mid_tilt: 0.00015831041963363111
+      mid_tilt_err: 0.0001265384030492949
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -740,6 +772,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: -0.022115062976571384
+      common_shift_err: 0.0023953779736510684
+      delta_tail_slope: 0.0008071331501493344
+      delta_tail_slope_err: 0.00022853740549448208
       f0_p0: 1.0663980924258838
       f0_p0_err: 0.026147572463073906
       f0_p1: -0.13313306674130304
@@ -791,6 +827,10 @@
       horizontal_c0_err: 102.34889687852265
       horizontal_mx: -0.0008500163255532646
       horizontal_mx_err: 0.9823554238009379
+      low_tilt: -0.001645166340369296
+      low_tilt_err: 0.0003147792628530998
+      mid_tilt: -9.274833628601661e-05
+      mid_tilt_err: 7.570538336463171e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -861,6 +901,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: -0.03279847584326659
+      common_shift_err: 0.005008259913008571
+      delta_tail_slope: 0.0015917940926089467
+      delta_tail_slope_err: 0.00031142425217522605
       f0_p0: 0.9879605395824371
       f0_p0_err: 0.056787946384643746
       f0_p1: -0.0872660800039048
@@ -912,6 +956,10 @@
       horizontal_c0_err: 1.6254551055428614
       horizontal_mx: -0.0001434845671832209
       horizontal_mx_err: 0.013396805039915013
+      low_tilt: -0.002861961526356094
+      low_tilt_err: 0.0007656615376982513
+      mid_tilt: -1.6994819022469576e-05
+      mid_tilt_err: 0.00011345563257709165
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -929,9 +977,9 @@
     dy_sample_label: IncDY_aMCatNLO_PySR07MayV2
     run_label: Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
     save_postfix: Sep14_2026
-    step2_derived_at: '2026-09-15T18:01:18.310137+00:00'
+    step2_derived_at: '2026-09-16T04:23:14.365324+00:00'
     step2_derived_by: shar1172
-    step2_git_commit: a1d720a15db33b14558ac491921b4716ac9c59df
+    step2_git_commit: a3794591fd016185cf6815d052b1ce465de24f6e
     step2_git_diff_file: git_diff.patch
     step2_git_dirty: true
   njet_0:
@@ -1082,6 +1130,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: -0.0023431884600969895
+      common_shift_err: 0.001044782159721305
+      delta_tail_slope: -0.023715912601286054
+      delta_tail_slope_err: 0.001491489372954272
       f0_p0: 1.116764758583996
       f0_p0_err: 0.009426016805779754
       f0_p1: 0.008433508778394676
@@ -1133,6 +1185,10 @@
       horizontal_c0_err: 59.80096300240617
       horizontal_mx: 0.0008834149151062225
       horizontal_mx_err: 0.7204214477015058
+      low_tilt: -0.0003156279320502956
+      low_tilt_err: 0.00017220835992600542
+      mid_tilt: -0.00011152616409092634
+      mid_tilt_err: 8.909525249273766e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -1200,6 +1256,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.01941659092902009
+      common_shift_err: 0.002307278688405287
+      delta_tail_slope: -0.02567333916122677
+      delta_tail_slope_err: 0.00015729964696510092
       f0_p0: 1.1094737849761656
       f0_p0_err: 0.0441018094207225
       f0_p1: 0.05927256428586739
@@ -1251,6 +1311,10 @@
       horizontal_c0_err: 68577.72093957376
       horizontal_mx: -0.001238490906206962
       horizontal_mx_err: 842.2229301994016
+      low_tilt: 0.0016647947194152277
+      low_tilt_err: 0.00036131603679027155
+      mid_tilt: 1.4948365184304705e-05
+      mid_tilt_err: 7.547925293703965e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -1306,6 +1370,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.06623547089800529
+      common_shift_err: 0.004722828795708716
+      delta_tail_slope: 0.0024268014620088827
+      delta_tail_slope_err: 0.00032391066263896037
       f0_p0: 0.9633041190205148
       f0_p0_err: 0.025230810613848995
       f0_p1: 0.025416613054974675
@@ -1357,6 +1425,10 @@
       horizontal_c0_err: 1.0517625844551866
       horizontal_mx: -0.000412064051783297
       horizontal_mx_err: 0.00798739716715841
+      low_tilt: 0.011395338218082396
+      low_tilt_err: 0.0016643756172072133
+      mid_tilt: 0.00014303517447231877
+      mid_tilt_err: 9.008416662223948e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -1374,9 +1446,9 @@
     dy_sample_label: IncDY_aMCatNLO_PySR07MayV2
     run_label: Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
     save_postfix: Sep14_2026
-    step2_derived_at: '2026-09-15T18:02:18.580123+00:00'
+    step2_derived_at: '2026-09-16T04:23:22.831718+00:00'
     step2_derived_by: shar1172
-    step2_git_commit: a1d720a15db33b14558ac491921b4716ac9c59df
+    step2_git_commit: a3794591fd016185cf6815d052b1ce465de24f6e
     step2_git_diff_file: git_diff.patch
     step2_git_dirty: true
   njet_0:
@@ -1480,6 +1552,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.0025685428653574533
+      common_shift_err: 0.0013780494645819715
+      delta_tail_slope: -0.03045386994519053
+      delta_tail_slope_err: 0.0017349036281345837
       f0_p0: 1.1091435982998121
       f0_p0_err: 0.015323567940074096
       f0_p1: 0.008036985467424956
@@ -1531,6 +1607,10 @@
       horizontal_c0_err: 66.80562355001915
       horizontal_mx: -0.002837565805453121
       horizontal_mx_err: 0.805581450475045
+      low_tilt: 0.00043469754064136295
+      low_tilt_err: 0.0002998939003215365
+      mid_tilt: 7.35610989401197e-05
+      mid_tilt_err: 0.00011331176787051676
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -1598,6 +1678,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.05062403663812696
+      common_shift_err: 0.003180911272492079
+      delta_tail_slope: 0.006942628523124559
+      delta_tail_slope_err: 0.00022876931634443869
       f0_p0: 1.1434625841835824
       f0_p0_err: 0.055873187851472744
       f0_p1: 0.005437914351828678
@@ -1649,6 +1733,10 @@
       horizontal_c0_err: 167.4582252429312
       horizontal_mx: -0.000320113693602353
       horizontal_mx_err: 2.0040409110174147
+      low_tilt: 0.003709317899100352
+      low_tilt_err: 0.00041540761969637886
+      mid_tilt: 0.00042102144674609687
+      mid_tilt_err: 0.00011010984776410477
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -1719,6 +1807,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.04977562628538546
+      common_shift_err: 0.006874184520458657
+      delta_tail_slope: 0.0008643447769725902
+      delta_tail_slope_err: 0.00046498597329551906
       f0_p0: 0.9343486974803386
       f0_p0_err: 0.03522767527521825
       f0_p1: 0.032727145957071116
@@ -1770,6 +1862,10 @@
       horizontal_c0_err: 1.5408413217815375
       horizontal_mx: -0.0010771721160786547
       horizontal_mx_err: 0.011703575282756987
+      low_tilt: 0.008400008175567892
+      low_tilt_err: 0.0023308630240640557
+      mid_tilt: 7.13253577245034e-05
+      mid_tilt_err: 0.0001315360213121282
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -1787,9 +1883,9 @@
     dy_sample_label: IncDY_aMCatNLO_PySR07MayV2
     run_label: Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
     save_postfix: Sep14_2026
-    step2_derived_at: '2026-09-15T18:02:58.242291+00:00'
+    step2_derived_at: '2026-09-16T04:23:31.377136+00:00'
     step2_derived_by: shar1172
-    step2_git_commit: a1d720a15db33b14558ac491921b4716ac9c59df
+    step2_git_commit: a3794591fd016185cf6815d052b1ce465de24f6e
     step2_git_diff_file: git_diff.patch
     step2_git_dirty: true
   njet_0:
@@ -1942,6 +2038,10 @@
       - 150.0
       - 175.0
       - 200.0
+      common_shift: 0.0018227326872926341
+      common_shift_err: 0.00043887390038691563
+      delta_tail_slope: 0.004690518633128331
+      delta_tail_slope_err: 0.0035445768908120745
       f0_p0: 1.085441574796242
       f0_p0_err: 0.00492728474601786
       f0_p1: -0.005052633070593647
@@ -1993,6 +2093,10 @@
       horizontal_c0_err: 433.6098312024458
       horizontal_mx: -0.008634095636042064
       horizontal_mx_err: 2.8223422138898235
+      low_tilt: 0.00018588439256940047
+      low_tilt_err: 5.2265764568782e-05
+      mid_tilt: 0.0001129076786218456
+      mid_tilt_err: 4.247806539710736e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -2060,6 +2164,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.010566227968507562
+      common_shift_err: 0.0006730904771606837
+      delta_tail_slope: 0.0014939676594459177
+      delta_tail_slope_err: 0.00012227190206454477
       f0_p0: 0.8213918677395077
       f0_p0_err: 0.00929202996855135
       f0_p1: 0.025807532115232776
@@ -2111,6 +2219,10 @@
       horizontal_c0_err: 26.334567800291097
       horizontal_mx: -0.00012995629339470835
       horizontal_mx_err: 0.2109892587119956
+      low_tilt: 0.0007340742095787147
+      low_tilt_err: 6.513805649845957e-05
+      mid_tilt: 8.248084911370481e-05
+      mid_tilt_err: 2.300520593116138e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -2181,6 +2293,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.0006609384380668593
+      common_shift_err: 0.0011520220041008082
+      delta_tail_slope: 0.0031712983310911392
+      delta_tail_slope_err: 0.0004798571914939086
       f0_p0: 0.8136732158285214
       f0_p0_err: 0.016818172981916228
       f0_p1: -0.030644747654891173
@@ -2232,6 +2348,10 @@
       horizontal_c0_err: 221.9516609728377
       horizontal_mx: 0.0013063995380013286
       horizontal_mx_err: 1.2723531539002868
+      low_tilt: 6.87586855844979e-05
+      low_tilt_err: 0.00020288320010088286
+      mid_tilt: 1.5082236426525197e-06
+      mid_tilt_err: 2.3184174388783985e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -2249,9 +2369,9 @@
     dy_sample_label: IncDY_aMCatNLO_PySR07MayV2
     run_label: Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
     save_postfix: Sep14_2026
-    step2_derived_at: '2026-09-15T18:49:08.464676+00:00'
+    step2_derived_at: '2026-09-16T04:23:39.090075+00:00'
     step2_derived_by: shar1172
-    step2_git_commit: a1d720a15db33b14558ac491921b4716ac9c59df
+    step2_git_commit: a3794591fd016185cf6815d052b1ce465de24f6e
     step2_git_diff_file: git_diff.patch
     step2_git_dirty: true
   njet_0:
@@ -2402,6 +2522,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: -0.0007214120545578839
+      common_shift_err: 0.0005243745174023393
+      delta_tail_slope: -0.04676945228905314
+      delta_tail_slope_err: 0.001848951914907658
       f0_p0: 1.1500033673118146
       f0_p0_err: 0.004466548908658985
       f0_p1: 0.013529472661813034
@@ -2453,6 +2577,10 @@
       horizontal_c0_err: 547.6392818747214
       horizontal_mx: -0.00949188211838569
       horizontal_mx_err: 4.8550523644375705
+      low_tilt: -7.32478148938063e-05
+      low_tilt_err: 6.142620103399734e-05
+      mid_tilt: -5.812554104269124e-05
+      mid_tilt_err: 5.706465700608278e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -2520,6 +2648,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.005006577881209203
+      common_shift_err: 0.0006675841639615628
+      delta_tail_slope: 0.002958726983931118
+      delta_tail_slope_err: 0.00015001890252814036
       f0_p0: 0.8454300672661892
       f0_p0_err: 0.007926554808355005
       f0_p1: 0.001436152000305449
@@ -2571,6 +2703,10 @@
       horizontal_c0_err: 29.777128624241836
       horizontal_mx: 0.00016295144532769588
       horizontal_mx_err: 0.23863673718494322
+      low_tilt: 0.0003455456498413182
+      low_tilt_err: 5.967570482758383e-05
+      mid_tilt: 7.550489231935133e-05
+      mid_tilt_err: 2.6177097202267913e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -2641,6 +2777,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.013261681698705166
+      common_shift_err: 0.0009619878093318169
+      delta_tail_slope: 0.004433654451161216
+      delta_tail_slope_err: 0.00011052347491416741
       f0_p0: 0.6469000046673715
       f0_p0_err: 0.018129707742329873
       f0_p1: -0.06082503919328397
@@ -2692,6 +2832,10 @@
       horizontal_c0_err: 183.6362345605278
       horizontal_mx: 0.0001919688912677582
       horizontal_mx_err: 1.4890481097429453
+      low_tilt: 0.001366054338733414
+      low_tilt_err: 0.0001462063452648462
+      mid_tilt: 8.151573254844535e-05
+      mid_tilt_err: 2.5496542437336274e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -2709,9 +2853,9 @@
     dy_sample_label: IncDY_aMCatNLO_PySR07MayV2
     run_label: Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
     save_postfix: Sep14_2026
-    step2_derived_at: '2026-09-15T19:41:17.943307+00:00'
+    step2_derived_at: '2026-09-16T04:23:47.026797+00:00'
     step2_derived_by: shar1172
-    step2_git_commit: a1d720a15db33b14558ac491921b4716ac9c59df
+    step2_git_commit: a3794591fd016185cf6815d052b1ce465de24f6e
     step2_git_diff_file: git_diff.patch
     step2_git_dirty: true
   njet_0:
@@ -2862,6 +3006,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: 0.0013530413218866245
+      common_shift_err: 0.0007227312343217996
+      delta_tail_slope: -0.014672064204939335
+      delta_tail_slope_err: 0.002217117536111227
       f0_p0: 1.0070683785597452
       f0_p0_err: 0.006324601210256611
       f0_p1: 0.02156191155051598
@@ -2913,6 +3061,10 @@
       horizontal_c0_err: 701.2541287041977
       horizontal_mx: -0.01126314973740057
       horizontal_mx_err: 6.216448301903117
+      low_tilt: 0.00013798793460310693
+      low_tilt_err: 8.58322890396293e-05
+      mid_tilt: 0.00010005622629438162
+      mid_tilt_err: 7.516536473533707e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -2980,6 +3132,10 @@
       - 145.0
       - 170.0
       - 200.0
+      common_shift: -0.0006667882304339929
+      common_shift_err: 0.0010776840925623924
+      delta_tail_slope: -0.000592951196020151
+      delta_tail_slope_err: 0.00013670502719554466
       f0_p0: 1.3336449313635044
       f0_p0_err: 0.016504476615759718
       f0_p1: 0.01763317127876922
@@ -3031,6 +3187,10 @@
       horizontal_c0_err: 526.8038158333327
       horizontal_mx: 0.0002888837389682379
       horizontal_mx_err: 5.117149077714734
+      low_tilt: -4.726046425813818e-05
+      low_tilt_err: 0.00010969371163346103
+      mid_tilt: 1.7737130256655163e-05
+      mid_tilt_err: 3.9286279763862714e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
@@ -3106,6 +3266,10 @@
       - 155.0
       - 165.0
       - 200.0
+      common_shift: 0.008926704850497066
+      common_shift_err: 0.0017731996203485287
+      delta_tail_slope: -0.00039991156725688185
+      delta_tail_slope_err: 0.00013501132020061734
       f0_p0: 1.170481909138605
       f0_p0_err: 0.03401756535867719
       f0_p1: 0.09338883483298138
@@ -3157,6 +3321,10 @@
       horizontal_c0_err: 39.71745521854273
       horizontal_mx: -0.000567917353499673
       horizontal_mx_err: 0.347238485523452
+      low_tilt: 0.0009460960058096015
+      low_tilt_err: 0.00031941350807475523
+      mid_tilt: 1.2434657991029145e-05
+      mid_tilt_err: 4.256924094555061e-05
       polynomial_range:
         xhigh: 200.0
         xlow: 0.0
