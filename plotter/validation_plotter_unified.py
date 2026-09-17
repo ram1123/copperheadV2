@@ -7,7 +7,7 @@ import logging
 import os
 import time
 import sys
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 
 import awkward as ak
@@ -103,13 +103,9 @@ def fillHist(sample_hist, var, to_fill_setting, values, weights):
     values = values[values_filter]
     weights = weights[values_filter]
     to_fill_setting[var] = values
-    to_fill_value = to_fill_setting.copy()
-    to_fill_value["val_sumw2"] = "value"
-    sample_hist.fill(**to_fill_value, weight=weights)
-
-    to_fill_sumw2 = to_fill_setting.copy()
-    to_fill_sumw2["val_sumw2"] = "sumw2"
-    sample_hist.fill(**to_fill_sumw2, weight=weights * weights)
+    # Weight() storage accumulates sum(weight) and sum(weight^2) per bin from
+    # one .fill() call -- see build_hist_templates().
+    sample_hist.fill(**to_fill_setting, weight=weights)
     return sample_hist
 
 
@@ -307,11 +303,16 @@ def load_plot_settings(category: str) -> dict:
 
 
 def build_hist_templates(variables2plot, plot_settings, sample_groups, njets_options, zpt_options):
-    """Build the empty per-variable hist.Hist templates for one category's binning group."""
+    """Build the empty per-variable hist.Hist templates for one category's binning group.
+
+    Uses Weight() storage (sum-of-weights + sum-of-weights^2 per bin, filled in
+    a single .fill() call) instead of a manual "value"/"sumw2" StrCat axis
+    requiring two .fill() calls per (var, zpt_option) -- see fillHist() and
+    generate_combo_plots()'s .values()/.variances() read side.
+    """
     sample_hist = (
         hist.Hist.new.StrCat(FULL_REGIONS, name="region")
         .StrCat(FULL_CHANNELS, name="channel")
-        .StrCat(["value", "sumw2"], name="val_sumw2")
         .StrCat(sample_groups, name="sample_group")
         .StrCat(VARIATIONS, name="variation")
         .StrCat(njets_options, name="njets")
@@ -334,7 +335,7 @@ def build_hist_templates(variables2plot, plot_settings, sample_groups, njets_opt
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         logger.debug(f"var: {var}")
-        hist_templates[var] = sample_hist.Var(binning, name=var).Double()
+        hist_templates[var] = sample_hist.Var(binning, name=var).Weight()
     return hist_templates
 
 
@@ -440,9 +441,14 @@ def build_fileset_for_year(year, load_path, available_processes, use_compacted):
 
     logger.info(f"Using parquet files from {load_path}")
     fileset = {}
-    for process in tqdm.tqdm(available_processes):
-        full_load_path = (load_path + f"/{process}/*/*.parquet").replace("//", "/")
-        files = glob.glob(full_load_path)
+    # glob.glob per process is pure I/O (stat-ing a shared/network filesystem),
+    # so a thread pool overlaps those waits instead of doing them one at a time.
+    with ThreadPoolExecutor(max_workers=max(1, min(32, len(available_processes)))) as pool:
+        glob_results = list(tqdm.tqdm(
+            pool.map(lambda p: (p,) + _glob_process_files(load_path, p), available_processes),
+            total=len(available_processes),
+        ))
+    for process, full_load_path, files in glob_results:
         logger.info(f"length of files: {len(files)}")
         logger.info(f"full_load_path: {full_load_path}")
         if len(files) == 0:
@@ -456,14 +462,34 @@ def build_fileset_for_year(year, load_path, available_processes, use_compacted):
     return fileset
 
 
-def run_validation_runner(fileset, processor_instance, client, chunksize=50_000, treereduction=2):
+def _glob_process_files(load_path, process):
+    full_load_path = (load_path + f"/{process}/*/*.parquet").replace("//", "/")
+    return full_load_path, glob.glob(full_load_path)
+
+
+def run_validation_runner(fileset, processor_instance, client, chunksize=400_000, treereduction=4):
     """Run one coffea Runner pass over the given fileset, dask-parallelized via `client`.
+
+    chunksize was raised from coffea's original 50_000 after a local-cluster sweep
+    (50k/100k/200k/400k/800k) showed monotonic wall-clock improvement up to 400k
+    (630s -> 88s, ~86% faster) then a flat plateau at 800k (also 88s, no further
+    gain) with no worker memory warnings at any step -- 400k gets the full
+    speedup with more headroom below the plateau than 800k. Output histograms
+    were verified byte-identical (all .txt dumps) across every chunksize tested,
+    so this only changes how work is split across chunks, not any result.
+    Revisit downward if a future run with more/heavier variables shows memory
+    pressure -- larger chunksize means more data (and more per-chunk Python
+    object overhead) in flight per task.
 
     treereduction is lowered from coffea's default of 20: each reduce task gathers
     up to `treereduction` still-unreduced per-chunk histogram payloads onto one
     worker and accumulates them all at once (coffea.processor.executor._reduce),
     so a smaller fan-in bounds peak per-worker memory during the final reduction
-    rounds at the cost of more (lighter) reduction rounds overall.
+    rounds at the cost of more (lighter) reduction rounds overall. 4 (was 2,
+    tightened during an earlier worker-memory stall) still keeps that bound far
+    below the default while roughly halving the number of reduction rounds/
+    scheduler overhead versus 2 -- revisit downward again if a future run shows
+    the same near-memory-ceiling "paused" worker pattern.
     """
     if not fileset:
         logger.warning("No samples left to process; fileset is empty.")
@@ -525,12 +551,11 @@ def generate_combo_plots(
             "zpt_option": zpt_option,
         }
 
-        to_project_setting_val = to_project_setting.copy()
-        to_project_setting_val["val_sumw2"] = "value"
-        hist_val = sample_hist[to_project_setting_val].project(var).values()
-        to_project_setting_w2 = to_project_setting.copy()
-        to_project_setting_w2["val_sumw2"] = "sumw2"
-        hist_w2 = sample_hist[to_project_setting_w2].project(var).values()
+        # Weight() storage exposes sum(weight) and sum(weight^2) per bin directly
+        # via .values()/.variances() -- see build_hist_templates()/fillHist().
+        projected = sample_hist[to_project_setting].project(var)
+        hist_val = projected.values()
+        hist_w2 = projected.variances()
         if np.sum(hist_val) == 0:  # skip processes that doesn't have anything
             logger.debug(f"hist_val is empty for {group_name} in {var}, skipping!")
             continue
