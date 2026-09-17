@@ -380,6 +380,7 @@ def closure_test_resolution_binning(
         plt.axvline(med_noncal, color="blue", linestyle="dashed", linewidth=2, label=f"Median NonCal: {med_noncal:.4f}")
         plt.legend()
         plt.savefig(f"{output_dir}/mass_resolution_resBin{i}_Calibrated_{pdfFile_ExtraText}.pdf")
+        plt.savefig(f"{output_dir}/mass_resolution_resBin{i}_Calibrated_{pdfFile_ExtraText}.png", dpi=120)
         plt.close()
 
         # measured sigma from Z-mass fit in THIS bin
@@ -587,6 +588,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
 
     # save plot
     canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.png")
     del canvas
     # # consider script to wait a second for stability?
     # time.sleep(1)
@@ -1348,6 +1350,7 @@ def generateBWxDCB_plot(
     if pdfFile_ExtraText:
         full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
     canvas.SaveAs(full_path)
+    canvas.SaveAs(full_path.replace(".pdf",".png"))
 
     os.makedirs(f"{output_dir}/fits_root", exist_ok=True)
     canvas.SaveAs(f"{output_dir}/fits_root/calibration_fitCat{cat_idx}.root")
@@ -1556,6 +1559,7 @@ def generateBWxDCB_plot_bkgErfxExp(mass_arr, cat_idx: int, nbins, df_fit = "", l
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
     canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.png")
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
@@ -1837,6 +1841,7 @@ def plot_closure_comparison_calibrated_uncalibrated(
     if pdfFile_ExtraText:
         full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
     plt.savefig(full_path)
+    plt.savefig(full_path.replace(".pdf",".png"))
     plt.close()
     logger.info(f"Combined closure test plot saved as {full_path}")
 
