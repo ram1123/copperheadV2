@@ -37,8 +37,8 @@ DATASET_SEPARATOR = "::"
 DY_MATCH_CATEGORIES = ("matched01J", "matched2J")
 
 # --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
-# The score and its working point both come from plotter/mva_A1xB2_scoring.py, which
-# already drives the equivalent control-plot categories; nothing is redefined here.
+
+# The score and its working point both come from plotter/mva_A1xB2_scoring.py.
 # Imported lazily so that the default kinematic path never pays the import cost and
 # never fails if the scan artifact or the checkpoints are absent.
 TRANSFORMER_SCORE_FIELD = "p_VBF_transformer"
@@ -65,6 +65,7 @@ def add_transformer_score(events, year):
     return ak.with_field(
         events, score_vbf_probability(events, year), TRANSFORMER_SCORE_FIELD
     )
+# --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
 
 
 def is_dy_sample(sample_name):
@@ -563,6 +564,9 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         }
 
         selected_events = 0
+        # Reuse DNN scores across weight variations, which share the same selection
+        # and input features, to avoid redundant inference.
+        score_cache = {}
         for region, weight_variation, syst_variation in itertools.product(
             ["h-peak", "h-sidebands"],
             wgt_variations,
@@ -586,10 +590,12 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             )
 
             # ----------------------------------
+            feature_sources = []
             for feature in self.training_features:
                 if feature in self.year_onehot_features:
                     # Synthesized from dataset metadata in evaluate_scores();
                     # no event field to fetch.
+                    feature_sources.append(feature)
                     continue
                 source = feature_name_for_variation(
                     feature,
@@ -599,6 +605,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                     nominal_only_features=self.no_scale_features,
                 )
                 needed_cols.add(source)
+                feature_sources.append(source)
 
             needed_cols4print = sorted(needed_cols)
             needed_cols = needed_cols & set(events.fields) # merge with existing fields
@@ -626,11 +633,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             region_events = selection.applyRegionCatCuts(
                 filtered_events,
                 process=sample_type,
-                # Same region selection, but stop at the b-jet veto and let the
-                # transformer score -- not jj_mass/jj_dEta/jet1_pt -- decide what is
-                # VBF. This is the "bJetVeto" branch applyRegionCatCuts already has,
-                # and it is exactly what plotter/mva_A1xB2_scoring.apply_mva_A1xB2_cut
-                # uses for the equivalent control-plot categories.
+                # Apply the b-jet veto before transformer-based VBF selection,
+                # matching the control-plot categories.
                 category="bJetVeto" if self.use_transformer_vbf_channel else category,
                 region_name=region,
                 do_vbf_filter_study=self.do_vbf_filter_study,
@@ -643,15 +647,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 ]
             region_events = fillEventNans(region_events, category=category)
             if region == "h-sidebands":
-                # Pin dimuon_mass to 125 GeV for every event in h-sidebands so DNN
-                # scoring there matches the signal-region mass hypothesis. This must
-                # also cover any systematic-shifted sibling column of dimuon_mass
-                # (e.g. dimuon_mass_mu_roccor_up/down) that survived column
-                # filtering above -- feature_name_for_variation() prefers a
-                # variation-suffixed column over the base "dimuon_mass" field, so
-                # leaving a sibling un-pinned lets the real (non-125) shifted mass
-                # leak into DNN scoring for that one variation while every other
-                # variation correctly uses the pinned value.
+                # Pin nominal and shifted dimuon masses to 125 GeV so sideband DNN
+                # scoring uses the signal-region mass hypothesis for every variation.
                 dimuon_mass_fields = [
                     f for f in region_events.fields if f.startswith("dimuon_mass")
                 ]
@@ -664,7 +661,23 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if variation == "nominal":
                 selected_events += len(region_events)
 
-            scores = self.evaluate_scores(region_events, feature_variation, year)
+            # Score caching method.
+            selection_key = "nominal" if variation.startswith("wgt") else variation
+            score_cache_key = (region, selection_key, tuple(feature_sources))
+            cached = score_cache.get(score_cache_key)
+            if cached is not None and len(cached) == len(region_events):
+                scores = cached
+            else:
+                if cached is not None:
+                    # Same key but a different row count means the selection was not
+                    # bit-identical to the cached one, so the cached score is invalid and must be recomputed.
+                    logger.warning(
+                        "[stage2][score-cache] row-count mismatch for key %s "
+                        "(cached %d, now %d); rescoring.",
+                        score_cache_key, len(cached), len(region_events),
+                    )
+                scores = self.evaluate_scores(region_events, feature_variation, year)
+                score_cache[score_cache_key] = scores
             weights = ak.to_numpy(ak.materialize(region_events[weight_variation]))
             fill_common = {
                 "region": region,

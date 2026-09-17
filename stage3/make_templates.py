@@ -49,11 +49,6 @@ PDF_UNC_COMBINATION = "hessian" # supported values are "hessian" or "rms"
 # they never count towards the 100 eigenvector members above.
 PDF_ALPHA_S_PREFIX = "wgt_pdfAlphaS"
 PDF_ALPHA_S_MEMBERS = ("wgt_pdfAlphaS101_up", "wgt_pdfAlphaS102_up")
-# Multiplies the alpha_s half-difference, PDF4LHC15 (arXiv:1510.03865) Eqs. (29)-(30):
-# r = (target delta alpha_s) / (delta alpha_s of the members). The members sit at
-# +-0.002, so 1.0 quotes the uncertainty for delta alpha_s = 0.002; PDF4LHC15's 0.0015
-# would be 0.75 and PDF4LHC21's 0.001 would be 0.5. Kept at 1.0 by the analyst
-# (2026-09-14).
 ALPHA_S_UNC_SCALE = 1.0
 
 shape_only = [
@@ -338,12 +333,8 @@ def make_templates(args, parameters={}):
         # manually add parton shower variations end -------------------------------
         logger.debug(f"wgt_variations: {wgt_variations}")
 
-        # Hold the eigenvector members out of the normal template path: they are not
-        # nuisances, they are the 100 terms of the Eq. (6.5) sum that is taken after
-        # this loop. They still have to go *through* the loop body, which is what
-        # sums a group's datasets and projects the bins, so append them at the end
-        # (sorted, so the sum is order-deterministic) and intercept them just before
-        # a TH1 would be made.
+        # Aggregate PDF members by group and bin for Eq. (6.5), without emitting
+        # individual nuisance templates; sort them for deterministic summation.
         pdf_member_variations = sorted(
             v for v in wgt_variations if v.startswith(PDF_MEMBER_PREFIX)
         )
@@ -653,14 +644,12 @@ def make_templates(args, parameters={}):
                 logger.debug(f"Sum of histogram for group {group} is zero in {year} for {region} and {channel}. Skipping!")
                 continue
 
-            # Keep the nominal group histogram: it is F^(0) of Eq. (6.5), and the
-            # members inherit its sumw2 (they are the same events reweighted, so they
-            # carry no independent MC statistics). Copy, because `group_hist` above is
-            # accumulated in place across the group's datasets.
+            # Copy the nominal reference for Eq. (6.5); reweighted members share
+            # its MC statistics and inherit its sumw2.
             if variation == "nominal":
                 pdf_nominal = (
                     np.array(group_hist, dtype=np.float64),
-                    np.array(group_sumw2, dtype=np.float64),
+                    np.array(group_sumw2, dtype=np.float64), # sumw2 should not be relevant for calculating pdf uncertainty, but keep it in track for consistency with the rest of the templates.
                     np.array(edges, dtype=np.float64),
                     np.array(centers, dtype=np.float64),
                 )
@@ -891,9 +880,7 @@ def make_templates(args, parameters={}):
             else:
                 pdf_suffix = "_" + group_LHE + str(year)
                 for nuisance, delta in pdf_deltas.items():
-                    # Positivity per PDF4LHC21 Sect. 6.3.2: the Gaussian interval is
-                    # symmetric about the nominal, and the truncation is applied to the
-                    # observable -- i.e. here, at the bin -- not to the per-event weight.
+                    # Floor downward bin yields at zero per PDF4LHC21 Sect. 6.3.2.
                     pdf_variations = {
                         "up": pdf_hist_nominal + delta,
                         "down": np.maximum(pdf_hist_nominal - delta, 0.0),
