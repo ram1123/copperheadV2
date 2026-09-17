@@ -21,6 +21,7 @@ common_defaults() {
     cluster_index="0"
     is_mc="0"
     is_sync="0"
+    is_cutflow="0"
     switches_yaml_file=""
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
@@ -31,7 +32,7 @@ common_defaults() {
 }
 
 parse_common_args() {
-    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:w:ksfzDV" opt; do
+    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:w:ksfzZDV" opt; do
         case "${opt}" in
             h) usage ;;
             c) dataset_yaml="${OPTARG}" ;;
@@ -54,6 +55,7 @@ parse_common_args() {
             s) skip_bad_files="1" ;;
             f) debug_fraction="1" ;;
             z) is_sync="1" ;;
+            Z) is_cutflow="1" ;;
             D) compact_add_dnn_score="1" ;;
             V) do_vbf_filter_study="1" ;;
             *) usage ;;
@@ -281,9 +283,13 @@ append_stage1_args() {
         # for 2022preEE v12 the plain file's data_C had 108 files / 158M events vs. the _sync.json's 3
         # small samples -- update_sync_references.sh appeared to hang because stage-1 was actually
         # processing 158M real events instead of ~1k sync events.
-        printf '%s\n' "--sync" "--isCutflow"
-        # BUG: --sync and --isCutflow should be separate.
-        #      as sync for the stage-1 is to read the sync pre-stage file
+        printf '%s\n' "--sync"
+    fi
+    if [[ "${is_cutflow}" == "1" ]]; then
+        # -z/--sync (sample-list selection) and -Z/--isCutflow (per-chunk cutflow shard
+        # output) are independent: a caller may want either alone, or both together (e.g.
+        # the CI sync-regression test wants both -- small sample set AND cutflow JSON).
+        printf '%s\n' "--isCutflow"
     fi
 }
 
@@ -387,7 +393,7 @@ build_compact_cmd() {
 }
 
 run_cutflow_merge() {
-    # Merges the per-chunk cutflow_*.npz shards stage-1 writes (-z/--isCutflow)
+    # Merges the per-chunk cutflow_*.npz shards stage-1 writes (-Z/--isCutflow)
     # into one whole-dataset cutflow per sample, via scripts/merge_cutflow_npz_file.py.
     # Every sample directory lives under stage1_output/<year>/f1_0/<sample>/ --
     # same layout build_stage1_cmd's --save_path writes to and every other
@@ -587,7 +593,7 @@ run_zpt_fit() {
     # local dy_sample="IncDY_aMCatNLO_PySR07MayV2_ShapeNormOnly"
     local -a cmd0=(python src/copperhead/zpt_rewgt/derive/save_SF_rootFiles.py -l "${label}" -y "${year}" --input_path "${save_path}" -dy_sample "${dy_sample}")
     local -a cmd1=(python src/copperhead/zpt_rewgt/derive/do_f_test.py -l "${label}" -y "${year}" --dy_sample "${dy_sample}" --nbins "${nbin}" --njet "${njet}" --save_postfix "${save_postfix}" --debug)
-    local -a cmd2=(python src/copperhead/zpt_rewgt/derive/get_polyFit.py -l "${label}" -y "${year}" --dy_sample "${dy_sample}" --njet "${njet}" --save_postfix "${save_postfix}")
+    local -a cmd2=(python src/copperhead/zpt_rewgt/derive/get_polyFit.py -l "${label}" -y "${year}" --dy_sample "${dy_sample}" --njet "${njet}" --save_postfix "${save_postfix}" --input_path "${save_path}")
 
     if [[ "${dask_gateway}" == "1" ]]; then
         cmd0+=(--use_gateway)

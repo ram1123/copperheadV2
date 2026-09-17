@@ -8,10 +8,10 @@ Modes:
   0|prestage
   1|stage1
   cutflow_merge                Merges the per-chunk cutflow_*.npz shards from a stage-1
-                                -z/--isCutflow run into one whole-dataset cutflow per sample
+                                -Z/--isCutflow run into one whole-dataset cutflow per sample
                                 (scripts/merge_cutflow_npz_file.py), writing
                                 <save_path>/stage1_output/<year>/f1_0/<sample>/cutflow_merged_<sample>.json.
-                                Run after the stage1 -z run it merges, with the same -l/-y/-S.
+                                Run after the stage1 -Z run it merges, with the same -l/-y/-S.
   2|stage2
   2p|stage2_plot
   3|stage3
@@ -27,6 +27,12 @@ Modes:
                                dnn_train, which combines years into one invocation).
 
 Options:
+  -z    Sync mode: prestage/stage-1 read the small sync sample list
+        (*_sync.json) instead of the plain/production one. Independent of -Z.
+  -Z    isCutflow: stage-1 writes per-chunk cutflow_*.npz/json shards
+        (see cutflow_merge above). Independent of -z -- pass both for a
+        sync-sample cutflow run (e.g. the CI regression test), or -Z alone
+        for a cutflow run against the full/production sample list.
   -D    Add DNN score during the compact step. Default is off.
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 workflow.
   -w    Path to a standalone switches yaml (stage-1 only), e.g.
