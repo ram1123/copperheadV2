@@ -69,12 +69,17 @@ run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics"
 # --switches-yaml / src/lib/get_parameters.py). Pins the `stage1` rule to a
 # named, independent switches configuration -- e.g.
 # configs/parameters/switches_official.yaml -- instead of whatever
-# configs/parameters/switches.yaml currently says, so you don't have to edit
+# configs/parameters/switches_official.yaml currently says, so you don't have to edit
 # the shared file in place per run_tag. 
 # Can also be set per-invocation without editing this file:
 #   snakemake ... --config switches_yaml=configs/parameters/switches_official.yaml
+
 # switches_yaml: configs/parameters/switches_official.yaml
 switches_yaml: configs/parameters/switches_official_systematics.yaml
+
+# switches_yaml: configs/parameters/switches_JetPt25GeV.yaml
+# switches_yaml: configs/parameters/switches_JetPt25GeV_PUDNN.yaml
+# switches_yaml: configs/parameters/switches_official_Both_HEHF_50GeV.yaml
 
 # dask gateway
 use_gateway: true

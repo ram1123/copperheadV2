@@ -86,10 +86,10 @@ def build_common_parser() -> argparse.ArgumentParser:
         action="store",
         help=(
             "Path to a standalone switches yaml (same 'switches: {key: {year: value}}' "
-            "shape as configs/parameters/switches.yaml) to use instead of the one in "
+            "shape as configs/parameters/switches_official.yaml) to use instead of the one in "
             "configs/parameters/ -- e.g. configs/parameters/switches_official.yaml. "
             "Only consumed by run_stage1.py. Omit to keep the previous behavior "
-            "(configs/parameters/switches.yaml, picked up automatically)."
+            "(configs/parameters/switches_official.yaml, picked up automatically)."
         ),
     )
     parser.add_argument(

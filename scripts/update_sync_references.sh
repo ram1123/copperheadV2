@@ -22,7 +22,7 @@ nanoaodv="12"
 label="label_output"
 output_root="test/output"
 reference_dir="test/reference"
-switches_file="configs/parameters/switches.yaml"
+switches_file="configs/parameters/switches_official.yaml"
 switches_backup=""
 reference_switches_file="test/reference/switches.yaml"
 
@@ -35,7 +35,7 @@ restore_switches() {
 }
 
 if [[ "$switch_mode" == "--use-reference-switches" ]]; then
-    switches_backup="$(mktemp "${TMPDIR:-/tmp}/switches.yaml.XXXXXX")"
+    switches_backup="$(mktemp "${TMPDIR:-/tmp}/switches_official.yaml.XXXXXX")"
     cp "$switches_file" "$switches_backup"
     trap restore_switches EXIT
     cp "$reference_switches_file" "$switches_file"

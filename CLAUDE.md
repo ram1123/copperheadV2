@@ -140,22 +140,22 @@ Client"; remember to run the teardown cells when done to free gateway resources.
 - Individual `run_*.py` scripts — argparse entry points invoked by the shell layer; can also be run directly
   for debugging a single step.
 
-**Switches profiles**: `configs/parameters/switches.yaml` is one file shared by every year/rule in the
+**Switches profiles**: `configs/parameters/switches_official.yaml` is one file shared by every year/rule in the
 Snakemake DAG, so it can't be toggled per-rule mid-DAG — parallel rules racing to rewrite it would corrupt
 it. `scripts/apply_switches_profile.py` applies a named profile from
-`configs/parameters/switches_profiles/*.yaml` onto `switches.yaml` as a text-level edit of just the
+`configs/parameters/switches_profiles/*.yaml` onto `switches_official.yaml` as a text-level edit of just the
 affected `(key, year)` tokens (not a YAML parse/re-dump, which would lose the file's inline comments).
 `scripts/run_scenario.sh` applies a profile once, then runs the whole Snakemake DAG under a
 scenario-specific `run_tag` (passed via `--config`, leaving the checked-in `workflow/config.yaml`
 untouched) — treat "apply a profile, then run the DAG" as one atomic step, never run two of these
-concurrently against the same `switches.yaml`. `scripts/reset_stage1_chunk.sh` /
+concurrently against the same `switches_official.yaml`. `scripts/reset_stage1_chunk.sh` /
 `reset_stage1_samples.sh` clear stage-1's resumability markers for one chunk or one sample so a targeted
 rerun (e.g. a corrupt parquet file, or reprocessing DY after deriving a new Z-pT correction) reprocesses
 only what's reset and skips everything else already done.
 
 **Config layout** (`configs/`): `datasets/*.yaml` (per-nanoAOD-version, per-run dataset lists incl. `sync_*`
 used by CI), `parameters/*.yaml` (JEC, muon, electron, trigger, cross sections, luminosity,
-`switches.yaml` for year-keyed feature flags plus `switches_profiles/` — see above,
+`switches_official.yaml` for year-keyed feature flags plus `switches_profiles/` — see above,
 `correction_filelist.yaml`/`SF_filelist.yaml` pointing at correction payloads), `categories/` (category
 cut definitions), `variables/variable_lists.py`, `samples/`, `MVA/` (BDT subcategory calculation configs),
 `skip_stage1_run.py` (`samples_to_run`/`samples_to_skip` allow/deny list consulted by stage-1 driving code).
@@ -196,7 +196,7 @@ intentional. `pylint.yml` runs pylint on PR-changed files only via `workflow_dis
   histogramming these.
 - Year strings are the canonical partition key throughout (`2016preVFP`, `2016postVFP`, `2017`, `2018`,
   `2022preEE`, `2022postEE`, `2023`, `2023BPix`, `2024`, `2025`); `modules/classify_year.py` maps these to
-  `is_run2`/`is_run3`, and `configs/parameters/switches.yaml` keys feature flags by the same strings.
+  `is_run2`/`is_run3`, and `configs/parameters/switches_official.yaml` keys feature flags by the same strings.
 
 ## Project scope
 

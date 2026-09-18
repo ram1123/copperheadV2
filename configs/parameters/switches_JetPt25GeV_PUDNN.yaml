@@ -197,13 +197,13 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
-        "2025": true
-        "2026": true
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_met_xy_correction: # PuppiMET xy-shift (phi modulation) correction, see src/corrections/met_xy_correction.py
         # Full Run 2 UL enabled (implement-met-phi-modulation-correction task,
         # Run3 is not implemented (no sourced coefficients).
@@ -219,17 +219,17 @@ switches:
         "2025": false
         "2026": false
     do_jet_veto_maps_filterJets: # remove the jets not events
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+        "2025": true
+        "2026": true
     do_jet_horn_ptcut: # Applies ONLY to the HE region (2.5 < |eta| <= 3.0, see jetHorn_region in
         # jet_loop) -- it never touches HF (3 < |eta| < 5) regardless of value.
         # Official JME per-year/per-region guidance ("Mitigation techniques", Anna Benecke slide 14):
@@ -247,7 +247,7 @@ switches:
         '2022postEE': false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2023": false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2023BPix": false # they are set by `add_pt_cut_for_HE_HF_jets`
-        "2024": 50
+        "2024": false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2025": false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2026": false # they are set by `add_pt_cut_for_HE_HF_jets`
     add_pt_cut_for_HE_HF_jets:
@@ -257,10 +257,10 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': 50
-        '2022postEE': 50
-        "2023": 50
-        "2023BPix": 50
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
         "2024": false
         "2025": false
         "2026": false
@@ -322,17 +322,17 @@ switches:
         # Mutually exclusive with do_use_pySR_score. Model dir is per-year, see
         # "pu_dnn_model_dir" in configs/parameters/SF_filelist.yaml (2022/2023
         # models exclude puIdDisc, 2024/2025 models include it).
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+        "2025": true
+        "2026": true
     do_jet_horn_puid:
         '2016preVFP': false # For nanoAODv12, do_jet_horn_puid should be true
         '2016postVFP': false # For nanoAODv12, do_jet_horn_puid should be true
@@ -374,18 +374,18 @@ switches:
         '2016postVFP': -1 # For nanoAODv12, jer_strat should be 3
         '2017': -1 # For nanoAODv12, jer_strat should be 3
         '2018': -1 # For nanoAODv12, jer_strat should be 3
-        '2022preEE': 4
-        '2022postEE': 4
-        "2023": 4
-        "2023BPix": 4
-        "2024": 4
-        "2025": 4
-        "2026": 4
+        '2022preEE': -1
+        '2022postEE': -1
+        "2023": -1
+        "2023BPix": -1
+        "2024": -1
+        "2025": -1
+        "2026": -1
     do_jec_unc:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
         '2022preEE': false
         '2022postEE': false
         "2023": false
@@ -406,17 +406,17 @@ switches:
         "2025": false
         "2026": false
     do_nnlops:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
-        "2025": true
-        "2026": true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_pdf:
         '2016preVFP': false
         '2016postVFP': false
@@ -430,17 +430,17 @@ switches:
         "2025": false
         "2026": false
     do_THU:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
-        "2025": true
-        "2026": true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_pu_wgt:
         '2016preVFP': true
         '2016postVFP': true

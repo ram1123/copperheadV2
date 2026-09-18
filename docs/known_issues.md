@@ -86,33 +86,33 @@ the `njets` keyword to `njets_selection` (the two scripts' `category`/`region_na
 `do_vbf_filter_study` keywords already matched the real signature, so only these two needed to
 change).
 
-## `test/reference/switches.yaml` drifts out of sync with new required switch keys (fixed 2026-09-12)
+## `test/reference/switches_official.yaml` drifts out of sync with new required switch keys (fixed 2026-09-12)
 
-`test/reference/switches.yaml` is a separately-maintained, intentionally-frozen snapshot of
-`configs/parameters/switches.yaml` that `.github/workflows/sync-stage1.yml` (and
+`test/reference/switches_official.yaml` is a separately-maintained, intentionally-frozen snapshot of
+`configs/parameters/switches_official.yaml` that `.github/workflows/sync-stage1.yml` (and
 `scripts/update_sync_references.sh --use-reference-switches`) copies over the real config before
 running the sync sample, so CI's stage-1 output stays reproducible regardless of what production
 switches currently say. Problem: nothing keeps this snapshot's *set of keys* in sync as
-`configs/parameters/switches.yaml` gains new switches over time. `src/copperhead_processor.py` reads
+`configs/parameters/switches_official.yaml` gains new switches over time. `src/copperhead_processor.py` reads
 some switches via a plain `self.config["switches"]["some_key"]` (no default) — if such a key is
 missing from the frozen snapshot, every sample crashes with a `KeyError` the moment
 `--use-reference-switches` is used, since that mode replaces the whole file rather than merging keys.
 
-Hit in practice with `do_reject_high_rawFactor_jets` (added to production switches.yaml after this
-snapshot was last regenerated). Fixed by adding it to `test/reference/switches.yaml` with `false` for
+Hit in practice with `do_reject_high_rawFactor_jets` (added to production switches_official.yaml after this
+snapshot was last regenerated). Fixed by adding it to `test/reference/switches_official.yaml` with `false` for
 every year — matching production's own universal-off default, so this is a zero-behavior-change fix,
 not a new physics choice. A second key, `do_met_xy_correction`, was also found missing from the
 snapshot but is read via `.config["switches"].get("do_met_xy_correction", False)`, so its absence
 silently defaults to `False` (matching production everywhere anyway) — harmless, left as-is.
 
 **If you add a new switch key that's read via a plain `["..."]` lookup (no `.get(..., default)`),
-add it to `test/reference/switches.yaml` too** (with whatever value reproduces old/pre-change
+add it to `test/reference/switches_official.yaml` too** (with whatever value reproduces old/pre-change
 behavior), or `--use-reference-switches` will start failing with a `KeyError` for every sample. To
 check for drift directly:
 
 ```python
 import yaml
-prod = yaml.safe_load(open("configs/parameters/switches.yaml"))["switches"]
-ref = yaml.safe_load(open("test/reference/switches.yaml"))["switches"]
-print("missing from test/reference/switches.yaml:", sorted(set(prod) - set(ref)))
+prod = yaml.safe_load(open("configs/parameters/switches_official.yaml"))["switches"]
+ref = yaml.safe_load(open("test/reference/switches_official.yaml"))["switches"]
+print("missing from test/reference/switches_official.yaml:", sorted(set(prod) - set(ref)))
 ```

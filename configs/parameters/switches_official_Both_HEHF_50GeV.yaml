@@ -247,7 +247,7 @@ switches:
         '2022postEE': false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2023": false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2023BPix": false # they are set by `add_pt_cut_for_HE_HF_jets`
-        "2024": 50
+        "2024": false
         "2025": false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2026": false # they are set by `add_pt_cut_for_HE_HF_jets`
     add_pt_cut_for_HE_HF_jets:
@@ -261,9 +261,9 @@ switches:
         '2022postEE': 50
         "2023": 50
         "2023BPix": 50
-        "2024": false
-        "2025": false
-        "2026": false
+        "2024": 50
+        "2025": 50
+        "2026": 50
     add_asymmetric_pt_cut_for_HE_HF_jets:
         # available options: [35.0, 30.0] or false
         '2016preVFP': false

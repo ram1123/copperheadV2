@@ -1,3 +1,4 @@
+# "Official" switches with systematics
 switches:
     save_full_muon_detail:
         '2016preVFP': false
@@ -136,13 +137,13 @@ switches:
         '2016postVFP': true
         '2017': true
         '2018': true
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+        "2025": true
+        "2026": true
     save_zpt_variations:
         '2016preVFP': false
         '2016postVFP': false
@@ -216,7 +217,7 @@ switches:
         "2023BPix": false
         "2024": false
         "2025": false
-        "2026": false    
+        "2026": false
     do_jet_veto_maps_filterJets: # remove the jets not events
         '2016preVFP': false
         '2016postVFP': false
@@ -242,13 +243,13 @@ switches:
         '2016postVFP': false
         '2017': false
         '2018': false
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
+        '2022preEE': false # they are set by `add_pt_cut_for_HE_HF_jets`
+        '2022postEE': false # they are set by `add_pt_cut_for_HE_HF_jets`
+        "2023": false # they are set by `add_pt_cut_for_HE_HF_jets`
+        "2023BPix": false # they are set by `add_pt_cut_for_HE_HF_jets`
+        "2024": 50
+        "2025": false # they are set by `add_pt_cut_for_HE_HF_jets`
+        "2026": false # they are set by `add_pt_cut_for_HE_HF_jets`
     add_pt_cut_for_HE_HF_jets:
         # official recommendation:
         # 2022 and 2023: HE and HF both >50 GeV
@@ -417,17 +418,17 @@ switches:
         "2025": true
         "2026": true
     do_pdf:
-        '2016preVFP': true
-        '2016postVFP': true
-        '2017': true
-        '2018': true
-        '2022preEE': true
-        '2022postEE': true
-        "2023": true
-        "2023BPix": true
-        "2024": true
-        "2025": true
-        "2026": true
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_THU:
         '2016preVFP': true
         '2016postVFP': true
@@ -480,10 +481,10 @@ switches:
         "2025": false
         "2026": false
     do_qgl_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         # Run-3: Recommendation does not exists, yet.
         '2022preEE': false
         '2022postEE': false
