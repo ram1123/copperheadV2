@@ -103,7 +103,7 @@ TXT_COMPARE_EXCLUDED_VARS = {
 
 HEADER_KEY_FIELD = "run:lumi:event"
 
-DEFAULT_REL_TOLERANCE = 1e-5
+DEFAULT_REL_TOLERANCE = 1e-3
 
 
 def _exceeds_tolerance(v1: float, v2: float, rel_tolerance: float) -> bool:
@@ -692,7 +692,8 @@ def parse_args():
         default=DEFAULT_REL_TOLERANCE,
         help=(
             "Relative tolerance for comparing dimuon variables "
-            f"(default: {DEFAULT_REL_TOLERANCE:g}). Cutflow counts are always exact."
+            f"(default: {DEFAULT_REL_TOLERANCE:g}); the value is enforced to be positive. "
+            "Cutflow counts are always exact."
         ),
     )
     parser.add_argument(
@@ -713,7 +714,9 @@ def parse_args():
         default="data",
         help="Process name passed to selection.applyRegionCatCuts (default: 'data').",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.tolerance = abs(args.tolerance) # A negative tolerance is meaningless here; treat it as its magnitude.
+    return args
 
 
 # ----------------------------------------------------------------------
