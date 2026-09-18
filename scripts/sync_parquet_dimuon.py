@@ -71,7 +71,6 @@ SYNCVARLIST: List[str] = [
     "separate_wgt_muTrig",
     "separate_wgt_LHERen",
     "separate_wgt_LHEFac",
-    "separate_wgt_pdf_2rms",
     "separate_wgt_jetpuid",
     "separate_wgt_btag",
     "separate_wgt_qgl",
@@ -92,7 +91,6 @@ TXT_COMPARE_EXCLUDED_VARS = {
     "separate_wgt_muTrig",
     "separate_wgt_LHERen",
     "separate_wgt_LHEFac",
-    "separate_wgt_pdf_2rms",
     "separate_wgt_jetpuid",
     "separate_wgt_btag",
     "separate_wgt_qgl",
@@ -268,15 +266,23 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     Missing values are written as -100.00
     """
     missing = [c for c in SYNCVARLIST if c not in df.columns]
-    required = [c for c in SYNCVARLIST if c not in KEY_VARS and c in df.columns]
+    # Always emit one field per SYNCVARLIST entry, in SYNCVARLIST order. Columns
+    # absent from the dataframe are written as -100.00 rather than dropped:
+    # parse_sync_txt() maps fields onto SYNCVARLIST *positionally*, so omitting a
+    # mid-list column silently shifts every column after it and makes unrelated
+    # variables compare against each other.
+    required = [c for c in SYNCVARLIST if c not in KEY_VARS]
 
     if missing:
-        print(f"[WARNING] Missing columns for sync dump: {missing}")
+        print(f"[WARNING] Missing columns for sync dump (written as -100.00): {missing}")
 
     df2 = df.copy()
 
     for c in required:
-        df2[c] = df2[c].fillna(-100.0)
+        if c not in df2.columns:
+            df2[c] = -100.0
+        else:
+            df2[c] = df2[c].fillna(-100.0)
 
     with open(out_path, "w") as f:
         for _, row in df2.iterrows():
