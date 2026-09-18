@@ -107,6 +107,12 @@ WEIGHT_DETAIL_VARS = {
     v for v in TXT_COMPARE_EXCLUDED_VARS if v != "wgt_nominal"
 }
 
+# Relative floor added to the absolute --tolerance, since stage-1 is not bit-reproducible
+# and wgt_nominal reaches ~6e5 for 2017 DY, where 0.1 absolute is a 1.7e-7 relative demand
+# that different BLAS builds miss (observed 1.5e-6 on GitHub runners, 3.4e-8 locally).
+# Kinematics are O(1e3) at most, so the absolute tolerance still governs them.
+SYNC_REL_TOLERANCE = 1e-5
+
 
 def _is_data_sync_source(label: str) -> bool:
     label_l = str(label).lower()
@@ -563,7 +569,7 @@ def compare_two_sync_txt(
             rec[f"{v}_1"] = v1
             rec[f"{v}_2"] = v2
             rec[f"delta_{v}"] = d
-            if abs(d) > tolerance:
+            if abs(d) > max(tolerance, SYNC_REL_TOLERANCE * max(abs(v1), abs(v2))):
                 mismatch = True
 
         if mismatch:
