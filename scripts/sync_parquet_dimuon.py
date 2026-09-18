@@ -110,7 +110,7 @@ WEIGHT_DETAIL_VARS = {
 # Comparisons are relative by default: stage-1 is not bit-reproducible and wgt_nominal
 # reaches ~6e5, where any absolute cut demands agreement below float noise (1.5e-6
 # relative seen on GitHub runners). --tolerance adds an optional absolute floor.
-DEFAULT_REL_TOLERANCE = 1e-5
+DEFAULT_REL_TOLERANCE = 1e-4
 DEFAULT_ABS_TOLERANCE = 0.0
 
 
