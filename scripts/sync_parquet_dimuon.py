@@ -107,17 +107,23 @@ WEIGHT_DETAIL_VARS = {
     v for v in TXT_COMPARE_EXCLUDED_VARS if v != "wgt_nominal"
 }
 
-# Comparisons are relative by default: stage-1 is not bit-reproducible and wgt_nominal
-# reaches ~6e5, where any absolute cut demands agreement below float noise (1.5e-6
-# relative seen on GitHub runners). --tolerance adds an optional absolute floor.
+DEFAULT_TOLERANCE_MODE = "relative"
 DEFAULT_REL_TOLERANCE = 1e-4
-DEFAULT_ABS_TOLERANCE = 0.0
+DEFAULT_ABS_TOLERANCE = 0.1
 
 
-def _exceeds_tolerance(v1: float, v2: float, tolerance: float, rel_tolerance: float) -> bool:
-    """True if v1 and v2 differ by more than the relative tolerance, or than the
-    absolute floor when one is given."""
-    return abs(v2 - v1) > max(tolerance, rel_tolerance * max(abs(v1), abs(v2)))
+def _exceeds_tolerance(
+    v1: float,
+    v2: float,
+    tolerance: float,
+    rel_tolerance: float,
+    mode: str = DEFAULT_TOLERANCE_MODE,
+) -> bool:
+    """True if v1 and v2 differ by more than the tolerance of the selected mode."""
+    delta = abs(v2 - v1)
+    if mode == "absolute":
+        return delta > tolerance
+    return delta > rel_tolerance * max(abs(v1), abs(v2))
 
 
 def _is_data_sync_source(label: str) -> bool:
@@ -332,6 +338,7 @@ def compare_two_dirs(
     out_path: Path,
     tolerance: float = DEFAULT_ABS_TOLERANCE,
     rel_tolerance: float = DEFAULT_REL_TOLERANCE,
+    tolerance_mode: str = DEFAULT_TOLERANCE_MODE,
     category: Optional[str] = None,
     region: Optional[str] = None,
     process: str = "data",
@@ -398,7 +405,7 @@ def compare_two_dirs(
             record[f"{var}_2"] = v2
             record[f"delta_{var}"] = delta
 
-            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance):
+            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance, tolerance_mode):
                 mismatch = True
 
         if mismatch:
@@ -502,6 +509,7 @@ def compare_two_sync_txt(
     out_path: Path,
     tolerance: float = DEFAULT_ABS_TOLERANCE,
     rel_tolerance: float = DEFAULT_REL_TOLERANCE,
+    tolerance_mode: str = DEFAULT_TOLERANCE_MODE,
 ) -> None:
     """
     Compare two sync txt dumps by (run,luminosityBlock,event).
@@ -577,7 +585,7 @@ def compare_two_sync_txt(
             rec[f"{v}_1"] = v1
             rec[f"{v}_2"] = v2
             rec[f"delta_{v}"] = d
-            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance):
+            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance, tolerance_mode):
                 mismatch = True
 
         if mismatch:
@@ -703,8 +711,8 @@ def parse_args():
         type=float,
         default=DEFAULT_ABS_TOLERANCE,
         help=(
-            "Optional absolute floor, used as max(--tolerance, --rel-tolerance * |value|). "
-            f"Comparison is relative by default (default: {DEFAULT_ABS_TOLERANCE:g})."
+            "Absolute tolerance, used only with --tolerance-mode absolute "
+            f"(default: {DEFAULT_ABS_TOLERANCE:g})."
         ),
     )
     parser.add_argument(
@@ -713,8 +721,18 @@ def parse_args():
         type=float,
         default=DEFAULT_REL_TOLERANCE,
         help=(
-            "Relative tolerance, the primary check for every compared variable "
+            "Relative tolerance, used only with --tolerance-mode relative "
             f"(default: {DEFAULT_REL_TOLERANCE:g})."
+        ),
+    )
+    parser.add_argument(
+        "--tolerance-mode",
+        dest="tolerance_mode",
+        choices=("relative", "absolute"),
+        default=DEFAULT_TOLERANCE_MODE,
+        help=(
+            "Which tolerance to apply; the two are never combined "
+            f"(default: {DEFAULT_TOLERANCE_MODE})."
         ),
     )
     parser.add_argument(
@@ -781,6 +799,7 @@ def main():
                 out_path=out_path,
                 tolerance=args.tolerance,
                 rel_tolerance=args.rel_tolerance,
+                tolerance_mode=args.tolerance_mode,
             )
             return
 
@@ -804,6 +823,7 @@ def main():
                 out_path=out_path,
                 tolerance=args.tolerance,
                 rel_tolerance=args.rel_tolerance,
+                tolerance_mode=args.tolerance_mode,
                 category=args.category,
                 region=args.region,
                 process=args.process,
