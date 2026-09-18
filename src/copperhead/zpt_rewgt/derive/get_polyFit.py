@@ -37,6 +37,14 @@ def eval_polynomial_derivative(coeffs, xval):
     return sum(idx * coeff * (xval ** (idx - 1)) for idx, coeff in enumerate(coeffs) if idx >= 1)
 
 
+def covariance_matrix_to_list(fit_result, npar):
+    """Extract a TFitResultPtr's full parameter covariance matrix as a plain
+    nested Python list (float, not numpy/ROOT scalar types - JSON/YAML-safe
+    via OmegaConf). Row/column order matches the fit's own parameter order."""
+    cov = fit_result.GetCovarianceMatrix()
+    return [[float(cov(i, j)) for j in range(npar)] for i in range(npar)]
+
+
 def make_combined_function_reduced(f0_coeffs, f1_coeffs, xmin, xmax):
     """
     Builds a reduced-parameter piecewise function with exact C0 (value) continuity
@@ -660,6 +668,27 @@ def main():
             params_dict["mid_tilt_err"] = final_piecewise["mid_tilt_err"]
             params_dict["delta_tail_slope"] = final_piecewise["delta_tail_slope"]
             params_dict["delta_tail_slope_err"] = final_piecewise["delta_tail_slope_err"]
+
+            # Full covariance matrices, in addition to the per-parameter
+            # (diagonal-only) *_err fields above. The individual _err fields
+            # are only a safe basis for a systematic envelope when the
+            # parameters they belong to are uncorrelated; combined_fit_covariance
+            # (the one that matters downstream) lets the consumer instead
+            # propagate exactly (sigma(x)^2 = g(x)^T Cov g(x)) rather than
+            # summing per-parameter errors in quadrature. Consumed by
+            # copperhead_processor.py's _zpt_combined_param_envelope_full_cov
+            # (falls back to the older diagonal method for a YAML that
+            # predates this field). f0_covariance/f1_covariance are also
+            # saved for completeness but have no consumer yet.
+            params_dict["f0_covariance"] = [[float(v) for v in row] for row in f0_result["cov_x"]]
+            params_dict["f0_covariance_order"] = [f"p{i}" for i in range(order0 + 1)]
+            params_dict["f1_covariance"] = [[float(v) for v in row] for row in f1_result["cov_x"]]
+            params_dict["f1_covariance_order"] = [f"p{i}" for i in range(order1 + 1)]
+            params_dict["combined_fit_covariance"] = covariance_matrix_to_list(fit_result, f_comb.GetNpar())
+            params_dict["combined_fit_covariance_order"] = [
+                "common_shift", "low_tilt", "mid_tilt", "delta_tail_slope"
+            ]
+
             params_dict["polynomial_range"] = {"xlow": 0.0, "xmin1": xmin1, "xmax1": xmax1, "xhigh": global_fit_xmax}
             params_dict["total_bins"] = nbins_new
             params_dict["fit_orders"] = {"f0_order": order0, "f1_order": order1}

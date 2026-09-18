@@ -3,8 +3,9 @@
 compare_zpt_variations.py
 
 Quick standalone check of the Z-pT reweighting's up/down systematic impact on
-the dimuon pT spectrum, reading directly from stage-1 parquet output -- no
-Dask client, no coffea Runner, just dak.from_parquet + plain histogramming.
+the dimuon pT spectrum, reading directly from stage-1 parquet output.  Parquet
+columns remain lazy (virtual) Dask-Awkward arrays and are reduced to histograms
+on the workers, so the full event arrays are never materialized on the driver.
 
 Branch names (see src/copperhead_processor.py):
   - wgt_nominal        total event weight, already includes the nominal zpt factor
@@ -27,13 +28,39 @@ Usage:
 import argparse
 import glob
 
-import awkward as ak
+import dask
 import dask_awkward as dak
+import hist.dask as hda
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
+import pyarrow.parquet as pq
+
+
+def connect_gateway(cluster_index):
+    """Connect to an existing Purdue Kubernetes Dask Gateway cluster."""
+    from dask_gateway import Gateway
+
+    gateway = Gateway(
+        "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
+        proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
+    )
+    clusters = gateway.list_clusters()
+    if not clusters:
+        raise RuntimeError(
+            "No running Dask Gateway cluster found. Start one first, or omit "
+            "--use-gateway to use this session's local Dask scheduler."
+        )
+    if not 0 <= cluster_index < len(clusters):
+        raise ValueError(
+            f"--cluster-index {cluster_index} is out of range; "
+            f"found {len(clusters)} running cluster(s)"
+        )
+    client = gateway.connect(clusters[cluster_index].name).get_client()
+    print(f"Connected to Dask Gateway cluster {clusters[cluster_index].name}")
+    return client
 
 
 def main():
@@ -45,6 +72,15 @@ def main():
     parser.add_argument("--bins", type=int, default=50)
     parser.add_argument("--xmax", type=float, default=200.0)
     parser.add_argument("--out", default=None, help="output PDF path (default: ./zpt_variation_<sample>_<year>.pdf)")
+    parser.add_argument(
+        "--use-gateway",
+        action="store_true",
+        help="Run parquet reads and histogram reductions on an existing Dask Gateway cluster",
+    )
+    parser.add_argument(
+        "--cluster-index", type=int, default=0,
+        help="Running Dask Gateway cluster to use (default: 0)",
+    )
     args = parser.parse_args()
 
     pattern = f"{args.label.rstrip('/')}/stage1_output/{args.year}/{args.level}/{args.sample}/*/*.parquet"
@@ -54,9 +90,8 @@ def main():
     print(f"Found {len(files)} files for {args.sample} ({args.year})")
 
     columns = ["dimuon_pt", "wgt_nominal", "separate_wgt_zpt", "zpt_wgt_reco_up", "zpt_wgt_reco_down"]
-    events = dak.from_parquet(pattern, columns=columns).compute()
-
-    missing = [c for c in columns if c not in events.fields]
+    available = set(pq.ParquetFile(files[0]).schema_arrow.names)
+    missing = [c for c in columns if c not in available]
     if missing:
         raise SystemExit(
             f"Missing columns in parquet schema: {missing}. zpt_wgt_reco_up/_down only "
@@ -64,13 +99,19 @@ def main():
             f"this output -- check with pyarrow.parquet.ParquetFile({files[0]!r}).schema_arrow.names"
         )
 
-    dimuon_pt = ak.to_numpy(ak.fill_none(events["dimuon_pt"], -999.0))
-    wgt_nominal = ak.to_numpy(ak.fill_none(events["wgt_nominal"], 0.0))
-    separate_wgt_zpt = ak.to_numpy(ak.fill_none(events["separate_wgt_zpt"], 1.0))
-    zpt_up = ak.to_numpy(ak.fill_none(events["zpt_wgt_reco_up"], 1.0))
-    zpt_down = ak.to_numpy(ak.fill_none(events["zpt_wgt_reco_down"], 1.0))
+    client = connect_gateway(args.cluster_index) if args.use_gateway else None
 
-    valid = dimuon_pt != -999.0
+    # These are virtual/lazy arrays. Column projection happens in the parquet
+    # reader and only the compact histogram reductions below are returned to
+    # this process.
+    events = dak.from_parquet(files, columns=columns)
+    dimuon_pt = dak.fill_none(events["dimuon_pt"], np.nan)
+    wgt_nominal = dak.fill_none(events["wgt_nominal"], 0.0)
+    separate_wgt_zpt = dak.fill_none(events["separate_wgt_zpt"], 1.0)
+    zpt_up = dak.fill_none(events["zpt_wgt_reco_up"], 1.0)
+    zpt_down = dak.fill_none(events["zpt_wgt_reco_down"], 1.0)
+
+    valid = (dimuon_pt != -999.0) & np.isfinite(dimuon_pt)
     dimuon_pt = dimuon_pt[valid]
     wgt_nominal = wgt_nominal[valid]
     separate_wgt_zpt = separate_wgt_zpt[valid]
@@ -85,9 +126,26 @@ def main():
     wgt_down = wgt_no_zpt * zpt_down
 
     binning = np.linspace(0, args.xmax, args.bins + 1)
-    h_nom, _ = np.histogram(dimuon_pt, bins=binning, weights=wgt_nominal)
-    h_up, _ = np.histogram(dimuon_pt, bins=binning, weights=wgt_up)
-    h_down, _ = np.histogram(dimuon_pt, bins=binning, weights=wgt_down)
+    histograms = []
+    for weight in (wgt_nominal, wgt_up, wgt_down):
+        histogram = hda.Hist.new.Variable(binning).Weight()
+        histogram.fill(dimuon_pt, weight=weight)
+        histograms.append(histogram)
+
+    try:
+        results = dask.compute(
+            *histograms,
+            dak.sum(valid),
+            dak.sum(wgt_nominal),
+            dak.sum(wgt_up),
+            dak.sum(wgt_down),
+        )
+    finally:
+        if client is not None:
+            client.close()
+
+    h_nom, h_up, h_down = (hist.values() for hist in results[:3])
+    entries, sum_nominal, sum_up, sum_down = results[3:]
 
     plt.style.use(hep.style.CMS)
     fig, (ax_top, ax_ratio) = plt.subplots(
@@ -109,16 +167,16 @@ def main():
     ax_ratio.step(binning[:-1], ratio_down, where="post", color="royalblue", linewidth=1.4)
     ax_ratio.set_ylabel("Var / Nom")
     ax_ratio.set_xlabel(r"$p_T(\mu\mu)$ [GeV]")
-    ax_ratio.set_ylim(0.8, 1.2)
+    ax_ratio.set_ylim(0.98, 1.02)
 
     out_path = args.out or f"zpt_variation_{args.sample}_{args.year}.pdf"
     fig.savefig(out_path, bbox_inches="tight")
     print(f"Saved: {out_path}")
 
-    print(f"\nEntries: {len(dimuon_pt)}")
-    print(f"Sum(wgt_nominal) = {wgt_nominal.sum():.1f}")
-    print(f"Sum(wgt_up)      = {wgt_up.sum():.1f}  (delta = {(wgt_up.sum() / wgt_nominal.sum() - 1) * 100:+.2f}%)")
-    print(f"Sum(wgt_down)    = {wgt_down.sum():.1f}  (delta = {(wgt_down.sum() / wgt_nominal.sum() - 1) * 100:+.2f}%)")
+    print(f"\nEntries: {entries}")
+    print(f"Sum(wgt_nominal) = {sum_nominal:.1f}")
+    print(f"Sum(wgt_up)      = {sum_up:.1f}  (delta = {(sum_up / sum_nominal - 1) * 100:+.2f}%)")
+    print(f"Sum(wgt_down)    = {sum_down:.1f}  (delta = {(sum_down / sum_nominal - 1) * 100:+.2f}%)")
 
 
 if __name__ == "__main__":
