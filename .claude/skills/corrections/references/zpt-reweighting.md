@@ -9,9 +9,9 @@ analysis's own derivation; there is no POG number to check against.
 | # | Source | Location | Snapshot / verified |
 |---|--------|----------|---------------------|
 | C1 | Switch | `configs/parameters/switches.yaml` (`do_zpt`) | 2026‑09‑17 |
-| C2 | Application | `src/copperhead_processor.py`: `getZptWgts_3region`, `_eval_zpt_old_quadrature`, `_zpt_combined_param_envelope`, and the call site (`'dy' in dataset and is_mc and switches.do_zpt`) | 2026‑09‑17 |
+| C2 | Application | `src/copperhead_processor.py`: `getZptWgts_3region`, `_eval_zpt_old_quadrature`, `_zpt_combined_param_envelope_full_cov`, `_zpt_combined_param_envelope_diagonal`, and the call site (`'dy' in dataset and is_mc and switches.do_zpt`) | 2026‑09‑18 |
 | C3 | Alternative method (DNN) | `src/corrections/zpt_dnn.py`; trainer `MVA_training/zpt_reweight/train_dnn_zpt_reweight_dak.py` | 2026‑09‑17 |
-| C4 | Derivation pipeline | `src/copperhead/zpt_rewgt/derive/{save_SF_rootFiles.py,do_f_test.py,get_polyFit.py,bin_definitions.py,poly_utils.py,sample_resolution.py}`, `dctr_zpt_reweighting/` | 2026‑09‑17 |
+| C4 | Derivation pipeline | `src/copperhead/zpt_rewgt/derive/{save_SF_rootFiles.py,do_f_test.py,get_polyFit.py,bin_definitions.py,poly_utils.py,sample_resolution.py}`, `dctr_zpt_reweighting/` | 2026‑09‑18 |
 | C5 | Fitted-parameter payloads | `data/zpt_rewgt/*.yaml` (several tagged variants); selected via `configs/parameters/SF_filelist.yaml` (`new_zpt_weights_file_aMCatNLO`, `new_zpt_weights_file_MiNNLO`) | 2026‑09‑17 |
 | C6 | Procedure docs | `docs/ZpT_reweight.md`, `README.md` ("Z-pT reweighting" section) | 2026‑09‑17 |
 
@@ -76,14 +76,23 @@ exist:
 ### Uncertainty (`sigma_shift`)
 
 - Nominal: `sigma_shift = 0.0`.
-- Preferred method: `_zpt_combined_param_envelope` — a ±1σ envelope from 4 parameters
-  of `get_polyFit.py`'s *combined* refit (each with its own Hessian error, 3 of the 4
-  defined to vanish at their own anchor point so they don't leak into other regions),
-  combined in quadrature.
-- Fallback: `_eval_zpt_old_quadrature` — a coarser per‑coefficient quadrature envelope,
-  used automatically when the YAML predates the 4 combined‑fit fields (`*_err` keys
-  absent). **A config produced by an older derivation silently gets the coarser
-  method** — check which one actually ran for the payload in use.
+- 3-tier fallback in `getZptWgts_3region`, most- to least-correct, degrading only as
+  far as the payload YAML's own saved fields require:
+  1. `_zpt_combined_param_envelope_full_cov` (preferred) — propagates the 4 combined-
+     refit parameters (`common_shift`/`low_tilt`/`mid_tilt`/`delta_tail_slope`)
+     through their **full covariance matrix** (`sigma(x)^2 = g(x)^T Cov g(x)`), not an
+     independence assumption. Needs `combined_fit_covariance` in the YAML
+     (`get_polyFit.py` saves it as of the Chebyshev-basis numerical-stability fix).
+  2. `_zpt_combined_param_envelope_diagonal` — same 4 parameters, but combined in
+     quadrature as if independent (ignores their real, generally small but nonzero,
+     correlations). Used when `combined_fit_covariance` is absent but the 4 `*_err`
+     fields are present (an older `get_polyFit.py` output).
+  3. `_eval_zpt_old_quadrature` — the coarsest, per-coefficient (14 `f0_pN`/`f1_pN`)
+     independent-quadrature envelope, used when even the 4 combined-fit fields are
+     absent.
+- **A config produced by an older derivation silently gets a coarser tier** — check
+  which one actually ran for the payload in use (log/inspect which fields exist in
+  the YAML for the njet bin being reviewed).
 - Gated by `save_zpt_variations` (only computed/saved if set).
 
 ---
@@ -141,4 +150,4 @@ DY sample choice by era (per `docs/ZpT_reweight.md`): Run 2 usually `MiNNLO` or
 
 ## Last verified
 
-- Local source review: 2026‑09‑17
+- Local source review: 2026‑09‑18

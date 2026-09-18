@@ -421,20 +421,76 @@ def _eval_zpt_piecewise_with_deltas(
     return value
 
 
-def _zpt_combined_param_envelope(
+_ZPT_COMBINED_PARAM_ORDER = ["common_shift", "low_tilt", "mid_tilt", "delta_tail_slope"]
+
+
+def _zpt_combined_param_envelope_full_cov(
     wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
     poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
 ):
     """
-    +-1 sigma envelope from the 4 parameters get_polyFit.py's combined refit
-    fits independently (_ZPT_COMBINED_PARAM_DELTAS), combined in quadrature.
-    A much better-motivated independence assumption than treating the 14
-    per-order f0_pN/f1_pN coefficients as independent (_eval_zpt_old_quadrature's
+    +-1 sigma envelope from the 4 combined-refit parameters
+    (common_shift/low_tilt/mid_tilt/delta_tail_slope), propagated through
+    their FULL covariance matrix: sigma(x)^2 = g(x)^T Cov g(x), where g(x)
+    is the weight's gradient w.r.t. each parameter. This is the preferred
+    method -- the correct one, not an independence approximation.
+
+    g(x) is obtained exactly (not by finite differencing): the mapping from
+    each combined-fit parameter to the final f0_p0/f0_p1/f1_p0/f1_p1/
+    horizontal_mx coefficients is exactly linear (_ZPT_COMBINED_PARAM_DELTAS),
+    so evaluating _eval_zpt_piecewise_with_deltas with a *unit* shift in one
+    parameter (instead of that parameter's own error) gives exactly
+    d(weight)/d(param), with no discretization error.
+
+    Returns None if this YAML predates the saved combined_fit_covariance
+    field (i.e. was derived before get_polyFit.py started saving it), so the
+    caller can fall back to _zpt_combined_param_envelope_diagonal.
+    """
+    cfg = wgt_config[f"njet_{jet_multiplicity}"][nbins]
+    if "combined_fit_covariance" not in cfg:
+        return None
+
+    cov = cfg["combined_fit_covariance"]
+    cov_order = cfg.get("combined_fit_covariance_order", _ZPT_COMBINED_PARAM_ORDER)
+
+    gradients = {}
+    for name in cov_order:
+        deltas = _ZPT_COMBINED_PARAM_DELTAS[name](1.0, poly_fit_cutoff_min)
+        shifted = _eval_zpt_piecewise_with_deltas(
+            wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+            poly_fit_cutoff_min, poly_fit_cutoff_max, deltas,
+        )
+        gradients[name] = shifted - nominal_value
+
+    variance = 0.0
+    for i, name_i in enumerate(cov_order):
+        for j, name_j in enumerate(cov_order):
+            variance = variance + gradients[name_i] * gradients[name_j] * cov[i][j]
+
+    # Exact math guarantees variance >= 0 (a quadratic form g^T Cov g with
+    # Cov positive semi-definite); guard only against floating-point noise
+    # right at zero-envelope points.
+    variance = ak.where(variance < 0.0, 0.0, variance)
+    return variance ** 0.5
+
+
+def _zpt_combined_param_envelope_diagonal(
+    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+    poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
+):
+    """
+    Second-tier fallback (used only for a YAML that predates the saved
+    combined_fit_covariance field): +-1 sigma envelope from the 4 combined
+    refit parameters, treated as independent and combined in quadrature --
+    ignores the (generally small but nonzero) correlations between them that
+    _zpt_combined_param_envelope_full_cov propagates correctly. Still a much
+    better-motivated independence assumption than treating the 14 per-order
+    f0_pN/f1_pN coefficients as independent (_eval_zpt_old_quadrature's own
     fallback): these 4 were fit together as genuinely separate MINUIT
-    parameters with their own Hessian errors, and 3 of the 4 are defined to
-    vanish at their own anchor point specifically so they don't leak into the
-    other regions. Returns None if this YAML predates these 4 saved fields
-    (i.e. was derived before this fix), so the caller can fall back.
+    parameters, and 3 of the 4 are defined to vanish at their own anchor
+    point specifically so they don't leak into the other regions. Returns
+    None if this YAML predates even these 4 saved *_err fields, so the
+    caller can fall back further.
     """
     cfg = wgt_config[f"njet_{jet_multiplicity}"][nbins]
     if not all(f"{name}_err" in cfg for name in _ZPT_COMBINED_PARAM_DELTAS):
@@ -490,15 +546,28 @@ def getZptWgts_3region(
         if sigma_shift == 0.0:
             zpt_wgt_by_jet = nominal_value
         else:
-            envelope = _zpt_combined_param_envelope(
+            # 3-tier fallback, most- to least-correct, degrading only as far
+            # as the payload YAML's own saved fields require:
+            #   1) full covariance of the 4 combined-fit parameters (needs
+            #      combined_fit_covariance -- get_polyFit.py's newest output)
+            #   2) those same 4 parameters treated as independent (needs
+            #      just their *_err fields -- older get_polyFit.py output)
+            #   3) the original 14 per-order f0_pN/f1_pN coefficients,
+            #      treated as independent (any payload YAML at all)
+            envelope = _zpt_combined_param_envelope_full_cov(
                 wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
                 poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
             )
+            if envelope is None:
+                envelope = _zpt_combined_param_envelope_diagonal(
+                    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+                    poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
+                )
             if envelope is not None:
                 zpt_wgt_by_jet = nominal_value + sigma_shift * envelope
             else:
-                # This YAML predates the 4 combined-fit parameters -- fall
-                # back to the coarser per-coefficient quadrature envelope.
+                # This YAML predates even the 4 combined-fit parameters --
+                # fall back to the coarsest per-coefficient quadrature envelope.
                 zpt_wgt_by_jet = _eval_zpt_old_quadrature(
                     wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
                     poly_fit_cutoff_min, poly_fit_cutoff_max, sigma_shift=sigma_shift,
