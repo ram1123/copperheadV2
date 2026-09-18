@@ -16,9 +16,20 @@ bash scripts/run_scenario.sh \
     --years 2024,2025,2026 \
     --target all_stage1
     
-bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml \
-         -v 15 -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation \
-         -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m dnn -k
+bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml \
+         -v 12 -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics \
+         -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m dnn_hpo -k
+
+bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml \
+         -v 12 -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics \
+         -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 23 -k
+
+JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_analysis_pipeline.sh \
+  -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 \
+  -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics \
+  -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 23 -k
+
+
 ```
 
 # 23 Aug 2026
