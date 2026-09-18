@@ -41,7 +41,7 @@ trials:
         date: September 09, 2026
         years: 2025
         gitSHA: e41bb0c4d87a82bedce3bfbd3652ec4d8be9f34e
-        NOTE: "Single git_info_*.txt (stage1_output/2025/git_info_20260909_173755.txt); working tree was dirty at run time (27 diff hunks, mostly configs/parameters/switches.yaml key renames/reorganization) -- see that file for the exact state."
+        NOTE: "Single git_info_*.txt (stage1_output/2025/git_info_20260909_173755.txt); working tree was dirty at run time (27 diff hunks, mostly configs/parameters/switches_official.yaml key renames/reorganization) -- see that file for the exact state."
 
     Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_AddHE50:
         stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_AddHE50/stage1_output/"

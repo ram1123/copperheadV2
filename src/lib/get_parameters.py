@@ -16,16 +16,16 @@ def getParametersForYr(parameter_path: str, year: str, switches_path: str | None
     switches_path -> optional path to a standalone switches yaml. Lets a run pin an
         independent, named switches configuration (e.g. switches_official.yaml,
         switches_config1.yaml) via a CLI flag rather than editing the shared
-        switches.yaml in place every time. None (default) preserves the
-        original behavior: switches.yaml is picked up from parameter_path's
+        switches_official.yaml in place every time. None (default) preserves the
+        original behavior: switches_official.yaml is picked up from parameter_path's
         own glob like every other parameter file.
     """
     filelist = glob.glob(parameter_path + "*.yaml")
     if switches_path:
-        # Exclude parameter_path's own switches.yaml (if present) so it isn't
+        # Exclude parameter_path's own switches_official.yaml (if present) so it isn't
         # merged on top of / conflicting with the explicit override -- the
         # override file entirely replaces it, it doesn't layer on top.
-        filelist = [f for f in filelist if os.path.basename(f) != "switches.yaml"]
+        filelist = [f for f in filelist if os.path.basename(f) != "switches_official.yaml"]
         filelist.append(switches_path)
     # print(f"getParametersForYr filelist: {filelist}")
     params = [OmegaConf.load(f) for f in filelist]

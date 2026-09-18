@@ -338,9 +338,9 @@ if __name__ == "__main__":
         yearForConfig = args.year
 
     # Always print which switches file is in effect -- an explicit override
-    # via --switches-yaml, or (default) configs/parameters/switches.yaml
+    # via --switches-yaml, or (default) configs/parameters/switches_official.yaml
     # picked up automatically by getParametersForYr's own glob.
-    switches_source_path = args.switches_yaml or "configs/parameters/switches.yaml"
+    switches_source_path = args.switches_yaml or "configs/parameters/switches_official.yaml"
     logger.info(f"Switches yaml for this run: {switches_source_path}")
     config = getParametersForYr("./configs/parameters/", yearForConfig, switches_path=args.switches_yaml)
     logger.debug(f"stage1 config: {config}")

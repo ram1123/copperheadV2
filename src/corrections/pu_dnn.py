@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 # torch is only needed for the two functions that actually run model inference
 # (_load_torchscript_cached, _eval_pu_dnn_one_partition), which are only ever
-# called when a switches.yaml year has do_use_pu_dnn_score enabled and configs
+# called when a switches_official.yaml year has do_use_pu_dnn_score enabled and configs
 # were successfully loaded. Importing it lazily there (rather than at module
 # scope) keeps this module importable in environments without pytorch, e.g.
 # the `ci`/`ci-legacy` pixi envs used by the sync-stage1 CI check.
