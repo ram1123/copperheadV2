@@ -71,6 +71,7 @@ SYNCVARLIST: List[str] = [
     "separate_wgt_muTrig",
     "separate_wgt_LHERen",
     "separate_wgt_LHEFac",
+    "separate_wgt_pdf_2rms",
     "separate_wgt_jetpuid",
     "separate_wgt_btag",
     "separate_wgt_qgl",
@@ -91,39 +92,13 @@ TXT_COMPARE_EXCLUDED_VARS = {
     "separate_wgt_muTrig",
     "separate_wgt_LHERen",
     "separate_wgt_LHEFac",
+    "separate_wgt_pdf_2rms",
     "separate_wgt_jetpuid",
     "separate_wgt_btag",
     "separate_wgt_qgl",
     "separate_wgt_zpt",
     "separate_wgt_ones",
 }
-
-
-# Skipped for MC too: the `separate_wgt_*` set varies per sample/era, and headerless
-# positional parsing shifts every later field when one is missing mid-block, so these
-# are not comparable against references dumped from a different column set.
-# Regenerate all test/reference/ txt files to compare them again.
-WEIGHT_DETAIL_VARS = {
-    v for v in TXT_COMPARE_EXCLUDED_VARS if v != "wgt_nominal"
-}
-
-DEFAULT_TOLERANCE_MODE = "relative"
-DEFAULT_REL_TOLERANCE = 1e-4
-DEFAULT_ABS_TOLERANCE = 0.1
-
-
-def _exceeds_tolerance(
-    v1: float,
-    v2: float,
-    tolerance: float,
-    rel_tolerance: float,
-    mode: str = DEFAULT_TOLERANCE_MODE,
-) -> bool:
-    """True if v1 and v2 differ by more than the tolerance of the selected mode."""
-    delta = abs(v2 - v1)
-    if mode == "absolute":
-        return delta > tolerance
-    return delta > rel_tolerance * max(abs(v1), abs(v2))
 
 
 def _is_data_sync_source(label: str) -> bool:
@@ -293,23 +268,25 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     Missing values are written as -100.00
     """
     missing = [c for c in SYNCVARLIST if c not in df.columns]
-    # Always emit one field per SYNCVARLIST entry, in SYNCVARLIST order. Columns
-    # absent from the dataframe are written as -100.00 rather than dropped:
-    # parse_sync_txt() maps fields onto SYNCVARLIST *positionally*, so omitting a
-    # mid-list column silently shifts every column after it and makes unrelated
-    # variables compare against each other.
-    required = [c for c in SYNCVARLIST if c not in KEY_VARS]
+    # stage-1 no longer writes separate_wgt_pdf_2rms, but test/reference/ was dumped
+    # when it did. Fields are matched by position, so emit it as -100.00 for MC to
+    # keep every later column in the slot the references expect.
+    padded = {"separate_wgt_pdf_2rms"} if "separate_wgt_genWeight" in df.columns else set()
+    required = [
+        c for c in SYNCVARLIST
+        if c not in KEY_VARS and (c in df.columns or c in padded)
+    ]
 
     if missing:
-        print(f"[WARNING] Missing columns for sync dump (written as -100.00): {missing}")
+        print(f"[WARNING] Missing columns for sync dump: {missing}")
 
     df2 = df.copy()
 
     for c in required:
-        if c not in df2.columns:
-            df2[c] = -100.0
-        else:
+        if c in df2.columns:
             df2[c] = df2[c].fillna(-100.0)
+        else:
+            df2[c] = -100.0
 
     with open(out_path, "w") as f:
         for _, row in df2.iterrows():
@@ -336,9 +313,7 @@ def compare_two_dirs(
     dir1: str,
     dir2: str,
     out_path: Path,
-    tolerance: float = DEFAULT_ABS_TOLERANCE,
-    rel_tolerance: float = DEFAULT_REL_TOLERANCE,
-    tolerance_mode: str = DEFAULT_TOLERANCE_MODE,
+    tolerance: float = 0.0,
     category: Optional[str] = None,
     region: Optional[str] = None,
     process: str = "data",
@@ -405,7 +380,7 @@ def compare_two_dirs(
             record[f"{var}_2"] = v2
             record[f"delta_{var}"] = delta
 
-            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance, tolerance_mode):
+            if abs(delta) > tolerance:
                 mismatch = True
 
         if mismatch:
@@ -507,9 +482,7 @@ def compare_two_sync_txt(
     txt1: str,
     txt2: str,
     out_path: Path,
-    tolerance: float = DEFAULT_ABS_TOLERANCE,
-    rel_tolerance: float = DEFAULT_REL_TOLERANCE,
-    tolerance_mode: str = DEFAULT_TOLERANCE_MODE,
+    tolerance: float = 0.0,
 ) -> None:
     """
     Compare two sync txt dumps by (run,luminosityBlock,event).
@@ -557,13 +530,7 @@ def compare_two_sync_txt(
         if skipped:
             print(f"[INFO] Skipping weight-like sync columns for data txt comparison: {skipped}")
     else:
-        vars_to_check = [
-            c for c in c1.columns
-            if c in c2.columns and c not in WEIGHT_DETAIL_VARS
-        ]
-        skipped = [c for c in c1.columns if c in c2.columns and c in WEIGHT_DETAIL_VARS]
-        if skipped:
-            print(f"[INFO] Skipping weight-like sync columns for MC txt comparison: {skipped}")
+        vars_to_check = [c for c in c1.columns if c in c2.columns]
 
     rows = []
     for idx in common_idx:
@@ -585,7 +552,7 @@ def compare_two_sync_txt(
             rec[f"{v}_1"] = v1
             rec[f"{v}_2"] = v2
             rec[f"delta_{v}"] = d
-            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance, tolerance_mode):
+            if abs(d) > tolerance:
                 mismatch = True
 
         if mismatch:
@@ -709,31 +676,8 @@ def parse_args():
     parser.add_argument(
         "--tolerance",
         type=float,
-        default=DEFAULT_ABS_TOLERANCE,
-        help=(
-            "Absolute tolerance, used only with --tolerance-mode absolute "
-            f"(default: {DEFAULT_ABS_TOLERANCE:g})."
-        ),
-    )
-    parser.add_argument(
-        "--rel-tolerance",
-        dest="rel_tolerance",
-        type=float,
-        default=DEFAULT_REL_TOLERANCE,
-        help=(
-            "Relative tolerance, used only with --tolerance-mode relative "
-            f"(default: {DEFAULT_REL_TOLERANCE:g})."
-        ),
-    )
-    parser.add_argument(
-        "--tolerance-mode",
-        dest="tolerance_mode",
-        choices=("relative", "absolute"),
-        default=DEFAULT_TOLERANCE_MODE,
-        help=(
-            "Which tolerance to apply; the two are never combined "
-            f"(default: {DEFAULT_TOLERANCE_MODE})."
-        ),
+        default=0.1,
+        help="Absolute tolerance for comparing dimuon variables (default: 0.1).",
     )
     parser.add_argument(
         "--category",
@@ -798,8 +742,6 @@ def main():
                 txt2=file2,
                 out_path=out_path,
                 tolerance=args.tolerance,
-                rel_tolerance=args.rel_tolerance,
-                tolerance_mode=args.tolerance_mode,
             )
             return
 
@@ -822,8 +764,6 @@ def main():
                 dir2=dir2,
                 out_path=out_path,
                 tolerance=args.tolerance,
-                rel_tolerance=args.rel_tolerance,
-                tolerance_mode=args.tolerance_mode,
                 category=args.category,
                 region=args.region,
                 process=args.process,
