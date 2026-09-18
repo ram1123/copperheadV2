@@ -107,11 +107,17 @@ WEIGHT_DETAIL_VARS = {
     v for v in TXT_COMPARE_EXCLUDED_VARS if v != "wgt_nominal"
 }
 
-# Relative floor added to the absolute --tolerance, since stage-1 is not bit-reproducible
-# and wgt_nominal reaches ~6e5 for 2017 DY, where 0.1 absolute is a 1.7e-7 relative demand
-# that different BLAS builds miss (observed 1.5e-6 on GitHub runners, 3.4e-8 locally).
-# Kinematics are O(1e3) at most, so the absolute tolerance still governs them.
-SYNC_REL_TOLERANCE = 1e-5
+# Comparisons are relative by default: stage-1 is not bit-reproducible and wgt_nominal
+# reaches ~6e5, where any absolute cut demands agreement below float noise (1.5e-6
+# relative seen on GitHub runners). --tolerance adds an optional absolute floor.
+DEFAULT_REL_TOLERANCE = 1e-5
+DEFAULT_ABS_TOLERANCE = 0.0
+
+
+def _exceeds_tolerance(v1: float, v2: float, tolerance: float, rel_tolerance: float) -> bool:
+    """True if v1 and v2 differ by more than the relative tolerance, or than the
+    absolute floor when one is given."""
+    return abs(v2 - v1) > max(tolerance, rel_tolerance * max(abs(v1), abs(v2)))
 
 
 def _is_data_sync_source(label: str) -> bool:
@@ -324,7 +330,8 @@ def compare_two_dirs(
     dir1: str,
     dir2: str,
     out_path: Path,
-    tolerance: float = 0.0,
+    tolerance: float = DEFAULT_ABS_TOLERANCE,
+    rel_tolerance: float = DEFAULT_REL_TOLERANCE,
     category: Optional[str] = None,
     region: Optional[str] = None,
     process: str = "data",
@@ -391,7 +398,7 @@ def compare_two_dirs(
             record[f"{var}_2"] = v2
             record[f"delta_{var}"] = delta
 
-            if abs(delta) > tolerance:
+            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance):
                 mismatch = True
 
         if mismatch:
@@ -493,7 +500,8 @@ def compare_two_sync_txt(
     txt1: str,
     txt2: str,
     out_path: Path,
-    tolerance: float = 0.0,
+    tolerance: float = DEFAULT_ABS_TOLERANCE,
+    rel_tolerance: float = DEFAULT_REL_TOLERANCE,
 ) -> None:
     """
     Compare two sync txt dumps by (run,luminosityBlock,event).
@@ -569,7 +577,7 @@ def compare_two_sync_txt(
             rec[f"{v}_1"] = v1
             rec[f"{v}_2"] = v2
             rec[f"delta_{v}"] = d
-            if abs(d) > max(tolerance, SYNC_REL_TOLERANCE * max(abs(v1), abs(v2))):
+            if _exceeds_tolerance(v1, v2, tolerance, rel_tolerance):
                 mismatch = True
 
         if mismatch:
@@ -693,8 +701,21 @@ def parse_args():
     parser.add_argument(
         "--tolerance",
         type=float,
-        default=0.1,
-        help="Absolute tolerance for comparing dimuon variables (default: 0.1).",
+        default=DEFAULT_ABS_TOLERANCE,
+        help=(
+            "Optional absolute floor, used as max(--tolerance, --rel-tolerance * |value|). "
+            f"Comparison is relative by default (default: {DEFAULT_ABS_TOLERANCE:g})."
+        ),
+    )
+    parser.add_argument(
+        "--rel-tolerance",
+        dest="rel_tolerance",
+        type=float,
+        default=DEFAULT_REL_TOLERANCE,
+        help=(
+            "Relative tolerance, the primary check for every compared variable "
+            f"(default: {DEFAULT_REL_TOLERANCE:g})."
+        ),
     )
     parser.add_argument(
         "--category",
@@ -759,6 +780,7 @@ def main():
                 txt2=file2,
                 out_path=out_path,
                 tolerance=args.tolerance,
+                rel_tolerance=args.rel_tolerance,
             )
             return
 
@@ -781,6 +803,7 @@ def main():
                 dir2=dir2,
                 out_path=out_path,
                 tolerance=args.tolerance,
+                rel_tolerance=args.rel_tolerance,
                 category=args.category,
                 region=args.region,
                 process=args.process,
