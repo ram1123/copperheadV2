@@ -99,6 +99,15 @@ TXT_COMPARE_EXCLUDED_VARS = {
 }
 
 
+# Skipped for MC too: the `separate_wgt_*` set varies per sample/era, and headerless
+# positional parsing shifts every later field when one is missing mid-block, so these
+# are not comparable against references dumped from a different column set.
+# Regenerate all test/reference/ txt files to compare them again.
+WEIGHT_DETAIL_VARS = {
+    v for v in TXT_COMPARE_EXCLUDED_VARS if v != "wgt_nominal"
+}
+
+
 def _is_data_sync_source(label: str) -> bool:
     label_l = str(label).lower()
     name_l = Path(str(label)).name.lower()
@@ -526,7 +535,13 @@ def compare_two_sync_txt(
         if skipped:
             print(f"[INFO] Skipping weight-like sync columns for data txt comparison: {skipped}")
     else:
-        vars_to_check = [c for c in c1.columns if c in c2.columns]
+        vars_to_check = [
+            c for c in c1.columns
+            if c in c2.columns and c not in WEIGHT_DETAIL_VARS
+        ]
+        skipped = [c for c in c1.columns if c in c2.columns and c in WEIGHT_DETAIL_VARS]
+        if skipped:
+            print(f"[INFO] Skipping weight-like sync columns for MC txt comparison: {skipped}")
 
     rows = []
     for idx in common_idx:
