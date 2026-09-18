@@ -26,11 +26,31 @@ class Variable(object):
         self.xmax = xmax_
 
 decorrelation_scheme = {
-    "LHERen": ["DY", "EWK", "ggH", "TT+ST"],
-    "LHEFac": ["DY", "EWK", "ggH", "TT+ST"],
-    "pdf_2rms": ["DY", "VBF", "ggH"], # ["DY", "qqH_hmm", "ggH_hmm"],
-    # "pdf_2rms": ["DY", "qqH_hmm", "ggH_hmm"],
+    "LHERen": [
+        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "EWK", "TT+ST",
+    ],
+    "LHEFac": [
+        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "EWK", "TT+ST",
+    ],
+    "pdf_unc": [
+        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "EWK", "VBF", "ggH", "TT+ST",
+    ],
+    # "pdf_unc": ["DY", "qqH_hmm", "ggH_hmm"],
 }
+
+PDF_MEMBER_PREFIX = "wgt_pdfMemberHessEig" # Prefix of the per-eigenvector weight for PDF unc
+PDF_N_EIGENVECTOR_MEMBERS = 100
+PDF_UNC_COMBINATION = "hessian" # supported values are "hessian" or "rms"
+# The two alpha_s members of the same set, LHEPdfWeight[101] (alpha_s(M_Z) = 0.116) and
+# LHEPdfWeight[102] (alpha_s(M_Z) = 0.120), written by stage1 under their own prefix so
+# they never count towards the 100 eigenvector members above.
+PDF_ALPHA_S_PREFIX = "wgt_pdfAlphaS"
+PDF_ALPHA_S_MEMBERS = ("wgt_pdfAlphaS101_up", "wgt_pdfAlphaS102_up")
+ALPHA_S_UNC_SCALE = 1.0
+
 shape_only = [
     "wgt_LHERen_up",
     "wgt_LHERen_down",
@@ -38,8 +58,6 @@ shape_only = [
     "wgt_LHEFac_down",
     "wgt_qgl_up",
     "wgt_qgl_down",
-    "wgt_pdf_2rms_up",
-    "wgt_pdf_2rms_down",
     "wgt_zpt_up",
     "wgt_zpt_down",
 ]
@@ -211,6 +229,20 @@ def to_templates(parameters, hist_df=None):
     return yield_df
 
 
+def _split_pdf_alpha_s(parameters, year):
+    """`split_pdf_alpha_s` for one era, as run_stage3_vbf.py read it from
+    stage3/VBF/switches.yaml. Raises rather than defaulting, because the two settings
+    produce differently named nuisances."""
+    per_year = parameters.get("split_pdf_alpha_s")
+    if per_year is None or year not in per_year:
+        raise ValueError(
+            f"make_templates: parameters['split_pdf_alpha_s'] has no entry for {year}; "
+            f"it is read per year from stage3/VBF/switches.yaml by run_stage3_vbf.py and "
+            f"decides whether alpha_s is its own nuisance."
+        )
+    return bool(per_year[year])
+
+
 def make_templates(args, parameters={}):
     logger.debug("============= make_templates ============")
     logger.debug(f"args: {args}")
@@ -301,7 +333,24 @@ def make_templates(args, parameters={}):
         # manually add parton shower variations end -------------------------------
         logger.debug(f"wgt_variations: {wgt_variations}")
 
-        for variation in wgt_variations:
+        # Aggregate PDF members by group and bin for Eq. (6.5), without emitting
+        # individual nuisance templates; sort them for deterministic summation.
+        pdf_member_variations = sorted(
+            v for v in wgt_variations if v.startswith(PDF_MEMBER_PREFIX)
+        )
+        # The two alpha_s members are held out the same way.
+        pdf_alpha_s_variations = sorted(
+            v for v in wgt_variations if v.startswith(PDF_ALPHA_S_PREFIX)
+        )
+        wgt_variations = [
+            v for v in wgt_variations
+            if not (v.startswith(PDF_MEMBER_PREFIX) or v.startswith(PDF_ALPHA_S_PREFIX))
+        ]
+        pdf_member_hists = {}
+        pdf_alpha_s_hists = {}
+        pdf_nominal = None
+
+        for variation in wgt_variations + pdf_member_variations + pdf_alpha_s_variations:
             logger.debug(f"variation: {variation}")
             logger.debug(f"channel: {channel}")
 
@@ -595,6 +644,24 @@ def make_templates(args, parameters={}):
                 logger.debug(f"Sum of histogram for group {group} is zero in {year} for {region} and {channel}. Skipping!")
                 continue
 
+            # Copy the nominal reference for Eq. (6.5); reweighted members share
+            # its MC statistics and inherit its sumw2.
+            if variation == "nominal":
+                pdf_nominal = (
+                    np.array(group_hist, dtype=np.float64),
+                    np.array(group_sumw2, dtype=np.float64), # sumw2 should not be relevant for calculating pdf uncertainty, but keep it in track for consistency with the rest of the templates.
+                    np.array(edges, dtype=np.float64),
+                    np.array(centers, dtype=np.float64),
+                )
+
+            # Intercept the eigenvector members before a TH1 is made for them.
+            if variation.startswith(PDF_MEMBER_PREFIX):
+                pdf_member_hists[variation] = np.array(group_hist, dtype=np.float64)
+                continue
+            if variation.startswith(PDF_ALPHA_S_PREFIX):
+                pdf_alpha_s_hists[variation] = np.array(group_hist, dtype=np.float64)
+                continue
+
             if group == "Data":
                 name = "data_obs"
             else:
@@ -627,9 +694,9 @@ def make_templates(args, parameters={}):
                         group_LHE = "ggH"
                     logger.debug(f"group_LHE after: {group_LHE}")
                     if group_LHE in decorrelation_scheme[variation_core]:
-                        if variation_core == "pdf_2rms" :
+                        if variation_core == "pdf_unc" :
                             suffix = "_"+group_LHE+str(year)
-                            logger.debug(f"pdf_2rms suffix: {suffix}")
+                            logger.debug(f"pdf_unc suffix: {suffix}")
                         else:
                             suffix = "_"+group_LHE
                     else:
@@ -676,6 +743,181 @@ def make_templates(args, parameters={}):
                     "yield": group_hist.sum(),
                 }
             )
+
+        # ---- PDF member collapse, taken on the observable ----------------------
+        # Estimator selected by PDF_UNC_COMBINATION; the shape below is Eq. (6.5).
+        # arXiv:2203.05506 Sect. 6.3.2 defines the symmetric-Hessian uncertainty on
+        # the observable:
+        #
+        #     delta F_b = sqrt( sum_{k=1..100} ( F_b^(k) - F_b^(0) )^2 )
+        #
+        # F_b^(k) is this group's bin-b yield reweighted by eigenvector member k
+        if pdf_member_hists or pdf_alpha_s_hists:
+            # alpha_s is part of the same uncertainty (PDF4LHC15 Eq. (28)), so the two
+            # sets of members must arrive together.
+            if not pdf_member_variations:
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) has "
+                    f"alpha_s member histograms {pdf_alpha_s_variations} but no PDF "
+                    f"eigenvector members; alpha_s is combined with the PDF uncertainty."
+                )
+            if tuple(pdf_alpha_s_variations) != PDF_ALPHA_S_MEMBERS:
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) has "
+                    f"alpha_s member histograms {pdf_alpha_s_variations}, expected "
+                    f"{list(PDF_ALPHA_S_MEMBERS)}. Stage1 output written before the "
+                    f"alpha_s columns were added has none; re-run stage1 for it."
+                )
+            missing_alpha_s = [
+                v for v in PDF_ALPHA_S_MEMBERS if v not in pdf_alpha_s_hists
+            ]
+            if missing_alpha_s:
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) is "
+                    f"missing alpha_s member histogram(s) {missing_alpha_s} (empty or "
+                    f"zero-sum); both are needed for the half-difference."
+                )
+            missing = [v for v in pdf_member_variations if v not in pdf_member_hists]
+            if missing:
+                # A member that got dropped (empty or zero-sum group histogram) would
+                # silently drop its term from the sum and shrink the uncertainty, so
+                # refuse rather than emit a number that is quietly too small.
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) is "
+                    f"missing {len(missing)} PDF eigenvector member histogram(s), e.g. "
+                    f"{missing[:3]}; every member must contribute to Eq. (6.5)."
+                )
+            if len(pdf_member_variations) != PDF_N_EIGENVECTOR_MEMBERS:
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) has "
+                    f"{len(pdf_member_variations)} PDF eigenvector members, expected "
+                    f"{PDF_N_EIGENVECTOR_MEMBERS}. A partial set underestimates the "
+                    f"uncertainty; check that every dataset in the group carries all "
+                    f"'{PDF_MEMBER_PREFIX}NNN_up' columns (excluded samples carry them "
+                    f"set to unity so the per-group intersection keeps them)."
+                )
+            if pdf_nominal is None:
+                raise ValueError(
+                    f"make_templates: group '{group}' ({year}, {region}, {channel}) has "
+                    f"PDF eigenvector members but no nominal histogram; Eq. (6.5) is "
+                    f"defined relative to F^(0)."
+                )
+
+            pdf_hist_nominal, pdf_sumw2_nominal, pdf_edges, pdf_centers = pdf_nominal
+            nominal_yield = pdf_hist_nominal.sum()
+
+            pdf_shape_only = "wgt_pdf_unc_up" in shape_only
+
+            delta_sq = np.zeros_like(pdf_hist_nominal)
+            for member in pdf_member_variations:
+                member_hist = pdf_member_hists[member]
+                if pdf_shape_only:
+                    member_yield = member_hist.sum()
+                    if member_yield != 0:
+                        member_hist = member_hist * (nominal_yield / member_yield)
+                delta_sq += (member_hist - pdf_hist_nominal) ** 2
+
+            if PDF_UNC_COMBINATION == "hessian":
+                pdf_divisor = 1.0
+            elif PDF_UNC_COMBINATION == "rms":
+                pdf_divisor = float(len(pdf_member_variations) - 1)
+            else:
+                raise ValueError(
+                    f"make_templates: PDF_UNC_COMBINATION is "
+                    f"{PDF_UNC_COMBINATION!r}; expected 'hessian' or 'rms'."
+                )
+            pdf_delta_sq = delta_sq / pdf_divisor
+
+            # ---- alpha_s, PDF4LHC15 (arXiv:1510.03865) Eqs. (27)-(28) ---------------
+            #
+            #     delta_alphas F_b = r * ( F_b(alpha_s = 0.120) - F_b(alpha_s = 0.116) ) / 2
+            #
+            # with r = ALPHA_S_UNC_SCALE. Taken on the bin like the PDF sum, and with
+            # the same shape-only treatment. The PDF_UNC_COMBINATION divisor applies to
+            # the 100-member sum only, never to this term.
+            alpha_s_member_hists = []
+            for member in PDF_ALPHA_S_MEMBERS:
+                member_hist = pdf_alpha_s_hists[member]
+                if pdf_shape_only:
+                    member_yield = member_hist.sum()
+                    if member_yield != 0:
+                        member_hist = member_hist * (nominal_yield / member_yield)
+                alpha_s_member_hists.append(member_hist)
+            alpha_s_diff = (
+                ALPHA_S_UNC_SCALE
+                * (alpha_s_member_hists[1] - alpha_s_member_hists[0])
+                / 2.0
+            )
+            alpha_s_delta_sq = alpha_s_diff**2
+
+            # split_pdf_alpha_s true: two independent nuisances, whose widths add in
+            # quadrature to the combined one. False: one nuisance, Eq. (28).
+            if _split_pdf_alpha_s(parameters, year_savepath):
+                pdf_deltas = {
+                    "pdf_unc": np.sqrt(pdf_delta_sq),
+                    "alpha_s_unc": np.sqrt(alpha_s_delta_sq),
+                }
+            else:
+                pdf_deltas = {
+                    "pdf_alpha_s_unc": np.sqrt(pdf_delta_sq + alpha_s_delta_sq),
+                }
+
+            # Same decorrelation and naming the normal path applies to `wgt_pdf_unc_*`.
+            # All three nuisance names follow the `pdf_unc` scheme.
+            group_LHE = group
+            if group_LHE == "DYJ2" or group_LHE == "DYJ01":
+                group_LHE = "DY"
+            elif "qqH" in group_LHE:
+                group_LHE = "VBF"
+            elif "ggH" in group_LHE:
+                group_LHE = "ggH"
+
+            if group_LHE not in decorrelation_scheme["pdf_unc"]:
+                logger.debug(
+                    f"pdf_unc: group {group} (as {group_LHE}) is not in the "
+                    f"decorrelation scheme; not emitting a template."
+                )
+            else:
+                pdf_suffix = "_" + group_LHE + str(year)
+                for nuisance, delta in pdf_deltas.items():
+                    # Floor downward bin yields at zero per PDF4LHC21 Sect. 6.3.2.
+                    pdf_variations = {
+                        "up": pdf_hist_nominal + delta,
+                        "down": np.maximum(pdf_hist_nominal - delta, 0.0),
+                    }
+                    for direction, pdf_hist in pdf_variations.items():
+                        variation_fixed = nuisance + pdf_suffix + (
+                            "Up" if direction == "up" else "Down"
+                        )
+                        name = f"{group}_{variation_fixed}"
+                        logger.debug(
+                            f"{nuisance} [{PDF_UNC_COMBINATION}, divisor {pdf_divisor:g}, "
+                            f"alpha_s scale {ALPHA_S_UNC_SCALE:g}] "
+                            f"{name}: nominal {nominal_yield:.6g}, "
+                            f"{direction} {pdf_hist.sum():.6g}"
+                        )
+                        # The members are the same events reweighted, so they add no
+                        # independent MC statistics: carry the nominal sumw2 across.
+                        templates.append(
+                            getTH1D_from_numpy(
+                                pdf_hist,
+                                pdf_edges,
+                                pdf_sumw2_nominal,
+                                pdf_centers,
+                                name,
+                            )
+                        )
+                        yield_rows.append(
+                            {
+                                "var_name": var_name,
+                                "group": group,
+                                "region": region,
+                                "channel": channel,
+                                "year": year,
+                                "variation": variation_fixed,
+                                "yield": pdf_hist.sum(),
+                            }
+                        )
 
     if parameters["save_templates"]:
         out_dir = parameters["global_path"]

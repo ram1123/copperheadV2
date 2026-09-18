@@ -28,10 +28,13 @@ from modules.vector_operations import (
 
 # from src.corrections.weight import Weights
 from src.corrections.evaluator import (
+    PDF_ALPHA_S_MEMBER_INDICES,
+    PDF_N_EIGENVECTOR_MEMBERS,
     add_pdf_variations,
     add_stxs_variations,
     btag_weights_jsonKeepDim,
     get_jetpuid_weights_eta_dependent,
+    get_pdf_lha_id_range,
     lhe_weights,
     nnlops_weights,
     pu_evaluator,
@@ -1532,6 +1535,11 @@ class EventProcessor(processor.ProcessorABC):
         save_all_weight_variations = self.config["switches"].get("save_all_weight_variations", False)
         do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
         weights = Weights(len(events), storeIndividual=do_save_partial_weights) # none for dask awkward
+        # Set by the do_pdf block below, consumed where weight_dict is built.
+        pdf_member_ratios = None
+        pdf_alpha_s_ratios = None
+        pdf_central_weight = None
+        write_pdf_members = False
         # weights = Weights(len(events))
         if is_mc:
             gen_weight_ones = ak.ones_like(events.genWeight)
@@ -1674,27 +1682,38 @@ class EventProcessor(processor.ProcessorABC):
                 )
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
+            # Gate by branch-title LHA IDs using pdf_supported_lha_ids in switches.yaml.
+            # Only 103-member NNPDF3.1 symmhessian+as sets (306000/325300) are supported;
+            # other sets receive unity weights because they need different prescriptions.
+            # Supported sets with corrupt weights (st_tchannel_*, tt_inclusive_amcatnlo)
+            # are excluded in the Run2 dataset YAML.
+            pdf_lha_ids = get_pdf_lha_id_range(events)
+            logger.debug(f"{dataset} ({year}): LHEPdfWeight LHA IDs {pdf_lha_ids}")
+            if pdf_lha_ids is None and ("LHEPdfWeight" in events.fields):
+                logger.warning(
+                    f"{dataset} ({year}): LHEPdfWeight title carries no LHA ID range, "
+                    f"so PDF members are set to unity"
+                )
             do_pdf = (
                 self.config["switches"]["do_pdf"]
                 and ("nominal" in pt_variations)
-                and ("LHEPdfWeight" in events.fields)
-                and (
-                    "dy" in dataset
-                    or "ewk" in dataset
-                    or "ggh" in dataset
-                    or "vbf" in dataset
-                )
-                and ("mg" not in dataset)
+                and pdf_lha_ids is not None
+                and pdf_lha_ids[0] in self.config["switches"]["pdf_supported_lha_ids"]
             )
+            # The 100 eigenvector members are carried to stage3 as separate weight
             if do_pdf:
                 logger.debug("doing pdf!")
-                # add_pdf_variations(events, self.weight_collection, self.config, dataset)
-                pdf_vars = add_pdf_variations(events, self.config, dataset)
-                weights.add("pdf_2rms",
-                    weight=ak.ones_like(pdf_vars["up"]),
-                    weightUp=pdf_vars["up"],
-                    weightDown=pdf_vars["down"]
+                pdf_member_ratios, pdf_alpha_s_ratios, pdf_central_weight = add_pdf_variations(
+                    events, self.config, dataset
                 )
+                write_pdf_members = True
+            else:
+                if self.config["switches"]["do_pdf"]: # for other mc samples with unsuppoorted NNPDF, we emit unity members
+                    # Unity members, so the per-group variation intersection in stage3
+                    # does not drop pdf_unc for every other dataset in the same group.
+                    # A unit ratio contributes exactly zero to F^(k) - F^(0).
+                    logger.debug("skip pdf! member ratios set to unity")
+                    write_pdf_members = True
         t15 = time.perf_counter()
         logger.info(f"[timing] some GEN event weights for syst time: {t15 - t14:.2f} seconds")
 
@@ -2385,6 +2404,41 @@ class EventProcessor(processor.ProcessorABC):
             for variation in weights.variations:
                 variation_name = "wgt_" + variation.replace("Up", "_up").replace("Down", "_down") # match the naming scheme of copperhead
                 weight_dict[variation_name] = weights.weight(variation)
+
+            # PDF eigenvector members. The `_up` suffix is what makes stage2's existing
+            # wgt_*_up/_down discovery pick them up and fill one histogram per member
+            # with no stage2 change; stage3 intercepts the `pdfMemberHessEig` prefix and
+            # collapses them via Eq. (6.5) instead of emitting 100 nuisances.
+            if write_pdf_members:
+                nominal_weight = weights.weight()
+                for k in range(PDF_N_EIGENVECTOR_MEMBERS):
+                    col = f"wgt_pdfMemberHessEig{k:03d}_up"
+                    if pdf_member_ratios is None:
+                        weight_dict[col] = nominal_weight
+                    else:
+                        weight_dict[col] = nominal_weight * pdf_member_ratios[:, k]
+
+                # The two alpha_s members, LHEPdfWeight[101] and [102]. Their own prefix
+                # keeps them out of stage3's 100-member count; stage3 combines them per
+                # PDF4LHC15 Eqs. (27)-(28). Unity for the gated-out samples, for the same
+                # group-intersection reason as the members above.
+                for j, index in enumerate(PDF_ALPHA_S_MEMBER_INDICES):
+                    col = f"wgt_pdfAlphaS{index}_up"
+                    if pdf_alpha_s_ratios is None:
+                        weight_dict[col] = nominal_weight
+                    else:
+                        weight_dict[col] = nominal_weight * pdf_alpha_s_ratios[:, j]
+
+                # Save raw w_0 for debugging precision offsets or corrupt weights.
+                # Use NaN when the PDF gate skips reading it; unity would imply a measurement.
+                # Omit wgt_/_up naming so stage2 does not treat it as a variation.
+                _add_block(out_dict, {
+                    "pdf_central_member": (
+                        np.full(len(nominal_weight), np.nan)
+                        if pdf_central_weight is None
+                        else pdf_central_weight
+                    ),
+                })
 
         t20 = time.perf_counter()
         logger.info(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")

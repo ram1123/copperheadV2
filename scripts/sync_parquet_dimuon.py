@@ -268,7 +268,14 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     Missing values are written as -100.00
     """
     missing = [c for c in SYNCVARLIST if c not in df.columns]
-    required = [c for c in SYNCVARLIST if c not in KEY_VARS and c in df.columns]
+    # stage-1 no longer writes separate_wgt_pdf_2rms, but test/reference/ was dumped
+    # when it did. Fields are matched by position, so emit it as -100.00 for MC to
+    # keep every later column in the slot the references expect.
+    padded = {"separate_wgt_pdf_2rms"} if "separate_wgt_genWeight" in df.columns else set()
+    required = [
+        c for c in SYNCVARLIST
+        if c not in KEY_VARS and (c in df.columns or c in padded)
+    ]
 
     if missing:
         print(f"[WARNING] Missing columns for sync dump: {missing}")
@@ -276,7 +283,10 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     df2 = df.copy()
 
     for c in required:
-        df2[c] = df2[c].fillna(-100.0)
+        if c in df2.columns:
+            df2[c] = df2[c].fillna(-100.0)
+        else:
+            df2[c] = -100.0
 
     with open(out_path, "w") as f:
         for _, row in df2.iterrows():

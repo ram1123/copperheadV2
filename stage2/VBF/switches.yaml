@@ -1,0 +1,18 @@
+# Stage2-only switches for the VBF channel, read directly by run_stage2_vbf.py (not by
+# src/lib/get_parameters.py, which only globs configs/parameters/*.yaml).
+# Same shape as configs/parameters/switches.yaml: one per-era block per switch.
+switches:
+    # true: every DY sample histogram is split on gjj_mass > 0 into
+    # <sample>_matched2J_hist.pkl and <sample>_matched01J_hist.pkl.
+    # Stage3 does not read this file: run_stage3_vbf.py detects the split from the
+    # histograms this switch produced (has_matched_jet_histograms).
+    divide_dy_into_matched_jets:
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true

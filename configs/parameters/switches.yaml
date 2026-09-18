@@ -321,6 +321,16 @@ switches:
         "2023": true
         "2023BPix": true
         "2024": true
+    pdf_supported_lha_ids:
+        '2016preVFP': [306000, 325300]
+        '2016postVFP': [306000, 325300]
+        '2017': [306000, 325300]
+        '2018': [306000, 325300]
+        '2022preEE': [306000, 325300]
+        '2022postEE': [306000, 325300]
+        "2023": [306000, 325300]
+        "2023BPix": [306000, 325300]
+        "2024": [306000, 325300]
     do_THU:
         '2016preVFP': true
         '2016postVFP': true
@@ -386,10 +396,10 @@ switches:
         "2023BPix": false
         "2024": false
     save_all_weight_variations:
-        '2016preVFP': false
-        '2016postVFP': false
-        '2017': false
-        '2018': false
+        '2016preVFP': true
+        '2016postVFP': true
+        '2017': true
+        '2018': true
         '2022preEE': false
         '2022postEE': false
         "2023": false

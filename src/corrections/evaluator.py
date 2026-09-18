@@ -1,3 +1,5 @@
+import re
+
 import awkward as ak
 import numpy as np
 import uproot
@@ -883,86 +885,124 @@ def stxs_uncert(source, event_STXS, Nsigma, stxs_acc_lookups, powheg_xsec_lookup
 
 # PDF SF-------------------------------------------------------------------------
 
-# def add_pdf_variations(events, weights, config, dataset):
-#     if "2016" in config["year"]:
-#         max_replicas = 0
-#         if "dy" in dataset:
-#             max_replicas = 100
-#         elif "ewk" in dataset:
-#             max_replicas = 33
-#         else:
-#             max_replicas = 100
-#         pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
+# Supported NNPDF3.1 symmhessian+as sets (103 members), verified from branch titles:
+#   LHA 306000-306102: NNPDF31_nnlo_hessian_pdfas
+#   LHA 325300-325402: NNPDF31_nnlo_as_0118_mc_hessian_pdfas
+# Member 0 is central (alpha_s=0.118), 1-100 are Hessian variations, and
+# 101/102 are alpha_s=0.116/0.120. The 68% CL PDF uncertainty is
+# sqrt(sum_{k=1..100}(w_k/w_0 - 1)^2); divide by w_0 because it can differ from 1.
+# The LHA-ID gate excludes 325500 (no alpha_s) and 320900 (MC replicas, requiring
+# RMS instead of quadrature). Supporting them requires a separate prescription;
+# add_pdf_variations rejects incompatible member counts.
 
-#         #---------------- No idea why output instead of weights
-#         for i in range(100):
-#             if (i < max_replicas) and do_pdf:
-#                 output[f"pdf_mcreplica{i}"] = pdf_wgts[:, i]
-#             else:
-#                 output[f"pdf_mcreplica{i}"] = np.nan
-#         #--------------------------------------------
+# Shared with copperhead_processor to emit unity columns when PDFs are disabled.
+PDF_N_EIGENVECTOR_MEMBERS = 100
 
-#     else:
-#         # pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]][0]
-#         pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
-#         # pdf_wgts = np.array(pdf_wgts)
-#         # print(f"add_pdf_variations pdf_wgts: {pdf_wgts}")
-#         pdf_std = ak.std(pdf_wgts, axis=1)
-#         pdf_vars = {
-#             # "up": (1 + 2 * pdf_wgts.std()),
-#             # "down": (1 - 2 * pdf_wgts.std()),
-#             "up": (1 + 2 * pdf_std),
-#             "down": (1 - 2 * pdf_std),
-#         }
-#         # print(f"add_pdf_variations pdf_vars up: {ak.to_numpy(pdf_vars['up'])}")
-#         # print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
-#         weights.add_weight("pdf_2rms", pdf_vars, how="only_vars")
+# alpha_s=0.116/0.120 member indices, also used to name stage1 columns.
+PDF_ALPHA_S_MEMBER_INDICES = (101, 102)
+
+# Shared metadata key for inclusive member sums filled by run_prestage.py.
+PDF_SUMW_METADATA_KEY = "sumLHEPdfWgts"
+
+
+def get_pdf_lha_id_range(events):
+    """(first, last) LHA IDs named in the LHEPdfWeight branch title, or None.
+
+    NanoAOD writes the PDF set into the branch title, e.g.
+    "LHE pdf variation weights (w_var / w_nominal) for LHA IDs 306000 - 306102",
+    and coffea NanoEvents keeps every branch title as the `__doc__` parameter of the
+    array, so reading it costs no file access. Returns None when the branch is absent
+    or its title carries no ID range.
+    """
+    if "LHEPdfWeight" not in events.fields:
+        return None
+    # The title sits on the float content, not on the list that wraps it. Walk down
+    # instead of hardcoding the depth, which event masking can change.
+    layout = events.LHEPdfWeight.layout
+    title = None
+    while layout is not None and title is None:
+        title = layout.parameters.get("__doc__")
+        layout = getattr(layout, "content", None)
+    match = re.search(r"(\d+)\s*-\s*(\d+)", title or "")
+    if match is None:
+        return None
+    first, last = map(int, match.groups())
+    return first, last
+
 
 def add_pdf_variations(events, config, dataset):
-    if "2016" in config["year"]:
-        max_replicas = 0
-        if "dy" in dataset:
-            max_replicas = 100
-        elif "ewk" in dataset:
-            max_replicas = 33
-        else:
-            max_replicas = 100
-        pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
+    """Return normalised PDF eigenvectors (N, 100), alpha_s members (N, 2),
+    and the unscaled central member (N,) for 103-member NNPDF3.1 sets.
 
-        #---------------- No idea why output instead of weights comment out for now
-        # for i in range(100):
-        #     if (i < max_replicas):
-        #         output[f"pdf_mcreplica{i}"] = pdf_wgts[:, i]
-        #     else:
-        #         output[f"pdf_mcreplica{i}"] = np.nan
-        #--------------------------------------------
+    Scale each variation by S_0 / S_k using whole-sample member sums from
+    prestage metadata. This preserves acceptance and shape changes while
+    removing inclusive cross-section shifts; category yields can still vary.
 
-    else:
-        # pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]][0]
-        pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]]
-        # pdf_wgts = np.array(pdf_wgts)
-        # print(f"add_pdf_variations pdf_wgts: {pdf_wgts}")
+    Keep the central weight separately without dividing members by it: stage3
+    combines bin yields using PDF4LHC21 Eq. (6.5) (arXiv:2203.05506), preserving
+    cancellations between events. Alpha_s follows PDF4LHC15 Eqs. (27)-(28)
+    (arXiv:1510.03865).
 
-    pdf_std = ak.std(pdf_wgts, axis=1)
-    pdf_vars = {
-        # "up": (1 + 2 * pdf_wgts.std()),
-        # "down": (1 - 2 * pdf_wgts.std()),
-        "up": (1 + 2 * pdf_std),
-        "down": (1 - 2 * pdf_std),
-    }
-    # pdf_wgts = events.LHEPdfWeight[:, 0 : config["n_pdf_variations"]][0]
-    # # print(f"pdf_wgts: {pdf_wgts.compute()}")
-    # pdf_std = ak.std(pdf_wgts, axis=0)
-    # print(f"pdf_std: {pdf_std.compute()}")
-    # pdf_vars = {
-    #     # "up": (1 + 2 * pdf_wgts.std()),
-    #     # "down": (1 - 2 * pdf_wgts.std()),
-    #     "up": (1 + 2 * pdf_std* ak.ones_like(events.LHEPdfWeight[:,0])),
-    #     "down": (1 - 2 * pdf_std* ak.ones_like(events.LHEPdfWeight[:,0])),
-    # }
-    # # print(f"add_pdf_variations pdf_vars up: {ak.to_numpy(pdf_vars['up'])}")
-    # # print(f"add_pdf_variations pdf_vars down: {ak.to_numpy(pdf_vars['down'])}")
-    return pdf_vars
+    Raises ValueError for incompatible member counts, invalid weights, or
+    missing/invalid sumLHEPdfWgts metadata. Re-run prestage if metadata is absent.
+    config and dataset identify the year and sample in errors.
+    """
+    # Fixed symmhessian layout shared by the two supported nnpdf3.1 sets selected by the LHA-ID gate.
+    PDF_N_MEMBERS_SYMMHESSIAN_AS = 103
+    PDF_CENTRAL_MEMBER = 0
+    # Keep alpha_s separate from the 100 Hessian eigenvectors for stage3.
+    PDF_EIGENVECTOR_MEMBERS = slice(1, 101)
+    PDF_ALPHA_S_MEMBERS = slice(
+        PDF_ALPHA_S_MEMBER_INDICES[0], PDF_ALPHA_S_MEMBER_INDICES[-1] + 1
+    )
+
+    pdf_wgts = events.LHEPdfWeight
+    n_members = np.unique(ak.to_numpy(ak.num(pdf_wgts, axis=1))).tolist()
+
+    if n_members != [PDF_N_MEMBERS_SYMMHESSIAN_AS]:
+        raise ValueError(
+            f"add_pdf_variations: '{dataset}' ({config['year']}) has LHEPdfWeight "
+            f"member counts {n_members}, expected [{PDF_N_MEMBERS_SYMMHESSIAN_AS}]. "
+            f"Only the symmetric-Hessian prescription is implemented; check the "
+            f"branch title and see the comments above for the supported sets."
+        )
+
+    # Reject invalid central weights; use float64 consistently with later arithmetic.
+    w_central = ak.values_astype(pdf_wgts[:, PDF_CENTRAL_MEMBER], np.float64)
+
+    # Reject non-finite members before they contaminate histograms.
+    eigen = ak.values_astype(pdf_wgts[:, PDF_EIGENVECTOR_MEMBERS], np.float64)
+
+    alpha_s = ak.values_astype(pdf_wgts[:, PDF_ALPHA_S_MEMBERS], np.float64)
+
+    # Whole-sample sums come from prestage and cannot be reconstructed per chunk.
+    metadata = getattr(events, "metadata", None) or {}
+    sumw_raw = metadata.get(PDF_SUMW_METADATA_KEY)
+    if sumw_raw is None:
+        raise ValueError(
+            f"add_pdf_variations: '{dataset}' ({config['year']}) has no "
+            f"'{PDF_SUMW_METADATA_KEY}' in its dataset metadata, so the members "
+            f"cannot be normalised to a common inclusive yield. It is filled by "
+            f"run_prestage.py from the Runs-tree LHEPdfSumw branch; a sample JSON "
+            f"written before that was added will not have it -- re-run prestage."
+        )
+
+    sumw = np.asarray(sumw_raw, dtype=np.float64)
+    if sumw.shape != (PDF_N_MEMBERS_SYMMHESSIAN_AS,):
+        raise ValueError(
+            f"add_pdf_variations: '{dataset}' ({config['year']}) has "
+            f"'{PDF_SUMW_METADATA_KEY}' of shape {sumw.shape}, expected "
+            f"({PDF_N_MEMBERS_SYMMHESSIAN_AS},) to match LHEPdfWeight. The metadata "
+            f"was filled from a different PDF set than the events carry."
+        )
+
+    # Match the central inclusive yield; explicit 2-D broadcasting supports jagged arrays.
+    member_norm = sumw[PDF_CENTRAL_MEMBER] / sumw[PDF_EIGENVECTOR_MEMBERS]
+    eigen = eigen * np.broadcast_to(member_norm, (len(eigen), member_norm.size))
+    alpha_s_norm = sumw[PDF_CENTRAL_MEMBER] / sumw[PDF_ALPHA_S_MEMBERS]
+    alpha_s = alpha_s * np.broadcast_to(alpha_s_norm, (len(alpha_s), alpha_s_norm.size))
+
+    return eigen, alpha_s, w_central
 
 
 # QGL SF-------------------------------------------------------------------------
