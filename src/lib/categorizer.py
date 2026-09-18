@@ -1,3 +1,19 @@
+"""
+Abandoned/incomplete scratch categorizer -- never imported or called anywhere
+else in this repo (verified via a repo-wide grep for these class/function
+names). The category logic actually used in the analysis lives in
+modules/selection.py (applyRegionCatCuts, PAIR_JJ_ETA_REGIONS/
+SINGLE_JET_ETA_REGIONS) and configs/categories/, per this repo's CLAUDE.md.
+
+Only the syntax error that blocked `ast.parse`/import (CategorizerMVA.runMVA
+had no body) has been fixed here, plus the missing `argparse` import below --
+this file otherwise still does not work as-is: `categorize()` is missing
+`self` in every class, `for key, val in cat_dict:` should be
+`cat_dict.items()`, and the `if __name__ == "__main__"` block below has a
+pre-existing `yeawr` typo and never does anything with the loaded data. Kept
+for historical reference only; see docs/known_issues.md.
+"""
+import argparse
 import dask_awkward as dak
 import awkward as ak
 import numpy as np
@@ -30,6 +46,7 @@ class CategorizerMVA(CategorizerBase):
         self.MVA = MVA
         self.edges = scorebin_edges
     def runMVA(self):
+        raise NotImplementedError("Abandoned stub -- never completed, see module docstring.")
     def categorize(stage1_data):
         input_data = stage1_data
         scores = self.MVA(input_data)

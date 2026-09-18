@@ -1,11 +1,20 @@
 import array
+import json
 import os
+from datetime import datetime, timezone
 
 import ROOT
 import yaml
+import poly_utils
 from cli.common_argparser import build_common_parser
+from modules.git_utils import get_git_state
 from modules.utils import logger
 from omegaconf import OmegaConf
+from sample_resolution import (
+    collect_process_paths,
+    resolve_dy_processes,
+    resolve_stage1_base_path,
+)
 
 # Run in batch mode and disable statistics box
 ROOT.gROOT.SetBatch(True)
@@ -24,35 +33,62 @@ def eval_polynomial(coeffs, xval):
     return sum(coeff * (xval ** idx) for idx, coeff in enumerate(coeffs))
 
 
-def make_combined_function_reduced(f0_coeffs, f1_coeffs, xmin, xmax, base_tail_slope):
+def eval_polynomial_derivative(coeffs, xval):
+    return sum(idx * coeff * (xval ** (idx - 1)) for idx, coeff in enumerate(coeffs) if idx >= 1)
+
+
+def covariance_matrix_to_list(fit_result, npar):
+    """Extract a TFitResultPtr's full parameter covariance matrix as a plain
+    nested Python list (float, not numpy/ROOT scalar types - JSON/YAML-safe
+    via OmegaConf). Row/column order matches the fit's own parameter order."""
+    cov = fit_result.GetCovarianceMatrix()
+    return [[float(cov(i, j)) for j in range(npar)] for i in range(npar)]
+
+
+def make_combined_function_reduced(f0_coeffs, f1_coeffs, xmin, xmax):
     """
-    Builds a reduced-parameter piecewise function:
-    - frozen low-range polynomial, plus a common vertical shift
-    - frozen mid-range polynomial, plus a small linear tilt around xmin
-    - linear tail beyond xmax, with only the slope adjusted in the final refit
+    Builds a reduced-parameter piecewise function with exact C0 (value) continuity
+    at both xmin and xmax, AND exact C1 (slope) continuity at xmax by construction:
+    the tail's slope/intercept are derived analytically from f1's own fit at xmax
+    (not from an unrelated, independently-fit flat-line tail), so a delta_tail_slope
+    of 0 already joins smoothly instead of leaving a visible corner. f0 gets its own
+    tilt (mirroring f1's), so a single shared vertical shift no longer has to serve
+    both regions at once - the previous single-shift design otherwise pulls whichever
+    region has the most fit weight (usually f1/tail) at the expense of the other.
 
     Free parameters:
-    - par[0]: common vertical shift applied to low/mid regions
-    - par[1]: extra mid-range tilt multiplying (x - xmin)
-    - par[2]: delta on the tail slope relative to the local tail fit
+    - par[0]: common_shift - vertical shift applied to the low-range polynomial
+              (propagated into the mid-range join via continuity)
+    - par[1]: low_tilt - extra low-range tilt multiplying (x - xmin); vanishes at
+              x=xmin, so xmin-continuity is unaffected by its value
+    - par[2]: mid_tilt - extra mid-range tilt multiplying (x - xmin)
+    - par[3]: delta_tail_slope - small deviation from f1's own analytic slope at xmax
     """
+    f1_prime_xmax = eval_polynomial_derivative(f1_coeffs, xmax)
+
     def func(x, par):
         xx = x[0]
         common_shift = par[0]
-        mid_tilt = par[1]
-        tail_slope = base_tail_slope + par[2]
+        low_tilt = par[1]
+        mid_tilt = par[2]
+        delta_tail_slope = par[3]
 
-        low_xmin = eval_polynomial(f0_coeffs, xmin) + common_shift
+        def eval_low(xlow):
+            return eval_polynomial(f0_coeffs, xlow) + common_shift + low_tilt * (xlow - xmin)
+
+        low_xmin = eval_low(xmin)
         mid_xmin_raw = eval_polynomial(f1_coeffs, xmin)
         mid_shift = low_xmin - mid_xmin_raw
 
         def eval_mid(xmid):
             return eval_polynomial(f1_coeffs, xmid) + mid_shift + mid_tilt * (xmid - xmin)
 
+        tail_slope = f1_prime_xmax + mid_tilt + delta_tail_slope
+
         if xx < 0.0:
             return 0.0
         elif xx <= xmin:
-            return eval_polynomial(f0_coeffs, xx) + common_shift
+            return eval_low(xx)
         elif xx < xmax:
             return eval_mid(xx)
         else:
@@ -74,28 +110,35 @@ def rebin_histogram(hist, edges):
     return rebinned
 
 
-def make_confidence_band(hist_sf, fit_result, confidence_level, name):
-    band = hist_sf.Clone(name)
-    band.SetDirectory(0)
-    band.Reset("ICESM")
-    ROOT.TVirtualFitter.GetFitter().GetConfidenceIntervals(band, confidence_level)
-    return band
+def make_confidence_band(global_xmax, confidence_level, name, npoints=400):
+    """
+    Confidence band as a fine TGraphErrors spanning [0, global_xmax], not a
+    clone of hist_sf: TH1's "E3" fill only spans the first-to-last bin
+    *center*, not the true axis edges, so a wide last bin (e.g. the [170,200]
+    tail bin, center 185) leaves a visible gap at the very end - a fine grid
+    of points decouples the band's resolution from the (necessarily coarse,
+    sparse-stats) tail binning. Draw with option "3 SAME".
+    """
+    xs = array.array('d', [global_xmax * i / (npoints - 1) for i in range(npoints)])
+    ys = array.array('d', [0.0] * npoints)
+    graph = ROOT.TGraphErrors(npoints, xs, ys)
+    graph.SetName(name)
+    ROOT.TVirtualFitter.GetFitter().GetConfidenceIntervals(graph, confidence_level)
+    return graph
 
-def fit_polynomial(hist_sf, order, xmin, xmax, fit_opts="L S Q"):
+def fit_polynomial(hist_sf, order, xmin, xmax, name):
     """
-    Fits a polynomial of degree 'order' to hist_sf between [xmin, xmax].
-    Returns the TF1 polynomial object.
+    Fits a polynomial of degree 'order' to hist_sf between [xmin, xmax] using a
+    numerically stable, centered/scaled Chebyshev basis (see poly_utils.py),
+    then converts back to plain monomial-in-x coefficients + covariance.
+    Returns the poly_utils.fit_chebyshev_poly() result dict.
     """
-    expr = " + ".join(f"[{i}]*x**{i}" for i in range(order + 1))
-    func = ROOT.TF1(f"poly{order}", expr, xmin, xmax)
-    hist_sf.Fit(func, fit_opts, "", xmin, xmax)
-    hist_sf.Fit(func, fit_opts, "", xmin, xmax)
-    hist_sf.Fit(func, "L S R", "", xmin, xmax)
-    return func
+    return poly_utils.fit_chebyshev_poly(hist_sf, order, xmin, xmax, name)
 
-def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
+def fit_flat_line(hist_sf, xmin, xmax, fit_opts="S R Q"):
     """
-    Fits a constant line to hist_sf between [xmin, xmax].
+    Fits a straight line (slope, intercept) to hist_sf between [xmin, xmax]
+    using a proper chi-square fit against the histogram's own bin errors.
     Returns the TF1 object for that line.
     """
     func = ROOT.TF1("flat_line", "[0]*x + [1]", xmin, xmax)
@@ -103,27 +146,32 @@ def fit_flat_line(hist_sf, xmin, xmax, fit_opts="L I S R"):
     return func
 
 
-def build_final_piecewise_coefficients(f0, order0, f1, order1, f_flat, f_comb, xmin1, xmax1):
+def build_final_piecewise_coefficients(f0_coeffs, f0_errors, order0, f1_coeffs, f1_errors, order1, f_flat, f_comb, xmin1, xmax1):
     """
     Convert the reduced-parameter combined refit back into the full set of
-    piecewise coefficients expected by stage1.
+    piecewise coefficients expected by stage1. f0_coeffs/f0_errors and
+    f1_coeffs/f1_errors are the monomial-in-x coefficients (and their
+    uncertainties) coming from poly_utils.fit_chebyshev_poly()'s basis
+    conversion - not read off a monomial-parametrized TF1 directly. f_flat (the
+    independent tail-only fit) is unused here - the tail slope/intercept are
+    now derived analytically from f1 at xmax1 for exact C1 continuity there,
+    see make_combined_function_reduced().
     """
     common_shift = f_comb.GetParameter(0)
     common_shift_err = f_comb.GetParError(0)
-    mid_tilt = f_comb.GetParameter(1)
-    mid_tilt_err = f_comb.GetParError(1)
-    delta_tail_slope = f_comb.GetParameter(2)
-    delta_tail_slope_err = f_comb.GetParError(2)
-
-    f0_coeffs = [f0.GetParameter(i) for i in range(order0 + 1)]
-    f0_errors = [f0.GetParError(i) for i in range(order0 + 1)]
-    f1_coeffs = [f1.GetParameter(i) for i in range(order1 + 1)]
-    f1_errors = [f1.GetParError(i) for i in range(order1 + 1)]
+    low_tilt = f_comb.GetParameter(1)
+    low_tilt_err = f_comb.GetParError(1)
+    mid_tilt = f_comb.GetParameter(2)
+    mid_tilt_err = f_comb.GetParError(2)
+    delta_tail_slope = f_comb.GetParameter(3)
+    delta_tail_slope_err = f_comb.GetParError(3)
 
     final_f0_coeffs = list(f0_coeffs)
     final_f0_errors = list(f0_errors)
-    final_f0_coeffs[0] += common_shift
-    final_f0_errors[0] = (final_f0_errors[0] ** 2 + common_shift_err ** 2) ** 0.5
+    final_f0_coeffs[0] += common_shift - low_tilt * xmin1
+    final_f0_coeffs[1] += low_tilt
+    final_f0_errors[0] = (final_f0_errors[0] ** 2 + common_shift_err ** 2 + (xmin1 * low_tilt_err) ** 2) ** 0.5
+    final_f0_errors[1] = (final_f0_errors[1] ** 2 + low_tilt_err ** 2) ** 0.5
 
     low_xmin_nominal = eval_polynomial(f0_coeffs, xmin1)
     mid_xmin_nominal = eval_polynomial(f1_coeffs, xmin1)
@@ -136,16 +184,21 @@ def build_final_piecewise_coefficients(f0, order0, f1, order1, f_flat, f_comb, x
     final_f1_errors[0] = (final_f1_errors[0] ** 2 + common_shift_err ** 2 + (xmin1 * mid_tilt_err) ** 2) ** 0.5
     final_f1_errors[1] = (final_f1_errors[1] ** 2 + mid_tilt_err ** 2) ** 0.5
 
-    final_tail_slope = f_flat.GetParameter(0) + delta_tail_slope
-    final_tail_slope_err = (f_flat.GetParError(0) ** 2 + delta_tail_slope_err ** 2) ** 0.5
+    # Tail slope: f1's own analytic derivative at xmax1 (guarantees C1 continuity
+    # when delta_tail_slope == 0) plus the small MINUIT-fitted correction.
+    f1_prime_xmax = eval_polynomial_derivative(f1_coeffs, xmax1)
+    final_tail_slope = f1_prime_xmax + mid_tilt + delta_tail_slope
+    # Diagonal (uncorrelated) quadrature approximation, consistent with the rest
+    # of this function's error propagation.
+    f1_prime_xmax_err = sum(
+        (idx * (xmax1 ** (idx - 1)) * err) ** 2 for idx, err in enumerate(f1_errors) if idx >= 1
+    ) ** 0.5
+    final_tail_slope_err = (f1_prime_xmax_err ** 2 + mid_tilt_err ** 2 + delta_tail_slope_err ** 2) ** 0.5
+
     y_at_xmax = eval_polynomial(final_f1_coeffs, xmax1)
     tail_intercept = y_at_xmax - final_tail_slope * xmax1
-    tail_intercept_err = (
-        f_flat.GetParError(1) ** 2
-        + common_shift_err ** 2
-        + ((xmax1 - xmin1) * mid_tilt_err) ** 2
-        + (xmax1 * delta_tail_slope_err) ** 2
-    ) ** 0.5
+    y_at_xmax_err = sum((xmax1 ** idx * err) ** 2 for idx, err in enumerate(final_f1_errors)) ** 0.5
+    tail_intercept_err = (y_at_xmax_err ** 2 + (xmax1 * final_tail_slope_err) ** 2) ** 0.5
 
     return {
         "f0_coeffs": final_f0_coeffs,
@@ -156,65 +209,90 @@ def build_final_piecewise_coefficients(f0, order0, f1, order1, f_flat, f_comb, x
         "tail_slope_err": final_tail_slope_err,
         "tail_intercept": tail_intercept,
         "tail_intercept_err": tail_intercept_err,
+        # The 4 parameters MINUIT actually fit independently (see
+        # make_combined_function_reduced) -- saved alongside their own fit
+        # errors so a consumer can build a proper up/down envelope by
+        # perturbing these 4 (genuinely close to independent, since low_tilt/
+        # mid_tilt/delta_tail_slope are defined to vanish at their respective
+        # anchor points) instead of the 14 per-order f0_pN/f1_pN coefficients,
+        # whose _err fields mix this same combined-fit uncertainty with the
+        # local Chebyshev fit's own (strongly correlated) per-order errors --
+        # see copperhead_processor.py's getZptWgts_3region for the consumer.
         "common_shift": common_shift,
+        "common_shift_err": common_shift_err,
+        "low_tilt": low_tilt,
+        "low_tilt_err": low_tilt_err,
         "mid_tilt": mid_tilt,
+        "mid_tilt_err": mid_tilt_err,
         "delta_tail_slope": delta_tail_slope,
+        "delta_tail_slope_err": delta_tail_slope_err,
     }
 
 def perform_fits(hist_sf, order0, xmin0, xmax0, order1, xmin1, xmax1, global_xmax):
     """
     Runs the three-step fits: 1) poly(order0) on [0, xmax0], 2) poly(order1) on [xmin1, xmax1],
     3) flat line on [xmax1, global_xmax]. Then creates and fits the combined TF1 over [0, global_xmax].
-    Returns all TF1s: (f0, f1, f_flat, f_combined).
+    Returns (f0_result, f1_result, f_flat, f_combined, final_fit), where f0_result/f1_result are the
+    dicts from poly_utils.fit_chebyshev_poly() (Chebyshev TF1 + converted monomial coeffs/errors).
     """
     logger.info(f"Performing piecewise fits with orders {order0} and {order1}")
 
     # 1) Low-range fit
     logger.debug(f"Fitting low range: 0 to {xmax0} with order {order0}")
-    f0 = fit_polynomial(hist_sf, order0, 0.0, xmax0, fit_opts="L S Q")
+    f0_result = fit_polynomial(hist_sf, order0, 0.0, xmax0, "f0_local")
 
     # 2) Mid-range fit
     logger.debug(f"Fitting mid range: {xmin1} to {xmax1} with order {order1}")
-    f1 = fit_polynomial(hist_sf, order1, xmin1, xmax1, fit_opts="L I S Q")
+    f1_result = fit_polynomial(hist_sf, order1, xmin1, xmax1, "f1_local")
 
-    # 3) High-range flat fit
+    # 3) High-range flat fit - kept only as an independent diagnostic reference
+    # (e.g. to sanity-check the analytic tail slope below); it is no longer the
+    # tail's baseline, since matching an independently-fit line's value but not
+    # its slope is exactly what produced the visible "kink" at xmax1.
     logger.debug(f"Fitting high range: {xmax1} to {global_xmax} with flat line")
-    f_flat = fit_flat_line(hist_sf, xmax1, global_xmax, fit_opts="L I S R")
-    # f_flat = fit_polynomial(hist_sf, order1, xmax1, global_xmax, fit_opts="L I S R")
+    f_flat = fit_flat_line(hist_sf, xmax1, global_xmax)
 
     # Build reduced-parameter combined TF1 using the stable local fits as anchors.
-    f0_coeffs = [f0.GetParameter(i) for i in range(order0 + 1)]
-    f1_coeffs = [f1.GetParameter(i) for i in range(order1 + 1)]
-    base_tail_slope = f_flat.GetParameter(0)
-    logger.debug("Creating reduced-parameter combined function with 3 parameters")
+    f0_coeffs = list(f0_result["coeffs_x"])
+    f1_coeffs = list(f1_result["coeffs_x"])
+    logger.debug("Creating reduced-parameter combined function with 4 parameters")
 
     comb_func = make_combined_function_reduced(
         f0_coeffs=f0_coeffs,
         f1_coeffs=f1_coeffs,
         xmin=xmin1,
         xmax=xmax1,
-        base_tail_slope=base_tail_slope,
     )
     logger.debug("Prepared reduced-parameter combined function for fitting")
 
-    f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, 3)
+    f_combined = ROOT.TF1("f_combined", comb_func, 0.0, global_xmax, 4)
     f_combined.SetParName(0, "common_shift")
-    f_combined.SetParName(1, "mid_tilt")
-    f_combined.SetParName(2, "delta_tail_slope")
+    f_combined.SetParName(1, "low_tilt")
+    f_combined.SetParName(2, "mid_tilt")
+    f_combined.SetParName(3, "delta_tail_slope")
     f_combined.SetParameter(0, 0.0)
     f_combined.SetParameter(1, 0.0)
     f_combined.SetParameter(2, 0.0)
-    f_combined.SetParLimits(0, -0.5, 0.5)
-    f_combined.SetParLimits(1, -0.02, 0.02)
-    f_combined.SetParLimits(2, -0.02, 0.02)
+    f_combined.SetParameter(3, 0.0)
+    # These 4 parameters are small corrections around the (already stable)
+    # local anchor fits, so generous - not razor-tight - bounds are enough to
+    # keep MIGRAD from running away; overly tight limits (as before) push the
+    # minimum onto a bound, where MINUIT's internal boundary transform makes
+    # HESSE/MINOS errors unreliable (often artificially huge or asymmetric).
+    f_combined.SetParLimits(0, -2.0, 2.0)
+    f_combined.SetParLimits(1, -0.5, 0.5)
+    f_combined.SetParLimits(2, -0.5, 0.5)
+    f_combined.SetParLimits(3, -0.5, 0.5)
 
-    # Perform final reduced refit
-    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
-    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
-    final_fit = hist_sf.Fit(f_combined, "L I S R", "", 0.0, global_xmax)
+    # Perform final reduced refit: a single proper chi2 fit against hist_sf's
+    # own bin errors (not the Poisson log-likelihood option "L", which is not
+    # appropriate for an already-computed Data/MC ratio histogram).
+    final_fit = hist_sf.Fit(f_combined, "S R Q", "", 0.0, global_xmax)
+    if final_fit and int(final_fit.Status()) != 0:
+        final_fit = hist_sf.Fit(f_combined, "S R Q", "", 0.0, global_xmax)
     logger.debug(f"Final fit result: {final_fit}")
 
-    return f0, f1, f_flat, f_combined, final_fit
+    return f0_result, f1_result, f_flat, f_combined, final_fit
 
 def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
                       xmin0, xmax0, xmin1, xmax1, global_xmax,
@@ -234,24 +312,29 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
     canv.Divide(1, 2)
 
     # --- Upper pad: SF histogram and fits ---
-    canv.cd(1)
-    # Force X-axis range from 0 to global_xmax and draw full axis
+    pad1 = canv.cd(1)
+    # Force X-axis range from 0 to global_xmax
     hist_sf.GetXaxis().SetRangeUser(0.0, global_xmax)
     hist_sf.SetTitle(f"Year {year}, njet={njet}, bins={nbins}")
     hist_sf.SetLineColor(ROOT.kBlue)
-    # Draw only the axis first to fix the range
+    hist_sf.SetMarkerColor(ROOT.kBlue)
+    hist_sf.SetMarkerStyle(20)
+    hist_sf.SetMarkerSize(0.6)
     hist_sf.Draw("axis")
+    pad1.Update()
+    ymin_auto = pad1.GetUymin()
+    ymax_auto = pad1.GetUymax()
 
     band95 = None
     band68 = None
     if fit_result and int(fit_result.Status()) == 0:
-        band95 = make_confidence_band(hist_sf, fit_result, 0.95, f"band95_{year}_{njet}")
+        band95 = make_confidence_band(global_xmax, 0.95, f"band95_{year}_{njet}")
         band95.SetFillColorAlpha(ROOT.kAzure - 9, 0.35)
         band95.SetLineColor(ROOT.kAzure - 9)
         band95.SetLineWidth(0)
         band95.SetMarkerSize(0)
 
-        band68 = make_confidence_band(hist_sf, fit_result, 0.68, f"band68_{year}_{njet}")
+        band68 = make_confidence_band(global_xmax, 0.68, f"band68_{year}_{njet}")
         band68.SetFillColorAlpha(ROOT.kOrange - 2, 0.45)
         band68.SetLineColor(ROOT.kOrange - 2)
         band68.SetLineWidth(0)
@@ -262,17 +345,29 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
     f_combined.SetNpx(5000)   # or 10000 if you want it super smooth
     f_combined.SetLineColor(ROOT.kRed)
 
-    # Finally draw the histogram and the combined fit
+    # Rebuild the pad's frame explicitly at exactly [0, global_xmax] - bypasses
+    # TH1's automatic (padded) frame sizing entirely, unlike SetRangeUser or
+    # SetNdivisions(optimize=False), neither of which affected the actual
+    # rendered frame edge when tried here.
     hist_sf.GetListOfFunctions().Clear()  # remove attached
-    hist_sf.Draw("axis")
+    pad1.Clear()
+    frame = pad1.DrawFrame(0.0, ymin_auto, global_xmax, ymax_auto)
+    frame.SetTitle(hist_sf.GetTitle())
+    frame.GetXaxis().SetTitle(hist_sf.GetXaxis().GetTitle())
+    frame.GetYaxis().SetTitle(hist_sf.GetYaxis().GetTitle())
     if band95:
-        band95.Draw("E3 SAME")
+        band95.Draw("3 SAME")
     if band68:
-        band68.Draw("E3 SAME")
-    hist_sf.Draw("same E")
+        band68.Draw("3 SAME")
+    # "P" (points at bin centers) instead of plain "E" (which also draws a
+    # connecting step outline - i.e. a flat horizontal segment across each
+    # bin's full width). The tail bins are tens of GeV wide, so that flat
+    # segment visibly diverges from the smoothly-varying fit curve/band,
+    # looking like a sharp discontinuity that isn't actually there (the fit
+    # itself and its confidence band are smooth - verified numerically).
+    hist_sf.Draw("same P E1")
     f_combined.Draw("SAME")
-    ROOT.gPad.Update()
-
+    pad1.Update()
 
     txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     # Legend
@@ -321,26 +416,47 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     elif year == "2022postEE":
-        if njet == 2 or njet == 1:
+        if njet == 2 or njet == 1 or njet == 0:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
     elif year == "2023":
-        if njet == 2 or njet == 1 or njet == 0:
+        if njet == 2 or njet == 0:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
-            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
     elif year == "2023BPix":
-        if njet == 2 or njet == 1 or njet == 0:
+        if njet == 2:
             leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
         else:
             leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")
+    elif year == "2024":
+        if njet == 2  or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
             txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")      
+    elif year == "2025":
+        if njet == 2  or njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")    
+    elif year == "2026":
+        if njet == 1 or njet == 0:
+            leg = ROOT.TLegend(0.7, 0.1, 0.9, 0.3)
+            txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
+        else:
+            leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
+            txt = ROOT.TPaveText(0.4, 0.7, 0.7, 0.9, "NDC")                              
     else:
         leg = ROOT.TLegend(0.7, 0.7, 0.9, 0.9)
         txt = ROOT.TPaveText(0.4, 0.1, 0.7, 0.3, "NDC")
@@ -364,8 +480,8 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
     txt.Draw()
 
     # --- Lower pad: Pull distribution ---
-    canv.cd(2)
-    ROOT.gPad.SetGrid()
+    pad2 = canv.cd(2)
+    pad2.SetGrid()
 
     nbins_hist = hist_sf.GetNbinsX()
     xmin_hist = hist_sf.GetXaxis().GetXmin()
@@ -385,7 +501,21 @@ def plot_sf_and_pulls(hist_sf, f0, f1, f_flat, f_combined, fit_result,
         pull_hist.SetBinContent(i, pull)
 
     pull_hist.SetMarkerStyle(20)
+    pull_hist.SetMarkerColor(ROOT.kBlack)  # pull_hist is a hist_sf clone; keep its own look, not hist_sf's blue
+    pull_hist.GetXaxis().SetRangeUser(0.0, global_xmax)
     pull_hist.Draw("P")
+    pad2.Update()
+    # Rebuild the frame at exactly [0, global_xmax] - see the upper panel's
+    # comment for why (TH1's automatic frame sizing pads past the request).
+    ymin_auto = pad2.GetUymin()
+    ymax_auto = pad2.GetUymax()
+    pad2.Clear()
+    pad2.SetGrid()
+    frame2 = pad2.DrawFrame(0.0, ymin_auto, global_xmax, ymax_auto)
+    frame2.SetTitle(pull_hist.GetTitle())
+    frame2.GetXaxis().SetTitle(pull_hist.GetXaxis().GetTitle())
+    frame2.GetYaxis().SetTitle(pull_hist.GetYaxis().GetTitle())
+    pull_hist.Draw("P SAME")
 
     # Save the canvas
     for ext in ("pdf", "png", "root"):
@@ -403,6 +533,14 @@ def main():
 
     save_dict = {}
     global_fit_xmax = 200.0
+
+    # Provenance for the fit step itself (produced once per script run, not
+    # per year) - who ran get_polyFit.py, when, and against which git state.
+    # Folded per-year below alongside step 0's own provenance.json (sample
+    # resolution), when present, so the final YAML carries a full trail.
+    in_dir_yaml = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
+    os.makedirs(in_dir_yaml, exist_ok=True)
+    fit_git_state = get_git_state(in_dir_yaml)
 
     for year in years:
         in_dir = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/{year}"
@@ -445,13 +583,14 @@ def main():
             # Removed previous call to h_SF.GetXaxis().SetRangeUser(0.0, global_fit_xmax)
 
             # Perform the piecewise fits
-            f0, f1, f_flat, f_comb, fit_result = perform_fits(
+            f0_result, f1_result, f_flat, f_comb, fit_result = perform_fits(
                 h_SF, order0, xmin0, xmax0, order1, xmin1, xmax1, global_fit_xmax
             )
 
-            # Plot the SF and pull distributions
+            # Plot the SF and pull distributions (f0/f1 TF1s are the Chebyshev-
+            # parametrized fits - same curve/chi2/ndf as the monomial form)
             plot_sf_and_pulls(
-                h_SF, f0, f1, f_flat, f_comb, fit_result,
+                h_SF, f0_result["tf1"], f1_result["tf1"], f_flat, f_comb, fit_result,
                 xmin0, xmax0, xmin1, xmax1, global_fit_xmax,
                 year, njet, nbins_new, save_dir
             )
@@ -469,9 +608,11 @@ def main():
                 logger.debug(f"f_comb parameter {i}: {f_comb.GetParameter(i)} +/- {f_comb.GetParError(i)}")
 
             final_piecewise = build_final_piecewise_coefficients(
-                f0=f0,
+                f0_coeffs=list(f0_result["coeffs_x"]),
+                f0_errors=list(f0_result["errors_x"]),
                 order0=order0,
-                f1=f1,
+                f1_coeffs=list(f1_result["coeffs_x"]),
+                f1_errors=list(f1_result["errors_x"]),
                 order1=order1,
                 f_flat=f_flat,
                 f_comb=f_comb,
@@ -484,7 +625,7 @@ def main():
                 params_dict[f"f0_p{i}_err"] = final_piecewise["f0_errors"][i]
                 logger.debug(
                     f"f0 parameter {i}: {final_piecewise['f0_coeffs'][i]} "
-                    f"(local={f0.GetParameter(i)}) +/- {final_piecewise['f0_errors'][i]}"
+                    f"(local={f0_result['coeffs_x'][i]}) +/- {final_piecewise['f0_errors'][i]}"
                 )
 
             for i in range(order1 + 1):
@@ -492,7 +633,7 @@ def main():
                 params_dict[f"f1_p{i}_err"] = final_piecewise["f1_errors"][i]
                 logger.debug(
                     f"f1 parameter {i}: {final_piecewise['f1_coeffs'][i]} "
-                    f"(local={f1.GetParameter(i)}) +/- {final_piecewise['f1_errors'][i]}"
+                    f"(local={f1_result['coeffs_x'][i]}) +/- {final_piecewise['f1_errors'][i]}"
                 )
 
             logger.debug(
@@ -505,12 +646,49 @@ def main():
             )
             logger.debug(
                 f"combined adjustments: common_shift={final_piecewise['common_shift']}, "
+                f"low_tilt={final_piecewise['low_tilt']}, "
                 f"mid_tilt={final_piecewise['mid_tilt']}, "
                 f"delta_tail_slope={final_piecewise['delta_tail_slope']}"
             )
 
             params_dict["horizontal_mx"] = final_piecewise["tail_slope"]
+            params_dict["horizontal_mx_err"] = final_piecewise["tail_slope_err"]
             params_dict["horizontal_c0"] = final_piecewise["tail_intercept"]
+            params_dict["horizontal_c0_err"] = final_piecewise["tail_intercept_err"]
+            # The 4 actual MINUIT-fit combined-refit parameters + their own
+            # fit errors (see build_final_piecewise_coefficients) -- consumed
+            # by copperhead_processor.py's getZptWgts_3region to build the
+            # up/down systematic envelope from 4 near-independent parameters
+            # instead of the 14 per-order f0_pN/f1_pN coefficients above.
+            params_dict["common_shift"] = final_piecewise["common_shift"]
+            params_dict["common_shift_err"] = final_piecewise["common_shift_err"]
+            params_dict["low_tilt"] = final_piecewise["low_tilt"]
+            params_dict["low_tilt_err"] = final_piecewise["low_tilt_err"]
+            params_dict["mid_tilt"] = final_piecewise["mid_tilt"]
+            params_dict["mid_tilt_err"] = final_piecewise["mid_tilt_err"]
+            params_dict["delta_tail_slope"] = final_piecewise["delta_tail_slope"]
+            params_dict["delta_tail_slope_err"] = final_piecewise["delta_tail_slope_err"]
+
+            # Full covariance matrices, in addition to the per-parameter
+            # (diagonal-only) *_err fields above. The individual _err fields
+            # are only a safe basis for a systematic envelope when the
+            # parameters they belong to are uncorrelated; combined_fit_covariance
+            # (the one that matters downstream) lets the consumer instead
+            # propagate exactly (sigma(x)^2 = g(x)^T Cov g(x)) rather than
+            # summing per-parameter errors in quadrature. Consumed by
+            # copperhead_processor.py's _zpt_combined_param_envelope_full_cov
+            # (falls back to the older diagonal method for a YAML that
+            # predates this field). f0_covariance/f1_covariance are also
+            # saved for completeness but have no consumer yet.
+            params_dict["f0_covariance"] = [[float(v) for v in row] for row in f0_result["cov_x"]]
+            params_dict["f0_covariance_order"] = [f"p{i}" for i in range(order0 + 1)]
+            params_dict["f1_covariance"] = [[float(v) for v in row] for row in f1_result["cov_x"]]
+            params_dict["f1_covariance_order"] = [f"p{i}" for i in range(order1 + 1)]
+            params_dict["combined_fit_covariance"] = covariance_matrix_to_list(fit_result, f_comb.GetNpar())
+            params_dict["combined_fit_covariance_order"] = [
+                "common_shift", "low_tilt", "mid_tilt", "delta_tail_slope"
+            ]
+
             params_dict["polynomial_range"] = {"xlow": 0.0, "xmin1": xmin1, "xmax1": xmax1, "xhigh": global_fit_xmax}
             params_dict["total_bins"] = nbins_new
             params_dict["fit_orders"] = {"f0_order": order0, "f1_order": order1}
@@ -520,6 +698,59 @@ def main():
             year_dict[f"njet_{njet}"] = {"function": params_dict}
             print(f"Using custom binning with {nbins_new} bins: {edges}")
 
+        metadata = {
+            "step2_derived_at": datetime.now(timezone.utc).isoformat(),
+            "step2_derived_by": os.getenv("USER", "unknown"),
+            "step2_git_commit": fit_git_state["commit"],
+            "step2_git_dirty": fit_git_state["dirty"],
+            "step2_git_diff_file": fit_git_state["diff_file"],
+            "run_label": run_label,
+            # Output-directory tag for this derivation run, not the physical
+            # DY MC sample(s) actually used - see dy_mc_samples below.
+            "dy_sample_label": args.dy_sample,
+            "save_postfix": out_append,
+        }
+
+        # The actual DY MC sample(s) read from the stage1 output, resolved
+        # the same way save_SF_rootFiles.py does (sample_resolution.py) -
+        # just the cheap glob/YAML lookup, no parquet read, so this doesn't
+        # need step0 to have been rerun with provenance capture. Requires
+        # --input_path (the stage1 output base) to have been passed through;
+        # degrades to a logged note, not a crash, if it wasn't.
+        if args.input_path:
+            try:
+                stage1_base_path = resolve_stage1_base_path(args.input_path, year)
+                dy_processes = resolve_dy_processes(year, args.sample_config)
+                _, matched_dy_processes, missing_dy_processes = collect_process_paths(
+                    stage1_base_path, dy_processes
+                )
+                metadata["dy_mc_samples"] = {
+                    "stage1_base_path": stage1_base_path,
+                    "sample_config": args.sample_config,
+                    "matched": matched_dy_processes,
+                    "missing": missing_dy_processes,
+                }
+            except Exception as exc:
+                logger.warning(f"Could not resolve actual DY MC sample(s) for {year}: {exc}")
+        else:
+            logger.debug(
+                "No --input_path given; cannot resolve the actual DY MC sample(s) "
+                "for metadata.dy_mc_samples (dy_sample_label is only the output-dir tag)."
+            )
+
+        # save_SF_rootFiles.py (step 0) writes this alongside the per-year ROOT
+        # files: when it ran, by whom, and the same Data/DY resolution above
+        # (redundant with dy_mc_samples but captured at step0 time). Fold it
+        # in here so the final YAML carries the full trail even though step 0
+        # and step 2 run as separate processes.
+        prov_path = f"{in_dir}/provenance.json"
+        if os.path.isfile(prov_path):
+            with open(prov_path) as prov_file:
+                metadata["step0"] = json.load(prov_file)
+        else:
+            logger.debug(f"No step0 provenance.json found at {prov_path}")
+        year_dict["metadata"] = metadata
+
         save_dict[year] = year_dict
 
     # Merge with existing YAML or create fresh
@@ -527,14 +758,19 @@ def main():
     # ------------------------------------------------------------------
     # Save YAML with top-level keys = years
     # ------------------------------------------------------------------
-    in_dir_yaml = f"{args.save_path}/zpt_rewgt/{run_label}/{args.dy_sample}/"
-    os.makedirs(in_dir_yaml, exist_ok=True)
     yaml_path = f"{in_dir_yaml}/zpt_rewgt_params_{args.dy_sample}.yaml"
 
     new_cfg = OmegaConf.create(save_dict)
 
     if os.path.isfile(yaml_path):
         existing = OmegaConf.load(yaml_path)
+        # `metadata` must fully replace, not deep-merge, for any year this run
+        # touches - otherwise a renamed/removed field (e.g. dy_sample ->
+        # dy_sample_label) lingers forever alongside its replacement, since
+        # OmegaConf.merge only adds/overwrites keys, never drops them.
+        for year in save_dict:
+            if year in existing and "metadata" in existing[year]:
+                del existing[year]["metadata"]
         merged = OmegaConf.merge(existing, new_cfg)  # merge year-by-year (and njet-by-njet)
     else:
         merged = new_cfg

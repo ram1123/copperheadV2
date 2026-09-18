@@ -7,6 +7,7 @@ HMM_BASE = config.get("hmm_base", f"/work/projects/hmm")
 HMM_USER = os.environ["USER"]
 
 USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
+CLEANUP_F1_0_AFTER_COMPACT = config.get("cleanup_f1_0_after_compact", False)
 
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
@@ -25,30 +26,70 @@ FINAL_REP = REPEATS[-1]
 
 ZPT_JETS_CATS = ["0", "1", "2"]
 
-PLOT_CATS = ["nocat", "vbf", "ggh"]
-# PLOT_CATS = ["vbf", "ggh"]
-# PLOT_CATS = ["vbf"]
-# PLOT_CATS = ["nocat"]
+# Plotting-variation knobs -- configurable via workflow/config.yaml
+# (plot_categories / plot_jj_eta_regions / plot_single_jet_eta_regions /
+# plot_zpt_modes / plot_var_sets) rather than hand-edited here. 
+PLOT_CATS = config.get("plot_categories", ["vbf", "ggh"])
+JJ_ETA_REGIONS = config.get("plot_jj_eta_regions", ["all"])
+SINGLE_JET_ETA_REGIONS = config.get("plot_single_jet_eta_regions", [])
+PLOT_ZPT_MODES = config.get("plot_zpt_modes", ["withzpt"])  # ["withzpt", "nozpt"]
+PLOT_VAR_SETS = config.get("plot_var_sets", ["fullset"])  # ["minset", "fullset"]
 
-# PLOT_NJETS = ["inclusive", "0", "1", "2"]   # adapt to what your script accepts
-# PLOT_NJETS = ["0", "1", "2"]   # adapt to what your script accepts
-PLOT_NJETS = ["inclusive"]   # adapt to what your script accepts
+# Per-category njets_plot bins to produce for non-vbf categories (vbf is
+# always njets_plot="2" by construction, see _jet_region_targets_for below).
+# Maps category name -> list of "inclusive"/"0"/"1"/"2" values wanted; a
+# category in plot_categories but absent here defaults to ["inclusive"].
+PLOT_NJETS_PLOTS = config.get("plot_njets_plots", {})
 
-JJ_ETA_REGIONS = [
-    "all",
-    "jj_both_central",
-    # "jj_non_central",
-    # "jj_one_fwd25_one_central",
-    # "jj_one_he_one_central",
-    # "jj_one_fwd30_one_central",
-    # "jj_both_fwd25",
-    # "jj_both_he",
-    # "jj_both_fwd30",
-    # "jj_one_he_one_fwd30",
-]
-PLOT_ZPT_MODES  = ["nozpt"] # ["withzpt", "nozpt"]
-# PLOT_ZPT_MODES  = ["withzpt", "nozpt"] # ["withzpt", "nozpt"]
-PLOT_VAR_SETS   = ["fullset"]          # ["minset", "fullset"]
+# Suffix appended to the plot output directory name (label_for_year(year) +
+# suffix) -- lets you rerun the plotter under the same run_tag with different
+# settings so that it won't overwrite the old plots.
+PLOT_OUTPUT_SUFFIX = config.get("plot_output_suffix", "_DY_ReRun")
+
+
+def _jet_region_targets_for(cat):
+    """
+    (njets_plot, jj_eta_region) pairs to generate for one category. vbf's own
+    category cut (jj_mass/jj_dEta need two real jets, see applyRegionCatCuts)
+    already requires njets>=2 by construction, so it always gets just the
+    pair-based jj_eta_region matrix, explicitly labeled njets_plot="2" (not
+    "inclusive" -- vbf-tagged events are never anything but >=2-jet).
+
+    Non-vbf categories (ggh/nocat) pick their njets_plot bins from
+    PLOT_NJETS_PLOTS[cat] (plot_njets_plots in config.yaml), defaulting to
+    ["inclusive"] if the category isn't listed there -- e.g. ["0"] for only
+    the zero-jet bin, ["inclusive"] for only the plain overview, or
+    ["0", "1", "2"] for the full njets multiplicity split. "1" further splits
+    by plot_single_jet_eta_regions if set (else just "all"); "2" splits by
+    plot_jj_eta_regions, same as vbf.
+    """
+    if cat == "vbf":
+        return [("2", r) for r in JJ_ETA_REGIONS]
+
+    targets = []
+    for njets_plot in PLOT_NJETS_PLOTS.get(cat, ["inclusive"]):
+        if njets_plot == "inclusive":
+            targets.append(("inclusive", "all"))
+        elif njets_plot == "0":
+            targets.append(("0", "all"))
+        elif njets_plot == "1":
+            targets += [("1", r) for r in (SINGLE_JET_ETA_REGIONS or ["all"])]
+        elif njets_plot == "2":
+            targets += [("2", r) for r in JJ_ETA_REGIONS]
+        else:
+            raise ValueError(
+                f"_jet_region_targets_for: unknown njets_plot '{njets_plot}' for "
+                f"cat '{cat}' (see plot_njets_plots in workflow/config.yaml)"
+            )
+    return targets
+
+
+# All njets_plot values actually produced by _jet_region_targets_for() above
+# for the configured PLOT_CATS -- derived, not hand-maintained, so it can
+# never drift out of sync with the target generator the way a separately
+# hardcoded list did before (root cause of a MissingInputException hit twice
+# this development cycle).
+PLOT_NJETS = sorted({njets_plot for cat in PLOT_CATS for njets_plot, _ in _jet_region_targets_for(cat)})
 
 wildcard_constraints:
     year="|".join([str(y) for y in YEARS]),
@@ -58,7 +99,7 @@ wildcard_constraints:
     njets_plot = "|".join(PLOT_NJETS),
     zpt_mode   = "|".join(PLOT_ZPT_MODES),
     var_set    = "|".join(PLOT_VAR_SETS),
-    jj_eta_region = "|".join(JJ_ETA_REGIONS),
+    jj_eta_region = "|".join(JJ_ETA_REGIONS + SINGLE_JET_ETA_REGIONS),
 
 RUN2_YEARS = ["2016preVFP", "2016postVFP", "2017", "2018"]
 RUN3_YEARS = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025"]
@@ -73,6 +114,7 @@ YEAR_META = {
     "2023BPix": ("run3", "12"),
     "2024": ("run3", "15"),
     "2025": ("run3", "15"),
+    "2026": ("run3", "15"),
 }
 
 DATASET_YAMLS = {
@@ -121,6 +163,14 @@ def plot_base_for_year(year: str) -> str:
 USE_GW = bool(config.get("use_gateway", False))
 CLIDX  = str(config.get("cluster_index", 0))
 
+# Optional standalone switches yaml (see run_stage1.py --switches-yaml /
+# src/lib/get_parameters.py) for stage-1 only -- e.g.
+# "configs/parameters/switches_official.yaml", to pin the DAG's stage1 rule to
+# a named, independent switches configuration instead of whatever
+# configs/parameters/switches_official.yaml currently says. Unset/empty (default)
+# preserves prior behavior.
+SWITCHES_YAML = config.get("switches_yaml", None)
+
 ZPT = config["zpt"]
 ZPT_OUT = ZPT.get("outbase", "try_zpt_dnn")
 ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
@@ -134,15 +184,17 @@ def gw_flags():
 def gw_flags_plots():
     return f" --use_gateway --cluster_index {CLIDX} " if USE_GW else ""
 
+
+def switches_flag():
+    return f"-w {SWITCHES_YAML}" if SWITCHES_YAML else ""
+
 PLOT_TARGETS = [
     (year, cat, njets_plot, jj_eta_region, zpt_mode, var_set)
     for year in YEARS
     for cat in PLOT_CATS
-    for njets_plot in PLOT_NJETS
-    for jj_eta_region in JJ_ETA_REGIONS
+    for (njets_plot, jj_eta_region) in _jet_region_targets_for(cat)
     for zpt_mode in PLOT_ZPT_MODES
     for var_set in PLOT_VAR_SETS
-    if not (cat == "vbf" and njets_plot != "inclusive")
 ]
 PLOT_DONE = expand(
     STATEDIR + "/plots_{year}_{cat}_{njets_plot}_{jj_eta_region}_{zpt_mode}_{var_set}.done",
@@ -171,6 +223,9 @@ rule all:
         INITIAL_STAGE1_DONE,
         # (2) stage1Compact for all years
         INITIAL_STAGE1_COMPACT_DONE,
+        # (5b) PU-DNN retraining -- deliberate/occasional, not automatic; uncomment
+        # or request state/<run_tag>/pu_dnn_train_<year>.done directly to run it.
+        expand(STATEDIR + "/pu_dnn_train_{year}.done", year=YEARS),        
         # (3) plotter (after stage1)
         PLOT_DONE,
         # (4) get zpt
@@ -178,10 +233,11 @@ rule all:
         expand(STATEDIR + "/zpt_step1_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
         expand(STATEDIR + "/zpt_step2_{year}_njets{njets}.done", year=YEARS, njets=ZPT_JETS_CATS),
         # (5) get EBE mass calibration
-        expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
-        expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_Data_Closure_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_MC_{year}.done", year=YEARS),
+        # expand(STATEDIR + "/mass_calibration_MC_Closure_{year}.done", year=YEARS),
+        # (6) summary
         f"{STATEDIR}/summary.done"
 
 rule plot_all:
@@ -202,6 +258,12 @@ rule all_stage1:
         PLOT_DONE,
         # f"{STATEDIR}/summary.done"
 
+rule DY_ReRun:
+    input:
+        # (1) stage1 for all years
+        INITIAL_STAGE1_DONE,
+        # (2) stage1Compact for all years
+        INITIAL_STAGE1_COMPACT_DONE,
 
 
 # ---------------------------------------
@@ -219,6 +281,7 @@ rule stage1:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        switches=lambda wc: switches_flag(),
         summary=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
@@ -237,8 +300,9 @@ rule stage1:
           -v {params.nano} \
           -l {params.label} \
           -y "{wildcards.year}" \
-          -m 1 \
+          -m 1 -Z \
           {params.gw}  \
+          {params.switches}  \
           > {log} 2>&1
         summary="{params.summary}"
 
@@ -294,6 +358,7 @@ rule stage1Compact:
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
         ),
+        cleanup_f1_0="1" if CLEANUP_F1_0_AFTER_COMPACT else "0",
     resources:
         gateway=1,
     shell:
@@ -319,6 +384,55 @@ rule stage1Compact:
             echo "stage1Compact year={wildcards.year} attempt= FAILED" >> {FAIL_LOG}
             exit 1
         fi
+
+        # -----------------------------
+        # Optional cleanup: once compact_sanity_check.py above has confirmed
+        # every sample's compacted output matches f1_0 (row counts/sizes),
+        # f1_0 is a fully-redundant duplicate of data now safely held in
+        # compacted/ -- opt-in via cleanup_f1_0_after_compact in config.yaml
+        # since this is irreversible (f1_0 is otherwise never deleted).
+        # -----------------------------
+        if [[ "{params.cleanup_f1_0}" == "1" ]]; then
+            echo "cleanup_f1_0_after_compact enabled; removing $BASE/f1_0"
+            rm -rf "$BASE/f1_0"
+        fi
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# ---------------------------------------
+# 2b) PU-DNN training (jet-level HS-vs-PU classifier consumed back inside a
+# LATER stage1 run via do_use_pu_dnn_score/pu_dnn_model_dir -- not to be
+# confused with the VBF-category DNN, which trains on stage2 output).
+# Not wired into `rule all` (see the commented-out target below): this is a
+# deliberate, occasional retraining step, not something that should fire as
+# a side effect of a routine `snakemake ... all_stage1` run. Request it
+# explicitly, e.g.:
+#   snakemake -s workflow/Snakefile state/<run_tag>/pu_dnn_train_<year>.done
+# ---------------------------------------
+rule pu_dnn_train:
+    input:
+        STATEDIR + f"/stage1_compact_{{year}}.done"
+    output:
+        done=STATEDIR + "/pu_dnn_train_{year}.done",
+    log:
+        LOGDIR + "/pu_dnn_train_{year}.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        label=lambda wc: label_for_year(wc.year),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -l {params.label} \
+            -y "{wildcards.year}" \
+            -m pu_dnn_train \
+            > {log} 2>&1
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
@@ -347,7 +461,7 @@ rule plots:
         ),
         save_path=lambda wc: (
             f"{plot_base_for_year(wc.year)}/"
-            f"{label_for_year(wc.year)}/"
+            f"{label_for_year(wc.year)}{PLOT_OUTPUT_SUFFIX}/"
         ),
         # map wildcards -> CLI flags
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",

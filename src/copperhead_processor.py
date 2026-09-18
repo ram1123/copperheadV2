@@ -56,6 +56,7 @@ from src.corrections.jet import (
     getJecDataTag,
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib
+from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 from src.corrections.met_xy_correction import apply_puppi_met_xy_correction
 
@@ -271,12 +272,11 @@ def build_muon_kinematic_variation_block(
 
 
 def _load_zpt_config_section(year: str, config_path: str, NanoAODv: int):
-    logger.info(f"zpt config file: {config_path}")
+    logger.debug(f"zpt config file: {config_path} (year={year}, nanoAODv{NanoAODv})")
     wgt_config = OmegaConf.load(config_path)
     wgt_config = wgt_config[str(year)]
     if ("nanoAODv12" in wgt_config.keys()) or ("nanoAODv15" in wgt_config.keys()):
         try:
-            logger.info(f"nanoAODv{NanoAODv}")
             wgt_config = wgt_config[f"nanoAODv{NanoAODv}"]
         except Exception as exc:
             raise ValueError(
@@ -285,14 +285,227 @@ def _load_zpt_config_section(year: str, config_path: str, NanoAODv: int):
     return wgt_config
 
 
-def _get_zpt_coeff(wgt_config, jet_multiplicity: int, nbins, coeff_name: str, sigma_shift: float = 0.0):
-    base = wgt_config[f"njet_{jet_multiplicity}"][nbins][coeff_name]
-    if sigma_shift == 0.0:
-        return base
+def _eval_zpt_poly(wgt_config, jet_multiplicity: int, nbins, prefix: str, order: int, x, sigma_shift: float = 0.0):
+    """
+    Evaluate the fitted polynomial (prefix "f0" or "f1") at `x`, optionally
+    shifted by `sigma_shift` sigma.
 
-    err_name = f"{coeff_name}_err"
-    err_val = wgt_config[f"njet_{jet_multiplicity}"][nbins].get(err_name, 0.0)
-    return base + sigma_shift * err_val
+    get_polyFit.py (the derivation script) only saves each coefficient's own
+    marginal fit uncertainty (`{prefix}_p{i}_err`) -- it does not save the
+    coefficient covariance matrix. Absent that, the +-1 sigma envelope at a
+    given x is built by combining each order's error contribution in
+    quadrature (the standard fallback for combining independent error
+    sources), NOT by shifting every coefficient by its own full marginal
+    error in the same direction at once. The latter (this function's
+    predecessor, _get_zpt_coeff) implicitly assumes every coefficient's
+    error is 100% positively correlated with every other's, which is not
+    physical for a polynomial fit and, combined with x^order growth for a
+    6th-order polynomial, produced +-1 sigma "variations" tens of times
+    larger than the nominal weight (and frequently negative) -- see
+    docs/... zpt variation investigation.
+
+    Caveat this does NOT fix: true polynomial fit coefficients are usually
+    strongly (anti-)correlated, so even an independent-quadrature combination
+    of marginal errors overstates the true fit uncertainty at x away from the
+    fit's pivot. A fully correct band needs either the coefficient covariance
+    matrix or the underlying combined-fit parameters (common_shift/low_tilt/
+    mid_tilt/delta_tail_slope, computed but not persisted in get_polyFit.py's
+    build_final_piecewise_coefficients) to be saved and varied instead of the
+    14 derived per-order coefficients -- that requires re-running the fit
+    derivation, not just this evaluation code.
+    """
+    nominal = 0.0
+    variance = 0.0
+    for i in range(order + 1):
+        base = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"{prefix}_p{i}"]
+        term = base * (x ** i)
+        nominal = nominal + term
+        if sigma_shift != 0.0:
+            err = wgt_config[f"njet_{jet_multiplicity}"][nbins].get(f"{prefix}_p{i}_err", 0.0)
+            variance = variance + (err * (x ** i)) ** 2
+    if sigma_shift == 0.0:
+        return nominal
+    envelope = variance ** 0.5
+    return nominal + sigma_shift * envelope
+
+
+def _eval_zpt_old_quadrature(
+    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+    poly_fit_cutoff_min, poly_fit_cutoff_max, sigma_shift,
+):
+    """
+    Evaluate the full 3-piece Z-pT function (also used for the nominal,
+    sigma_shift=0 case -- identical to the original implementation then).
+    For sigma_shift != 0 this is the legacy per-coefficient independent-
+    quadrature fallback (_eval_zpt_poly) for YAML files that predate the 4
+    combined-fit parameters below -- horizontal_mx itself is never varied,
+    matching the original implementation (only f0/f1 are perturbed; the
+    horizontal segment's slope is fixed and its intercept just follows
+    continuity from f1's shifted value at xmax1).
+    """
+    f0_val = _eval_zpt_poly(wgt_config, jet_multiplicity, nbins, "f0", f0_order, dimuon_pt, sigma_shift)
+    f0_xmin = _eval_zpt_poly(wgt_config, jet_multiplicity, nbins, "f0", f0_order, poly_fit_cutoff_min, sigma_shift)
+    f1_val = _eval_zpt_poly(wgt_config, jet_multiplicity, nbins, "f1", f1_order, dimuon_pt, sigma_shift)
+    f1_xmin = _eval_zpt_poly(wgt_config, jet_multiplicity, nbins, "f1", f1_order, poly_fit_cutoff_min, sigma_shift)
+    f1_xmax = _eval_zpt_poly(wgt_config, jet_multiplicity, nbins, "f1", f1_order, poly_fit_cutoff_max, sigma_shift)
+
+    offset = f0_xmin - f1_xmin
+    mx = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"]
+    y_at_xmax = f1_xmax + offset
+    intercept = y_at_xmax - mx * poly_fit_cutoff_max
+
+    value = ak.where(poly_fit_cutoff_min >= dimuon_pt, f0_val, f1_val + offset)
+    value = ak.where(poly_fit_cutoff_max < dimuon_pt, mx * dimuon_pt + intercept, value)
+    return value
+
+
+# How a +1 sigma shift in each of the 4 parameters get_polyFit.py's combined
+# refit actually fits independently (common_shift/low_tilt/mid_tilt/
+# delta_tail_slope -- see make_combined_function_reduced /
+# build_final_piecewise_coefficients there) propagates into the *already
+# saved* final f0_p0/f0_p1/f1_p0/f1_p1/horizontal_mx coefficients. This
+# mapping is exactly linear (not an approximation) and needs only those final
+# coefficients plus xmin1 -- not the raw/local per-region fit coefficients,
+# which aren't saved. Derivation: common_shift and low_tilt only ever enter
+# f0's coefficients (low_tilt vanishes at xmin1 by construction, so it can't
+# disturb f0/f1 continuity there); mid_tilt enters f1's coefficients the same
+# way *and* shifts the tail slope by the same amount, since
+# final_tail_slope = derivative-of-final-f1-at-xmax1 + delta_tail_slope, and
+# a +delta shift to f1's linear coefficient shifts that derivative by exactly
+# +delta everywhere; delta_tail_slope only ever enters the tail slope.
+_ZPT_COMBINED_PARAM_DELTAS = {
+    "common_shift": lambda err, xmin1: {"f0_p0": err, "f1_p0": err},
+    "low_tilt": lambda err, xmin1: {"f0_p0": -err * xmin1, "f0_p1": err},
+    "mid_tilt": lambda err, xmin1: {"f1_p0": -err * xmin1, "f1_p1": err, "horizontal_mx": err},
+    "delta_tail_slope": lambda err, xmin1: {"horizontal_mx": err},
+}
+
+
+def _eval_zpt_piecewise_with_deltas(
+    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+    poly_fit_cutoff_min, poly_fit_cutoff_max, coeff_deltas,
+):
+    """
+    Same 3-piece evaluation as _eval_zpt_old_quadrature's nominal case, but
+    with the given additive `coeff_deltas` (a sparse {"f0_p0": ..., ...}
+    dict, see _ZPT_COMBINED_PARAM_DELTAS) applied to the named low-order
+    coefficients/horizontal_mx before evaluating -- used to measure one
+    combined-fit parameter's effect on the weight at a time.
+    """
+    def coeff(prefix, order_idx):
+        base = wgt_config[f"njet_{jet_multiplicity}"][nbins][f"{prefix}_p{order_idx}"]
+        return base + coeff_deltas.get(f"{prefix}_p{order_idx}", 0.0)
+
+    def eval_poly(prefix, order, x):
+        total = 0.0
+        for i in range(order + 1):
+            total = total + coeff(prefix, i) * (x ** i)
+        return total
+
+    f0_val = eval_poly("f0", f0_order, dimuon_pt)
+    f0_xmin = eval_poly("f0", f0_order, poly_fit_cutoff_min)
+    f1_val = eval_poly("f1", f1_order, dimuon_pt)
+    f1_xmin = eval_poly("f1", f1_order, poly_fit_cutoff_min)
+    f1_xmax = eval_poly("f1", f1_order, poly_fit_cutoff_max)
+
+    offset = f0_xmin - f1_xmin
+    mx = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"] + coeff_deltas.get("horizontal_mx", 0.0)
+    y_at_xmax = f1_xmax + offset
+    intercept = y_at_xmax - mx * poly_fit_cutoff_max
+
+    value = ak.where(poly_fit_cutoff_min >= dimuon_pt, f0_val, f1_val + offset)
+    value = ak.where(poly_fit_cutoff_max < dimuon_pt, mx * dimuon_pt + intercept, value)
+    return value
+
+
+_ZPT_COMBINED_PARAM_ORDER = ["common_shift", "low_tilt", "mid_tilt", "delta_tail_slope"]
+
+
+def _zpt_combined_param_envelope_full_cov(
+    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+    poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
+):
+    """
+    +-1 sigma envelope from the 4 combined-refit parameters
+    (common_shift/low_tilt/mid_tilt/delta_tail_slope), propagated through
+    their FULL covariance matrix: sigma(x)^2 = g(x)^T Cov g(x), where g(x)
+    is the weight's gradient w.r.t. each parameter. This is the preferred
+    method -- the correct one, not an independence approximation.
+
+    g(x) is obtained exactly (not by finite differencing): the mapping from
+    each combined-fit parameter to the final f0_p0/f0_p1/f1_p0/f1_p1/
+    horizontal_mx coefficients is exactly linear (_ZPT_COMBINED_PARAM_DELTAS),
+    so evaluating _eval_zpt_piecewise_with_deltas with a *unit* shift in one
+    parameter (instead of that parameter's own error) gives exactly
+    d(weight)/d(param), with no discretization error.
+
+    Returns None if this YAML predates the saved combined_fit_covariance
+    field (i.e. was derived before get_polyFit.py started saving it), so the
+    caller can fall back to _zpt_combined_param_envelope_diagonal.
+    """
+    cfg = wgt_config[f"njet_{jet_multiplicity}"][nbins]
+    if "combined_fit_covariance" not in cfg:
+        return None
+
+    cov = cfg["combined_fit_covariance"]
+    cov_order = cfg.get("combined_fit_covariance_order", _ZPT_COMBINED_PARAM_ORDER)
+
+    gradients = {}
+    for name in cov_order:
+        deltas = _ZPT_COMBINED_PARAM_DELTAS[name](1.0, poly_fit_cutoff_min)
+        shifted = _eval_zpt_piecewise_with_deltas(
+            wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+            poly_fit_cutoff_min, poly_fit_cutoff_max, deltas,
+        )
+        gradients[name] = shifted - nominal_value
+
+    variance = 0.0
+    for i, name_i in enumerate(cov_order):
+        for j, name_j in enumerate(cov_order):
+            variance = variance + gradients[name_i] * gradients[name_j] * cov[i][j]
+
+    # Exact math guarantees variance >= 0 (a quadratic form g^T Cov g with
+    # Cov positive semi-definite); guard only against floating-point noise
+    # right at zero-envelope points.
+    variance = ak.where(variance < 0.0, 0.0, variance)
+    return variance ** 0.5
+
+
+def _zpt_combined_param_envelope_diagonal(
+    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+    poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
+):
+    """
+    Second-tier fallback (used only for a YAML that predates the saved
+    combined_fit_covariance field): +-1 sigma envelope from the 4 combined
+    refit parameters, treated as independent and combined in quadrature --
+    ignores the (generally small but nonzero) correlations between them that
+    _zpt_combined_param_envelope_full_cov propagates correctly. Still a much
+    better-motivated independence assumption than treating the 14 per-order
+    f0_pN/f1_pN coefficients as independent (_eval_zpt_old_quadrature's own
+    fallback): these 4 were fit together as genuinely separate MINUIT
+    parameters, and 3 of the 4 are defined to vanish at their own anchor
+    point specifically so they don't leak into the other regions. Returns
+    None if this YAML predates even these 4 saved *_err fields, so the
+    caller can fall back further.
+    """
+    cfg = wgt_config[f"njet_{jet_multiplicity}"][nbins]
+    if not all(f"{name}_err" in cfg for name in _ZPT_COMBINED_PARAM_DELTAS):
+        return None
+
+    variance = 0.0
+    for name, delta_fn in _ZPT_COMBINED_PARAM_DELTAS.items():
+        err = cfg[f"{name}_err"]
+        if err == 0.0:
+            continue
+        deltas = delta_fn(err, poly_fit_cutoff_min)
+        shifted = _eval_zpt_piecewise_with_deltas(
+            wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+            poly_fit_cutoff_min, poly_fit_cutoff_max, deltas,
+        )
+        variance = variance + (shifted - nominal_value) ** 2
+
+    return variance ** 0.5
 
 
 def getZptWgts_3region(
@@ -314,8 +527,6 @@ def getZptWgts_3region(
 
     for jet_multiplicity in jet_multiplicies:
 
-        zpt_wgt_by_jet = ak.zeros_like(dimuon_pt)
-
         # Get cut-off regions between the polynomial fits
         poly_fit_cutoff_min = wgt_config[f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmin1"]
         poly_fit_cutoff_max = wgt_config[f"njet_{jet_multiplicity}"][nbins]["polynomial_range"]["xmax1"]
@@ -324,60 +535,40 @@ def getZptWgts_3region(
         f0_order = int(wgt_config[f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f0_order"])
         f1_order = int(wgt_config[f"njet_{jet_multiplicity}"][nbins]["fit_orders"]["f1_order"])
 
-        # first polynomial fit
-        zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
-        for order in range(f0_order + 1):  # Dynamically use max_order from the configuration
-            coeff = _get_zpt_coeff(
-                wgt_config, jet_multiplicity, nbins, f"f0_p{order}", sigma_shift
+        nominal_value = _eval_zpt_old_quadrature(
+            wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+            poly_fit_cutoff_min, poly_fit_cutoff_max, sigma_shift=0.0,
+        )
+
+        if sigma_shift == 0.0:
+            zpt_wgt_by_jet = nominal_value
+        else:
+            # 3-tier fallback, most- to least-correct, degrading only as far
+            # as the payload YAML's own saved fields require:
+            #   1) full covariance of the 4 combined-fit parameters (needs
+            #      combined_fit_covariance -- get_polyFit.py's newest output)
+            #   2) those same 4 parameters treated as independent (needs
+            #      just their *_err fields -- older get_polyFit.py output)
+            #   3) the original 14 per-order f0_pN/f1_pN coefficients,
+            #      treated as independent (any payload YAML at all)
+            envelope = _zpt_combined_param_envelope_full_cov(
+                wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+                poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
             )
-            polynomial_term = coeff*(dimuon_pt**order) # a * x^n
-            zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-
-        # compute the value of the first polynomial at the cutoff min
-        f0_xmin = 0.0
-        for order in range(f0_order + 1):
-            coeff = _get_zpt_coeff(
-                wgt_config, jet_multiplicity, nbins, f"f0_p{order}", sigma_shift
-            )
-            f0_xmin += coeff * (poly_fit_cutoff_min ** order)
-
-        zpt_wgt_by_jet = ak.where((poly_fit_cutoff_min >= dimuon_pt), zpt_wgt_by_jet_poly, zpt_wgt_by_jet)
-
-        # 2nd polynomial fit
-        zpt_wgt_by_jet_poly = ak.zeros_like(dimuon_pt)
-        for order in range(f1_order + 1):  # p goes from 0 to max_order
-            coeff = _get_zpt_coeff(
-                wgt_config, jet_multiplicity, nbins, f"f1_p{order}", sigma_shift
-            )
-            polynomial_term = coeff * (dimuon_pt**order)  # a * x^n
-            zpt_wgt_by_jet_poly = zpt_wgt_by_jet_poly + polynomial_term
-
-        # compute the value of the 2nd polynomial at the cutoff min
-        f1_xmin = 0.0
-        f1_xmax = 0.0
-        for order in range(f1_order + 1):
-            coeff = _get_zpt_coeff(
-                wgt_config, jet_multiplicity, nbins, f"f1_p{order}", sigma_shift
-            )
-            f1_xmin += coeff * (poly_fit_cutoff_min ** order)
-            f1_xmax += coeff * (poly_fit_cutoff_max ** order)
-
-        # continuity offset so that f1(xmin)+offset == f0(xmin)
-        offset = f0_xmin - f1_xmin
-
-        zpt_wgt_by_jet = ak.where(
-            ((poly_fit_cutoff_min < dimuon_pt) & (poly_fit_cutoff_max >= dimuon_pt)),
-            zpt_wgt_by_jet_poly + offset,
-            zpt_wgt_by_jet)
-
-        # horizontal line beyond poly_fit_cutoff_max horizontal_c0 and horizontal_mx
-        # coeff = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_c0"]
-        mx = wgt_config[f"njet_{jet_multiplicity}"][nbins]["horizontal_mx"]
-        y_at_xmax = f1_xmax + offset
-        coeff = y_at_xmax - mx*poly_fit_cutoff_max
-
-        zpt_wgt_by_jet_horizontal = mx*dimuon_pt + coeff # y=mx*x + c0
-        zpt_wgt_by_jet = ak.where((poly_fit_cutoff_max < dimuon_pt), zpt_wgt_by_jet_horizontal, zpt_wgt_by_jet)
+            if envelope is None:
+                envelope = _zpt_combined_param_envelope_diagonal(
+                    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+                    poly_fit_cutoff_min, poly_fit_cutoff_max, nominal_value,
+                )
+            if envelope is not None:
+                zpt_wgt_by_jet = nominal_value + sigma_shift * envelope
+            else:
+                # This YAML predates even the 4 combined-fit parameters --
+                # fall back to the coarsest per-coefficient quadrature envelope.
+                zpt_wgt_by_jet = _eval_zpt_old_quadrature(
+                    wgt_config, jet_multiplicity, nbins, dimuon_pt, f0_order, f1_order,
+                    poly_fit_cutoff_min, poly_fit_cutoff_max, sigma_shift=sigma_shift,
+                )
 
         if jet_multiplicity != 2:
             njet_mask = njets == jet_multiplicity
@@ -567,6 +758,7 @@ class EventProcessor(processor.ProcessorABC):
         # Reference: https://nbviewer.org/github/scikit-hep/coffea/blob/master/binder/packedselection.ipynb
         self.selection = {}
         self.cutflow = {}
+        self.cutflow_names = []
 
         self.pysr_configs = {}
         self.pysr_all_features = set()
@@ -584,12 +776,46 @@ class EventProcessor(processor.ProcessorABC):
                 )
                 self.pysr_all_features.update(cfg["features"])
 
+        self.pu_dnn_configs = {}
+        if self.config["switches"].get("do_use_pu_dnn_score", False):
+            if self.config["switches"].get("do_use_pySR_score", False):
+                raise ValueError(
+                    "do_use_pySR_score and do_use_pu_dnn_score are alternative "
+                    "forward-jet PU cleanup models; only one can be enabled at once."
+                )
+            # do_use_pu_dnn_score enabled must have an explicit model dir.
+            if "pu_dnn_model_dir" not in self.config:
+                raise KeyError(
+                    "do_use_pu_dnn_score is enabled for this year, but no "
+                    "'pu_dnn_model_dir' entry was found in the config. Add one "
+                    "for this year in configs/parameters/SF_filelist.yaml."
+                )
+            pu_dnn_base_dir = self.config["pu_dnn_model_dir"]
+            self.pu_dnn_configs = load_pu_dnn_configs(pu_dnn_base_dir)
+            if not self.pu_dnn_configs:
+                raise FileNotFoundError(
+                    f"PU DNN scoring is enabled, but no region models were found under {pu_dnn_base_dir}."
+                )
+
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
         # application is in "do_jet_veto_maps_filterEvents" field in config.
         # If any jet in the event falls into the veto map region, the whole event is vetoed.
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Without this,
+        # a soft/loose-ID/high-EM-fraction jet landing in a vetoed region would
+        # trigger event rejection even though the recommendation says it shouldn't count.
         """
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jets = jets[min_sel]
+
         jet_veto_maps_path = self.config.get("jet_veto_maps", None)
         logger.debug(f"jet_veto_maps_path: {jet_veto_maps_path}")
         if jet_veto_maps_path is None:
@@ -598,7 +824,6 @@ class EventProcessor(processor.ProcessorABC):
 
         # Load correction set
         cset = get_corrset(jet_veto_maps_path)
-        logger.debug(f"jet_veto_maps_cset: {cset}")
         logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
 
         input_dict = {
@@ -640,7 +865,6 @@ class EventProcessor(processor.ProcessorABC):
 
         # Load correction set
         cset = get_corrset(jet_veto_maps_path)
-        logger.debug(f"jet_veto_maps_cset: {cset}")
         logger.debug(f"jet_veto_maps_cset keys: {list(cset.keys())}")
 
         # correctionlib's evaluate flattens jagged inputs and returns a FLAT
@@ -669,6 +893,22 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"jet_veto_mask: {ak.to_list(jet_veto_mask[40:47].compute())}")
 
         jet_veto_mask = ak.unflatten(jet_veto_mask, counts)   # jagged, same shape as jets
+
+        # Official JME minimal selection before checking against the veto map
+        # (https://cms-jme-jerc.docs.cern.ch/recommendations/jet-veto-maps/#application):
+        # pT > 15 GeV, tightLepVeto jet ID, (chEmEF + neEmEF) < 0.9. Force the mask
+        # to "not vetoed" (0.0) for jets failing this selection, so they're never
+        # counted for the event decision below nor removed by the jet-removal
+        # step further down -- without this, a soft/loose-ID/high-EM-fraction
+        # jet landing in a vetoed region would incorrectly count.
+        year = self.config["year"]
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        jet_veto_mask = ak.where(min_sel, jet_veto_mask, 0.0)
+
         jet_veto_eventFilter = ak.any(jet_veto_mask != 0.0, axis=1)
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[30:35].compute())}")
 
@@ -1385,7 +1625,7 @@ class EventProcessor(processor.ProcessorABC):
         t12 = time.perf_counter()
         logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
-        logger.info(f"jets type before pad_none: {jets.type}")
+        logger.debug(f"jets type before pad_none: {jets.type}")
         logger.info(f"jets ndim: {jets.ndim}")
 
         jet_default = ak.pad_none(jets, target=4, axis=1)
@@ -1504,7 +1744,13 @@ class EventProcessor(processor.ProcessorABC):
             # if "jer" in variation: # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution#JER_Scaling_factors_and_Uncertai
             if is_mc and (self.config["switches"]["jer_strat"] >=0):
                 logger.debug("Applying JER smearing!")
-                jets = do_jer_smear(jets, self.config, events.event)
+                # Only build the up/down JER-smear columns when they will be used
+                # (do_jer_unc drives the pt_variations loop further below). On a
+                # nominal run this skips 2/3 of the JER correctionlib evaluations
+                # and the apply_jer_unc per-eta-bin columns, with no change to the
+                # skim output.
+                jer_syst_l = ["nom", "up", "down"] if do_jer_unc else ["nom"]
+                jets = do_jer_smear(jets, self.config, events.event, syst_l=jer_syst_l)
             else:
                 logger.debug(f"==> Not applying JER smearing. is_mc: {is_mc}, jer_strat: {self.config['switches']['jer_strat']}")
 
@@ -2262,6 +2508,8 @@ class EventProcessor(processor.ProcessorABC):
                     zpt_cfg = self.config["new_zpt_weights_file_MiNNLO"]
                 else:
                     zpt_cfg = self.config["new_zpt_weights_file_aMCatNLO"]
+                
+                logger.warning(f"zpt weights: {zpt_cfg}")
 
                 zpt_wgt_reco = getZptWgts_3region(dimuon.pt, njets_reco, "function", year, zpt_cfg, NanoAODv)
                 zpt_wgt_gen  = getZptWgts_3region(dimuon.pt, njets_gen,  "function", year, zpt_cfg, NanoAODv)
@@ -2411,29 +2659,35 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         # Cutflow
         if self.isCutflow:
-            # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
             # Ensure all selections exist before calling cutflow
             # Add protection for the cutflow if the selection is not in the cutflow
             logger.info(f"selection: {self.selection}")
+            # NOTE: order matters -- PackedSelection.cutflow(*names) ANDs cuts
+            # cumulatively in the order given here, not in .add() registration
+            # order, so this list must match the actual .add() call sequence
+            # below for the per-step "individual"/"cumulative" numbers to mean
+            # anything (the final fully-AND'd count doesn't depend on order,
+            # but every intermediate row does). Keep in sync with the .add(...)
+            # call sites as this method evolves.
             all_required_selections = [
                 "TotalEntries",
                 "lumi_mask",
                 "LHE_cut",
                 "HLT_filter",
                 "event_quality_flags",
-                "PV_npvsGood",
                 "muon_pT_roch",
                 "muon_eta",
                 "muon_id",
                 "muon_isGlobal_or_Tracker",
                 "muon_selection",
                 "muon_iso",
-                "nmuons",
-                "mm_charge",
-                "electron_veto",
-                "HemVeto",
                 "trigger_match",
                 "leading_muon_pt",
+                "electron_veto",
+                "HemVeto",
+                "PV_npvsGood",
+                "nmuons",
+                "mm_charge",
                 "jet_veto_maps",
                 "dimuon_mass_window_76_106",
                 "h_peak_115_135",
@@ -2446,79 +2700,51 @@ class EventProcessor(processor.ProcessorABC):
             except AttributeError:
                 # very old coffea versions might differ — fallback
                 available_cuts = set(getattr(self.selection, "_names", []))
+                logger.warning(
+                    "PackedSelection.names not available (old coffea API?); "
+                    f"falling back to _names, found {len(available_cuts)} cut(s)"
+                )
 
-            # Start with "TotalEntries" explicitly, if you want it in the table
-            required_selections = []
-            if "TotalEntries" in all_required_selections:
-                required_selections.append("TotalEntries")
+            # Keep only the cuts that actually exist in PackedSelection (some
+            # are added conditionally, e.g. per year/data-vs-MC), preserving
+            # the order above -- including "TotalEntries" itself, so a future
+            # rename there gets the same graceful-skip treatment as everything
+            # else instead of a silent inconsistency.
+            required_selections = [cut for cut in all_required_selections if cut in available_cuts]
 
-            # Add only those cuts that actually exist in PackedSelection, preserving order
-            for cut in all_required_selections:
-                if cut == "TotalEntries":
-                    continue
-                if cut in available_cuts:
-                    required_selections.append(cut)
-
-            logger.info(f"dynamic required_selections = {required_selections}")
+            logger.debug(f"dynamic required_selections = {required_selections}")
 
             # Optional: warn about missing cuts
-            missing = [cut for cut in all_required_selections
-                    if cut not in available_cuts and cut != "TotalEntries"]
+            missing = [cut for cut in all_required_selections if cut not in available_cuts]
             if missing:
                 logger.warning(f"These requested cuts are not defined and will be skipped: {missing}")
 
+            self.cutflow_names = required_selections
+            # NOT passing weights= here: PackedSelection.cutflow(*names,
+            # weights=..., weightsmodifier=...) does support a weighted
+            # cutflow natively since coffea 2025.3.0 (confirmed present in the
+            # installed 2026.5.0, see
+            # https://coffea-hep.readthedocs.io/en/v2026.5.0/api/coffea.analysis_tools.Cutflow.html)
+            # -- but there is no valid same-length weights array available at
+            # this point in THIS pipeline to pass it. `events` (and hence
+            # `weights`, built from `len(events)` above) gets reduced to the
+            # already-selected population at `events = events[event_filter ==
+            # True]` (:1290), right after every selection here is registered;
+            # `self.selection`'s per-cut masks are all still sized to the
+            # original, pre-reduction chunk. Confirmed by hitting exactly this
+            # mismatch (IndexError, e.g. "size of axis is 148 but size of
+            # corresponding boolean axis is 5420") when this was tried via
+            # `scripts/update_sync_references.sh` on 2017 sync data (2026-09-09).
             self.cutflow = self.selection.cutflow(*required_selections)
-            logger.info(f"cutflow: {self.cutflow}")
-            logger.info(f"self.cutflow.logger.info(): {self.cutflow.print()}")
-
-            # logger.info(f"wgtcutflow: {wgtcutflow.print()}")
-
-            # self.nminusone = self.selection.nminusone(*required_selections)
-            # logger.info(f"self.cutflow.logger.info(): {self.nminusone.print()}")
-            # logger.info(f"self.cutflow.logger.info(): {self.cutflow.logger.info(weighted=False)}") # FIXME: weights and weightsmodifier are availalbe starting coffea: 2025.3.0
-            # logger.info(f"self.cutflow.result(): {self.cutflow.result()}")
-
-            # # --- FIXME: extra info for (unweighted + weighted + efficiencies)
-            # # n_total = len(events)
-            # n_total = int(dak.num(events, axis=0).compute())
-            # w_all  = weights.weight()
-            # mask_cum = dak.ones_like(w_all, dtype=bool)
-
-            # rows = []
-            # prev_n = n_total
-            # prev_w = float(dak.sum(w_all).compute())
-
-            # for name in required_selections:
-            #     # boolean mask for this single cut
-            #     mask_this = self.selection.all(name)
-            #     # update cumulative mask
-            #     mask_cum = mask_cum & mask_this
-
-            #     n_pass = int(ak.sum(mask_cum))
-            #     w_pass = float(ak.sum(w_all[mask_cum]))
-
-            #     eff_step     = n_pass / prev_n if prev_n > 0 else 0.0
-            #     eff_step_w   = w_pass / prev_w if prev_w > 0 else 0.0
-            #     eff_cum      = n_pass / n_total if n_total > 0 else 0.0
-            #     eff_cum_w    = w_pass / float(ak.sum(w_all)) if ak.sum(w_all) != 0 else 0.0
-
-            #     rows.append(
-            #         dict(
-            #             cut=name,
-            #             n_pass=n_pass,
-            #             w_pass=w_pass,
-            #             eff_step=eff_step,
-            #             eff_step_w=eff_step_w,
-            #             eff_cum=eff_cum,
-            #             eff_cum_w=eff_cum_w,
-            #         )
-            #     )
-
-            #     prev_n = n_pass
-            #     prev_w = w_pass
-
-            # self.cutflow_table = pd.DataFrame(rows)
-            # logger.info("\n" + str(self.cutflow_table))
+            # Cutflow.print() writes straight to stdout via coffea's own Rich
+            # console (not this module's logger), so this table can't be
+            # attributed to a chunk when interleaved across concurrent Dask
+            # workers -- log a header identifying which dataset it belongs to
+            # right before it. The table itself is left as coffea's own
+            # print() rather than reimplemented, since re-deriving its
+            # dask-delayed materialization here would risk quietly breaking it.
+            logger.info(f"[{dataset}] Cutflow selection stats (stdout table follows):")
+            self.cutflow.print()
         t22 = time.perf_counter()
         logger.info(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
 
@@ -2596,10 +2822,10 @@ class EventProcessor(processor.ProcessorABC):
         dnn_year = None,
         do_jet_horn_puid = False,
     ):
-        logger.debug(f'variation: {variation}')
         is_mc = events.metadata["is_mc"]
         dataset = events.metadata["dataset"]
         year = self.config["year"]
+        logger.debug(f"jet_loop: dataset={dataset}, year={year}, variation={variation}")
 
         # print raw pt, jec pt and jer pt
         # logger.warning(f"jets.pt_raw: {jets.pt_raw[:1].compute()}, jets.pt: {jets.pt[:1].compute()}")
@@ -2675,6 +2901,13 @@ class EventProcessor(processor.ProcessorABC):
                 "hfsigmaPhiPhi",
                 "nConstituents",
                 "rawFactor",
+                # Needed by the PU-DNN model's feature list (see scaler.json
+                # under pu_dnn_model_dir) when do_use_pu_dnn_score is enabled.
+                "hfEmEF",
+                "hfHEF",
+                "nElectrons",
+                "nMuons",
+                "puIdDisc",
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
 
@@ -2686,7 +2919,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"jet loop NanoAODv: {NanoAODv}")
         logger.debug(f"dnn_year: {dnn_year}")
         if self.config["switches"]["do_jet_PUID_cut"]:
-            logger.info("Applying jet PUID cut!")
+            logger.debug("Applying jet PUID cut!")
             pass_jet_puid = jet_puid(jets, self.config)
         else:
             pass_jet_puid = ak.ones_like(pass_jet_id, dtype="bool")
@@ -2735,6 +2968,16 @@ class EventProcessor(processor.ProcessorABC):
         jetHorn_ptcut = ak.ones_like(jets.pt, dtype="bool") # default value is True
         HE_HF_ptcut = ak.ones_like(jets.pt, dtype="bool")
         jetHorn_nConst_Cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        rawFactor_cut = ak.ones_like(pass_jet_id, dtype="bool") # default value is True
+        if self.config["switches"]["do_reject_high_rawFactor_jets"]:
+            # Official JME mitigation for a rare L2Relative asymptotic-behavior known
+            # issue in Run3 (https://cms-jme-jerc.docs.cern.ch/recommendations/jes/#known-issues):
+            # in a very narrow pT bin the L2Relative JEC can blow up to anomalously
+            # large corrected jet pT (>10 TeV). Affects ~1e-7 to 1e-6 of events in the
+            # rare samples where it occurs at all; JME's own fix is to reject jets with
+            # Jet_rawFactor > 0.9.
+            logger.debug("Applying Jet_rawFactor > 0.9 rejection (rare L2Relative asymptotic-JEC mitigation)")
+            rawFactor_cut = jets.rawFactor <= 0.9
         n_active = sum(bool(x) for x in [do_he_ptcut, add_hehf_ptcut, add_hehf_asym])
         if n_active > 1:
             raise ValueError(
@@ -2748,7 +2991,7 @@ class EventProcessor(processor.ProcessorABC):
                 - Remove jets in the jet horn region with pT < 50 GeV
                   and horn region: 3.0 > abs(eta) > 2.5
             """
-            logger.info(f"Applying additional jet pT cut of {do_he_ptcut} GeV for forward region (jet horn region)!")
+            logger.debug(f"Applying additional jet pT cut of {do_he_ptcut} GeV for forward region (jet horn region)!")
             jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) <= 3.0)
             jetHorn_pt_cut = (jets.pt > do_he_ptcut) # https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetMET#Run3_recommendations
 
@@ -2788,7 +3031,7 @@ class EventProcessor(processor.ProcessorABC):
 
         if self.config["switches"]["add_pt_cut_for_HE_HF_jets"]:
             thr = self.config["switches"]["add_pt_cut_for_HE_HF_jets"]
-            logger.info(f"Applying additional jet pT cut of {thr} GeV for HE/HF jets!")
+            logger.debug(f"Applying additional jet pT cut of {thr} GeV for HE/HF jets!")
 
             is_hehf = abs(jets.eta) > 2.5
             HE_HF_ptcut = ak.where(is_hehf, jets.pt > thr, HE_HF_ptcut)
@@ -2800,7 +3043,7 @@ class EventProcessor(processor.ProcessorABC):
                 - Remove jets having nConstituents <= 3
                   and horn region: 3.0 > abs(eta) > 2.5
             """
-            logger.info("Applying nConstituent cut > 3 for the HE region")
+            logger.debug("Applying nConstituent cut > 3 for the HE region")
             jetHorn_region = (abs(jets.eta) > 2.5) & (abs(jets.eta) <= 3.0)
             jetHorn_nConst_cut_local = (jets.nConstituents > 3)
 
@@ -2818,6 +3061,7 @@ class EventProcessor(processor.ProcessorABC):
             & jetHorn_ptcut
             & HE_HF_ptcut
             & jetHorn_nConst_Cut
+            & rawFactor_cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
 
@@ -2831,18 +3075,24 @@ class EventProcessor(processor.ProcessorABC):
             pysr_dict, pysr_region = build_pysr_pu_masks(jets, self.pysr_configs)
             jets = jets[pysr_dict["jet_pysr_pu_pass"]]
 
+        if_pu_dnn = self.config["switches"].get("do_use_pu_dnn_score", False)
+        if if_pu_dnn:
+            jets = add_dphi_met_jet_features(jets, events.PuppiMET.phi)
+            pu_dnn_out = eval_pu_dnn(jets, self.pu_dnn_configs)
+            jets = jets[pu_dnn_out["pu_dnn_pass"]]
+
         jets = ak.to_packed(jets)
 
         # apply jetpuid if not have done already
         if is_mc and (variation=="nominal") and is_run2(year) and hasattr(jets, "puId"): # INFO: Skip jet PUID for Run3 samples as they don't have puid yet
-            logger.info("Applying jet PUID scale factors and adding jetpuid wgt!")
+            logger.debug("Applying jet PUID scale factors and adding jetpuid wgt!")
             jetpuid_weight = get_jetpuid_weights_eta_dependent(year, jets, self.config) # FIXME
             # FIXME: we should get the weight for each jet and multiply them together.
             weights.add("jetpuid",
                     weight=jetpuid_weight,
             )
         else:
-            logger.info(f"Skipping jet PUID SFs for variation: {variation}, is_mc: {is_mc}, dnn_year: {dnn_year}")
+            logger.debug(f"Skipping jet PUID SFs for variation: {variation}, is_mc: {is_mc}, dnn_year: {dnn_year}")
 
         # jets = ak.where(jet_selection, jets, None)
         # muons = events.Muon
@@ -3053,6 +3303,11 @@ class EventProcessor(processor.ProcessorABC):
                 "btagUParTAK4B",
                 "btagDeepB",
                 # "btagDeepFlavB",
+
+                # Needed to check do_reject_high_rawFactor_jets' rare L2Relative
+                # asymptotic-JEC mitigation (rejects Jet_rawFactor > 0.9) even when
+                # that switch (do_reject_high_rawFactor_jets) is off
+                "rawFactor",
                 ]
         jets_to_process = [jet1, jet2, jet3, jet4] if save_four_jets_kinematics else [jet1, jet2]
         for i, jet in enumerate(jets_to_process, start=1):
@@ -3082,7 +3337,7 @@ class EventProcessor(processor.ProcessorABC):
                 "hadronFlavour", "partonFlavour",
                 "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
                 "hfsigmaEtaEta", "hfsigmaPhiPhi",
-                "muonSubtrFactor", "rawFactor",
+                "muonSubtrFactor",
                 "puIdDisc"
             ]
 
@@ -3164,7 +3419,7 @@ class EventProcessor(processor.ProcessorABC):
                 btag_eta_val = 2.4 if str(year).startswith("2016") else 2.5
 
             # --- Btag weights  start--- #
-            logger.info("doing btag wgt!")
+            logger.debug("doing btag wgt!")
             bjet_sel_mask = ak.ones_like(ak.num(btag_jets, axis=1))
             btag_systs = self.config["btag_systs"]
             if "RERECO" in year:
@@ -3186,7 +3441,7 @@ class EventProcessor(processor.ProcessorABC):
                     )
 
                 btag_json=btag_file["deepJet_shape"]
-                logger.info("Using btag correction key: deepJet_shape")
+                logger.debug("Using btag correction key: deepJet_shape")
 
             # keep dims start -------------------------------------
             btag_wgt, btag_syst = btag_weights_jsonKeepDim(
@@ -3197,7 +3452,7 @@ class EventProcessor(processor.ProcessorABC):
             )
             # --- Btag weights variations --- #
             for name, bs in btag_syst.items():
-                logger.info(f"{name} value: {bs}")
+                logger.debug(f"{name} value: {bs}")
                 weights.add(f"btag_{name}",
                     weight=ak.ones_like(btag_wgt),
                     weightUp=bs["up"],
@@ -3233,7 +3488,7 @@ class EventProcessor(processor.ProcessorABC):
             btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp"]
 
         if is_run2(year) and NanoAODv == 12 and hasattr(btag_jets, "btagDeepB"):
-            logger.info("Using btagDeepB btag!")
+            logger.debug("Using btagDeepB btag!")
             btagLoose_filter = btag_jets.btagDeepB > self.config["btag_loose_wp_DeepCSV"] # FIXME: check the var name and score
             btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp_DeepCSV"]
 
@@ -3243,15 +3498,15 @@ class EventProcessor(processor.ProcessorABC):
         #     btagMedium_filter = btag_jets.btagDeepFlavB > self.config["btag_medium_wp_deepJet"]
 
         if is_run3(year) and NanoAODv == 12 and hasattr(btag_jets, "btagPNetB"):
-            logger.info("Using btagPNetB btag!")
+            logger.debug("Using btagPNetB btag!")
             btagLoose_filter = btag_jets.btagPNetB > self.config["btag_loose_wp_ParticleNet"]
             btagMedium_filter = btag_jets.btagPNetB > self.config["btag_medium_wp_ParticleNet"]
 
         if (is_run3(year) or is_run2(year)) and NanoAODv == 15 and hasattr(btag_jets, "btagUParTAK4B"):
-            logger.info("Using btagUParTAK4B btag!")
+            logger.debug("Using btagUParTAK4B btag!")
             btagLoose_filter = btag_jets.btagUParTAK4B > self.config["btag_loose_wp_UParT"]
             btagMedium_filter = btag_jets.btagUParTAK4B > self.config["btag_medium_wp_UParT"]
-        logger.info(f"hasattr(btag_jets, 'btagUParTAK4B'): {hasattr(btag_jets, 'btagUParTAK4B')}")
+        logger.debug(f"hasattr(btag_jets, 'btagUParTAK4B'): {hasattr(btag_jets, 'btagUParTAK4B')}")
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)

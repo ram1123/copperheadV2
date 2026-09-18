@@ -116,6 +116,32 @@ def get_bkg_sig_dicts(
     return bkg, sig, combined
 
 
+def get_data_processes(yaml_path: str | Path, year: str) -> List[str]:
+    """
+    Returns the list of data process names (e.g. ["data_C", "data_D"]) for a
+    given year from the top-level "data" section of the sample config YAML.
+
+    Unlike background/signal groups, this is a flat {year: [processes]} map
+    (no "processes"/"processes_per_year" default+override split) since every
+    year's set of data-taking eras is genuinely distinct. Also accepts the
+    "run2"/"run3" aggregate keys used for combined-year runs.
+    """
+    cfg = _load_yaml(yaml_path)
+    data_cfg = cfg.get("data", {})
+    if not isinstance(data_cfg, dict):
+        raise ValueError(f"'data' section must be a dict, got {type(data_cfg)}")
+
+    year = _as_str_year(year)
+    if year not in data_cfg:
+        raise KeyError(
+            f"Year '{year}' not found in 'data' section. Available: {list(data_cfg.keys())}"
+        )
+    procs = data_cfg[year] or []
+    if not isinstance(procs, list):
+        raise ValueError(f"'data.{year}' must be a list, got {type(procs)}")
+    return list(procs)
+
+
 def get_grouping_dict(
     yaml_path: str | Path,
     year: str,

@@ -7,16 +7,21 @@ import logging
 import os
 import time
 import sys
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 
 import awkward as ak
 import hist
 import numpy as np
+import pyarrow.parquet as pq
 import tqdm
 from coffea import processor
 from coffea.nanoevents import BaseSchema
 
 import matplotlib
+matplotlib.use("Agg")  # must be set before pyplot import; also required so
+# worker processes spawned by _render_combo_plots_parallel() below don't each
+# try (and fail) to pick an interactive backend.
 import matplotlib.pyplot as plt
 import mplhep as hep
 
@@ -27,11 +32,11 @@ from modules import selection
 from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
+from modules.sample_config import get_bkg_sig_dicts, get_data_processes
 from configs.variables.variable_lists import get_all_vars
 from scripts.compact_parquet_data import ensure_compacted
 
-# Load CMS style including color-scheme once, regardless of which entry point
-# (standalone CLI or the bulk driver in run_plotter.py) is used.
+# Load CMS plotting style 
 plt.style.use(hep.style.CMS)
 
 DATASET_SEPARATOR = "::"
@@ -55,158 +60,35 @@ ZPT_POSTFIX_BY_OPTION = {
 bkg_MC_order = ["VV", "EWK",  "TOP", "DY", "DYVBF"]
 
 
-group_dict = {
-    "DATA": {
-        "2016preVFP": ["data_B", "data_C", "data_D", "data_E", "data_F"],
-        "2016postVFP": ["data_F", "data_G", "data_H"],
-        "2016": ["data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
-        "2017": ["data_B", "data_C", "data_D", "data_E", "data_F"],
-        "2018": ["data_A", "data_B", "data_C", "data_D"],
-        "run2": ["data_A", "data_B", "data_C", "data_D", "data_E", "data_F", "data_G", "data_H"],
+# DY/DYVBF/EWK/TOP/VV/ggH/VBF/DATA process lists all live in
+# configs/samples/samples.yaml (read via get_bkg_sig_dicts/get_data_processes in
+# build_group_dict_for_year below).
+# Group names used throughout this script -> group names as defined in samples.yaml
+# (identity mapping unless listed here).
+YAML_GROUP_ALIASES = {"TOP": "TT", "ggH": "GGH"}
 
-        "2022preEE": ["data_C", "data_D"],
-        "2022postEE": ["data_E", "data_F", "data_G"],
-        "2023": ["data_C"],
-        "2023BPix": ["data_D"],
-        "2024": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
-        "run3": ["data_C", "data_D", "data_E", "data_F", "data_G", "data_H", "data_I"],
-    },
-    "DY": {
-        "2016preVFP": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2016postVFP": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2017": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2018": [
-            # "dyTo2Mu_M-100to200_MiNNLO",
-            # "dy_M-100To200_MiNNLO",# run2 nanoV12
-            # "dy_M-50_MiNNLO", # run2 nanoV12
-            # "dy_M-50_aMCatNLO", # run2 nanoV12
-            # "dyTo2L_M-50_aMCatNLO", # run2 nanoV15
-            "dyTo2Mu_M-50_MiNNLO", # run2 nanoV15
-            "dyTo2Mu_M-100to200_MiNNLO", # run2 nanoV15
-        ],
-        "2022preEE": ["dyTo2L_M-50_incl"],
-        "2022postEE": ["dyTo2L_M-50_incl"],
-        "2023": ["dyTo2L_M-50_incl"],
-        "2023BPix": ["dyTo2L_M-50_incl"],
-        "2024": ["dyTo2Mu_M-50_aMCatNLO"],
-
-        # "2022preEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2022postEE": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2023BPix": ["dyTo2L_M-50_incl", "dy_VBF_filter"],
-        # "2024": ["dyTo2Mu_M-50_aMCatNLO", "dy_VBF_filter"],
+# Fixed group-name list, independent of year -- used both for the Hist
+# category axis (which must be static) and to drive build_group_dict_for_year.
+ALL_GROUP_NAMES = ["DATA", "DY", "DYVBF", "EWK", "TOP", "VV", "ggH", "VBF"]
 
 
-        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-
-        # "2022preEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2022postEE": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2023BPix": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-        # "2024": ["dyTo2Mu_MLL_10To50", "dyTo2Mu_MLL_50To120", "dyTo2Mu_MLL_120To200"],
-    },
-    "DYVBF": {
-        "2016preVFP": ["dy_VBF_filter"],
-        "2016postVFP": ["dy_VBF_filter"],
-        "2017": ["dy_VBF_filter"],
-        "2018": ["dy_VBF_filter"],
-        "2022preEE": ["dy_VBF_filter"],
-        "2022postEE": ["dy_VBF_filter"],
-        "2023": ["dy_VBF_filter"],
-        "2023BPix": ["dy_VBF_filter"],
-        "2024": ["dy_VBF_filter"],
-    },
-    "EWK": {
-        "2016preVFP": ["ewk_zlljj"],
-        "2016postVFP": ["ewk_zlljj"],
-        "2017": ["ewk_zlljj"],
-        "2018": ["ewk_zlljj"],
-        "2022preEE": ["ewk_mmjj_mll_105_160"],
-        "2022postEE": ["ewk_mmjj_mll_105_160"],
-        "2023": ["ewk_mmjj_mll_105_160"],
-        "2023BPix": ["ewk_mmjj_mll_105_160"],
-        "2024": ["ewk_mmjj_mll_105_160"],
-    },
-    "TOP": [
-        # "tt_inclusive",
-        "ttjets_dl",
-        "ttjets_sl",
-        # "ttjets_fh",
-        # "st_tw_top",
-        # "st_tw_antitop",
-        # "st_t_top",
-        # "st_t_antitop",
-    ],
-    "VV": [
-        "ww_2l2nu",
-        "wz_3lnu",
-        "wz_2l2q",
-        "wz_1l1nu2q",
-        "zz_2l2q",
-        "zz_2l2u",
-        "zz_2l2nu",
-        "zz_4l",
-    ],
-    # "OTHER": ["www", "wwz", "wzz", "zzz"],
-    "ggH": ["ggh_powhegPS"],
-    "VBF": {
-        "2016preVFP": ["vbf_powheg_dipole"],
-        "2016postVFP": ["vbf_powheg_dipole"],
-        "2017": ["vbf_powheg_dipole"],
-        "2018": ["vbf_powheg_dipole"],
-        "2022preEE": ["vbf_powheg_dipole"],
-        "2022postEE": ["vbf_powheg_dipole"],
-        "2023": ["vbf_powheg"],
-        "2023BPix": ["vbf_powheg"],
-        "2024": ["vbf_powheg"],
-    },
-}
-
-def parseGroupProcesses(group_dict, year: str):
+def build_group_dict_for_year(year: str, sample_config_path: str) -> dict:
     """
-    helper function that simplifies group_dict to be
-    specific to one year.
+    Resolve the process-group -> [process names] mapping for one year, reading
+    everything from samples.yaml: DATA via get_data_processes, and DY/DYVBF/EWK/
+    TOP/VV/ggH/VBF via get_bkg_sig_dicts (the same helper scripts/get_yields.py
+    uses).
     """
-    year_specific_group_dict = {}
-    for group_name, processes in group_dict.items():
-        logger.debug(f"Group '{group_name}' processes (original): {processes}")
-        if type(processes) is dict:
-            if year not in processes:
-                raise KeyError(
-                    f"Year '{year}' is not configured for process group '{group_name}'."
-                )
-            processes = processes[year]
-        year_specific_group_dict[group_name] = processes
-    logger.debug(f"Group dict specific to year {year}: {year_specific_group_dict}")
-    return year_specific_group_dict
+    resolved = {"DATA": get_data_processes(sample_config_path, year)}
+    _, _, combined = get_bkg_sig_dicts(sample_config_path, year)
+    for name in ALL_GROUP_NAMES:
+        if name == "DATA":
+            continue
+        yaml_name = YAML_GROUP_ALIASES.get(name, name)
+        if yaml_name in combined:
+            resolved[name] = combined[yaml_name]
+    return resolved
+
 
 def find_group_name(process_name, group_dict_param):
     # Avoid redefining group_dict from outer scope
@@ -221,13 +103,9 @@ def fillHist(sample_hist, var, to_fill_setting, values, weights):
     values = values[values_filter]
     weights = weights[values_filter]
     to_fill_setting[var] = values
-    to_fill_value = to_fill_setting.copy()
-    to_fill_value["val_sumw2"] = "value"
-    sample_hist.fill(**to_fill_value, weight=weights)
-
-    to_fill_sumw2 = to_fill_setting.copy()
-    to_fill_sumw2["val_sumw2"] = "sumw2"
-    sample_hist.fill(**to_fill_sumw2, weight=weights * weights)
+    # Weight() storage accumulates sum(weight) and sum(weight^2) per bin from
+    # one .fill() call -- see build_hist_templates().
+    sample_hist.fill(**to_fill_setting, weight=weights)
     return sample_hist
 
 
@@ -240,6 +118,42 @@ def getPlotVar(var_param: str):
     else:
         plot_var = var_param
     return plot_var
+
+
+def _value_var_for(var: str) -> str:
+    """Strip the plot-only '_range2'/'_zpeak' suffixes to get the underlying parquet field name."""
+    if "_range2" in var:
+        return var.replace("_range2", "")
+    if "_zpeak" in var:
+        return var.replace("_zpeak", "")
+    return var
+
+
+def _warn_missing_vars_once(fileset, variables2plot):
+    """
+    One-time, driver-side check of each dataset's parquet schema against the
+    variables the plotter will try to histogram. ValidationHistProcessor.process()
+    runs as a separate Dask task per chunk (often on separate worker processes),
+    so an in-`process()` warning fires once per chunk/worker with no way to
+    dedupe across the whole run; this instead peeks at one file's schema per
+    dataset up front and logs each missing variable exactly once.
+    """
+    value_vars = sorted({_value_var_for(v) for v in variables2plot})
+    for dataset_key, entry in fileset.items():
+        files = entry.get("files")
+        if not files:
+            continue
+        try:
+            schema_fields = set(pq.ParquetFile(files[0]).schema_arrow.names)
+        except Exception as e:
+            logger.debug(f"Could not read parquet schema for {dataset_key} ({files[0]}): {e}")
+            continue
+        missing = [v for v in value_vars if v not in schema_fields]
+        if missing:
+            logger.warning(
+                f"Dataset '{dataset_key}': {len(missing)} plotted variable(s) not found in "
+                f"parquet schema, will be skipped: {missing}"
+            )
 
 
 class ValidationHistProcessor(processor.ProcessorABC):
@@ -337,18 +251,14 @@ class ValidationHistProcessor(processor.ProcessorABC):
                             )
 
                     for var in templates:
-                        if "_range2" in var:
-                            value_var = var.replace("_range2", "")
-                        elif "_zpeak" in var:
-                            value_var = var.replace("_zpeak", "")
-                        else:
-                            value_var = var
+                        value_var = _value_var_for(var)
 
                         if value_var not in region_events.fields:
-                            logger.warning(
-                                f"Variable '{value_var}' not found for process '{dataset_key}' "
-                                f"in region '{region_name}'. Skipping histogram fill for '{var}'."
-                            )
+                            # Missing-variable warnings are issued once, up front,
+                            # by _warn_missing_vars_once() -- this runs as a
+                            # separate Dask task per chunk, often on different
+                            # worker processes, so a warning here can't be
+                            # deduped across the run.
                             continue
 
                         values = ak.to_numpy(ak.fill_none(region_events[value_var], value=-999.0))
@@ -393,11 +303,16 @@ def load_plot_settings(category: str) -> dict:
 
 
 def build_hist_templates(variables2plot, plot_settings, sample_groups, njets_options, zpt_options):
-    """Build the empty per-variable hist.Hist templates for one category's binning group."""
+    """Build the empty per-variable hist.Hist templates for one category's binning group.
+
+    Uses Weight() storage (sum-of-weights + sum-of-weights^2 per bin, filled in
+    a single .fill() call) instead of a manual "value"/"sumw2" StrCat axis
+    requiring two .fill() calls per (var, zpt_option) -- see fillHist() and
+    generate_combo_plots()'s .values()/.variances() read side.
+    """
     sample_hist = (
         hist.Hist.new.StrCat(FULL_REGIONS, name="region")
         .StrCat(FULL_CHANNELS, name="channel")
-        .StrCat(["value", "sumw2"], name="val_sumw2")
         .StrCat(sample_groups, name="sample_group")
         .StrCat(VARIATIONS, name="variation")
         .StrCat(njets_options, name="njets")
@@ -420,7 +335,7 @@ def build_hist_templates(variables2plot, plot_settings, sample_groups, njets_opt
         else:
             binning = np.linspace(*plot_settings[plot_var]["binning_linspace"])
         logger.debug(f"var: {var}")
-        hist_templates[var] = sample_hist.Var(binning, name=var).Double()
+        hist_templates[var] = sample_hist.Var(binning, name=var).Weight()
     return hist_templates
 
 
@@ -430,6 +345,7 @@ def resolve_year_context(
     sig_samples,
     data_samples,
     do_vbf_filter_study,
+    sample_config_path="configs/samples/samples.yaml",
     lumi_override="",
 ):
     """
@@ -437,7 +353,7 @@ def resolve_year_context(
     the year-specific group_dict, lumi, center-of-mass energy, and the list of
     available (data + bkg + sig) process names.
     """
-    group_dict_year = parseGroupProcesses(group_dict, year)
+    group_dict_year = build_group_dict_for_year(year, sample_config_path)
 
     if is_run3(year):
         CM_energy = 13.6  # TeV
@@ -501,12 +417,15 @@ def resolve_year_context(
     }
 
 
-def build_fileset_for_year(year, load_path, available_processes, use_compacted):
+def build_fileset_for_year(year, load_path, available_processes, use_compacted, force_compact=False):
     """
     Build the coffea fileset entries (one per process) for one year, bootstrapping
     the compacted parquet path via ensure_compacted() when requested. Returns a
     dict keyed by plain process name; the caller prefixes keys with the year for
     cross-year fileset merging.
+
+    force_compact=True always calls ensure_compacted(force=True), even when
+    compacted_path_DNN already exists, to redo a stale/suspect compaction.
     """
     load_path = str(load_path)
     if use_compacted != "":
@@ -519,35 +438,65 @@ def build_fileset_for_year(year, load_path, available_processes, use_compacted):
         compacted_base_path = load_path.replace("f1_0", use_compacted)
         for process in available_processes:
             compacted_path_DNN = os.path.join(compacted_base_path, process, "0")
-            ensure_compacted(year, process, load_path, compacted_path_DNN)
+            if force_compact or not os.path.exists(compacted_path_DNN):
+                ensure_compacted(year, process, load_path, compacted_path_DNN, force=force_compact)
         load_path = compacted_base_path
 
     logger.info(f"Using parquet files from {load_path}")
     fileset = {}
-    for process in tqdm.tqdm(available_processes):
-        full_load_path = (load_path + f"/{process}/*/*.parquet").replace("//", "/")
-        files = glob.glob(full_load_path)
-        logger.info(f"length of files: {len(files)}")
-        logger.info(f"full_load_path: {full_load_path}")
+    # glob.glob per process is pure I/O (stat-ing a shared/network filesystem),
+    # so a thread pool overlaps those waits instead of doing them one at a time.
+    with ThreadPoolExecutor(max_workers=max(1, min(32, len(available_processes)))) as pool:
+        glob_results = list(tqdm.tqdm(
+            pool.map(lambda p: (p,) + _glob_process_files(load_path, p), available_processes),
+            total=len(available_processes),
+        ))
+    n_skipped = 0
+    for process, full_load_path, files in glob_results:
+        logger.debug(f"{process}: {len(files)} file(s) at {full_load_path}")
         if len(files) == 0:
             logger.warning("full_load_path: %s Not available. Skipping", full_load_path)
+            n_skipped += 1
             continue
         fileset[process] = {
             "files": files,
             "treename": "Events",
             "metadata": {"year": year, "sample": process},
         }
+    n_files = sum(len(entry["files"]) for entry in fileset.values())
+    skip_note = f", {n_skipped} process(es) skipped (no files found)" if n_skipped else ""
+    logger.info(f"Fileset for {year}: {len(fileset)} process(es), {n_files} file(s) total{skip_note}")
     return fileset
 
 
-def run_validation_runner(fileset, processor_instance, client, chunksize=50_000, treereduction=2):
+def _glob_process_files(load_path, process):
+    full_load_path = (load_path + f"/{process}/*/*.parquet").replace("//", "/")
+    return full_load_path, glob.glob(full_load_path)
+
+
+def run_validation_runner(fileset, processor_instance, client, chunksize=400_000, treereduction=4):
     """Run one coffea Runner pass over the given fileset, dask-parallelized via `client`.
+
+    chunksize was raised from coffea's original 50_000 after a local-cluster sweep
+    (50k/100k/200k/400k/800k) showed monotonic wall-clock improvement up to 400k
+    (630s -> 88s, ~86% faster) then a flat plateau at 800k (also 88s, no further
+    gain) with no worker memory warnings at any step -- 400k gets the full
+    speedup with more headroom below the plateau than 800k. Output histograms
+    were verified byte-identical (all .txt dumps) across every chunksize tested,
+    so this only changes how work is split across chunks, not any result.
+    Revisit downward if a future run with more/heavier variables shows memory
+    pressure -- larger chunksize means more data (and more per-chunk Python
+    object overhead) in flight per task.
 
     treereduction is lowered from coffea's default of 20: each reduce task gathers
     up to `treereduction` still-unreduced per-chunk histogram payloads onto one
     worker and accumulates them all at once (coffea.processor.executor._reduce),
     so a smaller fan-in bounds peak per-worker memory during the final reduction
-    rounds at the cost of more (lighter) reduction rounds overall.
+    rounds at the cost of more (lighter) reduction rounds overall. 4 (was 2,
+    tightened during an earlier worker-memory stall) still keeps that bound far
+    below the default while roughly halving the number of reduction rounds/
+    scheduler overhead versus 2 -- revisit downward again if a future run shows
+    the same near-memory-ceiling "paused" worker pattern.
     """
     if not fileset:
         logger.warning("No samples left to process; fileset is empty.")
@@ -568,7 +517,7 @@ def generate_combo_plots(
     zpt_option,
     region_name,
     var,
-    sample_hist_lookup,
+    sample_hist,
     sample_groups,
     plot_settings,
     save_path,
@@ -580,20 +529,21 @@ def generate_combo_plots(
     jj_eta_region,
 ):
     """
-    Project the accumulated histograms for one (year, category, njets, zpt_option,
+    Project the accumulated histogram for one (year, category, njets, zpt_option,
     region, var) combo into Data/bkg-MC/sig-MC arrays and save the PDF+txt pair.
     Returns the save directory on success, or None if there was nothing to plot.
 
-    sample_hist_lookup is keyed as sample_hist_lookup[year][var] -> hist.Hist,
-    already scoped by the caller to the current (category, njets) -- category and
-    njets are only needed here for the projection/file-naming below, not as
-    additional lookup levels.
+    sample_hist is the already-resolved hist.Hist for this (year, var) -- i.e.
+    the caller's sample_hist_lookup[year][var], already scoped to the current
+    (category, njets). Taking just the one Hist needed (rather than the whole
+    lookup dict) keeps this function's argument list cheap to pickle, since
+    _render_combo_plots_parallel() dispatches calls to it across worker
+    processes.
     """
     data_dict = {}
     bkg_MC_dict = {}
     sig_MC_dict = {}
 
-    sample_hist = sample_hist_lookup[year][var]
     if sample_hist is None:
         logger.debug(f"no histograms found for {year} {category} {njets} {var}, skipping!")
         return None
@@ -608,12 +558,11 @@ def generate_combo_plots(
             "zpt_option": zpt_option,
         }
 
-        to_project_setting_val = to_project_setting.copy()
-        to_project_setting_val["val_sumw2"] = "value"
-        hist_val = sample_hist[to_project_setting_val].project(var).values()
-        to_project_setting_w2 = to_project_setting.copy()
-        to_project_setting_w2["val_sumw2"] = "sumw2"
-        hist_w2 = sample_hist[to_project_setting_w2].project(var).values()
+        # Weight() storage exposes sum(weight) and sum(weight^2) per bin directly
+        # via .values()/.variances() -- see build_hist_templates()/fillHist().
+        projected = sample_hist[to_project_setting].project(var)
+        hist_val = projected.values()
+        hist_w2 = projected.variances()
         if np.sum(hist_val) == 0:  # skip processes that doesn't have anything
             logger.debug(f"hist_val is empty for {group_name} in {var}, skipping!")
             continue
@@ -691,8 +640,7 @@ def generate_combo_plots(
     else:
         full_save_path = f"{save_path}/{year}/mplhep/Reg_{region_name}/Cat_{category}/njet_{njets}/{zpt_postfix}"
 
-    if not os.path.exists(full_save_path):
-        os.makedirs(full_save_path)
+    os.makedirs(full_save_path, exist_ok=True)
     full_save_fname = f"{full_save_path}/{var}.pdf"
 
     plot_var = getPlotVar(var)
@@ -738,6 +686,36 @@ def generate_combo_plots(
     return full_save_path
 
 
+def _render_combo_plots_parallel(combo_args_list, max_workers=None):
+    """
+    Run generate_combo_plots() once per entry in combo_args_list (each entry is
+    that function's positional-argument tuple), across worker processes instead
+    of one at a time in the calling process.
+
+    This is the actual serial hot path in a plotting run: histogram projection
+    is cheap, but matplotlib rendering (plotDataMC_compare, called twice per
+    combo for log/linear scale) is not, and generate_combo_plots() was
+    previously called in a plain Python loop -- one PDF+txt pair at a time,
+    regardless of how many CPU cores were available. Diagnosed via a standalone
+    monitored run: ~90 s wall for one (category, njets) sub-pass was ~40 s
+    client startup + ~43 s of purely serial rendering on a session with 128
+    cores sitting idle.
+
+    Falls back to sequential execution when there's nothing to gain from a
+    process pool (0-1 combos, or max_workers resolves to 1).
+    """
+    if not combo_args_list:
+        return []
+    if max_workers is None:
+        max_workers = min(len(combo_args_list), os.cpu_count() or 1)
+    if max_workers <= 1:
+        return [generate_combo_plots(*combo_args) for combo_args in combo_args_list]
+
+    with ProcessPoolExecutor(max_workers=max_workers) as pool:
+        futures = [pool.submit(generate_combo_plots, *combo_args) for combo_args in combo_args_list]
+        return [future.result() for future in futures]
+
+
 def _derive_zpt_options(remove_zpt_weights_options, add_dnn_zpt_weights_options):
     """Map (remove_zpt_weights, use_dnn_zpt_weights) boolean-list config into the
     "default"/"no_zpt"/"dnn_zpt" enum ValidationHistProcessor expects."""
@@ -773,17 +751,27 @@ def _run_validation_scope(
     linear_scale,
     use_compacted,
     dry_run,
+    sample_config="configs/samples/samples.yaml",
     force_rerun=False,
+    plot_workers=None,
+    force_compact=False,
 ):
     """
     Run one consolidated Dask pass (year x category x njets x zpt_option, all
     computed together) for a single fixed (jj_eta_region, vbf_filter_study,
     region_list) scope. `client` is None during a dry run.
 
+    force_compact=True redoes compaction from scratch (see
+    build_fileset_for_year/ensure_compacted) even if a compacted_path already
+    exists on disk -- for recovering from a stale/suspect compaction.
+
     force_rerun bypasses the `_status` done markers (mirrors run_stage1.py's
     --rerun): useful when the underlying samples/config changed since a
     (category, njets) sub-pass was last marked done, since done-marker checks
     are purely file-existence-based and won't detect that on their own.
+
+    plot_workers is forwarded to _render_combo_plots_parallel() -- None (the
+    default) auto-sizes the pool to min(number of PDF combos, cpu_count()).
     """
     # if vbf_filter_study: remove z-peak from region (same rule as before)
     fill_regions = [r for r in region_list if not (do_vbf_filter_study and r == "z-peak")]
@@ -811,9 +799,14 @@ def _run_validation_scope(
         variables2plot += ["jj_mass_nominal_range2"]
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"]
-    logger.info(f"variables2plot: {variables2plot}")
+    logger.debug(f"variables2plot: {variables2plot}")
+    logger.info(f"{len(variables2plot)} variable(s) to plot")
 
-    sample_groups = list(group_dict.keys()) + ["other"]
+    # sample_groups: fixed group-name list, independent of year (only the DYVBF
+    # removal rule -- itself independent of year -- can change it). The actual
+    # per-year process membership of each group is resolved dynamically from
+    # samples.yaml below (resolve_year_context -> build_group_dict_for_year).
+    sample_groups = list(ALL_GROUP_NAMES) + ["other"]
     if not do_vbf_filter_study and "DYVBF" in sample_groups:
         sample_groups.remove("DYVBF")
     logger.info(f"sample_groups: {sample_groups}")
@@ -835,19 +828,23 @@ def _run_validation_scope(
     for year in years:
         load_path = Path(str(load_path_template).format(year=year))
         year_ctx = resolve_year_context(
-            year, background_samples, sig_samples, data_samples, do_vbf_filter_study, lumi_override=""
+            year, background_samples, sig_samples, data_samples, do_vbf_filter_study,
+            sample_config_path=sample_config, lumi_override="",
         )
         group_dict_by_year[year] = year_ctx["group_dict"]
         lumi_by_year[year] = year_ctx["lumi"]
         CM_energy_by_year[year] = year_ctx["CM_energy"]
-        logger.info(f"{year} available_processes: {year_ctx['available_processes']}")
+        logger.debug(f"{year} available_processes: {year_ctx['available_processes']}")
+        logger.info(f"{year}: {len(year_ctx['available_processes'])} available process(es) resolved")
 
         year_fileset = build_fileset_for_year(
-            year, load_path, year_ctx["available_processes"], use_compacted
+            year, load_path, year_ctx["available_processes"], use_compacted,
+            force_compact=force_compact,
         )
         for process, entry in year_fileset.items():
             fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
     logger.info(f"finished building fileset! ({len(fileset)} datasets across {len(years)} year(s))")
+    _warn_missing_vars_once(fileset, variables2plot)
 
     # Resumability: each (category, njets) sub-pass below is its own coffea Runner
     # call (potentially the most expensive single step -- a full pass over the
@@ -928,29 +925,32 @@ def _run_validation_scope(
                             slot[var] += h
 
                 logger.info(f"Generating plots for category={category} njets={njets}...")
-                for year in years:
-                    for zpt_option in zpt_options:
-                        for region_name in fill_regions:
-                            for var in scoped_templates:
-                                sub_pass_plots += 1
-                                generate_combo_plots(
-                                    year,
-                                    category,
-                                    njets,
-                                    zpt_option,
-                                    region_name,
-                                    var,
-                                    sub_pass_hist_lookup,
-                                    sample_groups,
-                                    plot_settings,
-                                    str(save_path),
-                                    lumi_by_year[year],
-                                    status,
-                                    CM_energy_by_year[year],
-                                    not linear_scale,
-                                    do_vbf_filter_study,
-                                    jj_eta_region,
-                                )
+                combo_args_list = [
+                    (
+                        year,
+                        category,
+                        njets,
+                        zpt_option,
+                        region_name,
+                        var,
+                        sub_pass_hist_lookup[year].get(var),
+                        sample_groups,
+                        plot_settings,
+                        str(save_path),
+                        lumi_by_year[year],
+                        status,
+                        CM_energy_by_year[year],
+                        not linear_scale,
+                        do_vbf_filter_study,
+                        jj_eta_region,
+                    )
+                    for year in years
+                    for zpt_option in zpt_options
+                    for region_name in fill_regions
+                    for var in scoped_templates
+                ]
+                sub_pass_plots += len(combo_args_list)
+                _render_combo_plots_parallel(combo_args_list, max_workers=plot_workers)
             except Exception as exc:
                 jobstat.mark_failed(job_key, 0, exc)
                 raise
@@ -982,8 +982,11 @@ def run_bulk_validation(
     use_gateway=True,
     cluster_index=0,
     use_compacted="compacted",
+    sample_config="configs/samples/samples.yaml",
     dry_run=False,
     force_rerun=False,
+    plot_workers=None,
+    force_compact=False,
 ):
     """
     Run the full validation-plot sweep: every (jj_eta_region, vbf_filter_study,
@@ -1001,6 +1004,11 @@ def run_bulk_validation(
     crash partway through doesn't lose already-completed Dask compute on rerun.
     Pass force_rerun=True (e.g. from --force) to bypass those done markers, such
     as after adding new samples to an already-"done" combo.
+
+    plot_workers controls the process-pool size used to render PDFs/txt tables
+    in parallel (see _render_combo_plots_parallel) -- None (default) auto-sizes
+    per sub-pass; pass an explicit int to cap it, e.g. if concurrent
+    run_plotter.py-driven jobs are already contending for the session's cores.
     """
     scopes = list(itertools.product(jj_eta_regions, vbf_filter_study_options, region_options))
     logger.info(f"Running {len(scopes)} (jj_eta_region, vbf_filter_study, region_list) scope(s).")
@@ -1031,7 +1039,10 @@ def run_bulk_validation(
             linear_scale,
             use_compacted,
             dry_run,
+            sample_config=sample_config,
             force_rerun=force_rerun,
+            plot_workers=plot_workers,
+            force_compact=force_compact,
         )
 
     if not dry_run:
@@ -1153,23 +1164,31 @@ if __name__ == "__main__":
         "--jj-eta-region",
         dest="jj_eta_region",
         default="all",
-        choices=[
-            "all",
-            "jj_both_central",
-            "jj_non_central",
-            "jj_one_fwd25_one_central",
-            "jj_one_he_one_central",
-            "jj_one_fwd30_one_central",
-            "jj_both_fwd25",
-            "jj_both_he",
-            "jj_both_fwd30",
-            "jj_one_he_one_fwd30",
-        ],
+        choices=["all", *selection.PAIR_JJ_ETA_REGIONS, *selection.SINGLE_JET_ETA_REGIONS],
         help=(
             "Select dijet eta topology using jet1_eta/jet2_eta. "
             "'central' = |eta|<2.5, 'he' = 2.5<|eta|<3.0, "
             "'fwd25' = |eta|>2.5, 'fwd30' = |eta|>3.0. Default: all"
         ),
+    )
+    parser.add_argument(
+        "--he-pt-cut",
+        dest="he_pt_cut",
+        default=None,
+        type=float,
+        help=(
+            "Post-hoc HE-region (2.5<|eta|<=3.0) jet pT cut (GeV) this will"
+            "migrate the events from VBF to ggH. However it won't remove jets"
+            "kinematics from the ggH channel. I mean if the jet pT is < 50 GeV"
+            "for the ggH still that jet and its derived quantities will be present."
+        ),
+    )
+    parser.add_argument(
+        "--hf-pt-cut",
+        dest="hf_pt_cut",
+        default=None,
+        type=float,
+        help="Same as --he-pt-cut but for the HF region (|eta|>3.0). Default: off (no cut).",
     )
     # add dnn score to the plotting variable list
     parser.add_argument(
@@ -1192,6 +1211,24 @@ if __name__ == "__main__":
         default="",
         type=str,
        help="Path to the compacted parquet files"
+    )
+    parser.add_argument(
+        "--force-compact",
+        dest="force_compact",
+        action="store_true",
+        default=False,
+        help="Redo compaction from scratch even if a compacted output already exists on disk",
+    )
+    parser.add_argument(
+        "--plot-workers",
+        dest="plot_workers",
+        default=None,
+        type=int,
+        help=(
+            "Number of worker processes to render PDF/txt plots in parallel "
+            "(see _render_combo_plots_parallel). Default: auto-size to "
+            "min(number of plots, cpu_count())."
+        ),
     )
 
     # ---------------------------------------------------------
@@ -1242,11 +1279,12 @@ if __name__ == "__main__":
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
-    logger.info(f"variables2plot: {variables2plot}")
+    logger.debug(f"variables2plot: {variables2plot}")
+    logger.info(f"{len(variables2plot)} variable(s) to plot")
 
     # sample_groups: fixed group-name list, independent of year (only the DYVBF
     # removal rule -- itself independent of year -- can change it).
-    sample_groups = list(group_dict.keys()) + ["other"]
+    sample_groups = list(ALL_GROUP_NAMES) + ["other"]
     if not args.do_vbf_filter_study and "DYVBF" in sample_groups:
         sample_groups.remove("DYVBF")
     logger.info(f"sample_groups: {sample_groups}")
@@ -1280,19 +1318,23 @@ if __name__ == "__main__":
             args.sig_samples,
             args.data_samples,
             args.do_vbf_filter_study,
+            sample_config_path=args.sample_config,
             lumi_override=args.lumi,
         )
         group_dict_by_year[year] = year_ctx["group_dict"]
         lumi_by_year[year] = year_ctx["lumi"]
         CM_energy_by_year[year] = year_ctx["CM_energy"]
-        logger.info(f"available_processes: {year_ctx['available_processes']}")
+        logger.debug(f"{year} available_processes: {year_ctx['available_processes']}")
+        logger.info(f"{year}: {len(year_ctx['available_processes'])} available process(es) resolved")
 
         year_fileset = build_fileset_for_year(
-            year, args.load_path, year_ctx["available_processes"], args.use_compacted
+            year, args.load_path, year_ctx["available_processes"], args.use_compacted,
+            force_compact=args.force_compact,
         )
         for process, entry in year_fileset.items():
             fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
     logger.info("finished building fileset!")
+    _warn_missing_vars_once(fileset, variables2plot)
 
     # fill the histograms: one coffea Runner pass, chunked and dask-parallelized,
     # filling every (category, njets, zpt_option, variable) combo per chunk (eager
@@ -1334,35 +1376,37 @@ if __name__ == "__main__":
     logger.info("{style}Generating plots.{style}".format(
         style="\n" + "="*50 + "\n",))
     last_save_path = args.save_path
-    for year in years:
-        for category in categories:
-            plot_settings = plot_settings_by_category[category]
-            for njets in njets_options:
-                if category == "vbf" and njets != "inclusive":
-                    continue
-                for zpt_option in zpt_options:
-                    for region_name in args.regions:
-                        for var in tqdm.tqdm(hist_templates_by_category[category]):
-                            result_path = generate_combo_plots(
-                                year,
-                                category,
-                                njets,
-                                zpt_option,
-                                region_name,
-                                var,
-                                sample_hist_lookup,
-                                sample_groups,
-                                plot_settings,
-                                args.save_path,
-                                lumi_by_year[year],
-                                status,
-                                CM_energy_by_year[year],
-                                do_logscale,
-                                args.do_vbf_filter_study,
-                                args.jj_eta_region,
-                            )
-                            if result_path:
-                                last_save_path = result_path
+    combo_args_list = [
+        (
+            year,
+            category,
+            njets,
+            zpt_option,
+            region_name,
+            var,
+            sample_hist_lookup[year].get(var),
+            sample_groups,
+            plot_settings_by_category[category],
+            args.save_path,
+            lumi_by_year[year],
+            status,
+            CM_energy_by_year[year],
+            do_logscale,
+            args.do_vbf_filter_study,
+            args.jj_eta_region,
+        )
+        for year in years
+        for category in categories
+        for njets in njets_options
+        if not (category == "vbf" and njets != "inclusive")
+        for zpt_option in zpt_options
+        for region_name in args.regions
+        for var in hist_templates_by_category[category]
+    ]
+    result_paths = _render_combo_plots_parallel(combo_args_list, max_workers=args.plot_workers)
+    for result_path in result_paths:
+        if result_path:
+            last_save_path = result_path
 
     close_dask_client()
     logger.info("Plots are saved to %s", last_save_path)

@@ -22,7 +22,7 @@ nanoaodv="12"
 label="label_output"
 output_root="test/output"
 reference_dir="test/reference"
-switches_file="configs/parameters/switches.yaml"
+switches_file="configs/parameters/switches_official.yaml"
 switches_backup=""
 reference_switches_file="test/reference/switches.yaml"
 
@@ -35,7 +35,7 @@ restore_switches() {
 }
 
 if [[ "$switch_mode" == "--use-reference-switches" ]]; then
-    switches_backup="$(mktemp "${TMPDIR:-/tmp}/switches.yaml.XXXXXX")"
+    switches_backup="$(mktemp "${TMPDIR:-/tmp}/switches_official.yaml.XXXXXX")"
     cp "$switches_file" "$switches_backup"
     trap restore_switches EXIT
     cp "$reference_switches_file" "$switches_file"
@@ -68,13 +68,14 @@ for year in "${years[@]}"; do
 
     vbf_sample="vbf_powheg_dipole"
 
-    bash stage1_loop_Improved.sh \
+    bash run_analysis_pipeline.sh \
         -c "$dataset_yaml" \
         -v "$nanoaodv" \
         -l "$label" \
         -y "$year" \
         -m 1 \
         -z \
+        -Z \
         -S "$output_root"
 
     year_root="${output_root}/${label}/stage1_output/${year}"
@@ -95,10 +96,31 @@ for year in "${years[@]}"; do
     cp "${year_root}/${year}_data_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_dy_eventKinematics.txt" "$reference_dir/"
     cp "${year_root}/${year}_vbf_eventKinematics.txt" "$reference_dir/"
-    cp "${f1_root}/${data_sample}/0/cutflow_${data_sample}_0.json" \
+    # The actual cutflow JSON filename embeds the input file's UUID + entry
+    # range (see runner_adapter.py::_build_shard_id), not a literal "_0" file
+    # index -- e.g. cutflow_data_D_<uuid>_NanoAOD_0_5420.json. Glob for it
+    # rather than assuming the old literal name, same as
+    # .github/workflows/sync-stage1.yml's find_cutflow_file() already does.
+    # The *destination* name in test/reference/ stays the plain "_0.json"
+    # form, matching what that CI workflow expects to diff against.
+    find_cutflow_file() {
+        local sample_dir="$1" sample_name="$2"
+        local matches=()
+        while IFS= read -r path; do
+            matches+=("$path")
+        done < <(find "$sample_dir" -maxdepth 1 -type f -name "cutflow_${sample_name}_*.json" | sort)
+        if [ "${#matches[@]}" -ne 1 ]; then
+            echo "Expected exactly one cutflow JSON for ${sample_name} in ${sample_dir}, found ${#matches[@]}" >&2
+            printf "%s\n" "${matches[@]}" >&2
+            exit 1
+        fi
+        printf "%s\n" "${matches[0]}"
+    }
+
+    cp "$(find_cutflow_file "${f1_root}/${data_sample}/0" "${data_sample}")" \
         "${reference_dir}/${year}_cutflow_${data_sample}_0.json"
-    cp "${f1_root}/${dy_sample}/0/cutflow_${dy_sample}_0.json" \
+    cp "$(find_cutflow_file "${f1_root}/${dy_sample}/0" "${dy_sample}")" \
         "${reference_dir}/${year}_cutflow_${dy_sample}_0.json"
-    cp "${f1_root}/${vbf_sample}/0/cutflow_${vbf_sample}_0.json" \
+    cp "$(find_cutflow_file "${f1_root}/${vbf_sample}/0" "${vbf_sample}")" \
         "${reference_dir}/${year}_cutflow_${vbf_sample}_0.json"
 done

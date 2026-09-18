@@ -22,10 +22,6 @@ from modules import selection
 from modules.dask_utils import get_dask_client
 from modules.utils import get_compacted_path, logger, fillEventNans
 from modules.sample_config import get_bkg_sig_dicts
-# Shape-systematics discovery/resolution lives in modules/systematics.py so that
-# Stage-2 inference and the DNN preprocessing/training share one definition of
-# "what is a variation". Re-exported here under their original names; the
-# semantics are unchanged.
 from modules.systematics import (  # noqa: F401
     discover_shape_systs,
     feature_name_for_variation,
@@ -88,11 +84,25 @@ SHIFTED_SELECTION_VARIABLES = {
     "jj_mass",
     "jj_dEta",
     "jet1_pt",
+    # jet1_eta/jet2_eta: only needed when jj_eta_region != "all" (selection.applyRegionCatCuts
+    # falls back to computing the region mask from these when no precomputed mask field exists
+    # in events)
+    "jet1_eta",
+    "jet2_eta",
 }
 
 NOMINAL_SELECTION_VARIABLES = {
     "dimuon_mass",
     "event",
+}
+
+# Each of these is only read by applyRegionCatCuts under a condition this script
+# never triggers, so a stage1 output that lacks the column is fine:
+#   - gjj_mass: generator-level, DY MC only, and only when do_vbf_filter_study is set
+#   - nfatJets_drmuon, MET_pt: only read when do_VH_veto=True, which this script
+#     never passes (applyRegionCatCuts defaults it to False)
+# Include them opportunistically instead of requiring them.
+OPTIONAL_SELECTION_VARIABLES = {
     "gjj_mass",
     "nfatJets_drmuon",
     "MET_pt",
@@ -103,7 +113,6 @@ def resolve_variation_field(base, variation, fields):
     if base in NOMINAL_SELECTION_VARIABLES:
         if base in fields:
             logger.debug(
-            # logger.warning(
                 f"[stage2][field-resolve] kind=selection variation={variation} "
                 f"var={base} resolved={base} fallback=False"
             )
@@ -140,22 +149,21 @@ def resolve_variation_field(base, variation, fields):
 
 
 def columns_for_selection(category, variation, fields):
-    # minimal columns for cuts; add here if your selection changes.
-    # NOMINAL_SELECTION_VARIABLES are only used behind switch-gated cuts (e.g.
-    # do_VH_veto) downstream, so they're kept optional here and left for the
-    # caller's `needed_cols & set(events.fields)` intersection to drop if absent,
-    # instead of being required via resolve_variation_field().
-    cols = [
+    # minimal columns for cuts; add here if your selection changes
+    base_names = [
         "event",
         "dimuon_mass",
-        "gjj_mass",
-        "nfatJets_drmuon",
-        "MET_pt",
+        "njets",
+        "nBtagLoose",
+        "nBtagMedium",
+        "jj_mass",
+        "jj_dEta",
+        "jet1_pt",
+        "jet1_eta",
+        "jet2_eta",
     ]
-    cols += [
-        resolve_variation_field(name, variation, fields)
-        for name in sorted(SHIFTED_SELECTION_VARIABLES)
-    ]
+    cols = [resolve_variation_field(name, variation, fields) for name in base_names]
+    cols += [name for name in OPTIONAL_SELECTION_VARIABLES if name in fields]
     return cols
 
 
@@ -308,8 +316,10 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         divide_dy_into_matched_jets=False,
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
+        jj_eta_region="all",
     ):
         NO_SCALE_FEATURES = {
+            "year",
             "nsoftjets5_nominal",
         }
         self.training_features = training_features
@@ -320,6 +330,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.no_variations = no_variations
         self.do_vbf_filter_study = do_vbf_filter_study
         self.divide_dy_into_matched_jets = divide_dy_into_matched_jets
+        self.jj_eta_region = jj_eta_region
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
         # One-hot year features (e.g. "year_2022preEE") don't exist as event
@@ -583,7 +594,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             # if variation in debug_variations:
             filtered_events = events[needed_cols]
             # if variation in debug_variations:
-            #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {filtered_events.fields}")
+            #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {fields}")
             region_events = selection.applyRegionCatCuts(
                 filtered_events,
                 process=sample_type,
@@ -591,6 +602,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 region_name=region,
                 do_vbf_filter_study=self.do_vbf_filter_study,
                 variation=variation,
+                jj_eta_region=self.jj_eta_region,
                 # year=year,
             )
             region_events = fillEventNans(region_events, category=category)
@@ -760,7 +772,6 @@ def getStage1Samples(stage1_path, year, sample_config, data_samples=[], sig_samp
     # work on bkg MC
     # ------------------------------------
     bkg_sample_l = []
-    # logger.info(f"bkg_samples: {bkg_samples}")
     for bkg_sample in bkg_samples:
         bkg_sample = bkg_sample.upper()
         if bkg_sample in bkg_sample_dict.keys():
@@ -866,6 +877,24 @@ if __name__ == "__main__":
             "<sample>_matched2J_hist.pkl and <sample>_matched01J_hist.pkl."
         ),
     )
+    parser.add_argument(
+        "--jj_eta_region",
+        dest="jj_eta_region",
+        default="all",
+        # Only the two-jet (PAIR_JJ_ETA_REGIONS) options are offered here, not
+        # SINGLE_JET_ETA_REGIONS: this script's VBF category always requires >=2 real jets
+        # (jj_mass/jj_dEta in vbf_cut), so a njets==1 single-jet region would silently select
+        # zero events rather than doing anything useful.
+        choices=["all"] + selection.PAIR_JJ_ETA_REGIONS,
+        action="store",
+        help=(
+            "Restrict the VBF category selection to a dijet |eta| phase space "
+            "(see modules.selection.applyRegionCatCuts). Default 'all' applies no "
+            "restriction, matching prior behavior. Non-'all' values append "
+            "'_<jj_eta_region>' to the output histogram directory name so different "
+            "phase-space runs don't collide."
+        ),
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -890,6 +919,8 @@ if __name__ == "__main__":
     histDirName = f"score_{args.label}" if args.save_postfix == "" else f"score_{args.label}_{args.save_postfix}"
     if args.do_vbf_filter_study:
         histDirName = f"{histDirName}_vbf_filter_study"
+    if args.jj_eta_region != "all":
+        histDirName = f"{histDirName}_{args.jj_eta_region}"
     if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
@@ -1019,6 +1050,7 @@ if __name__ == "__main__":
                 divide_dy_into_matched_jets=args.divide_dy_into_matched_jets,
                 allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
+                jj_eta_region=args.jj_eta_region,
             ),
         )
         t5 = time.perf_counter()

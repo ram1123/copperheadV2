@@ -35,6 +35,7 @@ import argparse
 import glob
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import ROOT
 import sys
 
@@ -42,10 +43,11 @@ ROOT.gROOT.SetBatch(True)
 
 JET_ID_VARIABLES = [
     # --- Jet kinematics ---
-    "jet1_pt_nominal", "jet1_eta_nominal", 
-    "jet2_pt_nominal", "jet2_eta_nominal", 
-    # "jet1_mass_nominal", "jet2_mass_nominal", 
-    "jet1_phi_nominal", "jet2_phi_nominal", 
+    "jet1_pt_nominal", "jet1_eta_nominal",
+    "jet2_pt_nominal", "jet2_eta_nominal",
+    # "jet1_mass_nominal", "jet2_mass_nominal",
+    "jet1_phi_nominal", "jet2_phi_nominal",
+    "jet1_rapidity_nominal", "jet2_rapidity_nominal",
     # "jj_dEta_nominal", "jj_mass_nominal",
 
     # --- Jet ID / PU ID ---
@@ -120,14 +122,29 @@ def parse_args():
 
     p.add_argument(
         "--region",
-        default="inclusive",
+        default=["inclusive"],
+        nargs="+",
         choices=[
             "inclusive", "central",
             "HE", "HF",
             "HEpos", "HEneg",
             "HFpos", "HFneg"
         ],
-        help="Eta region selection"
+        help="Eta region selection(s). Pass multiple to plot several regions "
+             "from one read of the input, e.g. --region central HE HF"
+    )
+
+    p.add_argument(
+        "--he-pt-min", type=float, default=None,
+        help="Extra pt threshold (GeV) applied only to jets geometrically in the "
+             "HE region (2.5 < |eta| <= 3.0), on top of --pt-min. Jets below it are "
+             "dropped from all plots/regions (same treatment as the base preselection)."
+    )
+    p.add_argument(
+        "--hf-pt-min", type=float, default=None,
+        help="Extra pt threshold (GeV) applied only to jets geometrically in the "
+             "HF region (|eta| > 3.0), on top of --pt-min. Jets below it are dropped "
+             "from all plots/regions (same treatment as the base preselection)."
     )
 
     p.add_argument(
@@ -161,10 +178,12 @@ def default_range(var: str):
         return 0.0, 30.0, 30
     if "mass" in var:
         return 0.0, 15.0, 100
-    if var.endswith("eta"):
+    if "_eta_" in var or var.endswith("eta"):
         return -4.7, 4.7, 50
-    if var.endswith("phi"):
+    if "_phi_" in var or var.endswith("phi"):
         return -3.2, 3.2, 50
+    if "_rapidity_" in var or var.endswith("rapidity"):
+        return -4.7, 4.7, 50
 
     # Energy fractions
     if any(var.endswith(s) for s in ["chEmEF", "chHEF", "neEmEF", "neHEF", "muEF"]):
@@ -208,8 +227,17 @@ def infer_range(x, fallback=(0.0, 1.0, 100)):
     x = x[np.isfinite(x)]
     if len(x) == 0:
         return fallback
-    lo = np.percentile(x, 0.001)
-    hi = np.percentile(x, 99.99999)
+    # np.percentile's index computation can round up to exactly len(x) for
+    # percentiles this close to 0/100 combined with certain large array
+    # sizes (observed: "ValueError: kth(=N) out of bounds (N)" from the
+    # underlying np.partition), so wrap defensively rather than crash a
+    # multi-minute production run over one edge case.
+    try:
+        lo = np.percentile(x, 0.001)
+        hi = np.percentile(x, 99.99999)
+    except ValueError:
+        lo = np.percentile(x, 1)
+        hi = np.percentile(x, 99)
     if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
         return fallback
     return float(lo), float(hi), infer_nbins(x, float(lo), float(hi))
@@ -321,6 +349,30 @@ def plot_var(df, var, args, region="inclusive"):
     # masks
     pre = get_preselection_mask(df, prefix, args.pt_min, args.abs_eta_max)
     reg = eta_region_mask(df, prefix, region, args.abs_eta_max)
+
+    # ---------------------------------------------------------
+    # Optional HE/HF horn pt cut: drop jets geometrically in HE (and/or HF)
+    # below an extra pt threshold, e.g. to study a --he-pt-min 50 style
+    # mitigation. Applied regardless of `region` (a jet failing this is
+    # dropped everywhere, not just when plotting the HE/HF region itself),
+    # same as the base pt/eta preselection.
+    # ---------------------------------------------------------
+    if args.he_pt_min is not None or args.hf_pt_min is not None:
+        eta_col = prefix + "eta_nominal"
+        pt_col = prefix + "pt_nominal"
+        eta = df[eta_col].to_numpy(dtype=np.float32)
+        pt = df[pt_col].to_numpy(dtype=np.float32)
+        aeta = np.abs(eta)
+
+        horn_reject = np.zeros(len(df), dtype=bool)
+        if args.he_pt_min is not None:
+            he_geom = (aeta > 2.5) & (aeta <= 3.0)
+            horn_reject |= he_geom & (pt < args.he_pt_min)
+        if args.hf_pt_min is not None:
+            hf_geom = aeta > 3.0
+            horn_reject |= hf_geom & (pt < args.hf_pt_min)
+
+        pre = pre & (~horn_reject)
 
     # ---------------------------------------------------------
     # Optional HE/HF cleaning
@@ -542,17 +594,28 @@ def main():
         all_needed_cols.add(prefix + "eta_nominal")
         all_needed_cols.add(prefix + args.genmatch_suffix)
 
-    all_needed_cols = sorted(all_needed_cols)
+    # Not every campaign writes every JET_ID_VARIABLES column (e.g. the
+    # chEmEF/chHEF/nConstituents/hf* block is only written when
+    # switches.do_add_jet_ID_vars was true for that stage-1 run). Requesting
+    # a column pyarrow can't find raises ArrowInvalid, so intersect against
+    # the first file's actual schema and skip the rest (plot_var already
+    # skips vars missing from df with a [WARN], so this just moves that same
+    # skip earlier instead of crashing the read).
+    available_cols = set(pq.ParquetFile(files[0]).schema_arrow.names)
+    missing_cols = sorted(c for c in all_needed_cols if c not in available_cols)
+    if missing_cols:
+        print(f"[WARN] {len(missing_cols)} requested column(s) not present in input, will be skipped: {missing_cols}")
+    all_needed_cols = sorted(c for c in all_needed_cols if c in available_cols)
 
     print(f"[INFO] Reading {len(all_needed_cols)} columns from {len(files)} files")
-    df = pd.read_parquet(files, columns=all_needed_cols)    
+    df = pd.read_parquet(files, columns=all_needed_cols)
 
     if args.max_rows is not None:
         df = df.head(args.max_rows)
 
     print(f"[INFO] N rows: {len(df)}")
 
-    regions = [args.region]
+    regions = args.region
 
 
     for var in JET_ID_VARIABLES:
