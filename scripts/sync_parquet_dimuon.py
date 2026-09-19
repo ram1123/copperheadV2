@@ -101,6 +101,16 @@ TXT_COMPARE_EXCLUDED_VARS = {
 }
 
 
+HEADER_KEY_FIELD = "run:lumi:event"
+
+DEFAULT_REL_TOLERANCE = 1e-3
+
+
+def _exceeds_tolerance(v1: float, v2: float, rel_tolerance: float) -> bool:
+    """True if v1 and v2 differ by more than rel_tolerance of the larger magnitude."""
+    return abs(v2 - v1) > rel_tolerance * max(abs(v1), abs(v2))
+
+
 def _is_data_sync_source(label: str) -> bool:
     label_l = str(label).lower()
     name_l = Path(str(label)).name.lower()
@@ -257,7 +267,7 @@ def dump_single_dir_sync_to_CSV(df: pd.DataFrame, out_path: Path) -> None:
 
 def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     """
-    Save a text file with one event per line in format:
+    Save a text file whose first line names the columns, then one event per line:
 
     run:lumi:event,mu1_pt,mu1_eta,mu1_phi,mu2_pt,mu2_eta,mu2_phi,
     dimuon_mass,dimuon_pt,dimuon_eta,dimuon_phi,
@@ -265,30 +275,23 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     jet2_pt_nominal,jet2_eta_nominal,jet2_phi_nominal,
     jj_mass_nominal,jj_dEta_nominal,...
 
-    Missing values are written as -100.00
+    Only columns this sample actually has are written; the header records which
+    ones, so a reader never has to infer a variable from its position. NaNs
+    within a written column are still dumped as -100.00.
     """
     missing = [c for c in SYNCVARLIST if c not in df.columns]
-    # stage-1 no longer writes separate_wgt_pdf_2rms, but test/reference/ was dumped
-    # when it did. Fields are matched by position, so emit it as -100.00 for MC to
-    # keep every later column in the slot the references expect.
-    padded = {"separate_wgt_pdf_2rms"} if "separate_wgt_genWeight" in df.columns else set()
-    required = [
-        c for c in SYNCVARLIST
-        if c not in KEY_VARS and (c in df.columns or c in padded)
-    ]
+    required = [c for c in SYNCVARLIST if c not in KEY_VARS and c in df.columns]
 
     if missing:
-        print(f"[WARNING] Missing columns for sync dump: {missing}")
+        print(f"[WARNING] Columns absent from this sample, not written: {missing}")
 
     df2 = df.copy()
 
     for c in required:
-        if c in df2.columns:
-            df2[c] = df2[c].fillna(-100.0)
-        else:
-            df2[c] = -100.0
+        df2[c] = df2[c].fillna(-100.0)
 
     with open(out_path, "w") as f:
+        f.write(HEADER_KEY_FIELD + "," + ",".join(required) + "\n")
         for _, row in df2.iterrows():
             run = int(row["run"])
             lumi = int(row["luminosityBlock"])
@@ -313,7 +316,7 @@ def compare_two_dirs(
     dir1: str,
     dir2: str,
     out_path: Path,
-    tolerance: float = 0.0,
+    tolerance: float = DEFAULT_REL_TOLERANCE,
     category: Optional[str] = None,
     region: Optional[str] = None,
     process: str = "data",
@@ -380,7 +383,7 @@ def compare_two_dirs(
             record[f"{var}_2"] = v2
             record[f"delta_{var}"] = delta
 
-            if abs(delta) > tolerance:
+            if _exceeds_tolerance(v1, v2, tolerance):
                 mismatch = True
 
         if mismatch:
@@ -401,23 +404,31 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
 
     run:lumi:event,val1,val2,...
 
-    The variable order is taken from SYNCVARLIST (excluding KEY_VARS).
-    If a line has fewer values than SYNCVARLIST expects, the missing ones
-    are filled with -100.0. If it has more, extras are ignored.
+    The first line must name the columns. Values are matched to those names,
+    never to a position in SYNCVARLIST, so a variable that one sample does not
+    have simply does not appear instead of shifting everything after it.
 
     Returns
     -------
     pd.DataFrame
         Indexed by (run, luminosityBlock, event).
     """
-    value_cols = [c for c in SYNCVARLIST if c not in KEY_VARS]
-
     # Read all non-empty lines
     with open(path, "r") as f:
         lines = [ln.strip() for ln in f if ln.strip()]
 
     if not lines:
         raise RuntimeError(f"No non-empty lines found in {path}")
+
+    header = lines[0].split(",")
+    if header[0] != HEADER_KEY_FIELD:
+        raise RuntimeError(
+            f"{path} has no header line. Regenerate it with the current "
+            f"scripts/sync_parquet_dimuon.py; column names are no longer inferred "
+            f"from position."
+        )
+    value_cols = header[1:]
+    lines = lines[1:]
 
     bad = 0
     records = []
@@ -443,11 +454,10 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
 
         raw_vals = parts[1:]
 
-        # Optional one-time info
-        if iline == 1:
-            print(
-                f"[INFO] Detected {len(raw_vals)} value columns in {path}; "
-                f"SYNCVARLIST expects {len(value_cols)}"
+        if len(raw_vals) != len(value_cols):
+            raise RuntimeError(
+                f"line {iline} of {path} has {len(raw_vals)} values but the header "
+                f"names {len(value_cols)} columns"
             )
 
         row = {
@@ -456,14 +466,10 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
             "event": evt,
         }
 
-        # Fill from SYNCVARLIST order, pad missing with -100.0
-        for i, col in enumerate(value_cols):
-            if i < len(raw_vals):
-                try:
-                    row[col] = float(raw_vals[i])
-                except Exception:
-                    row[col] = -100.0
-            else:
+        for col, raw in zip(value_cols, raw_vals):
+            try:
+                row[col] = float(raw)
+            except Exception:
                 row[col] = -100.0
 
         records.append(row)
@@ -482,7 +488,7 @@ def compare_two_sync_txt(
     txt1: str,
     txt2: str,
     out_path: Path,
-    tolerance: float = 0.0,
+    tolerance: float = DEFAULT_REL_TOLERANCE,
 ) -> None:
     """
     Compare two sync txt dumps by (run,luminosityBlock,event).
@@ -532,6 +538,13 @@ def compare_two_sync_txt(
     else:
         vars_to_check = [c for c in c1.columns if c in c2.columns]
 
+    one_sided = sorted(set(c1.columns) ^ set(c2.columns))
+    if one_sided:
+        print(
+            f"[WARNING] Not compared, present in only one file: {one_sided}. "
+            f"This is a column set difference, not a value difference."
+        )
+
     rows = []
     for idx in common_idx:
         r1 = c1.loc[idx]
@@ -552,7 +565,7 @@ def compare_two_sync_txt(
             rec[f"{v}_1"] = v1
             rec[f"{v}_2"] = v2
             rec[f"delta_{v}"] = d
-            if abs(d) > tolerance:
+            if _exceeds_tolerance(v1, v2, tolerance):
                 mismatch = True
 
         if mismatch:
@@ -676,8 +689,12 @@ def parse_args():
     parser.add_argument(
         "--tolerance",
         type=float,
-        default=0.1,
-        help="Absolute tolerance for comparing dimuon variables (default: 0.1).",
+        default=DEFAULT_REL_TOLERANCE,
+        help=(
+            "Relative tolerance for comparing dimuon variables "
+            f"(default: {DEFAULT_REL_TOLERANCE:g}); the value is enforced to be positive. "
+            "Cutflow counts are always exact."
+        ),
     )
     parser.add_argument(
         "--category",
@@ -697,7 +714,9 @@ def parse_args():
         default="data",
         help="Process name passed to selection.applyRegionCatCuts (default: 'data').",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    args.tolerance = abs(args.tolerance) # A negative tolerance is meaningless here; treat it as its magnitude.
+    return args
 
 
 # ----------------------------------------------------------------------
@@ -751,7 +770,6 @@ def main():
                 json1=file1,
                 json2=file2,
                 out_path=out_path,
-                tolerance=args.tolerance,
             )
             return
 
