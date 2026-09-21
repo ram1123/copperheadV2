@@ -13,11 +13,6 @@ def write_processed_lumis(run_arr, lumi_arr, save_path, dataset_name, file_idx):
     a small per-shard JSON, right alongside the cutflow shard files written by
     write_cutflow_outputs() (src/stage1/cutflow_io.py).
 
-    It collects per-chunk record of which lumi sections were actually run over, 
-    so the whole dataset's shards can later be merged + range-compressed into 
-    one golden-JSON-format file usable directly with `brilcalc lumi -i <file>` 
-    to get the true processed luminosity.
-
     We can compute the processed lumi and compare it with golden json lumi. 
     This will help us to ensure that we are not missing any data events.
     """

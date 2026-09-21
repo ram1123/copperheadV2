@@ -128,6 +128,9 @@ lumi_syst = {
     "2025": {
         "lumi2025": 5.0,
     },
+    "2026": {
+        "lumi2026": 5.0,
+    },    
 }
 
 nuisance_titles = {

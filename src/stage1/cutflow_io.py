@@ -8,14 +8,6 @@ def write_cutflow_outputs(cutflow, selection_names, save_path, dataset_name, fil
     """
     Write a per-chunk cutflow shard to JSON (+ the full arrays to .npz).
 
-    Uses coffea.analysis_tools.Cutflow's public `.result()` API rather than
-    its private `_names`/`_nevcutflow`/`_nevonecut` attributes -- more robust
-    against internal coffea changes, and it's also how weighted yields become
-    available: if `cutflow` was built with `weights=...` (see
-    src/copperhead_processor.py's cutflow block), `.result()` additionally
-    carries `wgtevonecut`/`wgtevcutflow`, which get included as
-    "*_weighted" JSON fields automatically.
-
     `selection_names` must be the exact, in-order list of names passed to
     `PackedSelection.cutflow(*selection_names, ...)` -- `.result()` returns
     the per-cut arrays but not the names themselves, so the caller (which

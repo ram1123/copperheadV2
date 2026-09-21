@@ -511,14 +511,7 @@ if __name__ == "__main__":
     if args.fraction is None: # do the normal prestage setup
         total_events = 0
 
-        # Per-run code provenance, computed once and stamped onto every sample
-        # this run touches (NOT a single top-level JSON key: merge_with_existing_json_dict
-        # does a plain dict.update, so a top-level block would get silently
-        # overwritten by the next incremental run and misattribute every
-        # sample already in the file to the wrong commit/diff). Written under
-        # a run-unique subdirectory of prestage_output so concurrent/successive
-        # runs (different years, or --sync vs not) never clobber each other's
-        # git_diff.patch.
+        # Save some metadata
         run_timestamp = time.strftime("%Y%m%d_%H%M%S")
         provenance_rel_dir = os.path.join(
             "_provenance",
@@ -698,18 +691,10 @@ if __name__ == "__main__":
                 "sumGenWgts" : None,
                 "nGenEvts" : None,
                 "data_entries" : None,
-                # Files actually queried for this sample (DAS/eos paths from the
-                # dataset YAML, "None" placeholder entries excluded) and file-count
-                # bookkeeping around --skipBadFiles, so a normalization discrepancy
-                # can be traced back to which/how many files were actually used.
                 "das_datasets" : das_datasets_used,
                 "n_files_requested" : n_files_requested,
                 "n_files_used" : len(fnames),
                 "bad_files" : bad_files,
-                # Code state for this run (git_diff.patch path is relative to
-                # args.prestage_output) -- see the run_provenance block above the
-                # sample loop for why this is per-sample rather than a single
-                # top-level JSON key.
                 "provenance" : run_provenance,
             }
             if is_data:  # data sample
