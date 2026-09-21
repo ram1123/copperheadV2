@@ -10,11 +10,8 @@ from modules.utils import logger
 # repo_root/modules/selection.py -> repo_root
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DNN_BINNING_YAML = REPO_ROOT / "configs" / "MVA" / "VBF" / "dnn_binning.yaml"
-# jj_eta_region names using both jet1 AND jet2 (only meaningful for njets>=2 --
-# jet2 is null for njets<2, so these silently evaluate False there, see
-# applyRegionCatCuts). Canonical source of truth for these names -- mirrored
-# (not imported, Snakemake reads it as plain CLI strings) in
-# workflow/Snakefile's PAIR_JJ_ETA_REGIONS.
+
+# jj_eta_region names using both jet1 AND jet2 (only meaningful for njets>=2
 PAIR_JJ_ETA_REGIONS = [
     "jj_both_central",
     "jj_non_central",
@@ -27,13 +24,7 @@ PAIR_JJ_ETA_REGIONS = [
     "jj_one_he_one_fwd30",
 ]
 
-# jj_eta_region names using jet1 alone, with njets==1 baked directly into the
-# mask (see applyRegionCatCuts) -- deliberately self-gating rather than
-# relying on the caller to also pass njets_selection="1", so combining one of
-# these with any other njets_selection can't silently return nonsense: it
-# either matches the njets==1 subset (njets_selection in ("inclusive", "1"))
-# or is provably empty (njets_selection in ("0", "2")). Canonical source of
-# truth, mirrored in workflow/Snakefile's SINGLE_JET_ETA_REGIONS.
+# jets eta region for njet==1
 SINGLE_JET_ETA_REGIONS = [
     "single_central",
     "single_fwd25",
@@ -84,7 +75,11 @@ def applyRegionCatCuts(
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
     year: str | None = None,
-    vbf_he_ptcut: float | None = None,
+    # Below two cuts:
+    # For applying pT cut on the HE/HF jets, it will affect the events migration from VBF to ggH. 
+    # But the jets properties of the ggH won't affect at all. 
+    # So, with this cut we should evaluate only the VBF events.
+    vbf_he_ptcut: float | None = None, 
     vbf_hf_ptcut: float | None = None,
 ):
     use_var = (
@@ -162,20 +157,10 @@ def applyRegionCatCuts(
         vbf_cut = ak.fill_none(vbf_cut, value=False)
 
         # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`
-        # itself (opt-in via vbf_he_ptcut/vbf_hf_ptcut, each independently
-        # None/off by default -- every other caller is unaffected). Placed
-        # here, before the category branch, so BOTH `category=="vbf"` (uses
-        # vbf_cut) and `category=="ggh"` (uses ~vbf_cut) see the tightened
-        # definition: an event whose jet1/jet2 pair no longer qualifies as
-        # VBF-quality falls back to ggH (if it clears ggH's own cuts) rather
-        # than being excluded from both.
-        # HE/HF boundaries match apply_jet_horn_ptcut / jetHorn_region in
-        # src/copperhead_processor.py's jet_loop: HE = 2.5 < |eta| <= 3.0,
-        # HF = |eta| > 3.0. Only jet1/jet2 (the pair that already defines
-        # jj_mass/jj_dEta/vbf_cut) are checked -- no jet reshuffling, so
-        # jj_mass etc. stay exactly as already computed. HE and HF thresholds
-        # are independent: set only vbf_he_ptcut for HE-only, only
-        # vbf_hf_ptcut for HF-only, or both for the combined cut.
+        # HE = 2.5 < |eta| <= 3.0, HF = |eta| > 3.0
+        # For applying pT cut on the HE/HF jets, it will affect the events migration from VBF to ggH. 
+        # But the jets properties of the ggH won't affect at all. 
+        # So, with this cut we should evaluate only the VBF events.        
         if vbf_he_ptcut is not None or vbf_hf_ptcut is not None:
             jet2_pt = varcol("jet2_pt")
             jet1_eta = varcol("jet1_eta")
@@ -251,9 +236,8 @@ def applyRegionCatCuts(
     #  jet-eta region selection (pair topology for njets>=2, single-jet
     #  topology for njets==1; a 0-jet event has nothing to region-split)
     # ---------------------------------------------------------
-    # A 0-jet selection can never satisfy any region mask (there are no jets
-    # to check |eta| on) -- reject rather than silently return an empty,
-    # confusing-looking selection.
+    # A 0-jet selection can never satisfy any region mask,
+    # reject rather than silently return an empty, confusing looking selection
     if njets_selection == "0" and jj_eta_region and jj_eta_region != "all":
         raise ValueError(
             f"jj_eta_region='{jj_eta_region}' is incompatible with njets_selection='0' "
@@ -292,12 +276,7 @@ def applyRegionCatCuts(
             a1 = abs(jet1_eta)
             a2 = abs(jet2_eta)
 
-            # basic regions -- boundaries deliberately half-open (<=/> ) so
-            # every |eta| value lands in exactly one of central/fwd25, and
-            # exactly one of he/fwd30 (an event with |eta| exactly 2.5 or 3.0
-            # -- rare but real, confirmed on data: 12/23692 single-jet
-            # ttjets_dl 2026 events sit exactly at 2.5 -- used to fall into
-            # neither bucket of either pair with the old strict <>/<> split).
+            # basic regions
             j1_c = a1 <= 2.5
             j2_c = a2 <= 2.5
 
@@ -310,11 +289,7 @@ def applyRegionCatCuts(
             j1_hf = a1 > 3.0
             j2_hf = a2 > 3.0
 
-            # njets==1 => jet1 is the one real jet (leading-pT slot, always
-            # filled first when any jet exists) and jet2 is null -- baked
-            # directly into the single-jet masks below so they're correct
-            # regardless of what njets_selection the caller passed (see
-            # SINGLE_JET_ETA_REGIONS docstring at the top of this module).
+            # njets==1 => jet1 is the one real jet
             is_single_jet = (njets == 1)
 
             masks = {
@@ -349,134 +324,6 @@ def applyRegionCatCuts(
 
     category_selection = prod_cat_cut & region
     events = events[category_selection]
-    return events
-
-
-def apply_jet_horn_ptcut(
-    events,
-    he_pt_cut: float | None = None,
-    hf_pt_cut: float | None = None,
-    variation: str = "nominal",
-    max_jet_slots: int = 4,
-):
-    """
-    Post-hoc HE/HF forward-jet pT mitigation cut, for validating stage-1 output
-    that was produced with a looser jet pT threshold than the official JME
-    mitigation (see the jme-horn-region-official-recommendation notes) --
-    without needing to rerun stage-1.
-
-    Regions (matching `jetHorn_region` in src/copperhead_processor.py's
-    jet_loop, and the HE/HF split from the JME "Mitigation techniques" slide):
-      HE: 2.5 < |eta| <= 3.0
-      HF: |eta| > 3.0
-    A jet in one of these regions with pt below the corresponding threshold is
-    treated as if it had not passed the jet selection at all; jets with
-    |eta| <= 2.5 are never affected. Passing `None` for a threshold disables
-    the cut for that region (e.g. he_pt_cut=50, hf_pt_cut=None applies the cut
-    to HE only).
-
-    Scope / what this does NOT do: stage-1 only ever saves the leading 2 (or 4,
-    if `save_four_jets_kinematics` was on) jets as flat jet1..jet4 columns, not
-    the full per-event jet collection. So a jet beyond the saved slots that
-    would have been promoted into jet1..jet4 after this cut can't be recovered
-    -- `njets_{variation}` is decremented by however many of the *saved* slots
-    got cut, which undercounts the true effect for events with more real jets
-    than saved slots. Only jet{i}_pt/eta/phi/mass and njets are remapped;
-    everything derived from the original jet1/jet2 pairing (jj_mass, jj_dEta,
-    zeppenfeld, mmj_*_dEta/dPhi/dR, rpt, pt_centrality, puId, rapidity, ...) is
-    left untouched and will still reflect the pre-cut jet1/jet2 identities --
-    treat pairwise/topology variables as stale/approximate when this is used.
-
-    Parameters
-    ----------
-    events : awkward.Array or dask_awkward.Array
-        Loaded stage-1/compacted ntuple.
-    he_pt_cut, hf_pt_cut : float or None
-        pT threshold (GeV) for the HE / HF region; None disables that region's cut.
-    variation : str
-        Column suffix to operate on (only "nominal" is meaningful for most
-        validation-plotting use cases, since jet1_pt_nominal etc. is what's loaded).
-    max_jet_slots : int
-        Highest jet slot to consider (1-4); slots whose pt/eta columns aren't
-        present in `events.fields` are skipped.
-
-    Returns
-    -------
-    Same type as `events`, with jet{i}_pt/eta/phi/mass_{variation} and
-    njets_{variation} replaced by the post-cut, re-compacted values.
-    """
-    if he_pt_cut is None and hf_pt_cut is None:
-        return events  # no-op
-
-    slots = [
-        i for i in range(1, max_jet_slots + 1)
-        if f"jet{i}_pt_{variation}" in events.fields and f"jet{i}_eta_{variation}" in events.fields
-    ]
-    if not slots:
-        raise KeyError(
-            f"apply_jet_horn_ptcut: no jet{{i}}_pt_{variation}/jet{{i}}_eta_{variation} "
-            "columns found in events.fields."
-        )
-
-    # attributes to remap in lockstep with pt/eta wherever they were saved for
-    # every considered slot (see jet_loop's unconditional jet1/jet2 + gated
-    # jet3/jet4 kinematics block in src/copperhead_processor.py)
-    extra_attrs = [
-        a for a in ("phi", "mass")
-        if all(f"jet{i}_{a}_{variation}" in events.fields for i in slots)
-    ]
-
-    # -999.0 sentinel for "no jet in this slot" -- robust to either an awkward
-    # None (padded slot) or a bare NaN surviving the parquet round-trip, since
-    # both compare False against `> -900` below.
-    def col(name):
-        return ak.fill_none(events[name], -999.0)
-
-    pt_per_slot = {i: col(f"jet{i}_pt_{variation}") for i in slots}
-    eta_per_slot = {i: col(f"jet{i}_eta_{variation}") for i in slots}
-    extra_per_slot = {
-        a: {i: col(f"jet{i}_{a}_{variation}") for i in slots} for a in extra_attrs
-    }
-
-    has_jet = {i: pt_per_slot[i] > -900.0 for i in slots}
-    fails_cut = {}
-    for i in slots:
-        abs_eta = abs(eta_per_slot[i])
-        in_he = (abs_eta > 2.5) & (abs_eta <= 3.0)
-        in_hf = abs_eta > 3.0
-        fail_he = (in_he & (pt_per_slot[i] < he_pt_cut)) if he_pt_cut is not None else (in_he & False)
-        fail_hf = (in_hf & (pt_per_slot[i] < hf_pt_cut)) if hf_pt_cut is not None else (in_hf & False)
-        fails_cut[i] = has_jet[i] & (fail_he | fail_hf)
-    passes = {i: has_jet[i] & ~fails_cut[i] for i in slots}
-
-    # stack slots into a jagged (nevents, n_slots) array, drop the failing
-    # entries per event (this compacts the survivors, preserving pT-descending
-    # order since we're only ever removing entries from an already-sorted
-    # list), then pad back out to a fixed number of columns.
-    n_slots = len(slots)
-
-    def stack(per_slot_dict):
-        # ak.concatenate(axis=1) here produces a *regular* (fixed-size) typed
-        # array; boolean-masking a regular array with a same-shaped regular
-        # mask uses numpy's flat semantics (global flatten) instead of the
-        # per-event jagged compaction we need, so force it to `var` type.
-        regular = ak.concatenate([per_slot_dict[i][:, None] for i in slots], axis=1)
-        return ak.from_regular(regular, axis=1)
-
-    pass_stack = stack(passes)
-    fail_stack = stack(fails_cut)
-
-    n_dropped = ak.sum(fail_stack, axis=1)
-    njets_col = f"njets_{variation}"
-    if njets_col in events.fields:
-        events[njets_col] = events[njets_col] - n_dropped
-
-    for attr, per_slot in {"pt": pt_per_slot, "eta": eta_per_slot, **extra_per_slot}.items():
-        stacked = stack(per_slot)
-        compacted = ak.pad_none(stacked[pass_stack], target=n_slots, axis=1)
-        for new_idx, orig_i in enumerate(slots):
-            events[f"jet{orig_i}_{attr}_{variation}"] = ak.fill_none(compacted[:, new_idx], -999.0)
-
     return events
 
 
@@ -745,8 +592,39 @@ binning_DNN_HIG19006 = np.array([
     2.8,
 ])
 
-# binning = binning_HPScan_21bins
-# binning = binning_HPScan_13bins
-# binning = binning_HPScan_17bins
-# binning = binning_based_on_significanceScan
-binning = binning_based_on_significanceScanV2  # 17 bins; one used for September 25, 2025 HiggsMuMu working group meeting.
+
+# ------------------------------------------------------------------
+# Active DNN binning.
+# Derived by MVA_training/VBF_run3/scan_bins_for_dnn.py and persisted to
+# configs/MVA/VBF/dnn_binning.yaml, so re-running the significance scan
+# updates the binning here without editing this file. The overhead on the
+# upper-most edge is already baked into the YAML.
+# ------------------------------------------------------------------
+def load_dnn_binning(path=DNN_BINNING_YAML):
+    """
+    Load the VBF DNN bin edges from the YAML config.
+
+    Parameters:
+    - path: YAML file holding an `edges` list (see scan_bins_for_dnn.py)
+    Returns:
+    - edges: np.ndarray of strictly increasing bin edges
+    """
+    path = Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"DNN binning config not found: {path}. "
+            "Generate it by running MVA_training/VBF_run3/scan_bins_for_dnn.py."
+        )
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+
+    edges = cfg.get("edges")
+    if edges is None or len(edges) < 2:
+        raise ValueError(f"'edges' is missing or has fewer than 2 entries in {path}")
+    edges = np.asarray(edges, dtype=float)
+    if np.any(np.diff(edges) <= 0):
+        raise ValueError(f"'edges' in {path} must be strictly increasing: {edges}")
+    return edges
+
+
+binning = load_dnn_binning()
