@@ -6,6 +6,10 @@ from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 from modules.utils import logger
 
 
+def _is_missing_category_error(err):
+    return isinstance(err, IndexError) and "Index not available in Category" in str(err)
+
+
 def _evaluate_nom_up_down(corr, eta, pt):
     """
     Evaluate nominal/systup/systdown for a correctionlib SF, tolerating a
@@ -22,12 +26,16 @@ def _evaluate_nom_up_down(corr, eta, pt):
     try:
         up = corr.evaluate(eta, pt, "systup")
     except Exception as err:
+        if not _is_missing_category_error(err):
+            raise
         logger.warning(f"correctionlib systup evaluation failed, will mirror systdown: {err}")
         up = None
 
     try:
         down = corr.evaluate(eta, pt, "systdown")
     except Exception as err:
+        if not _is_missing_category_error(err):
+            raise
         logger.warning(f"correctionlib systdown evaluation failed, will mirror systup: {err}")
         down = None
 
