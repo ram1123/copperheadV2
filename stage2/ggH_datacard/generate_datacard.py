@@ -248,10 +248,9 @@ pdf_Higgs_qq     lnN     -            1.021        -
         lines.append("lumi_13p6TeV_23_24    lnN     1.0068      1.0068      -")
         lines.append("lumi_13p6TeV_uncorr   lnN     1.0144      1.0144      -")
     else:
-        logger.warning(
-            f"No luminosity systematic defined for year '{year}' in buildDataCard() -- no "
-            "official CMS LUM value exists yet. Omitting the lumi lnN line; treat this datacard "
-            "as missing its luminosity systematic until an official value is published."
+        raise ValueError(
+            f"No luminosity systematic defined for year '{year}'; refusing to build a "
+            "datacard without the luminosity nuisance."
         )
 
     for u in nuisances:
