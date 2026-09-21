@@ -30,6 +30,10 @@ JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_analysis_pipeline.sh \
   -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 23 -k
 
 
+JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_stats_pipeline_VBF.sh \
+  -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 \
+  -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics \
+  -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 9 -k
 ```
 
 # 23 Aug 2026

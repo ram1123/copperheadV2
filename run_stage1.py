@@ -99,6 +99,12 @@ def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=N
     Returns True if it should run, False if it should be skipped.
     """
 
+    # --sync runs read a dedicated small sample list (*_sync.json); the
+    # production run/skip lists in configs/skip_stage1_run.py don't apply to
+    # it.
+    if args.sync:
+        return True
+
     # If explicit run-list is provided → highest priority
     if samples_to_run:
         return dataset in samples_to_run

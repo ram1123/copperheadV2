@@ -76,6 +76,7 @@ for year in "${years[@]}"; do
         -m 1 \
         -z \
         -Z \
+        -w "$switches_file" \
         -S "$output_root"
 
     year_root="${output_root}/${label}/stage1_output/${year}"

@@ -82,7 +82,6 @@ jobs:
 
       - name: Apply CI-only switch overrides
         run: |
-          cp configs/parameters/switches.yaml configs/parameters/switches.yaml.bak
           cp test/reference/switches.yaml configs/parameters/switches.yaml
 
       # STEP-1: Get the stage-1 output
@@ -100,6 +99,7 @@ jobs:
               -m 1 \
               -z \
               -Z \
+              -w configs/parameters/switches.yaml \
               -S test/output
           '
 
@@ -130,7 +130,7 @@ jobs:
 
             case "${{ matrix.year }}" in
               2017)
-                data_sample="data_D"
+                data_sample="data_B"
                 dy_sample="dy_M-50_aMCatNLO"
                 ;;
               2022preEE)
