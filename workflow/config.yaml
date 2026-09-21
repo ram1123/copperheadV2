@@ -68,18 +68,18 @@ run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics"
 # Optional standalone switches yaml, stage-1 only (see run_stage1.py's
 # --switches-yaml / src/lib/get_parameters.py). Pins the `stage1` rule to a
 # named, independent switches configuration -- e.g.
-# configs/parameters/switches_official.yaml -- instead of whatever
-# configs/parameters/switches_official.yaml currently says, so you don't have to edit
+# configs/switches/switches_official.yaml -- instead of whatever
+# configs/switches/switches_official.yaml currently says, so you don't have to edit
 # the shared file in place per run_tag. 
 # Can also be set per-invocation without editing this file:
-#   snakemake ... --config switches_yaml=configs/parameters/switches_official.yaml
+#   snakemake ... --config switches_yaml=configs/switches/switches_official.yaml
 
-# switches_yaml: configs/parameters/switches_official.yaml
-switches_yaml: configs/parameters/switches_official_systematics.yaml
+# switches_yaml: configs/switches/switches_official.yaml
+switches_yaml: configs/switches/switches_official_systematics.yaml
 
-# switches_yaml: configs/parameters/switches_JetPt25GeV.yaml
-# switches_yaml: configs/parameters/switches_JetPt25GeV_PUDNN.yaml
-# switches_yaml: configs/parameters/switches_official_Both_HEHF_50GeV.yaml
+# switches_yaml: configs/switches/switches_JetPt25GeV.yaml
+# switches_yaml: configs/switches/switches_JetPt25GeV_PUDNN.yaml
+# switches_yaml: configs/switches/switches_official_Both_HEHF_50GeV.yaml
 
 # dask gateway
 use_gateway: true
@@ -123,7 +123,8 @@ plot_njets_plots:
 # (ggh/nocat otherwise only produce the inclusive/"all" overview and don't
 # split by dijet-eta region -- see _jet_region_targets_for in the Snakefile).
 # Mirrors (not imported) modules/selection.py::PAIR_JJ_ETA_REGIONS.
-plot_jj_eta_regions: ["all"]
+# plot_jj_eta_regions: ["all"]
+plot_jj_eta_regions: ["all", "jj_both_central", "jj_both_fwd25", "jj_one_fwd25_one_central"]
 # plot_jj_eta_regions: ["all", "jj_both_central", "jj_non_central", "jj_one_fwd25_one_central", "jj_one_he_one_central", "jj_one_fwd30_one_central", "jj_both_fwd25", "jj_both_he", "jj_both_fwd30", "jj_one_he_one_fwd30"]
 
 # Single-jet dijet-eta topology options, used for the "1" (1j) bin of any
@@ -134,8 +135,8 @@ plot_single_jet_eta_regions: []
 # plot_single_jet_eta_regions: ["single_central", "single_fwd25", "single_he", "single_fwd30"]
 
 # Z-pT weighting variants to plot.
-plot_zpt_modes: ["withzpt"]
-# plot_zpt_modes: ["withzpt", "nozpt"]
+# plot_zpt_modes: ["withzpt"]
+plot_zpt_modes: ["withzpt", "nozpt"]
 
 # Variable-set size to plot.
 plot_var_sets: ["fullset"]

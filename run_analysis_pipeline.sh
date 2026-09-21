@@ -38,9 +38,9 @@ Options:
   -D    Add DNN score during the compact step. Default is off.
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 workflow.
   -w    Path to a standalone switches yaml (stage-1 only), e.g.
-        configs/parameters/switches_official.yaml, used instead of
-        configs/parameters/switches_official.yaml. 
-        Default: unset (falls back to configs/parameters/switches_official.yaml).
+        configs/switches/switches_official.yaml, used instead of
+        configs/switches/switches_official.yaml. 
+        Default: unset (falls back to configs/switches/switches_official.yaml).
 
 Env vars:
   MODEL_YEARS   Comma-separated years used to build the DNN model directory name

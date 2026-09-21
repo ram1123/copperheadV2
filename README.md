@@ -118,7 +118,7 @@ The per-sample survey these findings come from is
 `.agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md`.
 
 This is not caught automatically. The LHA-ID gate (`pdf_supported_lha_ids` in
-[configs/parameters/switches.yaml](configs/parameters/switches.yaml)) only checks *which*
+[configs/switches/switches.yaml](configs/switches/switches.yaml)) only checks *which*
 PDF set a sample stores, not whether its weights are usable, so it keeps PDFs enabled for
 all three. These samples were excluded by hand with `skip_sample: True` on 2026-09-14.
 

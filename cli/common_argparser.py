@@ -82,14 +82,12 @@ def build_common_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--switches-yaml",
         dest="switches_yaml",
-        default=None,
+        default="configs/switches/switches_official.yaml",
         action="store",
         help=(
-            "Path to a standalone switches yaml (same 'switches: {key: {year: value}}' "
-            "shape as configs/parameters/switches_official.yaml) to use instead of the one in "
-            "configs/parameters/ -- e.g. configs/parameters/switches_official.yaml. "
-            "Only consumed by run_stage1.py. Omit to keep the previous behavior "
-            "(configs/parameters/switches_official.yaml, picked up automatically)."
+            "Path to the switches yaml ('switches: {key: {year: value}}')."
+            "switches file is loaded per run."
+            "Only consumed by run_stage1.py."
         ),
     )
     parser.add_argument(

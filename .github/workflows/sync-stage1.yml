@@ -80,10 +80,6 @@ jobs:
         run: |
           mkdir -p test/output
 
-      - name: Apply CI-only switch overrides
-        run: |
-          cp test/reference/switches.yaml configs/parameters/switches.yaml
-
       # STEP-1: Get the stage-1 output
       - name: Run stage-1 sync sample
         run: |
@@ -99,7 +95,7 @@ jobs:
               -m 1 \
               -z \
               -Z \
-              -w configs/parameters/switches.yaml \
+              -w test/reference/switches.yaml \
               -S test/output
           '
 

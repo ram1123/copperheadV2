@@ -343,7 +343,7 @@ if __name__ == "__main__":
     else:
         yearForConfig = args.year
 
-    switches_source_path = args.switches_yaml or "configs/parameters/switches_official.yaml"
+    switches_source_path = args.switches_yaml
     logger.info(f"Switches yaml for this run: {switches_source_path}")
     config = getParametersForYr("./configs/parameters/", yearForConfig, switches_path=args.switches_yaml)
     logger.debug(f"stage1 config: {config}")

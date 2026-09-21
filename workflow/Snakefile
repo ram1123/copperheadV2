@@ -165,9 +165,9 @@ CLIDX  = str(config.get("cluster_index", 0))
 
 # Optional standalone switches yaml (see run_stage1.py --switches-yaml /
 # src/lib/get_parameters.py) for stage-1 only -- e.g.
-# "configs/parameters/switches_official.yaml", to pin the DAG's stage1 rule to
+# "configs/switches/switches_official.yaml", to pin the DAG's stage1 rule to
 # a named, independent switches configuration instead of whatever
-# configs/parameters/switches_official.yaml currently says. Unset/empty (default)
+# configs/switches/switches_official.yaml currently says. Unset/empty (default)
 # preserves prior behavior.
 SWITCHES_YAML = config.get("switches_yaml", None)
 

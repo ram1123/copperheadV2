@@ -89,11 +89,11 @@ change).
 ## `test/reference/switches_official.yaml` drifts out of sync with new required switch keys (fixed 2026-09-12)
 
 `test/reference/switches_official.yaml` is a separately-maintained, intentionally-frozen snapshot of
-`configs/parameters/switches_official.yaml` that `.github/workflows/sync-stage1.yml` (and
+`configs/switches/switches_official.yaml` that `.github/workflows/sync-stage1.yml` (and
 `scripts/update_sync_references.sh --use-reference-switches`) copies over the real config before
 running the sync sample, so CI's stage-1 output stays reproducible regardless of what production
 switches currently say. Problem: nothing keeps this snapshot's *set of keys* in sync as
-`configs/parameters/switches_official.yaml` gains new switches over time. `src/copperhead_processor.py` reads
+`configs/switches/switches_official.yaml` gains new switches over time. `src/copperhead_processor.py` reads
 some switches via a plain `self.config["switches"]["some_key"]` (no default) — if such a key is
 missing from the frozen snapshot, every sample crashes with a `KeyError` the moment
 `--use-reference-switches` is used, since that mode replaces the whole file rather than merging keys.
@@ -112,7 +112,7 @@ check for drift directly:
 
 ```python
 import yaml
-prod = yaml.safe_load(open("configs/parameters/switches_official.yaml"))["switches"]
+prod = yaml.safe_load(open("configs/switches/switches_official.yaml"))["switches"]
 ref = yaml.safe_load(open("test/reference/switches_official.yaml"))["switches"]
 print("missing from test/reference/switches_official.yaml:", sorted(set(prod) - set(ref)))
 ```

@@ -4,7 +4,7 @@ title: HemVetoRatio Calculation
 
 # Setup
 
-Set `do_HemVetoStudy` in `configs/parameters/switches_official.yaml` as `true` (it should false by default) and make sure `do_HemVeto` in `configs/parameters/switches_official.yaml` is also `true` (it should true by default).
+Set `do_HemVetoStudy` in `configs/switches/switches_official.yaml` as `true` (it should false by default) and make sure `do_HemVeto` in `configs/switches/switches_official.yaml` is also `true` (it should true by default).
 
 # Skimming
 
@@ -21,4 +21,4 @@ It should print the ratio value within the print statement `The proportion of 20
 
 # Cleanup
 
-Go back to `configs/parameters/switches_official.yaml` and set `do_HemVetoStudy` config back to `false.`
+Go back to `configs/switches/switches_official.yaml` and set `do_HemVetoStudy` config back to `false.`
