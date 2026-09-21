@@ -15,6 +15,10 @@
         "cumulative": 2002,
         "individual": 5412
     },
+    "PV_npvsGood": {
+        "cumulative": 2002,
+        "individual": 5420
+    },
     "muon_pT_roch": {
         "cumulative": 1975,
         "individual": 4543
@@ -39,29 +43,25 @@
         "cumulative": 1862,
         "individual": 3099
     },
-    "trigger_match": {
-        "cumulative": 1666,
-        "individual": 1675
-    },
-    "electron_veto": {
-        "cumulative": 1663,
-        "individual": 5415
-    },
-    "HemVeto": {
-        "cumulative": 1663,
-        "individual": 5420
-    },
-    "PV_npvsGood": {
-        "cumulative": 1663,
-        "individual": 5420
-    },
     "nmuons": {
-        "cumulative": 148,
+        "cumulative": 151,
         "individual": 160
     },
     "mm_charge": {
-        "cumulative": 148,
+        "cumulative": 151,
         "individual": 1294
+    },
+    "electron_veto": {
+        "cumulative": 151,
+        "individual": 5415
+    },
+    "HemVeto": {
+        "cumulative": 151,
+        "individual": 5420
+    },
+    "trigger_match": {
+        "cumulative": 148,
+        "individual": 1675
     },
     "dimuon_mass_window_76_106": {
         "cumulative": 131,
