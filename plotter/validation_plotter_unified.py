@@ -219,7 +219,7 @@ class ValidationHistProcessor(processor.ProcessorABC):
         for category in self.categories:
             templates = self.hist_templates_by_category[category]
             for njets in self.njets_options:
-                if category == "vbf" and njets != "inclusive":
+                if category == "vbf" and njets != "2":
                     continue
 
                 for region_name in self.regions:
@@ -755,11 +755,16 @@ def _run_validation_scope(
     force_rerun=False,
     plot_workers=None,
     force_compact=False,
+    combine_years=False,
 ):
     """
     Run one consolidated Dask pass (year x category x njets x zpt_option, all
     computed together) for a single fixed (jj_eta_region, vbf_filter_study,
     region_list) scope. `client` is None during a dry run.
+
+    combine_years=True sums every year's histograms together (per var/zpt_option/
+    region) into one plot per combo instead of one plot per year, saved under
+    year="*" (AllYear). Requires a uniform CM_energy across `years`.
 
     force_compact=True redoes compaction from scratch (see
     build_fileset_for_year/ensure_compacted) even if a compacted_path already
@@ -825,6 +830,7 @@ def _run_validation_scope(
     lumi_by_year = {}
     CM_energy_by_year = {}
     fileset = {}
+    fileset_by_year = {}
     for year in years:
         load_path = Path(str(load_path_template).format(year=year))
         year_ctx = resolve_year_context(
@@ -841,8 +847,11 @@ def _run_validation_scope(
             year, load_path, year_ctx["available_processes"], use_compacted,
             force_compact=force_compact,
         )
+        fileset_by_year[year] = {}
         for process, entry in year_fileset.items():
-            fileset[f"{year}{DATASET_SEPARATOR}{process}"] = entry
+            dataset_key = f"{year}{DATASET_SEPARATOR}{process}"
+            fileset[dataset_key] = entry
+            fileset_by_year[year][dataset_key] = entry
     logger.info(f"finished building fileset! ({len(fileset)} datasets across {len(years)} year(s))")
     _warn_missing_vars_once(fileset, variables2plot)
 
@@ -880,10 +889,10 @@ def _run_validation_scope(
     for category in categories:
         plot_settings = plot_settings_by_category[category]
         for njets in njets_options:
-            if category == "vbf" and njets != "inclusive":
+            if category == "vbf" and njets != "2":
                 continue
 
-            job_key = f"{scope_key}__category={category}__njets={njets}"
+            job_key = f"{scope_key}__category={category}__njets={njets}__combine_years={combine_years}"
 
             if not force_rerun and not jobstat.should_run(job_key, 0):
                 logger.info(f"[resume] skip {job_key} (done marker present); plots already on disk")
@@ -909,46 +918,104 @@ def _run_validation_scope(
                     jj_eta_region=jj_eta_region,
                     group_dict_by_year=group_dict_by_year,
                 )
-                results = run_validation_runner(fileset, processor_instance, client)
-
                 # Reduce eagerly across processes into one running total per
                 # (year, var), scoped to this sub-pass only -- discarded once its
                 # plots are generated below, not kept around for the whole scope.
                 sub_pass_hist_lookup = {year: {var: None for var in scoped_templates} for year in years}
-                for dataset_key, output in results.items():
-                    result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
-                    for var, h in output["hist_by_category_var"][category].items():
-                        slot = sub_pass_hist_lookup[result_year]
-                        if slot[var] is None:
-                            slot[var] = h
-                        else:
-                            slot[var] += h
+                if combine_years:
+                    # One Runner call per year instead of one call spanning every
+                    # year's fileset at once. If we call all year once then we see the memory issue.
+                    for year in years:
+                        year_results = run_validation_runner(fileset_by_year[year], processor_instance, client)
+                        for dataset_key, output in year_results.items():
+                            result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
+                            for var, h in output["hist_by_category_var"][category].items():
+                                slot = sub_pass_hist_lookup[result_year]
+                                if slot[var] is None:
+                                    slot[var] = h
+                                else:
+                                    slot[var] += h
+                else:
+                    results = run_validation_runner(fileset, processor_instance, client)
+                    for dataset_key, output in results.items():
+                        result_year, _process = dataset_key.split(DATASET_SEPARATOR, maxsplit=1)
+                        for var, h in output["hist_by_category_var"][category].items():
+                            slot = sub_pass_hist_lookup[result_year]
+                            if slot[var] is None:
+                                slot[var] = h
+                            else:
+                                slot[var] += h
 
                 logger.info(f"Generating plots for category={category} njets={njets}...")
-                combo_args_list = [
-                    (
-                        year,
-                        category,
-                        njets,
-                        zpt_option,
-                        region_name,
-                        var,
-                        sub_pass_hist_lookup[year].get(var),
-                        sample_groups,
-                        plot_settings,
-                        str(save_path),
-                        lumi_by_year[year],
-                        status,
-                        CM_energy_by_year[year],
-                        not linear_scale,
-                        do_vbf_filter_study,
-                        jj_eta_region,
-                    )
-                    for year in years
-                    for zpt_option in zpt_options
-                    for region_name in fill_regions
-                    for var in scoped_templates
-                ]
+                if combine_years:
+                    # One plot per (var, zpt_option, region) summed across every
+                    # year in `years` (year="*" -- see generate_combo_plots'
+                    # AllYear save-path branch) instead of one plot per year.
+                    combined_hist_lookup = {}
+                    for var in scoped_templates:
+                        combined = None
+                        for year in years:
+                            h = sub_pass_hist_lookup[year].get(var)
+                            if h is None:
+                                continue
+                            combined = h if combined is None else combined + h
+                        combined_hist_lookup[var] = combined
+                    combined_lumi = sum(lumi_by_year[year] for year in years)
+                    combined_CM_energies = {CM_energy_by_year[year] for year in years}
+                    if len(combined_CM_energies) > 1:
+                        raise ValueError(
+                            f"combine_years=True requires a uniform CM_energy across years, "
+                            f"got {combined_CM_energies} for years={years}"
+                        )
+                    combined_CM_energy = next(iter(combined_CM_energies))
+                    combo_args_list = [
+                        (
+                            "*",
+                            category,
+                            njets,
+                            zpt_option,
+                            region_name,
+                            var,
+                            combined_hist_lookup.get(var),
+                            sample_groups,
+                            plot_settings,
+                            str(save_path),
+                            combined_lumi,
+                            status,
+                            combined_CM_energy,
+                            not linear_scale,
+                            do_vbf_filter_study,
+                            jj_eta_region,
+                        )
+                        for zpt_option in zpt_options
+                        for region_name in fill_regions
+                        for var in scoped_templates
+                    ]
+                else:
+                    combo_args_list = [
+                        (
+                            year,
+                            category,
+                            njets,
+                            zpt_option,
+                            region_name,
+                            var,
+                            sub_pass_hist_lookup[year].get(var),
+                            sample_groups,
+                            plot_settings,
+                            str(save_path),
+                            lumi_by_year[year],
+                            status,
+                            CM_energy_by_year[year],
+                            not linear_scale,
+                            do_vbf_filter_study,
+                            jj_eta_region,
+                        )
+                        for year in years
+                        for zpt_option in zpt_options
+                        for region_name in fill_regions
+                        for var in scoped_templates
+                    ]
                 sub_pass_plots += len(combo_args_list)
                 _render_combo_plots_parallel(combo_args_list, max_workers=plot_workers)
             except Exception as exc:
@@ -987,6 +1054,7 @@ def run_bulk_validation(
     force_rerun=False,
     plot_workers=None,
     force_compact=False,
+    combine_years=False,
 ):
     """
     Run the full validation-plot sweep: every (jj_eta_region, vbf_filter_study,
@@ -1043,6 +1111,7 @@ def run_bulk_validation(
             force_rerun=force_rerun,
             plot_workers=plot_workers,
             force_compact=force_compact,
+            combine_years=combine_years,
         )
 
     if not dry_run:
@@ -1398,7 +1467,7 @@ if __name__ == "__main__":
         for year in years
         for category in categories
         for njets in njets_options
-        if not (category == "vbf" and njets != "inclusive")
+        if not (category == "vbf" and njets != "2")
         for zpt_option in zpt_options
         for region_name in args.regions
         for var in hist_templates_by_category[category]
