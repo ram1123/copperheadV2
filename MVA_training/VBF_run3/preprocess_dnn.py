@@ -577,6 +577,20 @@ def make_output_dir(
     return str(out)
 
 
+def preprocess_output_is_complete(out_dir: str, n_folds: int) -> bool:
+    """
+    True if `out_dir` already holds a complete, successful preprocess_dnn.py
+    """
+    out = Path(out_dir)
+    if not (out / "preprocess_manifest.json").exists():
+        return False
+    for split in ("train", "validation", "evaluation"):
+        for i in range(n_folds):
+            if not (out / f"data_df_{split}_{i}.parquet").exists():
+                return False
+    return True
+
+
 def save_feature_list(save_dir: str, features: List[str]) -> None:
     with open(os.path.join(save_dir, "training_features.pkl"), "wb") as f:
         pickle.dump(features, f)
@@ -1224,7 +1238,7 @@ def build_argparser() -> argparse.ArgumentParser:
         "--include-systematic-variations",
         action="store_true",
         help=(
-            "Additionally write, per training feature, the resolved shape-variation "
+            "For systematic aware DNN training. Additionally write, per training feature, the resolved shape-variation "
             "columns for every discovered up/down variation, plus a manifest entry "
             "listing them. Off by default; the nominal-only output is byte-identical "
             "to before when this is not passed."
@@ -1260,6 +1274,14 @@ def build_argparser() -> argparse.ArgumentParser:
             "inside applyRegionCatCuts."
         ),
     )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Re-run preprocessing even if the target output directory already has a "
+            "complete result"
+        ),
+    )
     return p
 
 
@@ -1267,7 +1289,6 @@ def main() -> None:
     args = build_argparser().parse_args()
     logger.setLevel(args.log_level)
 
-    client = get_dask_client(args.use_dask_gateway, cluster_index=args.cluster_index)
     cfg = load_config(args.config)
     if args.category is not None:
         object.__setattr__(
@@ -1296,6 +1317,27 @@ def main() -> None:
         "[main] category=%s region=%s jj_eta_region=%s years=%s",
         cfg.category, cfg.region, cfg.jj_eta_region, args.years,
     )
+
+    # If the exact preprocess output already exists and is complete -- unless
+    # --include-systematic-variations is requested, whose own (pre-existing) guard
+    # right below handles that combination by refusing rather than skipping (mixing
+    # nominal-only and variation-augmented output under one tag is a different,
+    # more consequential failure mode than "nothing to do").
+    if (
+        not args.force
+        and not args.include_systematic_variations
+        and preprocess_output_is_complete(out_dir, cfg.n_folds)
+    ):
+        logger.info(
+            "[main] Complete output already found in %s (preprocess_manifest.json + "
+            "all %d folds' parquets present) -- skipping preprocessing. Pass --force "
+            "to re-run anyway.",
+            out_dir,
+            cfg.n_folds,
+        )
+        return
+
+    client = get_dask_client(args.use_dask_gateway, cluster_index=args.cluster_index)
 
     if args.include_systematic_variations:
         existing = sorted(Path(out_dir).glob("data_df_train_*.parquet"))

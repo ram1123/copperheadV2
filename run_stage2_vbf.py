@@ -387,7 +387,6 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         # Per-era `divide_dy_into_matched_jets`; one stage2 run can span several eras,
         # so the switch is resolved per dataset in process(), not here.
         self.divide_dy_by_year = divide_dy_by_year
-        self.divide_dy_into_matched_jets = divide_dy_into_matched_jets
         self.jj_eta_region = jj_eta_region
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
