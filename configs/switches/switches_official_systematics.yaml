@@ -441,6 +441,20 @@ switches:
         "2024": [306000, 325300]
         "2025": [306000, 325300]
         "2026": [306000, 325300]
+    # Samples whose LHEPdfWeight branch title claims a supported LHA-ID range
+    # (above) but whose actual per-event content is empty/corrupt
+    pdf_excluded_samples:
+        '2016preVFP': [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        '2016postVFP': [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        '2017': [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        '2018': [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        '2022preEE': [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        '2022postEE': [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        "2023": [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        "2023BPix": [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        "2024": [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        "2025": [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
+        "2026": [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q,st_tchannel]
     do_THU:
         '2016preVFP': true
         '2016postVFP': true

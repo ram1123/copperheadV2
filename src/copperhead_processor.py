@@ -1940,11 +1940,18 @@ class EventProcessor(processor.ProcessorABC):
                     f"{dataset} ({year}): LHEPdfWeight title carries no LHA ID range, "
                     f"so PDF members are set to unity"
                 )
+            pdf_excluded_samples = self.config["switches"].get("pdf_excluded_samples", [])
+            if dataset in pdf_excluded_samples:
+                logger.warning(
+                    f"{dataset} ({year}): listed in pdf_excluded_samples, "
+                    f"so PDF members are set to unity"
+                )
             do_pdf = (
                 self.config["switches"]["do_pdf"]
                 and ("nominal" in pt_variations)
                 and pdf_lha_ids is not None
                 and pdf_lha_ids[0] in self.config["switches"]["pdf_supported_lha_ids"]
+                and dataset not in pdf_excluded_samples
             )
             # The 100 eigenvector members are carried to stage3 as separate weight
             if do_pdf:
