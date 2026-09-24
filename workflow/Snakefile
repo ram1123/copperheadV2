@@ -177,6 +177,12 @@ ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
 ZPT_BATCH = int(ZPT.get("batch", 65536))
 
 
+onstart:
+    if USE_GW:
+        print("use_gateway=True -- (re)creating the Dask Gateway cluster before the DAG runs")
+        shell("python scripts/manage_dask.py --recreate")
+
+
 def gw_flags():
     return f"-k -i {CLIDX}" if USE_GW else ""
 
@@ -437,6 +443,227 @@ rule pu_dnn_train:
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
         """
+
+
+# ---------------------------------------
+# 2c) VBF-category DNN (preprocess -> HPO -> train). Combines all years in
+# DNN_YEARS into one invocation each (mirrors run_dnn_workflow_once in
+# common_workflow.sh, which is keyed off -y's full year list, not a single
+# year) -- so these rules carry no {year} wildcard. Not wired into `rule all`
+# (see rule vbf_dnn below): training a new VBF DNN is a deliberate step, not
+# something that should fire as a side effect of a routine stage1/plot run.
+# Request explicitly, e.g.:
+#   snakemake -s workflow/Snakefile state/<run_tag>/dnn_train.done
+# ---------------------------------------
+DNN_CONFIG = config.get("dnn_config", "configs/dnn_run3_vbf.yaml")
+DNN_YEARS = config.get("dnn_years", YEARS)
+DNN_YEARS_CSV = ",".join(DNN_YEARS)
+DNN_JJ_ETA_REGION = config.get("dnn_jj_eta_region", None)
+
+
+def dnn_env_flags():
+    return f"JJ_ETA_REGION={DNN_JJ_ETA_REGION} " if DNN_JJ_ETA_REGION else ""
+
+
+rule dnn_pre:
+    input:
+        expand(STATEDIR + "/stage1_compact_{year}.done", year=DNN_YEARS),
+    output:
+        done=STATEDIR + "/dnn_pre.done",
+    log:
+        LOGDIR + "/dnn_pre.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        env=dnn_env_flags(),
+        config=DNN_CONFIG,
+        years=DNN_YEARS_CSV,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.env}DNN_CONFIG={params.config} PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -y "{params.years}" \
+            -m dnn_pre \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule dnn_hpo:
+    input:
+        STATEDIR + "/dnn_pre.done",
+    output:
+        done=STATEDIR + "/dnn_hpo.done",
+    log:
+        LOGDIR + "/dnn_hpo.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        env=dnn_env_flags(),
+        config=DNN_CONFIG,
+        years=DNN_YEARS_CSV,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.env}DNN_CONFIG={params.config} PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -y "{params.years}" \
+            -m dnn_hpo \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule dnn_train:
+    input:
+        STATEDIR + "/dnn_hpo.done",
+    output:
+        done=STATEDIR + "/dnn_train.done",
+    log:
+        LOGDIR + "/dnn_train.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        env=dnn_env_flags(),
+        config=DNN_CONFIG,
+        years=DNN_YEARS_CSV,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.env}DNN_CONFIG={params.config} PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -y "{params.years}" \
+            -m dnn_train \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule vbf_dnn:
+    input:
+        STATEDIR + "/dnn_train.done",
+
+
+# ---------------------------------------
+# 2d) Stage-2 / Stage-3 (per year, after stage1Compact). stage2 always loads
+# the VBF DNN model (see build_stage2_cmd's --model_tag/--model_path in
+# common_workflow.sh), so it depends on dnn_train having produced one -- not
+# wired into `rule all`/`all_stage1` for the same reason as dnn_train above.
+# Request explicitly, e.g.:
+#   snakemake -s workflow/Snakefile state/<run_tag>/stage3_2022preEE.done
+# ---------------------------------------
+rule stage2:
+    input:
+        STATEDIR + "/stage1_compact_{year}.done",
+        STATEDIR + "/dnn_train.done",
+    output:
+        done=STATEDIR + "/stage2_{year}.done",
+    log:
+        LOGDIR + "/stage2_{year}.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        nano=lambda wc: nano_for_year(wc.year),
+        yaml=lambda wc: yaml_for_year(wc.year),
+        label=lambda wc: label_for_year(wc.year),
+        gw=lambda wc: gw_flags(),
+    resources:
+        gateway=1,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -c {params.yaml} \
+            -v {params.nano} \
+            -l {params.label} \
+            -y "{wildcards.year}" \
+            -m 2 \
+            {params.gw} \
+            > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule stage2_plot:
+    input:
+        STATEDIR + "/stage2_{year}.done",
+    output:
+        done=STATEDIR + "/stage2_plot_{year}.done",
+    log:
+        LOGDIR + "/stage2_plot_{year}.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        nano=lambda wc: nano_for_year(wc.year),
+        yaml=lambda wc: yaml_for_year(wc.year),
+        label=lambda wc: label_for_year(wc.year),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -c {params.yaml} \
+            -v {params.nano} \
+            -l {params.label} \
+            -y "{wildcards.year}" \
+            -m 2p \
+            > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule stage3:
+    input:
+        STATEDIR + "/stage2_{year}.done",
+    output:
+        done=STATEDIR + "/stage3_{year}.done",
+    log:
+        LOGDIR + "/stage3_{year}.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        nano=lambda wc: nano_for_year(wc.year),
+        yaml=lambda wc: yaml_for_year(wc.year),
+        label=lambda wc: label_for_year(wc.year),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -c {params.yaml} \
+            -v {params.nano} \
+            -l {params.label} \
+            -y "{wildcards.year}" \
+            -m 3 \
+            > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule stage23_all:
+    input:
+        expand(STATEDIR + "/stage2_plot_{year}.done", year=YEARS),
+        expand(STATEDIR + "/stage3_{year}.done", year=YEARS),
 
 
 # ---------------------------------------
