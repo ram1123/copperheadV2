@@ -1,7 +1,6 @@
 # filesystem base for hmm area
 hmm_base: /work/projects/hmm
 # hmm_base: /depot/cms/hmm
-
 #  pattern of output folder:
 # load_path=lambda wc: (
 #     f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/"
@@ -9,12 +8,19 @@ hmm_base: /work/projects/hmm
 # )
 
 # what to run
-years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+# years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
+# years: ["2022preEE", "2022postEE", "2023BPix", "2024"]
 # years: ["2022preEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE"]
 # years: ["2022preEE"]
 # years: ["2022postEE"]
+# years: ["2024", "2025", "2026"]
 # years: ["2024"]
+# years: ["2025"]
+# years: ["2024", "2025"]
 # years: ["2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2016preVFP", "2016postVFP", "2017", "2018"]
 # run_tag: "FilterJetsHorn30GeV_Feb23_tightPassLepVeto_NoJER_AddVars_v2"
@@ -35,14 +41,113 @@ years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # run_tag: "test_14apr"
 
 
-run_tag: "FilterJets_May14_PySR07MayV2"
+# run_tag: "FilterJets_May14_PySR07MayV2"
+
+# run_tag: "FilterJets_June02_tightPassLepVeto_NoJER_coffea_latest"
+
+# run_tag: "FilterJets_May08_tightPassLepVeto_NoJER"
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN"
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE"
+
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024_Syst"
+# run_tag: "FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024"
+
+# run_tag: "FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets_Syst"
+# run_tag: "FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets"
+
+# run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_AddHE50"
+# run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation"
+# run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_DYReRun"
+run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics"
+
+# run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_MuonID-tightId"
+# run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV"
+# run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN"
+# run_tag: "test"
+
+# Optional standalone switches yaml, stage-1 only (see run_stage1.py's
+# --switches-yaml / src/lib/get_parameters.py). Pins the `stage1` rule to a
+# named, independent switches configuration -- e.g.
+# configs/switches/switches_official.yaml -- instead of whatever
+# configs/switches/switches_official.yaml currently says, so you don't have to edit
+# the shared file in place per run_tag. 
+# Can also be set per-invocation without editing this file:
+#   snakemake ... --config switches_yaml=configs/switches/switches_official.yaml
+
+# switches_yaml: configs/switches/switches_official.yaml
+switches_yaml: configs/switches/switches_official_systematics.yaml
+
+# switches_yaml: configs/switches/switches_JetPt25GeV.yaml
+# switches_yaml: configs/switches/switches_JetPt25GeV_PUDNN.yaml
+# switches_yaml: configs/switches/switches_official_Both_HEHF_50GeV.yaml
 
 # dask gateway
 use_gateway: true
 cluster_index: 0
 
+# Delete the raw stage-1 f1_0 output for a year once its compacted output has
+# been written AND validated by scripts/compact_sanity_check.py (row/size
+# checks passing). Off by default since this is irreversible; f1_0 is kept
+# forever otherwise (compaction never deletes it on its own). Only takes
+# effect for the Snakemake-driven stage1Compact rule.
+cleanup_f1_0_after_compact: false
+
 # plotting workflow
-plot_vbf_filter_study: false
+plot_vbf_filter_study: true
+
+# Categories to generate validation plots for (subset of "nocat"/"vbf"/"ggh").
+# "nocat" = fully inclusive (no VBF/ggH/btag category cut, just the mass-region
+# selection) -- see modules/selection.py's prod_cat_cut for "nocat" vs "vbf"/"ggh".
+plot_categories: ["vbf", "ggh"]
+# plot_categories: ["nocat", "vbf", "ggh"]
+# plot_categories: ["vbf"]
+# plot_categories: ["nocat"]   # inclusive plots only, no vbf/ggh categorization
+
+# Which njets_plot bins to produce, per non-vbf category (vbf is always
+# njets>=2 by construction, not configurable here -- see plot_jj_eta_regions).
+# Each value is a list drawn from "inclusive"/"0"/"1"/"2" ("2" = >=2 jets).
+# A category listed in plot_categories but absent from this map defaults to
+# ["inclusive"] (a single inclusive overview plot -- the historical default).
+plot_njets_plots:
+  vbf: ["inclusive"]
+  ggh: ["inclusive"]
+  nocat: ["inclusive"]
+# plot_njets_plots:
+#   ggh: ["0"]                    # only the zero-jet bin
+#   ggh: ["inclusive"]            # only the plain inclusive overview
+#   ggh: ["0", "1", "2"]          # full njets multiplicity split, no inclusive overview
+#   ggh: ["inclusive", "0", "1", "2"]   # overview plus the full split
+
+# Two-jet (pair) dijet-eta topology options, used for vbf's njets>=2 plots,
+# and for the "2" (>=2j) bin of any category's plot_njets_plots above
+# (ggh/nocat otherwise only produce the inclusive/"all" overview and don't
+# split by dijet-eta region -- see _jet_region_targets_for in the Snakefile).
+# Mirrors (not imported) modules/selection.py::PAIR_JJ_ETA_REGIONS.
+# plot_jj_eta_regions: ["all"]
+plot_jj_eta_regions: ["all", "jj_both_central", "jj_both_fwd25", "jj_one_fwd25_one_central"]
+# plot_jj_eta_regions: ["all", "jj_both_central", "jj_non_central", "jj_one_fwd25_one_central", "jj_one_he_one_central", "jj_one_fwd30_one_central", "jj_both_fwd25", "jj_both_he", "jj_both_fwd30", "jj_one_he_one_fwd30"]
+
+# Single-jet dijet-eta topology options, used for the "1" (1j) bin of any
+# category's plot_njets_plots above (otherwise unused). Empty means the 1j
+# bin gets a single "all"-region plot instead of a region split. Mirrors
+# modules/selection.py::SINGLE_JET_ETA_REGIONS.
+plot_single_jet_eta_regions: []
+# plot_single_jet_eta_regions: ["single_central", "single_fwd25", "single_he", "single_fwd30"]
+
+# Z-pT weighting variants to plot.
+# plot_zpt_modes: ["withzpt"]
+plot_zpt_modes: ["withzpt", "nozpt"]
+
+# Variable-set size to plot.
+plot_var_sets: ["fullset"]
+# plot_var_sets: ["minset", "fullset"]
+
+# Suffix appended to the plot output directory name (label_for_year(year) +
+# suffix). Change this when rerunning the plotter under the same run_tag with
+# different settings, so it writes to a separate directory instead of
+# overwriting the main run's plots. "" writes directly to label_for_year(year)/.
+# plot_output_suffix: "_DY_ReRun"
+plot_output_suffix: ""
 
 # zpt DNN
 zpt:

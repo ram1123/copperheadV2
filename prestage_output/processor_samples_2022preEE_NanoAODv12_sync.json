@@ -1,5 +1,6 @@
 {
   "data_D": {
+    "compressed_form": null,
     "files": {
       "test/data/eos/purdue/store/data/Run2022D/Muon/NANOAOD/16Dec2023-v1/50000/d41f592b-ea76-4743-9614-6e00d1c7ac87_1000.root": {
         "num_entries": 1000,
@@ -13,18 +14,31 @@
         "uuid": "eb0c4dfa-1f9e-11f1-89fd-f20a050abeef"
       }
     },
-    "form": null,
     "metadata": {
+      "bad_files": [],
+      "das_datasets": [
+        "test/data/eos/purdue/store/data/Run2022D/Muon/NANOAOD/16Dec2023-v1/50000/"
+      ],
       "data_entries": 1000,
       "dataset": "data_D",
       "fraction": 1.0,
       "is_mc": false,
       "nGenEvts": null,
+      "n_files_requested": 1,
+      "n_files_used": 1,
       "original_fraction": 1.0,
-      "sumGenWgts": null
+      "provenance": {
+        "commit": "3b6e328a805ff08d11999840358ba341092a0c6c",
+        "diff_file": "_provenance/2022preEE_NanoAODv12_sync_20260921_183808/git_diff.patch",
+        "dirty": true,
+        "timestamp": "20260921_183808"
+      },
+      "sumGenWgts": null,
+      "sumLHEPdfWgts": null
     }
   },
   "dyTo2L_M-50_incl": {
+    "compressed_form": null,
     "files": {
       "test/data/eos/purdue/store/mc/Run3Summer22NanoAODv12/DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/50000/a181e806-b4fa-4d45-b308-bada1b9754f3.root": {
         "num_entries": 699,
@@ -38,14 +52,25 @@
         "uuid": "b25f6662-630e-11ee-b224-7c2411acbeef"
       }
     },
-    "form": null,
     "metadata": {
+      "bad_files": [],
+      "das_datasets": [
+        "test/data/eos/purdue/store/mc/Run3Summer22NanoAODv12/DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/50000"
+      ],
       "data_entries": null,
       "dataset": "dyTo2L_M-50_incl",
       "fraction": 1.0,
       "is_mc": true,
       "nGenEvts": 699,
+      "n_files_requested": 1,
+      "n_files_used": 1,
       "original_fraction": 1.0,
+      "provenance": {
+        "commit": "3b6e328a805ff08d11999840358ba341092a0c6c",
+        "diff_file": "_provenance/2022preEE_NanoAODv12_sync_20260921_183808/git_diff.patch",
+        "dirty": true,
+        "timestamp": "20260921_183808"
+      },
       "sumGenWgts": 12506265.604,
       "sumLHEPdfWgts": [
         12506265.604,
@@ -155,6 +180,7 @@
     }
   },
   "vbf_powheg_dipole": {
+    "compressed_form": null,
     "files": {
       "test/data/eos/purdue/store/mc/Run3Summer22NanoAODv12/VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v3/50000/0ea52cdc-3d79-497f-9275-b6fd2041e9a0.root": {
         "num_entries": 684,
@@ -168,14 +194,25 @@
         "uuid": "a7b5d7f4-af22-11ee-9bcc-07bfe183beef"
       }
     },
-    "form": null,
     "metadata": {
+      "bad_files": [],
+      "das_datasets": [
+        "test/data/eos/purdue/store/mc/Run3Summer22NanoAODv12/VBFHto2Mu_M-125_TuneCP5_withDipoleRecoil_13p6TeV_powheg-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v3/50000"
+      ],
       "data_entries": null,
       "dataset": "vbf_powheg_dipole",
       "fraction": 1.0,
       "is_mc": true,
       "nGenEvts": 684,
+      "n_files_requested": 1,
+      "n_files_used": 1,
       "original_fraction": 1.0,
+      "provenance": {
+        "commit": "3b6e328a805ff08d11999840358ba341092a0c6c",
+        "diff_file": "_provenance/2022preEE_NanoAODv12_sync_20260921_183808/git_diff.patch",
+        "dirty": true,
+        "timestamp": "20260921_183808"
+      },
       "sumGenWgts": 2853.6653200000005,
       "sumLHEPdfWgts": [
         2853.6926000000003,

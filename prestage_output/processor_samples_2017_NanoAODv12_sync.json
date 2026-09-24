@@ -1,5 +1,6 @@
 {
   "data_B": {
+    "compressed_form": null,
     "files": {
       "test/data/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017B/3B7EF8F0-9FBD-7245-8E35-16707C3F9C00_NanoAOD.root": {
         "num_entries": 5420,
@@ -13,18 +14,31 @@
         "uuid": "657ddb14-e411-11ef-b128-913012acbeef"
       }
     },
-    "form": null,
     "metadata": {
+      "bad_files": [],
+      "das_datasets": [
+        "test/data/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/SingleMuon_Run2017B/"
+      ],
       "data_entries": 5420,
       "dataset": "data_B",
       "fraction": 1.0,
       "is_mc": false,
       "nGenEvts": null,
+      "n_files_requested": 1,
+      "n_files_used": 1,
       "original_fraction": 1.0,
-      "sumGenWgts": null
+      "provenance": {
+        "commit": "3b6e328a805ff08d11999840358ba341092a0c6c",
+        "diff_file": "_provenance/2017_NanoAODv12_sync_20260921_183726/git_diff.patch",
+        "dirty": true,
+        "timestamp": "20260921_183726"
+      },
+      "sumGenWgts": null,
+      "sumLHEPdfWgts": null
     }
   },
   "dy_M-50_aMCatNLO": {
+    "compressed_form": null,
     "files": {
       "test/data/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9/636DE849-81B5-6B41-A906-9E997CF8E1A5_NanoAOD.root": {
         "num_entries": 900,
@@ -38,14 +52,25 @@
         "uuid": "2fb26800-e417-11ef-baf7-833012acbeef"
       }
     },
-    "form": null,
     "metadata": {
+      "bad_files": [],
+      "das_datasets": [
+        "test/data/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8_RunIISummer20UL17NanoAODv9/"
+      ],
       "data_entries": null,
       "dataset": "dy_M-50_aMCatNLO",
       "fraction": 1.0,
       "is_mc": true,
       "nGenEvts": 900,
+      "n_files_requested": 1,
+      "n_files_used": 1,
       "original_fraction": 1.0,
+      "provenance": {
+        "commit": "3b6e328a805ff08d11999840358ba341092a0c6c",
+        "diff_file": "_provenance/2017_NanoAODv12_sync_20260921_183726/git_diff.patch",
+        "dirty": true,
+        "timestamp": "20260921_183726"
+      },
       "sumGenWgts": 15408401.139999999,
       "sumLHEPdfWgts": [
         15408401.139999999,
@@ -155,6 +180,7 @@
     }
   },
   "vbf_powheg_dipole": {
+    "compressed_form": null,
     "files": {
       "test/data/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/098E86A3-EC97-394F-B455-C3B00C6AFEE4_NanoAOD.root": {
         "num_entries": 1000,
@@ -168,14 +194,25 @@
         "uuid": "2a240a88-e57a-11ef-b5aa-9a3012acbeef"
       }
     },
-    "form": null,
     "metadata": {
+      "bad_files": [],
+      "das_datasets": [
+        "test/data/eos/purdue/store/user/rasharma/customNanoAOD_Gautschi_v2/UL2017/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/"
+      ],
       "data_entries": null,
       "dataset": "vbf_powheg_dipole",
       "fraction": 1.0,
       "is_mc": true,
       "nGenEvts": 1000,
+      "n_files_requested": 1,
+      "n_files_used": 1,
       "original_fraction": 1.0,
+      "provenance": {
+        "commit": "3b6e328a805ff08d11999840358ba341092a0c6c",
+        "diff_file": "_provenance/2017_NanoAODv12_sync_20260921_183726/git_diff.patch",
+        "dirty": true,
+        "timestamp": "20260921_183726"
+      },
       "sumGenWgts": 3865.1700000000005,
       "sumLHEPdfWgts": [
         3865.2000000000007,

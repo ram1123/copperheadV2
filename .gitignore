@@ -1,3 +1,8 @@
+CLAUDE.md
+.claude/
+figs
+validation/pu_dnn/
+validation/muon_*/
 *.patch
 CMSSW_13_0_14/
 .nfs*

@@ -175,7 +175,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
             # print(f"pu_weights[{var}]: {pu_weights[var].compute()}")
     elif Run==3:
         jsonGz_path = parameters["pu_file_mc"]
-        logger.info(f"jsonGz_path: {jsonGz_path}")
+        logger.debug(f"jsonGz_path: {jsonGz_path}")
         ceval = get_corrset(jsonGz_path)
         key = list(ceval.keys())[0]
         pu_lookup = ceval[key]
@@ -184,8 +184,7 @@ def pu_evaluator(parameters, ntrueint, onTheSpot=False, Run=2, is_rereco=False):
         pu_weights["up"] = pu_lookup.evaluate(ntrueint,"up")
         pu_weights["down"] = pu_lookup.evaluate(ntrueint,"down")
     else:
-        print("ERROR: unacceptable Run value is given!")
-        raise ValueError
+        raise ValueError(f"get_pu_weights: unacceptable Run value given: {Run!r} (expected 2 or 3)")
     return pu_weights
 
 
@@ -1717,7 +1716,7 @@ def get_jetpuid_weights_old(evaluator, year, jets, pt_name, jet_puid_opt, jet_pu
     ones = ak.ones_like(ones)
     # if True:
     if "2017corrected" in jet_puid_opt:
-        print("doing the 2017corrected jetPUID method !")
+        logger.debug(f"Using 2017-corrected jetPUID method (jet_puid_opt={jet_puid_opt!r})")
         h_eff_name_L = f"h2_eff_mc{yearname}_L"
         h_sf_name_L = f"h2_eff_sf{yearname}_L"
         h_eff_name_T = f"h2_eff_mc{yearname}_T"

@@ -6,17 +6,47 @@ usage() {
 Usage: run_stats_pipeline_VBF.sh [options]
 
 Modes:
-  4|copy_datacards
-  5|combine_vbf
-  6|combine_vbf_significance
-  7|combine_vbf_impacts
-  8|combine_vbf_lhscan
-  9|combine_vbf_all
-  10|combine_vbf_summary
-  11|vbf_limit
+  4|combine_vbf              Build the VBF datacard + Combine workspace for -y (a single
+                              year, or a pseudo-year like Run3/Run2/Run2Run3 to combine
+                              already-built per-year cards into one).
+  5|combine_vbf_significance Run signal / stat-only significance fits.
+  6|combine_vbf_summary      (Re)collect the significance summary CSV only.
+  7|combine_vbf_impacts      Run nuisance-parameter impacts. Blinded, so no observed
+                              scenario: runs Asimov r=1 (signal injected) and r=0
+                              (background-only), each as its own impacts_..._r1/_r0 plot.
+  8|combine_vbf_lhscan       Run a 1D likelihood scan (Asimov, r=1 injected).
+  9|combine_vbf_all          combine_vbf + combine_vbf_significance, then collect the
+                              significance summary CSV.
+  10|combine_vbf_limit        Expected 95% CL limit via AsymptoticLimits --run blind
+                              (Asimov background-only dataset, no unblinding), with-syst
+                              and stat-only variants; collects
+                              vbf_expected_limit_summary_<save_postfix>.csv.
+  11|vbf_limit                combine_vbf_all + combine_vbf_limit combined: card + workspace +
+                              significance + summary + expected limit + limit summary, for -y.
+                              Does NOT rebuild stage2/stage3 (unlike the old same-named mode) --
+                              run those separately first if the histograms/datacards aren't
+                              already built for -y.
+  12|combine_vbf_jjregions    Combines the already-built jj_both_central and jj_non_central
+                              cards for -y into one card (two channels, exact partition of the
+                              VBF selection -- see ensure_vbf_jjcombined_card in
+                              common_workflow.sh), then significance + summary + expected limit
+                              + limit summary on the combined card. Independent of -- and does
+                              NOT read or need -- JJ_ETA_REGION below; it always targets both
+                              regions directly. Requires combine_vbf/combine_vbf_all/vbf_limit
+                              to have already been run for -y under JJ_ETA_REGION=jj_both_central
+                              and JJ_ETA_REGION=jj_non_central (so both per-region cards exist).
+  13|combine_vbf_jjregions_impacts
+                              Same jj-region combination as mode 12, then impacts (r=1/r=0,
+                              blinded) on the combined card instead of significance/limit.
 
 Common options:
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 commands built by this wrapper.
+
+Env vars:
+  JJ_ETA_REGION  Must match whatever the stage-2/3 run being targeted was built with (default
+                 "all"). This wrapper's own datacard/workspace paths are derived from -o's
+                 save_postfix plus this var (same mechanism as -o itself), so a mismatch here
+                 looks exactly like a wrong -o: "Missing VBF SR/SB datacards for <year>".
 EOF
     exit 1
 }
@@ -43,30 +73,41 @@ for year in "${years[@]}"; do
         5|combine_vbf_significance)
             run_vbf_significance "${year}"
             ;;
-        6|combine_vbf_impacts)
+        6|combine_vbf_summary)
+            collect_vbf_significance_summary
+            ;;            
+        7|combine_vbf_impacts)
             run_vbf_impacts "${year}"
             ;;
-        7|combine_vbf_lhscan)
+        8|combine_vbf_lhscan)
             run_vbf_lhscan "${year}"
             ;;
-        8|combine_vbf_all)
+        9|combine_vbf_all)
             ensure_vbf_card "${year}"
             ensure_vbf_workspace "${year}"
             run_vbf_significance "${year}"
             collect_vbf_significance_summary
             ;;
-        9|combine_vbf_summary)
-            collect_vbf_significance_summary
+        10|combine_vbf_limit)
+            ensure_vbf_card "${year}"
+            ensure_vbf_workspace "${year}"
+            run_vbf_limit "${year}"
+            collect_vbf_limit_summary
             ;;
-        10|vbf_limit)
-            run_mode_from_nul < <(build_stage2_cmd "${year}")
-            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")
-            run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-peak")
-            run_mode_from_nul < <(build_stage3_cmd "${year}")
+        11|vbf_limit)
             ensure_vbf_card "${year}"
             ensure_vbf_workspace "${year}"
             run_vbf_significance "${year}"
             collect_vbf_significance_summary
+            run_vbf_limit "${year}"
+            collect_vbf_limit_summary
+            ;;
+        12|combine_vbf_jjregions)
+            run_vbf_jjcombined_significance_and_limit "${year}"
+            collect_vbf_jjcombined_summaries
+            ;;
+        13|combine_vbf_jjregions_impacts)
+            run_vbf_jjcombined_impacts "${year}"
             ;;
         *)
             die "Invalid stats mode '${mode}'."

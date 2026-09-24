@@ -127,17 +127,28 @@ bash stage1_loop_Improved.sh -m 9 -y Run3 -l label_for_ntuple
 3. To regenerate the sync reference txt files used by GitHub Actions, run:
 
     ```bash
-    bash scripts/update_sync_references.sh
+    bash scripts/update_sync_references.sh "2017,2022preEE" --use-reference-switches
     ```
 
     For a single year:
 
     ```bash
-    bash scripts/update_sync_references.sh 2017
+    bash scripts/update_sync_references.sh 2017 --use-reference-switches
     ```
 
     This reruns the sync stage-1 samples, rebuilds the `*_eventKinematics.txt` files, and updates
     the copies in `test/reference`.
+
+    **Always pass `--use-reference-switches`.** `.github/workflows/sync-stage1.yml` unconditionally
+    overwrites `configs/switches/switches_official.yaml` with `test/reference/switches_official.yaml` before running
+    stage-1 -- CI never runs the sync sample against your local/production switches. Omitting this
+    flag runs against production `configs/switches/switches_official.yaml` instead, which can silently
+    diverge from what CI actually produces (e.g. `do_remove_dy_M100to200`, `do_save_partial_weights`)
+    and generate reference files that don't match what CI itself would compare against on the next
+    run. `test/reference/switches_official.yaml` is a separately-maintained, intentionally-frozen snapshot
+    (see `docs/known_issues.md`) -- if a code change adds a new required switch key, add it there too
+    (matching whatever value reproduces the pre-change behavior) or this command will fail with a
+    `KeyError`.
 
 ### Control Plots
 

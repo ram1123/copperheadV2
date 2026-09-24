@@ -3,6 +3,7 @@ import copy
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -29,6 +30,7 @@ from modules.dask_utils import close_dask_client, get_dask_client
 from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import absolutize_config, get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
+from scripts.build_processed_lumi_json import build_report as build_processed_lumi_report
 from src.copperhead_processor import EventProcessor
 from src.lib.get_parameters import getParametersForYr
 from pathlib import Path
@@ -43,11 +45,20 @@ np.set_printoptions(threshold=sys.maxsize)
 
 ENABLE_DASK_REPORT = os.environ.get("ENABLE_DASK_REPORT", "1") == "1"
 
+MAX_FILE_LEN = 50000
+CHUNK_SIZE = 250_000
+# Retries against the *same* redirector before giving up on it / moving to the next
+# one in AAA_REDIRECTORS. Needed because AAA_REDIRECTORS currently has only one
+# entry, which made the old "cycle to next redirector on tls_bad" logic a no-op --
+# any transient read error (even a spurious FileNotFoundError from a momentary
+# EOS/XRootD hiccup) permanently failed the whole dataset with zero retries.
+MAX_ATTEMPTS_PER_REDIRECTOR = 3
+RETRY_BACKOFF_SECONDS = 20
 DATASET_ELEMENT_LIMITS = {
-    "data_": 900,  # None means no limit (use uproot's default behavior)
-    "dy": 500,
-    "ttjets_dl": 500,
-    "ttjets_sl": 500,
+    "data_": MAX_FILE_LEN,  # None means no limit (use uproot's default behavior)
+    "dy": MAX_FILE_LEN,
+    "ttjets_dl": MAX_FILE_LEN,
+    "ttjets_sl": MAX_FILE_LEN,
 }
 
 
@@ -87,6 +98,12 @@ def should_process_dataset(dataset, args, samples_to_skip=None, samples_to_run=N
     Decide whether a dataset should be processed.
     Returns True if it should run, False if it should be skipped.
     """
+
+    # --sync runs read a dedicated small sample list (*_sync.json); the
+    # production run/skip lists in configs/skip_stage1_run.py don't apply to
+    # it.
+    if args.sync:
+        return True
 
     # If explicit run-list is provided → highest priority
     if samples_to_run:
@@ -170,9 +187,14 @@ def dataset_loop(processor, dataset_dict, file_idx=0, test=False, save_path=None
     )
 
     runner = coffea_processor_module.Runner(
-        executor=coffea_processor_module.DaskExecutor(client=client),  # reuse existing client
+        # status=False: coffea's RichProgressBar (coffea/processor/_dask.py:_draw_stop)
+        # crashes with AttributeError: 'NoneType' object has no attribute '__traceback__'
+        # when a task fails from a lost/killed worker (no real exception object attached),
+        # masking the real error and aborting the whole chunk instead of letting Dask's
+        # own worker-loss retry recover transparently.
+        executor=coffea_processor_module.DaskExecutor(client=client, status=False),  # reuse existing client
         schema=NanoAODSchema,
-        chunksize=100_000,
+        chunksize=CHUNK_SIZE,
         skipbadfiles=False,
     )
 
@@ -249,7 +271,7 @@ if __name__ == "__main__":
         "--max_file_len",
         dest="max_file_len",
         type=int,
-        default = 3000,
+        default = MAX_FILE_LEN,
         help = "How many maximum files to process simultaneously.",
     )
     parser.add_argument(
@@ -321,7 +343,9 @@ if __name__ == "__main__":
     else:
         yearForConfig = args.year
 
-    config = getParametersForYr("./configs/parameters/" , yearForConfig)
+    switches_source_path = args.switches_yaml
+    logger.info(f"Switches yaml for this run: {switches_source_path}")
+    config = getParametersForYr("./configs/parameters/", yearForConfig, switches_path=args.switches_yaml)
     logger.debug(f"stage1 config: {config}")
 
     # Convert OmegaConf -> plain dict/list so the walker recurses correctly
@@ -341,7 +365,7 @@ if __name__ == "__main__":
         t2 = time.perf_counter()
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
-        sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename        logger.debug(f"Sample path: {sample_path}")
+        sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
         if args.sync:
             sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path
         logger.debug(f"Sample path: {sample_path}")
@@ -371,26 +395,33 @@ if __name__ == "__main__":
             f.write(f"Diff:\n{diff}\n")
         logger.info(f"git_info_path: {git_info_path}")
 
+        # Save a literal copy of the switches yaml actually used for this run alongside `git_info_*.txt`. 
+        switches_used_path = os.path.join(start_save_path, f"switches_used_{timestamp}.yaml")
+        try:
+            shutil.copyfile(switches_source_path, switches_used_path)
+            logger.info(f"switches_used_path: {switches_used_path}")
+        except Exception as err:
+            logger.error(f"Could not save a copy of the switches yaml used (non-fatal): {err}")
+
         # if True:
         with optional_performance_report():
             for dataset, sample in tqdm.tqdm(samples.items(), desc="Processing datasets"):
                 if not should_process_dataset(dataset, args, samples_to_skip, samples_to_run):
-                    logger.warning(f"Skipping Year: {args.year:10}, dataset: {dataset}")
+                    logger.info(f"Skipping year={args.year}, dataset={dataset} (excluded by --skipSamples/run-list)")
                     continue
 
-                logger.info("{}{}".format("\n" * 2, "=" * 51))
-                logger.info(f"===         Processing dataset: {dataset}       ===")
-                logger.info(f"===         NanoAODv: {args.NanoAODv}                 ===")
-                logger.info(f"===         Year: {args.year}                        ===")
-                logger.info("{}{}".format("=" * 51, "\n" * 2))
+                logger.info(
+                    "\n%s\n===         Processing dataset: %-20s ===\n"
+                    "===         NanoAODv: %-2s                    ===\n"
+                    "===         Year: %-10s                   ===\n%s\n",
+                    "=" * 51, dataset, args.NanoAODv, args.year, "=" * 51,
+                )
 
                 sample_step = time.time()
                 if any(key in dataset for key in DATASET_ELEMENT_LIMITS.keys()):
                     args.max_file_len = DATASET_ELEMENT_LIMITS[[key for key in DATASET_ELEMENT_LIMITS.keys() if key in dataset][0]]
-                    logger.info(f"Setting max_file_len for {dataset} to {args.max_file_len}")
                 else:
-                    args.max_file_len = 500
-                logger.info(f"max_file_len for {dataset} set to {args.max_file_len}")
+                    args.max_file_len = MAX_FILE_LEN
 
                 # split the sample files into smaller chunks of size args.max_file_len
                 # # use only 1/4 of the total files available in sample for test mode
@@ -402,7 +433,9 @@ if __name__ == "__main__":
                 #     sample["files"] = test_files
                 #     logger.info(f"Test mode: Using only 1/4 of total files for {dataset}. total_files: {total_files}, test_files used: {len(test_files)}")
                 smaller_files = list(divide_chunks(sample["files"], args.max_file_len))
-                logger.info(f"len(smaller_files): {len(smaller_files)}")
+                logger.info(
+                    f"{dataset}: max_file_len={args.max_file_len}, split into {len(smaller_files)} chunk group(s)"
+                )
                 for idx in tqdm.tqdm(range(len(smaller_files)), leave=False):
                     # Skip if already done (unless user wants a full rerun)
                     if not args.rerun and not jobstat.should_run(dataset, idx):
@@ -430,100 +463,54 @@ if __name__ == "__main__":
                             "git_branch": branch_name,
                             "git patch path": git_info_path,
                             })
+                    file_idx_succeeded = False
                     for attempt, host_prefix in enumerate(AAA_REDIRECTORS, start=1):
-                        try:
-                            logger.info(f"[resume] attempt {attempt} for {dataset}[{idx}] using {host_prefix}")
-                            # build fresh file list with this redirector
-                            alt_sample = copy.deepcopy(smaller_sample)
-                            # logger.info(f"alt_sample['files']: {alt_sample['files']}")
+                        for retry_num in range(1, MAX_ATTEMPTS_PER_REDIRECTOR + 1):
+                            try:
+                                logger.info(f"[resume] attempt {attempt} (retry {retry_num}/{MAX_ATTEMPTS_PER_REDIRECTOR}) for {dataset}[{idx}] using {host_prefix}")
+                                # build fresh file list with this redirector
+                                alt_sample = copy.deepcopy(smaller_sample)
+                                # logger.info(f"alt_sample['files']: {alt_sample['files']}")
 
-                            alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
+                                alt_sample["files"] = normalize_paths(smaller_sample["files"], host_prefix=host_prefix)
 
-                            logger.debug(f"alt_sample['files']: {alt_sample['files']}")
+                                logger.debug(f"alt_sample['files']: {alt_sample['files']}")
 
-                            # clean partial output from previous tries
-                            save_dir_path = Path(save_path)
-                            if save_dir_path.is_dir():
-                                time.sleep(30) # NOTE: wait 30 seconds if removing directory. If immediately re-running run_stage1.py after crash, it may return `Directory not empty` error because there's still some parquet files being saved.
-                                os.system(f"rm -rf '{save_path}'") 
-                                logger.info(f"rm command executed for: {save_path}")
-                            eos_mkdirs(save_path)
+                                # clean partial output from previous tries
+                                save_dir_path = Path(save_path)
+                                if save_dir_path.is_dir():
+                                    time.sleep(30) # NOTE: wait 30 seconds if removing directory. If immediately re-running run_stage1.py after crash, it may return `Directory not empty` error because there's still some parquet files being saved.
+                                    os.system(f"rm -rf '{save_path}'")
+                                    logger.info(f"rm command executed for: {save_path}")
+                                eos_mkdirs(save_path)
 
-                            # rebuild the events/out collections for this attempt
-                            processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file, client=client)
+                                # rebuild the events/out collections for this attempt
+                                processed_event_count = dataset_loop(coffea_processor, alt_sample, file_idx=idx, test=test_mode, save_path=save_path, isCutflow=args.isCutflow, dataset_yaml_file=args.dataset_yaml_file, client=client)
 
-                            logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
-                            logger.info(f"Processed events: {processed_event_count}")
+                                logger.info(f"Expected  events: {ExpectedEvents_from_prestage}")
+                                logger.info(f"Processed events: {processed_event_count}")
 
-                            # to_persist = to_persist.persist()
-                            # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
-                            # to_persist.to_parquet(save_path)
+                                # to_persist = to_persist.persist()
+                                # to_persist.to_parquet(save_path, write_metadata_file=False) # INFO: Find out difference between below and this line
+                                # to_persist.to_parquet(save_path)
 
-                            if not _parquet_dir_has_files(save_path):
-                                raise RuntimeError("Parquet write produced no files.")
+                                if not _parquet_dir_has_files(save_path):
+                                    raise RuntimeError("Parquet write produced no files.")
 
-                            if ExpectedEvents_from_prestage != processed_event_count:
-                                raise ValueError(
-                                    f"Number of processed events does not match expected events: "
-                                    f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
-                                    f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
-                                )
+                                if ExpectedEvents_from_prestage != processed_event_count:
+                                    raise ValueError(
+                                        f"Number of processed events does not match expected events: "
+                                        f"expected {ExpectedEvents_from_prestage}, processed {processed_event_count} "
+                                        f"(dataset={dataset}, file_idx={idx}, save_path={save_path})"
+                                    )
 
-                            jobstat.mark_done(
-                                dataset,
-                                idx,
-                                meta={
-                                    "split count": len(smaller_files),
-                                    "attempt": attempt,
-                                    "max_attempts": len(AAA_REDIRECTORS),
-                                    "args.max_file_len": args.max_file_len,
-                                    "redirector": host_prefix,
-                                    "path": save_path,
-                                    "git_commit_hash": git_commit_hash,
-                                    "git_branch": branch_name,
-                                    "git patch path": git_info_path,
-                                    "Expected events from pre-stage": ExpectedEvents_from_prestage,
-                                    "Processed events from stage-1": processed_event_count,
-                                },
-                            )
-                            logger.info(f"[resume] success on attempt {attempt} with {host_prefix}")
-                            break  # stop trying once successful
-
-                        except Exception as e:
-                            msg = str(e)
-                            tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
-                            logger.warning(
-                                f"[resume] attempt {attempt} failed for {dataset}[{idx}] "
-                                f"({type(e).__name__}: {e})"
-                            )
-                            # save the list of files that were attempted in this failure for debugging,
-                            # with the redirector info in the filename
-                            # as well as the error message for this failure
-                            timestamp = time.strftime("%Y%m%d-%H%M%S")
-                            error_info_path = os.path.join(
-                                start_save_path,
-                                "_status",
-                                f"error_{dataset}_{idx}_{timestamp}.txt",
-                            )
-                            with open(error_info_path, "w") as f:
-                                f.write(f"Error message: {msg}\n")
-                                f.write(f"Attempted files with {host_prefix}:\n")
-                                f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
-                                for i, file in enumerate(alt_sample["files"]):
-                                    f.write(f"{i:4}: {file}\n")
-                            logger.info(f"Saved error info to {error_info_path}")
-
-                            if attempt < len(AAA_REDIRECTORS) and tls_bad:
-                                logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
-                                continue  # next redirector in list
-                            else:
-                                jobstat.mark_failed(
+                                jobstat.mark_done(
                                     dataset,
                                     idx,
-                                    e,
                                     meta={
                                         "split count": len(smaller_files),
                                         "attempt": attempt,
+                                        "retry": retry_num,
                                         "max_attempts": len(AAA_REDIRECTORS),
                                         "args.max_file_len": args.max_file_len,
                                         "redirector": host_prefix,
@@ -535,16 +522,82 @@ if __name__ == "__main__":
                                         "Processed events from stage-1": processed_event_count,
                                     },
                                 )
-                                logger.exception(
-                                    f"[resume] write failed after {attempt} attempts for {dataset}[{idx}]"
+                                logger.info(f"[resume] success on attempt {attempt} retry {retry_num} with {host_prefix}")
+                                file_idx_succeeded = True
+                                break  # stop retrying this redirector once successful
+
+                            except Exception as e:
+                                msg = str(e)
+                                tls_bad = any(frag in msg for frag in AAA_ERROR_FRAGMENTS)
+                                logger.warning(
+                                    f"[resume] attempt {attempt} retry {retry_num} failed for {dataset}[{idx}] "
+                                    f"({type(e).__name__}: {e})"
                                 )
+                                # save the list of files that were attempted in this failure for debugging,
+                                # with the redirector info in the filename
+                                # as well as the error message for this failure
+                                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                                error_info_path = os.path.join(
+                                    start_save_path,
+                                    "_status",
+                                    f"error_{dataset}_{idx}_{timestamp}.txt",
+                                )
+                                with open(error_info_path, "w") as f:
+                                    f.write(f"Error message: {msg}\n")
+                                    f.write(f"Attempted files with {host_prefix}:\n")
+                                    f.write(f"Total files attempted: {len(alt_sample['files'])}\n")
+                                    for i, file in enumerate(alt_sample["files"]):
+                                        f.write(f"{i:4}: {file}\n")
+                                logger.info(f"Saved error info to {error_info_path}")
+
+                                is_last_retry_for_redirector = retry_num == MAX_ATTEMPTS_PER_REDIRECTOR
+                                is_last_redirector = attempt == len(AAA_REDIRECTORS)
+
+                                if not is_last_retry_for_redirector:
+                                    # Retry the same redirector -- most failures seen in practice
+                                    # (including a plain FileNotFoundError on a file that is
+                                    # actually readable) are transient EOS/XRootD hiccups, not a
+                                    # genuinely missing file, so it's always worth a couple more
+                                    # tries before concluding otherwise.
+                                    logger.warning(
+                                        f"Retrying {dataset}[{idx}] with same redirector {host_prefix} "
+                                        f"in {RETRY_BACKOFF_SECONDS}s (retry {retry_num + 1}/{MAX_ATTEMPTS_PER_REDIRECTOR}) ..."
+                                    )
+                                    time.sleep(RETRY_BACKOFF_SECONDS)
+                                    continue  # next retry, same redirector
+                                elif not is_last_redirector and tls_bad:
+                                    logger.warning(f"Retrying {dataset}[{idx}] with next redirector ...")
+                                    break  # exhaust retries for this redirector, move to next one
+                                else:
+                                    jobstat.mark_failed(
+                                        dataset,
+                                        idx,
+                                        e,
+                                        meta={
+                                            "split count": len(smaller_files),
+                                            "attempt": attempt,
+                                            "retry": retry_num,
+                                            "max_attempts": len(AAA_REDIRECTORS),
+                                            "args.max_file_len": args.max_file_len,
+                                            "redirector": host_prefix,
+                                            "path": save_path,
+                                            "git_commit_hash": git_commit_hash,
+                                            "git_branch": branch_name,
+                                            "git patch path": git_info_path,
+                                            "Expected events from pre-stage": ExpectedEvents_from_prestage,
+                                            "Processed events from stage-1": processed_event_count,
+                                        },
+                                    )
+                                    logger.exception(
+                                        f"[resume] write failed after {attempt} redirector(s) x {retry_num} retries for {dataset}[{idx}]"
+                                    )
+                        if file_idx_succeeded:
+                            break  # stop trying other redirectors once successful
 
                     var_elapsed = round(time.time() - var_step, 3)
-                    logger.info(f"Finished file_idx {idx} in {var_elapsed} s.")
+                    logger.info(f"{dataset}[{idx}]: finished in {var_elapsed} s. (success={file_idx_succeeded})")
                 sample_elapsed = round(time.time() - sample_step, 3)
                 logger.info(f"Finished sample {dataset} in {sample_elapsed} s.")
-                t6 = time.perf_counter()
-                logger.info(f"[Timing] Time taken to process sample {dataset}: {round(t6 - t2, 3)} seconds")
 
     else:
         # FIXME: update this for /store usage
@@ -584,6 +637,19 @@ if __name__ == "__main__":
         out_json_path=os.path.join(start_save_path, "_status", "stage1_summary.json"),
         logger=logger,
     )
+
+    # CRAB-style processed-lumi report: merge the per-chunk processedlumis_*.json
+    # shards (written for data only, see src/stage1/lumi_io.py) into one
+    # processedLumis.json, and check it against this year's certified lumimask
+    # so we can ensure if the whole data processed successfully.
+    try:
+        lumi_report = build_processed_lumi_report(
+            start_save_path,
+            golden_json_path=config.get("lumimask"),
+        )
+        logger.info(f"[processed-lumi report]\n{lumi_report}")
+    except Exception as err:
+        logger.error(f"Processed-lumi report failed (non-fatal): {err}")
 
     close_dask_client()
     logger.info(f"Finished everything in {elapsed} s.")

@@ -5,10 +5,32 @@ import awkward as ak
 import pandas as pd
 import yaml
 from modules.classify_year import is_run3
+from modules.utils import logger
 
 # repo_root/modules/selection.py -> repo_root
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DNN_BINNING_YAML = REPO_ROOT / "configs" / "MVA" / "VBF" / "dnn_binning.yaml"
+
+# jj_eta_region names using both jet1 AND jet2 (only meaningful for njets>=2
+PAIR_JJ_ETA_REGIONS = [
+    "jj_both_central",
+    "jj_non_central",
+    "jj_one_fwd25_one_central",
+    "jj_one_he_one_central",
+    "jj_one_fwd30_one_central",
+    "jj_both_fwd25",
+    "jj_both_he",
+    "jj_both_fwd30",
+    "jj_one_he_one_fwd30",
+]
+
+# jets eta region for njet==1
+SINGLE_JET_ETA_REGIONS = [
+    "single_central",
+    "single_fwd25",
+    "single_he",
+    "single_fwd30",
+]
 
 
 def filterRegion(events, region="h-peak"):
@@ -53,6 +75,12 @@ def applyRegionCatCuts(
     jj_eta_region: str = "all",
     njets_selection: str = "inclusive",  # available options ["inclusive", "0", "1", "2"],
     year: str | None = None,
+    # Below two cuts:
+    # For applying pT cut on the HE/HF jets, it will affect the events migration from VBF to ggH. 
+    # But the jets properties of the ggH won't affect at all. 
+    # So, with this cut we should evaluate only the VBF events.
+    vbf_he_ptcut: float | None = None, 
+    vbf_hf_ptcut: float | None = None,
 ):
     use_var = (
         "nominal"
@@ -110,7 +138,7 @@ def applyRegionCatCuts(
         prod_cat_cut = prod_cat_cut  # no additional cut
     else:  # VBF or ggH
         if do_VH_veto:
-            print("Applying VH veto!")
+            logger.debug("Applying VH veto!")
             # NOTE: fatjet and MET veto for VH: nfatJets_drmuon == 0 and MET_pt < 150 GeV
             fatjet_veto = ak.fill_none((events.nfatJets_drmuon == 0), value=False)
             met_veto = ak.fill_none((events.MET_pt < 150), value=False)
@@ -127,6 +155,31 @@ def applyRegionCatCuts(
 
         vbf_cut = (jj_mass > 400) & (jj_dEta > 2.5) & (jet1_pt > 35)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
+
+        # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`
+        # HE = 2.5 < |eta| <= 3.0, HF = |eta| > 3.0
+        # For applying pT cut on the HE/HF jets, it will affect the events migration from VBF to ggH. 
+        # But the jets properties of the ggH won't affect at all. 
+        # So, with this cut we should evaluate only the VBF events.        
+        if vbf_he_ptcut is not None or vbf_hf_ptcut is not None:
+            jet2_pt = varcol("jet2_pt")
+            jet1_eta = varcol("jet1_eta")
+            jet2_eta = varcol("jet2_eta")
+
+            def _passes_he_hf_ptcut(pt, eta):
+                abs_eta = abs(eta)
+                in_he = (abs_eta > 2.5) & (abs_eta <= 3.0)
+                in_hf = abs_eta > 3.0
+                fail_he = (in_he & (pt < vbf_he_ptcut)) if vbf_he_ptcut is not None else (in_he & False)
+                fail_hf = (in_hf & (pt < vbf_hf_ptcut)) if vbf_hf_ptcut is not None else (in_hf & False)
+                return ~(fail_he | fail_hf)
+
+            vbf_he_hf_pass = ak.fill_none(
+                _passes_he_hf_ptcut(jet1_pt, jet1_eta)
+                & _passes_he_hf_ptcut(jet2_pt, jet2_eta),
+                value=False,
+            )
+            vbf_cut = vbf_cut & vbf_he_hf_pass
 
         if category == "vbf":
             # print("vbf mode!")
@@ -180,8 +233,35 @@ def applyRegionCatCuts(
         prod_cat_cut = prod_cat_cut & ak.fill_none(njets_mask, value=False)
 
     # ---------------------------------------------------------
-    #  jet-eta region selection (pair topology)
+    #  jet-eta region selection (pair topology for njets>=2, single-jet
+    #  topology for njets==1; a 0-jet event has nothing to region-split)
     # ---------------------------------------------------------
+    # A 0-jet selection can never satisfy any region mask,
+    # reject rather than silently return an empty, confusing looking selection
+    if njets_selection == "0" and jj_eta_region and jj_eta_region != "all":
+        raise ValueError(
+            f"jj_eta_region='{jj_eta_region}' is incompatible with njets_selection='0' "
+            "-- a 0-jet selection has no jets to region-split; use jj_eta_region='all'."
+        )
+    # A 1-jet selection only has a single real jet (jet2 is null), so a
+    # PAIR_JJ_ETA_REGIONS mask (needs jet1 AND jet2) can only ever be empty
+    # there -- reject rather than silently return zero events.
+    if njets_selection == "1" and jj_eta_region in PAIR_JJ_ETA_REGIONS:
+        raise ValueError(
+            f"jj_eta_region='{jj_eta_region}' is a two-jet condition, incompatible with "
+            f"njets_selection='1' -- use one of {SINGLE_JET_ETA_REGIONS} instead."
+        )
+    # Symmetric case: a SINGLE_JET_ETA_REGIONS mask bakes njets==1 into its
+    # own definition (see below), so it can only ever be empty against a
+    # njets>=2 selection -- reject for the same "don't silently return zero
+    # events" reason.
+    if njets_selection == "2" and jj_eta_region in SINGLE_JET_ETA_REGIONS:
+        raise ValueError(
+            f"jj_eta_region='{jj_eta_region}' is a single-jet (njets==1) condition, "
+            f"incompatible with njets_selection='2' -- use one of {PAIR_JJ_ETA_REGIONS} "
+            "(or 'all') instead."
+        )
+
     if jj_eta_region and jj_eta_region != "all":
 
         # 1) prefer precomputed mask if present
@@ -197,29 +277,40 @@ def applyRegionCatCuts(
             a2 = abs(jet2_eta)
 
             # basic regions
-            j1_c = a1 < 2.5
-            j2_c = a2 < 2.5
+            j1_c = a1 <= 2.5
+            j2_c = a2 <= 2.5
 
             j1_f25 = a1 > 2.5
             j2_f25 = a2 > 2.5
 
-            j1_he = (a1 > 2.5) & (a1 < 3.0)
-            j2_he = (a2 > 2.5) & (a2 < 3.0)
+            j1_he = (a1 > 2.5) & (a1 <= 3.0)
+            j2_he = (a2 > 2.5) & (a2 <= 3.0)
 
-            j1_f30 = a1 > 3.0
-            j2_f30 = a2 > 3.0
+            j1_hf = a1 > 3.0
+            j2_hf = a2 > 3.0
+
+            # njets==1 => jet1 is the one real jet
+            is_single_jet = (njets == 1)
 
             masks = {
                 "jj_both_central": j1_c & j2_c,
                 "jj_non_central": ~ (j1_c & j2_c),
                 "jj_one_fwd25_one_central": (j1_f25 & j2_c) | (j2_f25 & j1_c),
                 "jj_one_he_one_central": (j1_he & j2_c) | (j2_he & j1_c),
-                "jj_one_fwd30_one_central": (j1_f30 & j2_c) | (j2_f30 & j1_c),
+                "jj_one_fwd30_one_central": (j1_hf & j2_c) | (j2_hf & j1_c),
                 "jj_both_fwd25": j1_f25 & j2_f25,
                 "jj_both_he": j1_he & j2_he,
-                "jj_both_fwd30": j1_f30 & j2_f30,
-                "jj_one_he_one_fwd30": (j1_he & j2_f30) | (j2_he & j1_f30),
+                "jj_both_fwd30": j1_hf & j2_hf,
+                "jj_one_he_one_fwd30": (j1_he & j2_hf) | (j2_he & j1_hf),
+                "single_central": is_single_jet & j1_c,
+                "single_fwd25": is_single_jet & j1_f25,
+                "single_he": is_single_jet & j1_he,
+                "single_fwd30": is_single_jet & j1_hf,
             }
+            assert set(masks.keys()) == set(PAIR_JJ_ETA_REGIONS) | set(SINGLE_JET_ETA_REGIONS), (
+                "masks dict drifted from the module-level PAIR_JJ_ETA_REGIONS/"
+                "SINGLE_JET_ETA_REGIONS name lists -- keep them in sync."
+            )
 
             if jj_eta_region not in masks:
                 raise ValueError(

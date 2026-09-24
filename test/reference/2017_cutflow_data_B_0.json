@@ -8,75 +8,75 @@
         "individual": 5420
     },
     "HLT_filter": {
-        "cumulative": 5420,
-        "individual": 5420
-    },
-    "event_quality_flags": {
         "cumulative": 2004,
         "individual": 2004
     },
-    "PV_npvsGood": {
+    "event_quality_flags": {
         "cumulative": 2002,
         "individual": 5412
     },
-    "muon_pT_roch": {
+    "PV_npvsGood": {
         "cumulative": 2002,
         "individual": 5420
     },
-    "muon_eta": {
+    "muon_pT_roch": {
         "cumulative": 1975,
         "individual": 4543
     },
-    "muon_id": {
+    "muon_eta": {
         "cumulative": 1973,
         "individual": 5265
     },
-    "muon_isGlobal_or_Tracker": {
+    "muon_id": {
         "cumulative": 1953,
         "individual": 5035
     },
-    "muon_selection": {
+    "muon_isGlobal_or_Tracker": {
         "cumulative": 1953,
         "individual": 5205
     },
-    "muon_iso": {
+    "muon_selection": {
         "cumulative": 1952,
         "individual": 4343
     },
-    "nmuons": {
+    "muon_iso": {
         "cumulative": 1862,
         "individual": 3099
     },
-    "mm_charge": {
+    "nmuons": {
         "cumulative": 151,
         "individual": 160
     },
-    "electron_veto": {
+    "mm_charge": {
         "cumulative": 151,
         "individual": 1294
     },
-    "HemVeto": {
+    "electron_veto": {
         "cumulative": 151,
         "individual": 5415
     },
     "trigger_match": {
-        "cumulative": 151,
-        "individual": 5420
-    },
-    "dimuon_mass_window_76_106": {
         "cumulative": 148,
         "individual": 1675
     },
-    "h_peak_115_135": {
+    "HemVeto": {
+        "cumulative": 148,
+        "individual": 5420
+    },
+    "dimuon_mass_window_76_106": {
         "cumulative": 131,
         "individual": 135
     },
-    "h_sidebands_110_115_135_150": {
+    "h_peak_115_135": {
         "cumulative": 0,
         "individual": 4
     },
-    "h_sidebands_106_115_135_150": {
+    "h_sidebands_110_115_135_150": {
         "cumulative": 0,
         "individual": 0
+    },
+    "h_sidebands_106_115_135_150": {
+        "cumulative": 0,
+        "individual": 1
     }
 }

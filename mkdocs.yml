@@ -1,10 +1,16 @@
 site_name: CopperheadV2 Documentation
 site_url: https://ram1123.github.io/copperheadV2/
 repo_url: https://github.com/ram1123/copperheadV2
-edit_uri: edit/dev_docs/
+edit_uri: edit/main/docs/
 
 docs_dir: docs
 site_dir: _site
+
+# Keep scratch notes and leftover Jekyll assets out of the built site.
+exclude_docs: |
+  _layouts/
+  _data/
+  temp/
 
 theme:
     name: material
@@ -36,12 +42,14 @@ nav:
           - Get Yields: GetYields.md
           - Failed Jobs Check: FailedJobsCheck.md
           - Merge NanoAOD ROOT Files: MergeNanoAODRootFiles.md
+          - Copy /work to /store (EOS): CopyWorkToStore.md
           - Plotting Codes: PlottingCodes.md
     - Corrections:
           - Z-pT Reweighting: ZpT_reweight.md
           - EBE Mass Resolution: eventbyeventMassResolution.md
           - Official Recommendations: Official_recommendation.md
           - Special Treatments Summary: SpecialTreatementsSummary.md
+          - HEM Veto Ratio: HemVetoRatio.md
     - Analysis Channels:
         - ggH:
               - Category Boundary Calculation: ggH_BdtCategoryEdgeCalculation.md
@@ -65,5 +73,4 @@ nav:
           - Known Issues: known_issues.md
     - Maintenance:
           - TODO Summary: TODO_SUMMARY.md
-    - References:
-          - References: copperhead_processor-reference.md
+    - References: copperhead_processor-reference.md

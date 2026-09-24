@@ -18,6 +18,22 @@ TAG="${TAG:-${LABEL}}"
 YEARS="${YEARS:-2022postEE}"
 REGION="${REGION:-h-peak}"
 CATEGORY="${CATEGORY:-vbf}"
+# Jet-eta topology of the VBF dijet pair to train on (preprocess_dnn.py --jj-eta-region;
+# "all" or one of modules/selection.py's PAIR_JJ_ETA_REGIONS, e.g. jj_both_central).
+# Source of truth is analysis.jj_eta_region in ${CONFIG}; the JJ_ETA_REGION env var, if
+# set, overrides it. Resolved once here so OUT_BASE and preprocess_dnn.py agree
+# (mirrors common_workflow.sh).
+if [[ -z "${JJ_ETA_REGION:-}" ]]; then
+  JJ_ETA_REGION="$(python3 -c '
+import sys, yaml
+try:
+    cfg = yaml.safe_load(open(sys.argv[1])) or {}
+    print((cfg.get("analysis") or {}).get("jj_eta_region") or "all")
+except Exception:
+    print("all")
+' "${CONFIG}" 2>/dev/null || echo all)"
+  JJ_ETA_REGION="${JJ_ETA_REGION:-all}"
+fi
 
 USE_DASK_GATEWAY="${USE_DASK_GATEWAY:-1}"
 CLUSTER_INDEX="${CLUSTER_INDEX:-0}"
@@ -32,7 +48,7 @@ HPO_LABEL="${HPO_LABEL:-v1_multifold_050Trials}"
 
 TRAIN_LABEL="${TRAIN_LABEL:-trained_best_optuna_${HPO_LABEL}}"
 
-OUT_BASE="dnn/trained_models/${TAG}/${YEARS//,/-}_${REGION}_${CATEGORY}"
+OUT_BASE="dnn/trained_models/${TAG}/${YEARS//,/-}_${REGION}_${CATEGORY}_${JJ_ETA_REGION}"
 HPO_OUT_DIR="${OUT_BASE}/hpo_optuna/${HPO_LABEL}"
 TRAIN_OUT_DIR="${OUT_BASE}/${TRAIN_LABEL}"
 OPTUNA_BEST_JSON="${OPTUNA_BEST_JSON:-${HPO_OUT_DIR}/optuna_best.json}"
@@ -43,12 +59,14 @@ PREPROCESS_CMD=(
   --base-path "${BASE_PATH}"
   --tag "${TAG}"
   --years "${YEARS}"
+  --jj-eta-region "${JJ_ETA_REGION}"
 )
 
 if [[ "${USE_DASK_GATEWAY}" == "1" ]]; then
   PREPROCESS_CMD+=(--use-dask-gateway --cluster-index "${CLUSTER_INDEX}")
 fi
 
+echo "[run_dnn] jj_eta_region: ${JJ_ETA_REGION}"
 echo "[run_dnn] Output base: ${OUT_BASE}"
 echo "[run_dnn] HPO output:  ${HPO_OUT_DIR}"
 echo "[run_dnn] Train output:${TRAIN_OUT_DIR}"

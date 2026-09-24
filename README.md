@@ -52,13 +52,13 @@ The GitHub sync workflow compares stage-1 outputs against text snapshots in `tes
 To refresh those reference txt files after an intentional stage-1 change, run:
 
 ```bash
-bash scripts/update_sync_references.sh
+bash scripts/update_sync_references.sh --use-reference-switches
 ```
 
 Or regenerate a single year:
 
 ```bash
-bash scripts/update_sync_references.sh 2017
+bash scripts/update_sync_references.sh 2017  --use-reference-switches
 ```
 
 This script reruns the sync stage-1 samples, rebuilds the `*_eventKinematics.txt` files with
@@ -92,7 +92,7 @@ Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, 
 bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
 ```
 
-### Get the validation plots:
+#### Get the validation plots:
 
 Before running the below code make sure to update the input and output paths and several other parameters in the [run_plotter.py](run_plotter.py) file.
 
@@ -118,7 +118,7 @@ The per-sample survey these findings come from is
 `.agent-system/tasks/pdf_unc_hessian_implementation/pdf-set-inventory.md`.
 
 This is not caught automatically. The LHA-ID gate (`pdf_supported_lha_ids` in
-[configs/parameters/switches.yaml](configs/parameters/switches.yaml)) only checks *which*
+[configs/switches/switches.yaml](configs/switches/switches.yaml)) only checks *which*
 PDF set a sample stores, not whether its weights are usable, so it keeps PDFs enabled for
 all three. These samples were excluded by hand with `skip_sample: True` on 2026-09-14.
 
@@ -136,7 +136,7 @@ bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml 
 
 - To adjust the fitting one can change the parameters in the script `src/lib/ebeMassResCalibration/ebeMassResPlotter.py`
 
-### Update
+#### Update
 
 - New code: `src/lib/ebeMassResCalibration/getCalibrationFactor_Improved.py`
    - Just need to update the path of the input files and it should work.
@@ -144,17 +144,55 @@ bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml 
    - Then re-run stage-1 to get the updated mass calibration. **REMEMBER TO SWITCH ON THE BSC OPTION**.
 - For validation use the jupyter notebook: `src/lib/ebeMassResCalibration/closure_test.ipynb`
 
-## Z-pT reweighting
+#### Z-pT reweighting
 
 ```bash
 bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt"
 ```
 
-### Z-pT reweighting - validation
+##### Z-pT reweighting - validation
 
 ```bash
 bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -m "zpt_val"
 ```
+
+### Run VBF stage-2/3 in a dijet-|η| phase space, with systematics
+
+Two environment variables control what `-m 2`, `-m 2p`, `-m 3` and `-m 23` (stage-2 + plots + stage-3) do:
+
+- `JJ_ETA_REGION` — restricts the VBF category to a dijet-|η| phase space. Default `all` (no restriction).
+  Other values are the pair regions in `modules/selection.py` (`PAIR_JJ_ETA_REGIONS`), e.g.
+  `jj_both_central` (both leading jets |η| ≤ 2.5) and `jj_non_central` (the complement).
+  The same variable also picks the DNN model directory,
+  `dnn/trained_models/<label>/<years>_<region>_<category>_<JJ_ETA_REGION>`, so the model for that phase space
+  must already be trained (look for a `trained_best_optuna_*/` folder inside it). Unless the value is `all`,
+  `_<JJ_ETA_REGION>` is appended to the output paths (stage-2 histograms and
+  `stage3_datacards_<postfix>_<JJ_ETA_REGION>`), so different phase spaces never overwrite each other.
+- `WITH_VARIATIONS=1` — fill the systematic variations. Without it stage-2/3 run with `--no_variations`
+  (nominal only, output dirs get `_NoSyst`). Only variations that stage-1 actually saved can appear: the
+  JES-source and muon scale/resolution shape variations, and weight variations only if stage-1 was run with
+  `save_all_weight_variations` on.
+
+Example (both-jets-central, with systematics):
+
+```bash
+JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_analysis_pipeline.sh \
+  -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 \
+  -l <label> -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 23 -k -o <postfix>
+```
+
+Things to watch:
+
+- Put the variables in front of the command separated by **spaces**. `JJ_ETA_REGION=jj_both_central; bash ...`
+  (with a semicolon) sets a plain shell variable that is *not* exported, so the script never sees it and
+  silently runs the `all` phase space.
+- Check the config banner printed at start-up: `jj_eta_region (stage2/3)` and `DNN jj_eta_region` should both
+  show the region you asked for.
+- Pass `-o <postfix>` so the output directory name does not depend on the run date. Later steps
+  (`run_stats_pipeline_VBF.sh`) need the same `-o` **and** the same `JJ_ETA_REGION`, otherwise they fail with
+  `Missing VBF SR/SB datacards`.
+- To get a result for the full phase space from separate `jj_both_central` and `jj_non_central` runs, run
+  stage-3 once per region with the same `-o`, then combine the two with `-m 12` (see below).
 
 ### Run the VBF stats pipeline
 
@@ -162,14 +200,20 @@ After `stage3` has produced the datacards, use the stats driver for VBF statisti
 
 Typical modes include:
 
-- `-m 4`: copy datacards
-- `-m 5`: build combined VBF cards and workspaces
-- `-m 6`: run significance
-- `-m 7`: run impacts
+- `-m 4`: build the VBF card and Combine workspace (`-y` can be a pseudo-year such as `Run3` to combine per-year cards)
+- `-m 5`: run significance
+- `-m 6`: collect the significance summary CSV only
+- `-m 7`: run impacts (blinded: Asimov `r=1` and `r=0`)
 - `-m 8`: run likelihood scan
-- `-m 9`: run the full VBF combine chain
-- `-m 10`: collect significance summaries
-- `-m 11`: run the stage2/stage3/stats limit chain
+- `-m 9`: card + workspace + significance + summary
+- `-m 10`: expected 95% CL limit (blinded, `AsymptoticLimits --run blind`) + limit summary CSV
+- `-m 11`: `-m 9` + `-m 10` together (does not rebuild stage-2/3)
+- `-m 12`: combine the already-built `jj_both_central` and `jj_non_central` cards for `-y` into one two-channel
+  card, then significance + limit + summaries on it (needs stage-3 datacards for both regions, built with the
+  same `-o`; it builds each region's per-year card itself if missing)
+- `-m 13`: same jj-region combination as `-m 12`, then impacts
+
+`run_stats_pipeline_VBF.sh` prints its full, current mode list with `-h`.
 
 Example:
 

@@ -3,6 +3,8 @@
 import os
 import sys
 import time
+import json
+import subprocess
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -111,6 +113,155 @@ def step1_mass_fitting_zcr(ddf, output_dir="", skim_dir="", fix_fitting_one_cat=
 
     logger.info("Step 1 completed in {:.2f} s".format(time.time() - tstart))
     return df_fit
+
+
+def _build_fixcat_subprocess_argv(args, year, cat_name):
+    """Re-invoke this same script for exactly one category, in its own OS process."""
+    argv = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "--NanoAODv", str(args.NanoAODv),
+        "--years", str(year),
+        "--input_path", args.input_path,
+        "--extraString", args.extraString,
+        "--steps", "step1",
+        "--fixCat", cat_name,
+        "--log-level", logging.getLevelName(args.log_level),
+        "--no-dask-client",
+    ]
+    if args.ifbinned:
+        argv.append("--ifbinned")
+    if args.isMC:
+        argv.append("--isMC")
+    return argv
+
+
+def run_step1_categories_isolated(args, year, ddf, output_dir, skim_dir):
+    """
+    Run each calibration category's Z-peak fit in its own OS subprocess (reusing the
+    already-tested --fixCat code path), instead of looping over all categories in one
+    long-lived process.
+
+    Why: the production fit (generateBWxDCB_RooCMSShape_plot, using the custom
+    RooCMSShape ROOT plugin) has shown intermittent glibc heap corruption
+    ("free(): invalid next size") that manifests only *after* a category's fit,
+    plots and JSON are fully written to disk -- not deterministically tied to any
+    one line of Python/RooFit code (an isolated single-category repro of the exact
+    same code succeeded cleanly, while the same category crashed when run through
+    this script's normal per-year loop). Recompiling the bundled RooCMSShape_cc.so
+    against this pixi environment's ROOT (6.32.02) surfaced a cling ABI-compatibility
+    warning (__GLIBCXX__ 20240521 at compile time vs 20250605 at runtime), consistent
+    with an intermittent ABI-mismatch-driven memory corruption rather than a pure
+    logic bug. Isolating each category in its own process means a crash at the very
+    end of category N's work cannot corrupt or kill category N+1 -- each subprocess
+    starts with a clean heap.
+    """
+    logger.info("=== Step 1 (per-category subprocess isolation) ===")
+    tstart = time.time()
+
+    categories = list(get_calib_categories(ddf).keys())
+    logger.info(f"{len(categories)} categories to fit for year {year}: {categories}")
+
+    fit_results_path = f"{output_dir}/fit_results.csv"
+    fit_params_path = f"{output_dir}/fit_params.json"
+    if not os.path.exists(fit_results_path):
+        pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"]).to_csv(fit_results_path, index=False)
+
+    max_attempts = 2
+    subprocess_timeout_s = 150
+
+    def _has_row(cat_name):
+        df_check = pd.read_csv(fit_results_path) if os.path.exists(fit_results_path) else pd.DataFrame(columns=["cat_name"])
+        return cat_name in set(df_check.get("cat_name", []))
+
+    def _append_row(cat_name, fit_val, fit_err):
+        df_check = pd.read_csv(fit_results_path) if os.path.exists(fit_results_path) else pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
+        df_check = df_check[df_check["cat_name"] != cat_name]
+        df_check = pd.concat([df_check, pd.DataFrame([{"cat_name": cat_name, "fit_val": fit_val, "fit_err": fit_err}])], ignore_index=True)
+        df_check.to_csv(fit_results_path, index=False)
+
+    def _try_recover_from_json(cat_name):
+        """
+        save_fit_params_to_json runs BEFORE the plotting/canvas-cleanup code that is
+        where the crash/hang has been observed to occur, so fit_params.json can hold a
+        valid result for a category whose subprocess never returned cleanly to append
+        its own fit_results.csv row. Recover it directly rather than re-fitting.
+        """
+        if not os.path.exists(fit_params_path):
+            return False
+        with open(fit_params_path) as f:
+            all_fits = json.load(f)
+        entry = all_fits.get(cat_name)
+        if not entry or entry.get("sigma") is None:
+            return False
+        status = entry.get("status")
+        if status != 0:
+            logger.warning(
+                f"[{cat_name}] recovering fit from {fit_params_path} despite non-zero "
+                f"fit status={status} (MIGRAD/HESSE did not fully converge) -- treat "
+                "this category's calibration factor as lower-confidence; re-check with "
+                "--fixCat after tuning fit_config.yml bounds for this category."
+            )
+        _append_row(cat_name, entry["sigma"], entry["sigma_err"])
+        logger.info(f"[{cat_name}] recovered fit_val={entry['sigma']:.4g} +/- {entry['sigma_err']:.4g} from fit_params.json")
+        return True
+
+    failures = []
+    for cat_name in categories:
+        if _has_row(cat_name):
+            logger.info(f"[{cat_name}] already has a fit_results.csv row, skipping.")
+            continue
+        if _try_recover_from_json(cat_name):
+            logger.info(f"[{cat_name}] recovered from a prior run's fit_params.json, skipping refit.")
+            continue
+
+        succeeded = False
+        for attempt in range(1, max_attempts + 1):
+            argv = _build_fixcat_subprocess_argv(args, year, cat_name)
+            logger.info(f"[{cat_name}] launching isolated subprocess (attempt {attempt}/{max_attempts})")
+            logger.debug(f"[{cat_name}] argv: {argv}")
+            try:
+                result = subprocess.run(argv, timeout=subprocess_timeout_s)
+                returncode = result.returncode
+            except subprocess.TimeoutExpired:
+                # subprocess.run() already killed and reaped the child on timeout.
+                # Some crashes in this fit (glibc heap corruption in the custom
+                # RooCMSShape ROOT plugin) print "*** Break *** abort" but then hang
+                # instead of actually terminating -- a plain non-zero exit code alone
+                # is not enough to detect that case, hence the timeout.
+                logger.warning(
+                    f"[{cat_name}] subprocess did not exit within {subprocess_timeout_s}s "
+                    "and was killed (likely hung after a post-fit crash, not still fitting)"
+                )
+                returncode = None
+
+            if returncode not in (0, None):
+                logger.warning(
+                    f"[{cat_name}] subprocess exited with code {returncode} "
+                    "(often a post-fit ROOT/PyROOT cleanup crash after output was already "
+                    "written -- checking fit_results.csv / fit_params.json before treating "
+                    "this as a real failure)"
+                )
+
+            if _has_row(cat_name) or _try_recover_from_json(cat_name):
+                succeeded = True
+                break
+            logger.warning(f"[{cat_name}] attempt {attempt}/{max_attempts} produced no recoverable output.")
+
+        if not succeeded:
+            logger.error(
+                f"[{cat_name}] no row and nothing recoverable from {fit_params_path} after "
+                f"{max_attempts} isolated attempts -- this category's fit genuinely failed."
+            )
+            failures.append(cat_name)
+
+    if failures:
+        logger.error(f"{len(failures)}/{len(categories)} categories produced no output: {failures}")
+    else:
+        logger.info(f"All {len(categories)} categories produced output.")
+
+    logger.info("Step 1 (isolated) completed in {:.2f} s".format(time.time() - tstart))
+    return pd.read_csv(fit_results_path)
 
 
 def median_bootstrap_err(x, n_boot=300, seed=12345):
@@ -234,7 +385,18 @@ def main():
     print(f"binned fitting: {ifbinned}")
     print(f"extra string: {args.extraString}")
 
-    stage1_dir = get_stage1_path()  # default = "current"
+    if args.input_path:
+        # args.input_path (wired through -l/--label by common_workflow.sh's
+        # build_calib_cmd, and by the Snakemake MassCalibration* rules) is the label's
+        # root save dir -- same convention used by save_SF_rootFiles.py/compact_parquet_data.py
+        # (f"{input_path}/stage1_output/{year}/..."). Previously this was ignored in favor
+        # of configs/trials.yml's "current" trial, so -l/-c silently had no effect on which
+        # stage-1 output got calibrated unless $HMM_TRIAL happened to be set to match.
+        stage1_dir = str(Path(args.input_path) / "stage1_output")
+        logger.info(f"Using stage1 output from --input_path: {stage1_dir}")
+    else:
+        stage1_dir = get_stage1_path()  # default = "current"
+        logger.info(f"--input_path not given; falling back to configs/trials.yml: {stage1_dir}")
     LOAD_PATH = str(Path(stage1_dir) / "{year}" / "compacted")
     logger.info(f"Using LOAD_PATH: {LOAD_PATH}")
 
@@ -243,28 +405,42 @@ def main():
 
     client = None  # IMPORTANT
 
+    # This script's own module-level dask.config.set(scheduler="threads") already
+    # forces .compute() calls onto local threads in THIS process regardless of any
+    # distributed client that gets created below -- so a real distributed.Client
+    # (local or Gateway-backed) provides no compute benefit here. Worse: creating one
+    # is actively harmful, because a live distributed Client (unlike the plain
+    # "threads" config scheduler) DOES take over .compute() routing and enforces its
+    # own per-worker memory_limit -- step2_mass_resolution's single-shot
+    # ddf.compute() has been observed needing >10 GiB for one task/partition, which
+    # hard-fails with distributed.MemoryError against CONFIG["memory_limit"]="8 GiB"
+    # per worker. So --use_gateway/the plain local-client path both now degrade to no
+    # client at all (matching the one combination proven to run this pipeline
+    # end-to-end), rather than connecting to Gateway or spinning up a local cluster.
     if args.no_dask_client:
         logger.warning("Running WITHOUT a Dask client (default scheduler)")
-        # Nothing to do
     elif args.use_gateway:
-        logger.info("Using Dask Gateway client")
         from dask_gateway import Gateway
 
         gateway = Gateway(
             "http://dask-gateway-k8s.geddes.rcac.purdue.edu/",
             proxy_address="traefik-dask-gateway-k8s.cms.geddes.rcac.purdue.edu:8786",
         )
-        cluster_info = gateway.list_clusters()[0]
-        client = gateway.connect(cluster_info.name).get_client()
-        logger.info("Gateway Client created")
-        client.run(_setup_path)
-        client.run(lambda: __import__("basic_class_for_calibration"))
+        if not gateway.list_clusters():
+            logger.warning(
+                "No running Dask Gateway cluster found for this user (and connecting "
+                "one would not help -- see comment above); running WITHOUT a Dask client."
+            )
+        else:
+            logger.warning(
+                "A Dask Gateway cluster exists but will NOT be used for this run -- "
+                "see comment above for why a live distributed client is unsafe for "
+                "this script; running WITHOUT a Dask client instead."
+            )
     else:
-        logger.info("Using local Dask client")
-        client = get_dask_client(
-            n_workers=CONFIG["n_workers"],
-            threads_per_worker=CONFIG["threads_per_worker"],
-            memory_limit=CONFIG["memory_limit"],
+        logger.warning(
+            "Running WITHOUT a Dask client (default scheduler) -- see comment above "
+            "for why a local distributed client is unsafe for this script."
         )
 
     for year in years:
@@ -281,7 +457,15 @@ def main():
 
         if isMC:
             # INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/dy*MiNNLO/*/*.parquet"
-            INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/dyTo2L_M-50_incl/*/*.parquet"
+            # Sample naming differs by NanoAOD campaign/label: nanoAODv12 (Run2/2022-2023)
+            # labels use "dyTo2L_M-50_incl"; nanoAODv15 2024-conditions (2024/2025/2026)
+            # labels use "dyTo2Mu_M-50_aMCatNLO". Pick whichever exists for this label/year.
+            dy_candidates = ["dyTo2L_M-50_incl", "dyTo2Mu_M-50_aMCatNLO"]
+            dy_sample = next(
+                (c for c in dy_candidates if os.path.isdir(f"{LOAD_PATH.format(year=year)}/{c}")),
+                dy_candidates[0],
+            )
+            INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/{dy_sample}/*/*.parquet"
         else:
             INPUT_DATASET = f"{LOAD_PATH.format(year=year)}/data_*/*/*.parquet"
 
@@ -315,20 +499,35 @@ def main():
 
         if not args.closure_test:
             if args.steps == "step1" or args.steps == "all":
-                df_fit = step1_mass_fitting_zcr(
-                    ddf,
-                    output_dir,
-                    skim_dir=skim_dir,
-                    fix_fitting_one_cat=fix_fitting_one_cat,
-                    ifbinned=ifbinned,
-                    inputFilePath=LOAD_PATH.format(year=year),
-                )
+                if fix_fitting_one_cat:
+                    # A single category was explicitly requested (either directly by the
+                    # user, or because we ARE one of run_step1_categories_isolated's
+                    # per-category subprocesses) -- run it in-process as before.
+                    df_fit = step1_mass_fitting_zcr(
+                        ddf,
+                        output_dir,
+                        skim_dir=skim_dir,
+                        fix_fitting_one_cat=fix_fitting_one_cat,
+                        ifbinned=ifbinned,
+                        inputFilePath=LOAD_PATH.format(year=year),
+                    )
+                else:
+                    # Full run over every category: isolate each one in its own
+                    # subprocess (see run_step1_categories_isolated's docstring for why).
+                    df_fit = run_step1_categories_isolated(
+                        args, year, ddf, output_dir, skim_dir,
+                    )
                 if fix_fitting_one_cat:
                     # df_fit currently contains ONLY the newly refit category from step1
                     df_fit_new = df_fit.copy()
 
-                    # load old results
-                    df_fit_old = pd.read_csv(f"{output_dir}/fit_results.csv")
+                    # load old results (may not exist yet, e.g. this is the very first
+                    # category ever fit for this output_dir -- start from empty rather
+                    # than crashing)
+                    if os.path.exists(f"{output_dir}/fit_results.csv"):
+                        df_fit_old = pd.read_csv(f"{output_dir}/fit_results.csv")
+                    else:
+                        df_fit_old = pd.DataFrame(columns=["cat_name", "fit_val", "fit_err"])
                     df_fit_old["orig_idx"] = df_fit_old.index
 
                     # keep only the new row for the category under consideration

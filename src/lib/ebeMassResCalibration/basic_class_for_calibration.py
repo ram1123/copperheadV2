@@ -18,6 +18,8 @@ from copy import deepcopy
 
 from contextlib import contextmanager
 
+import re
+
 import correctionlib
 import ROOT
 
@@ -26,6 +28,29 @@ from modules.correctionlib_file_cache import get_corrset, get_corr_input_names
 
 # surpress RooFit printout
 rt.RooMsgService.instance().setGlobalKillBelow(rt.RooFit.ERROR)
+
+_IMPLICIT_MT_ENABLED = False
+
+
+def _ensure_implicit_mt(n_threads=None):
+    """
+    Enable ROOT's implicit multithreading at most once per process, with a bounded
+    thread count. Repeatedly calling rt.EnableImplicitMT() with no argument (as this
+    module previously did, once per category fit) lets it pick up hardware_concurrency()
+    each time, which in a k8s pod can wildly over-subscribe the pod's actual cgroup CPU
+    allocation.
+    """
+    global _IMPLICIT_MT_ENABLED
+    if _IMPLICIT_MT_ENABLED:
+        return
+    n = n_threads if n_threads else min(os.cpu_count() or 4, 8)
+    rt.EnableImplicitMT(n)
+    _IMPLICIT_MT_ENABLED = True
+
+
+def _safe_roofit_name(cat_idx) -> str:
+    """Sanitize cat_idx into a string safe to use as (part of) a ROOT/RooFit object name."""
+    return re.sub(r"[^0-9A-Za-z_]", "_", str(cat_idx))
 
 # ROOT.gErrorIgnoreLevel = ROOT.kWarning
 ROOT.gErrorIgnoreLevel = ROOT.kFatal
@@ -355,6 +380,7 @@ def closure_test_resolution_binning(
         plt.axvline(med_noncal, color="blue", linestyle="dashed", linewidth=2, label=f"Median NonCal: {med_noncal:.4f}")
         plt.legend()
         plt.savefig(f"{output_dir}/mass_resolution_resBin{i}_Calibrated_{pdfFile_ExtraText}.pdf")
+        plt.savefig(f"{output_dir}/mass_resolution_resBin{i}_Calibrated_{pdfFile_ExtraText}.png", dpi=120)
         plt.close()
 
         # measured sigma from Z-mass fit in THIS bin
@@ -395,7 +421,7 @@ def closure_test_resolution_binning(
     return df_out
 
 
-def save_fit_params_to_json( inputFilePath, ifbinned, fit_result, cat_idx, json_path, model_name="BWxDCB", chi2_val=None):
+def save_fit_params_to_json( inputFilePath, ifbinned, fit_result, cat_idx, json_path, model_name="BWxDCB", chi2_val=None, sigma_param_name="sigma"):
     param_dict = {}
     sigma_val = None
     sigma_err = None
@@ -409,7 +435,9 @@ def save_fit_params_to_json( inputFilePath, ifbinned, fit_result, cat_idx, json_
             "min": p.getMin(),
             "max": p.getMax()
         }
-        if p.GetName().lower() == "sigma":
+        # exact match against the caller-supplied sigma RooRealVar name (which may be
+        # per-category-suffixed, e.g. "sigma_30_45_BB") rather than a bare "sigma" guess
+        if p.GetName() == sigma_param_name:
             sigma_val = p.getVal()
             sigma_err = p.getError()
 
@@ -560,6 +588,7 @@ def generateVoigtian_plot(mass_arr, cat_idx: int, nbins, df_fit, logfile="Calibr
 
     # save plot
     canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.png")
     del canvas
     # # consider script to wait a second for stability?
     # time.sleep(1)
@@ -616,7 +645,17 @@ def generateBWxDCB_RooCMSShape_plot(
     mass_name = obs.get("name", "dimuon_mass")
     mass_title = obs.get("title", "mass (GeV)")
 
-    # if you want TCanvas to not crash, separate fitting and drawing
+    # Every RooFit object below is given a name suffixed by this sanitized cat_idx.
+    # RooFit keeps global, name-keyed lookup/caching state (notably RooFFTConvPdf's FFT
+    # cache) across sequential fits in the same process; reusing identical object names
+    # across categories (as this function previously did for every RooRealVar/RooAbsPdf)
+    # causes heap corruption crashes once the previous category's same-named objects are
+    # garbage-collected. The canvas name below was already uniquified for the same reason
+    # ("giving a specific name for each canvas prevents segfault?") -- this extends that
+    # fix to the RooFit model components themselves.
+    suf = f"_{_safe_roofit_name(cat_idx)}"
+    mass_var_name = f"{mass_name}{suf}"
+
     canvas = rt.TCanvas(str(cat_idx),str(cat_idx),800, 800) # giving a specific name for each canvas prevents segfault?
     upper_pad = rt.TPad("upper_pad", "upper_pad", 0, 0.25, 1, 1)
     lower_pad = rt.TPad("lower_pad", "lower_pad", 0, 0, 1, 0.35)
@@ -627,7 +666,7 @@ def generateBWxDCB_RooCMSShape_plot(
     lower_pad.Draw()
     upper_pad.cd()
 
-    mass =  rt.RooRealVar(mass_name, mass_title, 100, float(lo), float(hi))
+    mass =  rt.RooRealVar(mass_var_name, mass_title, 100, float(lo), float(hi))
     mass.setBins(nbins)
 
     # pick the preferred fit window
@@ -641,7 +680,7 @@ def generateBWxDCB_RooCMSShape_plot(
     mass.setMin("cache",cache_lo)
     mass.setMax("cache",cache_hi)
 
-    roo_dataset = rt.RooDataSet.from_numpy({mass_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
+    roo_dataset = rt.RooDataSet.from_numpy({mass_var_name: mass_arr}, [mass]) # associate numpy arr to RooRealVar
     if roo_dataset.numEntries() == 0:
         logger.error(f"No entries in RooDataSet for category {cat_idx}. Skipping.")
         return df_fit
@@ -650,13 +689,13 @@ def generateBWxDCB_RooCMSShape_plot(
 
     pc = cat_cfg.get("params", {})
     # BWxDCB --------------------------------------------------------------------------
-    bwmZ = rt.RooRealVar("bwz_mZ" , "mZ", 91.1876, 91, 92)
+    bwmZ = rt.RooRealVar(f"bwz_mZ{suf}" , "mZ", 91.1876, 91, 92)
     apply_roorealvar_cfg(bwmZ, pc.get("bwz_mZ"))
 
-    bwWidth = rt.RooRealVar("bwz_Width" , "widthZ", 2.4952, 1, 3)
+    bwWidth = rt.RooRealVar(f"bwz_Width{suf}" , "widthZ", 2.4952, 1, 3)
     apply_roorealvar_cfg(bwWidth, pc.get("bwz_Width"))
 
-    model1_1 = rt.RooBreitWigner("bwz", "BWZ",mass, bwmZ, bwWidth)
+    model1_1 = rt.RooBreitWigner(f"bwz{suf}", "BWZ",mass, bwmZ, bwWidth)
 
     """
     Note from Jan: sometimes freeze n values in DCB to be frozen (ie 1, but could be other values)
@@ -664,59 +703,62 @@ def generateBWxDCB_RooCMSShape_plot(
     Also, given that we care about the resolution, not the actual parameter values alpha and n, we can
     put whatevere restrictions we want.
     """
-    mean = rt.RooRealVar("mean" , "mean", 0, -10, 10) # mean is mean relative to BW
+    mean = rt.RooRealVar(f"mean{suf}" , "mean", 0, -10, 10) # mean is mean relative to BW
     apply_roorealvar_cfg(mean, pc.get("mean"))
 
-    sigma = rt.RooRealVar("sigma" , "sigma", 2, .001, 4.0)
+    sigma = rt.RooRealVar(f"sigma{suf}" , "sigma", 2, .001, 4.0)
     apply_roorealvar_cfg(sigma, pc.get("sigma"))
 
-    alpha1 = rt.RooRealVar("alpha1" , "alpha1", 2, 0.01, 65)
+    alpha1 = rt.RooRealVar(f"alpha1{suf}" , "alpha1", 2, 0.01, 65)
     apply_roorealvar_cfg(alpha1, pc.get("alpha1"))
 
-    n1 = rt.RooRealVar("n1" , "n1", 137, 1, 185)
+    n1 = rt.RooRealVar(f"n1{suf}" , "n1", 137, 1, 185)
     apply_roorealvar_cfg(n1, pc.get("n1"))
 
-    alpha2 = rt.RooRealVar("alpha2" , "alpha2", 2.0, 0.01, 65)
+    alpha2 = rt.RooRealVar(f"alpha2{suf}" , "alpha2", 2.0, 0.01, 65)
     apply_roorealvar_cfg(alpha2, pc.get("alpha2"))
 
-    n2 = rt.RooRealVar("n2" , "n2",   2, 1, 20)
+    n2 = rt.RooRealVar(f"n2{suf}" , "n2",   2, 1, 20)
     apply_roorealvar_cfg(n2, pc.get("n2"))
 
-    model1_2 = rt.RooCrystalBall("dcb","dcb",mass, mean, sigma, alpha1, n1, alpha2, n2)
+    model1_2 = rt.RooCrystalBall(f"dcb{suf}",f"dcb{suf}",mass, mean, sigma, alpha1, n1, alpha2, n2)
 
     # merge BW with DCB via convolution
-    model1 = rt.RooFFTConvPdf("signal", "signal", mass, model1_1, model1_2) # BWxDCB
+    model1 = rt.RooFFTConvPdf(f"signal{suf}", "signal", mass, model1_1, model1_2) # BWxDCB
 
     logger.info("Configured BWxDCB model.")
 
 
     # Add RooCMSShape Background --------------------------------------------------------------------------
-    exp_alpha = rt.RooRealVar("exp_alpha", "#alpha", 101.0, 0.0, 300.0)
+    exp_alpha = rt.RooRealVar(f"exp_alpha{suf}", "#alpha", 101.0, 0.0, 300.0)
     apply_roorealvar_cfg(exp_alpha, pc.get("exp_alpha"))
 
-    exp_beta = rt.RooRealVar("exp_beta", "#beta", 0.15, 0.0, 2.0)
+    exp_beta = rt.RooRealVar(f"exp_beta{suf}", "#beta", 0.15, 0.0, 2.0)
     apply_roorealvar_cfg(exp_beta, pc.get("exp_beta"))
 
-    exp_gamma = rt.RooRealVar("exp_gamma", "#gamma", 0.1, 0.0, 10.0)
+    exp_gamma = rt.RooRealVar(f"exp_gamma{suf}", "#gamma", 0.1, 0.0, 10.0)
     apply_roorealvar_cfg(exp_gamma, pc.get("exp_gamma"))
 
-    exp_peak = rt.RooRealVar("exp_peak", "peak", 91.1876)  # 91.1876
+    exp_peak = rt.RooRealVar(f"exp_peak{suf}", "peak", 91.1876)  # 91.1876
     apply_roorealvar_cfg(exp_peak, pc.get("exp_peak"))
 
-    model2 = rt.RooCMSShape("bkg", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
+    model2 = rt.RooCMSShape(f"bkg{suf}", "bkg", mass, exp_alpha, exp_beta, exp_gamma, exp_peak)
 
 
-    sigfrac = rt.RooRealVar("sigfrac", "sigfrac", 0.999, 0.5, 0.99999999)
+    sigfrac = rt.RooRealVar(f"sigfrac{suf}", "sigfrac", 0.999, 0.5, 0.99999999)
     apply_roorealvar_cfg(sigfrac, pc.get("sigfrac"))
 
-    final_model = rt.RooAddPdf("final_model", "final_model", [model1, model2],[sigfrac])
+    final_model = rt.RooAddPdf(f"final_model{suf}", "final_model", [model1, model2],[sigfrac])
     # final_model = model1_2
 
     time_step = time.time()
 
     if ifbinned:
         # fitting directly to unbinned dataset is slow, so first make a histogram
-        roo_hist = rt.RooDataHist("data_hist","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
+        # (name uniquified per-category like every other RooFit object above; the
+        # "data_hist" string used in plotOn(Name=...)/chiSquare/pullHist below is a
+        # separate, frame-scoped tag and does not need to match this object's own name)
+        roo_hist = rt.RooDataHist(f"data_hist{suf}","binned version of roo_dataset", rt.RooArgSet(mass), roo_dataset)  # copies binning from mass variable
         if roo_hist.numEntries() == 0:
             logger.error(f"No entries in RooDataHist for category {cat_idx}. Skipping.")
             return df_fit
@@ -745,7 +787,7 @@ def generateBWxDCB_RooCMSShape_plot(
         return opts
 
     # do fitting
-    rt.EnableImplicitMT()
+    _ensure_implicit_mt()
 
     _ = final_model.fitTo(roo_hist, *roo_fit_opts(stage1))
     fit_result = final_model.fitTo(roo_hist, *roo_fit_opts(stage2))
@@ -778,8 +820,11 @@ def generateBWxDCB_RooCMSShape_plot(
     # NOTE: Remember to provide "Name" argument to plotOn so that legend and chi2 can find the correct objects
     roo_dataset.plotOn(frame, DataError="SumW2", Name="data_hist") # name is explicitly defined so chiSquare can find it
     # roo_hist.plotOn(frame, Name="data_hist") # name is explicitly defined so chiSquare can find it
-    final_model.plotOn(frame, Components="signal", Name="signal", LineColor=rt.kBlue)
-    final_model.plotOn(frame, Components="bkg", Name="bkg", LineColor=rt.kRed)
+    # Components= selects a sub-pdf of final_model by its OWN RooFit name (model1/model2's
+    # GetName(), now per-category-suffixed) -- unlike Name=, which just tags the resulting
+    # curve within this frame and can stay a fixed literal.
+    final_model.plotOn(frame, Components=model1.GetName(), Name="signal", LineColor=rt.kBlue)
+    final_model.plotOn(frame, Components=model2.GetName(), Name="bkg", LineColor=rt.kRed)
     final_model.plotOn(frame, Name="final_model", LineColor=rt.kGreen)
     model1.paramOn(frame, Parameters=[sigma], Layout=[0.55,0.94, 0.8],
                                 # Label="Fit Result",
@@ -791,7 +836,7 @@ def generateBWxDCB_RooCMSShape_plot(
     # NOTE: compute chi2 after all plotOn calls to ensure correct components are drawn
     # calculate chi2 and add to plot
     # chiSquare(pdfName, histName, nFreeParams) returns chi2/ndf
-    chi2_per_ndf = frame.chiSquare(final_model.GetName(), "data_hist", n_free_params)
+    chi2_per_ndf = frame.chiSquare("final_model", "data_hist", n_free_params)  # "final_model" is the plotOn Name= tag, not final_model.GetName() (now per-category suffixed)
     chi2_per_ndf = float("%.3g" % chi2_per_ndf)  # get up to 3 sig fig
     logger.info(f"chi2_per_ndf: {chi2_per_ndf}")
 
@@ -806,7 +851,7 @@ def generateBWxDCB_RooCMSShape_plot(
 
     print(f"===> output dir: {output_dir}/fit_params.json")
     # store the fit result in a json file
-    save_fit_params_to_json(inputFilePath, ifbinned, fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2)
+    save_fit_params_to_json(inputFilePath, ifbinned, fit_result, cat_idx, f"{output_dir}/fit_params.json", model_name="BWxDCB+RooCMSShape", chi2_val=chi2, sigma_param_name=sigma.GetName())
 
     latex = rt.TLatex()
     latex.SetNDC()
@@ -885,9 +930,16 @@ def generateBWxDCB_RooCMSShape_plot(
     with open(f"{output_dir}/{logfile}", "a") as f:
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
-    full_path = f"{output_dir}/calibration_fitCat{cat_idx}.pdf"
+    # PNG, not PDF: ROOT's TPDF backend reproducibly crashes with a glibc heap
+    # corruption (free(): invalid next size) partway through writing the PDF for
+    # this exact canvas -- confirmed via bisection (same fit, same canvas, same
+    # process: PDF output crashes every time, PNG output via the same canvas.SaveAs
+    # call succeeds every time). Root cause not isolated further (ROOT's TPDF
+    # internals); PNG sidesteps it entirely and is what the calibration factors
+    # need visually inspected anyway.
+    full_path = f"{output_dir}/calibration_fitCat{cat_idx}.png"
     if pdfFile_ExtraText:
-        full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
+        full_path = full_path.replace(".png", f"_{pdfFile_ExtraText}.png")
     canvas.SaveAs(full_path)
 
     os.makedirs(f"{output_dir}/fits_root", exist_ok=True)
@@ -1298,6 +1350,7 @@ def generateBWxDCB_plot(
     if pdfFile_ExtraText:
         full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
     canvas.SaveAs(full_path)
+    canvas.SaveAs(full_path.replace(".pdf",".png"))
 
     os.makedirs(f"{output_dir}/fits_root", exist_ok=True)
     canvas.SaveAs(f"{output_dir}/fits_root/calibration_fitCat{cat_idx}.root")
@@ -1506,6 +1559,7 @@ def generateBWxDCB_plot_bkgErfxExp(mass_arr, cat_idx: int, nbins, df_fit = "", l
         f.write(f"{cat_idx} {sigma.getVal()} {sigma.getError()}\n")
 
     canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.pdf")
+    canvas.SaveAs(f"{output_dir}/calibration_fitCat{cat_idx}.png")
     del canvas
     # consider script to wait a second for stability?
     time.sleep(1)
@@ -1787,6 +1841,7 @@ def plot_closure_comparison_calibrated_uncalibrated(
     if pdfFile_ExtraText:
         full_path = full_path.replace(".pdf", f"_{pdfFile_ExtraText}.pdf")
     plt.savefig(full_path)
+    plt.savefig(full_path.replace(".pdf",".png"))
     plt.close()
     logger.info(f"Combined closure test plot saved as {full_path}")
 
