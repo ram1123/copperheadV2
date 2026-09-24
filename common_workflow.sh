@@ -985,6 +985,28 @@ run_vbf_significance() {
     )
 }
 
+# Number of entries in a ROOT TTree, or 0 if the file/tree is missing/unreadable.
+# Used to detect a Combine fit that silently produced an empty output file (which
+# combineTool.py's own collection step doesn't catch until much later, crashing with
+# an unhelpful TypeError) rather than to inspect fit content.
+combine_root_tree_entries() {
+    local root_path="$1"
+    local tree_name="$2"
+    python3 -c "
+import ROOT
+ROOT.gErrorIgnoreLevel = ROOT.kFatal
+try:
+    f = ROOT.TFile.Open('${root_path}')
+except OSError:
+    f = None
+if not f or f.IsZombie():
+    print(0)
+else:
+    t = f.Get('${tree_name}')
+    print(t.GetEntries() if t else 0)
+" 2>/dev/null
+}
+
 run_vbf_impacts() {
     local year="$1"
     local card_dir
@@ -1000,8 +1022,31 @@ run_vbf_impacts() {
         tag="r${r_inject}"
         (
             cd "${card_dir}"
-            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 -t -1 --expectSignal "${r_inject}"
-            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doFits --robustFit 1 -t -1 --expectSignal "${r_inject}" --parallel 60
+            # --cminDefaultMinimizerStrategy: neither strategy converges uniformly across
+            # all year/region/r_inject combos. Strategy 1's Hesse step fails to converge
+            # (Edm stuck above tolerance) when the Asimov dataset sits almost exactly at
+            # the nominal templates (e.g. 2023BPix r=1) -- strategy 0 fixes that. But
+            # strategy 0 in turn fails outright for some combos (e.g. 2022preEE
+            # jj_both_central r=0: initial-fit ROOT output has 0 entries), while strategy 2
+            # fails on others that strategy 0 handles fine (e.g. 2022preEE jj_non_central
+            # r=1). So: try strategy 0 first (cheaper, usually sufficient), and only if its
+            # initial-fit output has no entries in the "limit" tree, discard it and retry
+            # with strategy 2 -- then use whichever strategy actually converged for the
+            # rest of this (year, r_inject)'s --doFits/-o/plotImpacts steps, so they stay
+            # consistent with the initial fit they're profiling around.
+            local initial_root="higgsCombine_initialFit_.impacts_${year}_${save_postfix}_${tag}.MultiDimFit.mH125.root"
+            local strategy=0
+            rm -f "${initial_root}"
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 --cminDefaultMinimizerStrategy "${strategy}" -t -1 --expectSignal "${r_inject}"
+            local entries
+            entries="$(combine_root_tree_entries "${initial_root}" limit)"
+            if [[ "${entries:-0}" -lt 1 ]]; then
+                echo "run_vbf_impacts: strategy 0 initial fit for year=${year} tag=${tag} produced no entries, retrying with strategy 2"
+                rm -f "${initial_root}"
+                strategy=2
+                combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doInitialFit --robustFit 1 --cminDefaultMinimizerStrategy "${strategy}" -t -1 --expectSignal "${r_inject}"
+            fi
+            combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 --doFits --robustFit 1 --cminDefaultMinimizerStrategy "${strategy}" -t -1 --expectSignal "${r_inject}" --parallel 60
             combineTool.py -M Impacts -d "${stem}.root" -m 125 --freezeParameters MH -n ".impacts_${year}_${save_postfix}_${tag}" --setParameterRanges r=-5.0,5.0 -o "impacts_${year}_${save_postfix}_${tag}.json" -t -1 --expectSignal "${r_inject}" --parallel 60
             plotImpacts.py -i "impacts_${year}_${save_postfix}_${tag}.json" -o "impacts_${year}_${save_postfix}_${tag}"
         )
@@ -1017,12 +1062,20 @@ run_vbf_lhscan() {
     ensure_vbf_workspace "${year}"
     (
         cd "${card_dir}"
+        # Named (lnN/shape/param) systematics only - excludes autoMCStats bin-by-bin
+        # stat parameters and the DY rateParams, which stay floating in the
+        # "MCStat+DYNorm" scan below.
+        local named_systs
+        named_systs="$(awk '$2=="lnN" || $2=="shape" || $2=="param" {print $1}' "${stem}.txt" | sort -u | paste -sd, -)"
         combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters MH -n ".lhscan${year}_${save_postfix}.with_syst" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
+        combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters "MH,${named_systs}" -n ".lhscan${year}_${save_postfix}.with_syst.mcstat_dynorm" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
         combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters MH,allConstrainedNuisances -n ".lhscan${year}_${save_postfix}.with_syst.statonly" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
         plot1DScan.py "higgsCombine.lhscan${year}_${save_postfix}.with_syst.MultiDimFit.mH125.root" \
-            --main-label "With systematics" \
+            --main-label "with-syst" \
             --main-color 1 \
-            --others "higgsCombine.lhscan${year}_${save_postfix}.with_syst.statonly.MultiDimFit.mH125.root:Stat-only:2" \
+            --others "higgsCombine.lhscan${year}_${save_postfix}.with_syst.mcstat_dynorm.MultiDimFit.mH125.root:Stat+DYNorm:2" \
+               "higgsCombine.lhscan${year}_${save_postfix}.with_syst.statonly.MultiDimFit.mH125.root:Stat-only:4" \
+            --breakdown "Syst,DYNorm,Stat" \
             -o "lh_scan_${year}_${save_postfix}"
     )
 }

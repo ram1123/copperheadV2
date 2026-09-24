@@ -1,6 +1,20 @@
 # Label name scheme
 - or Run3_nanoAODv<version>_<date>_<additional_info>
 
+# AI chat snapshot
+
+Create a State Snapshot before closing: Once a milestone is met, prompt the agent:
+
+```
+Generate a minimal State Snapshot for this session, to be pasted at the start of a fresh chat to resume work with near-zero re-derivation cost. Do NOT include anything derivable from git log, git diff, or reading the current files — I'll re-read code fresh next time. Only include what would otherwise be lost. Format as compact markdown with these sections, omitting any that are empty:
+1. Task — one line: what I'm working on and why (physics/pipeline goal, not implementation detail).
+2. Decisions made — choices settled this session that aren't obvious from the diff (e.g. "use jer_strat=4 not veto-map", "combine years via pseudo-year not per-year loop"). One line each, with the reason if non-obvious.
+3. Open questions / blockers — anything unresolved that the next session needs to pick up, including who/what it's waiting on.
+4. Files touched this session — bare paths, no descriptions (git diff covers the "what").
+5. Validation status — what was run (sync test, smoke test, specific script) and pass/fail, so I don't rerun blindly or skip something unverified.
+6. Next concrete step — the single next action, phrased as an imperative, not a summary of the whole session.
+Keep the whole thing under ~200 words. Do not restate CLAUDE.md content, my memory files, skills or anything already persisted in project docs — this snapshot is purely session-delta state
+```
 
 # Compact command
 
@@ -34,6 +48,12 @@ JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_stats_pipeline_VBF.sh \
   -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 \
   -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics \
   -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 9 -k
+
+
+ time MODEL_YEARS="2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" JJ_ETA_REGION=jj_one_fwd25_one_central WITH_VARIATIONS=1 bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml          -v 12 -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics          -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 23 -k
+
+
+ time MODEL_YEARS="2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_stats_pipeline_VBF.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml          -v 12 -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics          -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026,Run3" -m 7
 ```
 
 # 23 Aug 2026

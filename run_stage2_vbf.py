@@ -538,6 +538,31 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             events = add_transformer_score(events, year)
         fields = set(events.fields)
 
+        # --- Reconstruct wgt_zpt_up/down from existing stage-1 output ------------------
+        # The zpt weight is applied as a pure multiplicative factor into
+        # wgt_nominal, so the alternate total
+        # weight is exactly wgt_nominal * (zpt_wgt_reco_{up,down} / zpt_wgt_reco)
+        if (
+            "zpt_wgt_reco" in fields
+            and "zpt_wgt_reco_up" in fields
+            and "zpt_wgt_reco_down" in fields
+            and "wgt_nominal" in fields
+            and "wgt_zpt_up" not in fields
+            and "wgt_zpt_down" not in fields
+        ):
+            zpt_nom = events["zpt_wgt_reco"]
+            safe_zpt_nom = ak.where(zpt_nom != 0, zpt_nom, ak.ones_like(zpt_nom))
+            zpt_up_ratio = ak.where(
+                zpt_nom != 0, events["zpt_wgt_reco_up"] / safe_zpt_nom, ak.ones_like(zpt_nom)
+            )
+            zpt_down_ratio = ak.where(
+                zpt_nom != 0, events["zpt_wgt_reco_down"] / safe_zpt_nom, ak.ones_like(zpt_nom)
+            )
+            events = ak.with_field(events, events["wgt_nominal"] * zpt_up_ratio, "wgt_zpt_up")
+            events = ak.with_field(events, events["wgt_nominal"] * zpt_down_ratio, "wgt_zpt_down")
+            fields = set(events.fields)
+        # ---------------------------------------------------------------------------------
+
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
