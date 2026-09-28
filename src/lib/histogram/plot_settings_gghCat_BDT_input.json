@@ -2430,5 +2430,373 @@
         "ylabel": "Events",
         "xlabel": "VBF pair exists",
         "color": "black"
+    },
+    "jet1_chEmEF": {
+        "variable": "jet1_chEmEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_chEmEF",
+        "color": "royalblue"
+    },
+    "jet1_chHEF": {
+        "variable": "jet1_chHEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_chHEF",
+        "color": "royalblue"
+    },
+    "jet1_neEmEF": {
+        "variable": "jet1_neEmEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_neEmEF",
+        "color": "royalblue"
+    },
+    "jet1_neHEF": {
+        "variable": "jet1_neHEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_neHEF",
+        "color": "royalblue"
+    },
+    "jet1_muEF": {
+        "variable": "jet1_muEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_muEF",
+        "color": "royalblue"
+    },
+    "jet1_chMultiplicity": {
+        "variable": "jet1_chMultiplicity",
+        "binning_linspace": [-0.5, 39.5, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_chMultiplicity",
+        "color": "royalblue"
+    },
+    "jet1_neMultiplicity": {
+        "variable": "jet1_neMultiplicity",
+        "binning_linspace": [-0.5, 39.5, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_neMultiplicity",
+        "color": "royalblue"
+    },
+    "jet1_nConstituents": {
+        "variable": "jet1_nConstituents",
+        "binning_linspace": [-0.5, 79.5, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_nConstituents",
+        "color": "royalblue"
+    },
+    "jet1_nElectrons": {
+        "variable": "jet1_nElectrons",
+        "binning_linspace": [-0.5, 4.5, 6],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_nElectrons",
+        "color": "royalblue"
+    },
+    "jet1_nMuons": {
+        "variable": "jet1_nMuons",
+        "binning_linspace": [-0.5, 4.5, 6],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_nMuons",
+        "color": "royalblue"
+    },
+    "jet1_mass": {
+        "variable": "jet1_mass",
+        "binning_linspace": [0.0, 40.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_mass",
+        "color": "royalblue"
+    },
+    "jet1_area": {
+        "variable": "jet1_area",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_area",
+        "color": "royalblue"
+    },
+    "jet1_rawFactor": {
+        "variable": "jet1_rawFactor",
+        "binning_linspace": [-0.2, 0.6, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_rawFactor",
+        "color": "royalblue"
+    },
+    "jet1_muonSubtrFactor": {
+        "variable": "jet1_muonSubtrFactor",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_muonSubtrFactor",
+        "color": "royalblue"
+    },
+    "jet1_muonSubtrDeltaEta": {
+        "variable": "jet1_muonSubtrDeltaEta",
+        "binning_linspace": [-0.6, 0.6, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_muonSubtrDeltaEta",
+        "color": "royalblue"
+    },
+    "jet1_muonSubtrDeltaPhi": {
+        "variable": "jet1_muonSubtrDeltaPhi",
+        "binning_linspace": [-3.2, 3.2, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_muonSubtrDeltaPhi",
+        "color": "royalblue"
+    },
+    "jet1_hfEmEF": {
+        "variable": "jet1_hfEmEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_hfEmEF",
+        "color": "royalblue"
+    },
+    "jet1_hfHEF": {
+        "variable": "jet1_hfHEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_hfHEF",
+        "color": "royalblue"
+    },
+    "jet1_hfcentralEtaStripSize": {
+        "variable": "jet1_hfcentralEtaStripSize",
+        "binning_linspace": [0.0, 20.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_hfcentralEtaStripSize",
+        "color": "royalblue"
+    },
+    "jet1_hfadjacentEtaStripsSize": {
+        "variable": "jet1_hfadjacentEtaStripsSize",
+        "binning_linspace": [0.0, 20.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_hfadjacentEtaStripsSize",
+        "color": "royalblue"
+    },
+    "jet1_hfsigmaEtaEta": {
+        "variable": "jet1_hfsigmaEtaEta",
+        "binning_linspace": [0.0, 0.05, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_hfsigmaEtaEta",
+        "color": "royalblue"
+    },
+    "jet1_hfsigmaPhiPhi": {
+        "variable": "jet1_hfsigmaPhiPhi",
+        "binning_linspace": [0.0, 0.05, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_hfsigmaPhiPhi",
+        "color": "royalblue"
+    },
+    "jet1_puIdDisc": {
+        "variable": "jet1_puIdDisc",
+        "binning_linspace": [-1.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet1_puIdDisc",
+        "color": "royalblue"
+    },
+    "jet2_chEmEF": {
+        "variable": "jet2_chEmEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_chEmEF",
+        "color": "royalblue"
+    },
+    "jet2_chHEF": {
+        "variable": "jet2_chHEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_chHEF",
+        "color": "royalblue"
+    },
+    "jet2_neEmEF": {
+        "variable": "jet2_neEmEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_neEmEF",
+        "color": "royalblue"
+    },
+    "jet2_neHEF": {
+        "variable": "jet2_neHEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_neHEF",
+        "color": "royalblue"
+    },
+    "jet2_muEF": {
+        "variable": "jet2_muEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_muEF",
+        "color": "royalblue"
+    },
+    "jet2_chMultiplicity": {
+        "variable": "jet2_chMultiplicity",
+        "binning_linspace": [-0.5, 39.5, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_chMultiplicity",
+        "color": "royalblue"
+    },
+    "jet2_neMultiplicity": {
+        "variable": "jet2_neMultiplicity",
+        "binning_linspace": [-0.5, 39.5, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_neMultiplicity",
+        "color": "royalblue"
+    },
+    "jet2_nConstituents": {
+        "variable": "jet2_nConstituents",
+        "binning_linspace": [-0.5, 79.5, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_nConstituents",
+        "color": "royalblue"
+    },
+    "jet2_nElectrons": {
+        "variable": "jet2_nElectrons",
+        "binning_linspace": [-0.5, 4.5, 6],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_nElectrons",
+        "color": "royalblue"
+    },
+    "jet2_nMuons": {
+        "variable": "jet2_nMuons",
+        "binning_linspace": [-0.5, 4.5, 6],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_nMuons",
+        "color": "royalblue"
+    },
+    "jet2_mass": {
+        "variable": "jet2_mass",
+        "binning_linspace": [0.0, 40.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_mass",
+        "color": "royalblue"
+    },
+    "jet2_area": {
+        "variable": "jet2_area",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_area",
+        "color": "royalblue"
+    },
+    "jet2_rawFactor": {
+        "variable": "jet2_rawFactor",
+        "binning_linspace": [-0.2, 0.6, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_rawFactor",
+        "color": "royalblue"
+    },
+    "jet2_muonSubtrFactor": {
+        "variable": "jet2_muonSubtrFactor",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_muonSubtrFactor",
+        "color": "royalblue"
+    },
+    "jet2_muonSubtrDeltaEta": {
+        "variable": "jet2_muonSubtrDeltaEta",
+        "binning_linspace": [-0.6, 0.6, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_muonSubtrDeltaEta",
+        "color": "royalblue"
+    },
+    "jet2_muonSubtrDeltaPhi": {
+        "variable": "jet2_muonSubtrDeltaPhi",
+        "binning_linspace": [-3.2, 3.2, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_muonSubtrDeltaPhi",
+        "color": "royalblue"
+    },
+    "jet2_hfEmEF": {
+        "variable": "jet2_hfEmEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_hfEmEF",
+        "color": "royalblue"
+    },
+    "jet2_hfHEF": {
+        "variable": "jet2_hfHEF",
+        "binning_linspace": [0.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_hfHEF",
+        "color": "royalblue"
+    },
+    "jet2_hfcentralEtaStripSize": {
+        "variable": "jet2_hfcentralEtaStripSize",
+        "binning_linspace": [0.0, 20.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_hfcentralEtaStripSize",
+        "color": "royalblue"
+    },
+    "jet2_hfadjacentEtaStripsSize": {
+        "variable": "jet2_hfadjacentEtaStripsSize",
+        "binning_linspace": [0.0, 20.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_hfadjacentEtaStripsSize",
+        "color": "royalblue"
+    },
+    "jet2_hfsigmaEtaEta": {
+        "variable": "jet2_hfsigmaEtaEta",
+        "binning_linspace": [0.0, 0.05, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_hfsigmaEtaEta",
+        "color": "royalblue"
+    },
+    "jet2_hfsigmaPhiPhi": {
+        "variable": "jet2_hfsigmaPhiPhi",
+        "binning_linspace": [0.0, 0.05, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_hfsigmaPhiPhi",
+        "color": "royalblue"
+    },
+    "jet2_puIdDisc": {
+        "variable": "jet2_puIdDisc",
+        "binning_linspace": [-1.0, 1.0, 41],
+        "density": false,
+        "ylabel": "Events",
+        "xlabel": "jet2_puIdDisc",
+        "color": "royalblue"
     }
 }

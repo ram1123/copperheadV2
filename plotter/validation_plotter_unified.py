@@ -33,7 +33,7 @@ from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
 from modules.sample_config import get_bkg_sig_dicts, get_data_processes
-from configs.variables.variable_lists import get_all_vars
+from configs.variables.variable_lists import get_all_vars, unique_preserve_order, VAR_SETS
 from scripts.compact_parquet_data import ensure_compacted
 
 # Load CMS plotting style 
@@ -98,8 +98,18 @@ def find_group_name(process_name, group_dict_param):
     return "other"
 
 
+# hf* jet vars are only meaningful for HF (|eta| >= 3) jets; NanoAOD fills a
+# -1 sentinel for non-HF jets (see CLAUDE.md's HF-sentinel guard rule).
+_HF_SENTINEL_VAR_SUBSTRINGS = (
+    "hfEmEF", "hfHEF", "hfcentralEtaStripSize", "hfadjacentEtaStripsSize",
+    "hfsigmaEtaEta", "hfsigmaPhiPhi",
+)
+
+
 def fillHist(sample_hist, var, to_fill_setting, values, weights):
-    values_filter = values!=-999.0
+    values_filter = values != -999.0
+    if any(sub in var for sub in _HF_SENTINEL_VAR_SUBSTRINGS):
+        values_filter &= values != -1.0
     values = values[values_filter]
     weights = weights[values_filter]
     to_fill_setting[var] = values
@@ -1135,14 +1145,16 @@ if __name__ == "__main__":
     "-var",
     "--variables",
     dest="variables",
-    # default=["dimuon", "mu"],
-    # default=["dijet", "jet"],
-    # default=["dimuon", "dijet", "jet", "mu"],
-    default=["dimuon", "dijet", "jet"],
+    default=None,
     nargs="*",
     type=str,
+    choices=list(VAR_SETS.keys()),
     action="store",
-    help="list of variables to plot (ie: jet, mu, dimuon)",
+    help=(
+        "extra VAR_SETS group(s) to plot IN ADDITION to the default set "
+        f"(choices: {list(VAR_SETS.keys())}); e.g. --variables jet_id for the "
+        "PU-DNN input variables. Omit for the default set only."
+    ),
     )
     parser.add_argument(
     "-min",
@@ -1342,7 +1354,14 @@ if __name__ == "__main__":
     # gather variables to plot:
     kinematic_vars = ['pt', 'eta', 'phi']
     if args.minimum_set: kinematic_vars = ['pt', 'eta']
-    variables2plot = get_all_vars(args.minimum_set)  # get the full list of variables from the config file
+    # get the full list of variables from the config file; args.variables (a
+    # VAR_SETS key list, e.g. "jet_id" for PU-DNN input vars) opts into extra
+    # groups beyond the default set instead of replacing it, so it's dead-simple
+    # to add one more plot group without changing anyone else's default run.
+    variables2plot = get_all_vars(args.minimum_set)
+    if args.variables:
+        variables2plot += get_all_vars(args.minimum_set, only_groups=args.variables)
+        variables2plot = unique_preserve_order(variables2plot)
 
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot

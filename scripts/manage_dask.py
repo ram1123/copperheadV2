@@ -22,25 +22,28 @@ Alternatively, source your environment setup script:
 USAGE EXAMPLES
 --------------
 1. Create a new cluster (cleans up any existing active clusters first):
-    python manage_dask.py --create
+    python scripts/manage_dask.py --create
 
 2. Retrieve active dashboard links:
-    python manage_dask.py --dashboard
+    python scripts/manage_dask.py --dashboard
 
 3. Recreate a cluster (shutdown existing + create new):
-    python manage_dask.py --recreate
+    python scripts/manage_dask.py --recreate
 
 4. Shutdown all active clusters without spinning up a new one:
-    python manage_dask.py --shutdown-all
+    python scripts/manage_dask.py --shutdown-all
 
 ===============================================================================
 """
 import argparse
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 from dask_gateway import Gateway
+
+CREATE_CLUSTER_TIMEOUT = 120  # seconds; the scheduler-comm handshake has no built-in timeout
 
 
 def setup_environment():
@@ -50,6 +53,7 @@ def setup_environment():
         sys.exit(1)
 
     cwd = str(Path.cwd())
+    print(f"PWD: {cwd}")
     current_pythonpath = os.environ.get("PYTHONPATH", "")
     os.environ["PYTHONPATH"] = (
         f"{current_pythonpath}:{cwd}" if current_pythonpath else cwd
@@ -91,12 +95,43 @@ def shutdown_all_clusters(gateway):
 
 def create_cluster(gateway, scale_workers=59):
     print("Creating new cluster...")
-    cluster = gateway.new_cluster(
-        pixi_project="/cvmfs/cms-af.opensciencegrid.org/paf/pixi/copperheadV2",
-        worker_cores=2,
-        worker_memory=20,
-        env=dict(os.environ),
-    )
+    worker_env = {
+        "PATH": os.environ["PATH"],
+        "PYTHONPATH": os.environ["PYTHONPATH"],
+        "X509_USER_PROXY": os.environ["X509_USER_PROXY"],
+    }
+    result = {}
+
+    def _new_cluster():
+        try:
+            result["cluster"] = gateway.new_cluster(
+                pixi_project="/cvmfs/cms-af.opensciencegrid.org/paf/pixi/copperheadV2",
+                worker_cores=2,
+                worker_memory=20,
+                env=worker_env,
+                shutdown_on_close=False,
+            )
+        except Exception as exc:  # surfaced via result dict, not raised cross-thread
+            result["error"] = exc
+
+    thread = threading.Thread(target=_new_cluster, daemon=True)
+    thread.start()
+    thread.join(timeout=CREATE_CLUSTER_TIMEOUT)
+
+    if thread.is_alive():
+        print(
+            f"Timed out after {CREATE_CLUSTER_TIMEOUT}s waiting for the "
+            "gateway's scheduler-comm handshake (a known dask_gateway hang "
+            "point with no built-in timeout). The cluster may still come up "
+            "in the background since shutdown_on_close=False -- check with "
+            "'python scripts/manage_dask.py --dashboard' before retrying, "
+            "to avoid piling up abandoned clusters."
+        )
+        sys.exit(1)
+    if "error" in result:
+        raise result["error"]
+
+    cluster = result["cluster"]
     cluster.scale(scale_workers)
     print(f"Cluster provisioned: {cluster.name}")
     print(f"Dashboard Link: {cluster.dashboard_link}")

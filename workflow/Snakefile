@@ -34,6 +34,7 @@ JJ_ETA_REGIONS = config.get("plot_jj_eta_regions", ["all"])
 SINGLE_JET_ETA_REGIONS = config.get("plot_single_jet_eta_regions", [])
 PLOT_ZPT_MODES = config.get("plot_zpt_modes", ["withzpt"])  # ["withzpt", "nozpt"]
 PLOT_VAR_SETS = config.get("plot_var_sets", ["fullset"])  # ["minset", "fullset"]
+PLOT_EXTRA_VARIABLES = config.get("plot_extra_variables", [])  # e.g. ["jet_id"]
 
 # Per-category njets_plot bins to produce for non-vbf categories (vbf is
 # always njets_plot="2" by construction, see _jet_region_targets_for below).
@@ -177,10 +178,10 @@ ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
 ZPT_BATCH = int(ZPT.get("batch", 65536))
 
 
-onstart:
-    if USE_GW:
-        print("use_gateway=True -- (re)creating the Dask Gateway cluster before the DAG runs")
-        shell("python scripts/manage_dask.py --recreate")
+#onstart:
+#    if USE_GW:
+#        print("use_gateway=True -- (re)creating the Dask Gateway cluster before the DAG runs")
+#        shell("python scripts/manage_dask.py --recreate")
 
 
 def gw_flags():
@@ -231,7 +232,7 @@ rule all:
         INITIAL_STAGE1_COMPACT_DONE,
         # (5b) PU-DNN retraining -- deliberate/occasional, not automatic; uncomment
         # or request state/<run_tag>/pu_dnn_train_<year>.done directly to run it.
-        expand(STATEDIR + "/pu_dnn_train_{year}.done", year=YEARS),        
+        # expand(STATEDIR + "/pu_dnn_train_{year}.done", year=YEARS),        
         # (3) plotter (after stage1)
         PLOT_DONE,
         # (4) get zpt
@@ -694,6 +695,9 @@ rule plots:
         zpt_flag=lambda wc: "--remove_zpt_weights" if wc.zpt_mode == "nozpt" else "",
         minset_flag=lambda wc: "--minimum_set" if wc.var_set == "minset" else "",
         vbf_filter_flag=lambda wc: "--vbf_filter_study" if PLOT_VBF_FILTER_STUDY else "",
+        extra_vars_flag=lambda wc: (
+            "--variables " + " ".join(PLOT_EXTRA_VARIABLES) if PLOT_EXTRA_VARIABLES else ""
+        ),
     # resources:
     #     gateway=1
     shell:
@@ -716,6 +720,7 @@ rule plots:
             {params.minset_flag} \
             {params.zpt_flag} \
             {params.vbf_filter_flag} \
+            {params.extra_vars_flag} \
             > {log} 2>&1
 
         #    --use_dnn_zpt_weights \

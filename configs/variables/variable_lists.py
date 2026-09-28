@@ -308,46 +308,60 @@ DIJET_VARS: List[str] = [
 # Jet ID variables (composition, flavour, HF noise, etc.)
 # ============================================================
 
+# PU-jet-ID DNN input variables (MVA_training/pileup_dnn/train_pu_dnn.py
+# FEATURE_ALIASES + BASELINE_ALIASES puIdDisc), for Data/MC validation plots.
 JET_ID_VARIABLES: List[str] = [
     # --- Energy fractions ---
-    "jet1_chEmEF",
-    "jet1_chHEF",
-    "jet1_neEmEF",
-    "jet1_neHEF",
-    "jet1_muEF",
-    "jet2_chEmEF",
-    "jet2_chHEF",
-    "jet2_neEmEF",
-    "jet2_neHEF",
-    "jet2_muEF",
-    # --- Multiplicities ---
-    "jet1_chMultiplicity",
-    "jet2_chMultiplicity",
-    "jet1_neMultiplicity",
-    "jet2_neMultiplicity",
-    # --- Constituents ---
-    "jet1_nConstituents",
-    "jet1_nElectrons",
-    "jet1_nMuons",
-    "jet1_nSVs",
-    "jet2_nConstituents",
-    "jet2_nElectrons",
-    "jet2_nMuons",
-    "jet2_nSVs",
-    # --- Flavour ---
-    "jet1_hadronFlavour",
-    "jet2_hadronFlavour",
-    "jet1_partonFlavour",
-    "jet2_partonFlavour",
-    # --- HF noise variables ---
-    "jet1_hfcentralEtaStripSize",
-    "jet1_hfadjacentEtaStripsSize",
-    "jet1_hfsigmaEtaEta",
-    "jet1_hfsigmaPhiPhi",
-    "jet2_hfcentralEtaStripSize",
-    "jet2_hfadjacentEtaStripsSize",
-    "jet2_hfsigmaEtaEta",
-    "jet2_hfsigmaPhiPhi",
+    "jet1_chEmEF_nominal",
+    "jet1_chHEF_nominal",
+    "jet1_neEmEF_nominal",
+    "jet1_neHEF_nominal",
+    "jet1_muEF_nominal",
+    "jet2_chEmEF_nominal",
+    "jet2_chHEF_nominal",
+    "jet2_neEmEF_nominal",
+    "jet2_neHEF_nominal",
+    "jet2_muEF_nominal",
+    # --- Multiplicities / constituents ---
+    "jet1_chMultiplicity_nominal",
+    "jet2_chMultiplicity_nominal",
+    "jet1_neMultiplicity_nominal",
+    "jet2_neMultiplicity_nominal",
+    "jet1_nConstituents_nominal",
+    "jet2_nConstituents_nominal",
+    "jet1_nElectrons_nominal",
+    "jet1_nMuons_nominal",
+    "jet2_nElectrons_nominal",
+    "jet2_nMuons_nominal",
+    # --- Calibration / composition ---
+    "jet1_mass_nominal",
+    "jet1_area_nominal",
+    "jet1_rawFactor_nominal",
+    "jet2_mass_nominal",
+    "jet2_area_nominal",
+    "jet2_rawFactor_nominal",
+    "jet1_muonSubtrFactor_nominal",
+    "jet1_muonSubtrDeltaEta_nominal",
+    "jet1_muonSubtrDeltaPhi_nominal",
+    "jet2_muonSubtrFactor_nominal",
+    "jet2_muonSubtrDeltaEta_nominal",
+    "jet2_muonSubtrDeltaPhi_nominal",
+    # --- HF noise variables (see -1 sentinel note above) ---
+    "jet1_hfEmEF_nominal",
+    "jet1_hfHEF_nominal",
+    "jet1_hfcentralEtaStripSize_nominal",
+    "jet1_hfadjacentEtaStripsSize_nominal",
+    "jet1_hfsigmaEtaEta_nominal",
+    "jet1_hfsigmaPhiPhi_nominal",
+    "jet2_hfEmEF_nominal",
+    "jet2_hfHEF_nominal",
+    "jet2_hfcentralEtaStripSize_nominal",
+    "jet2_hfadjacentEtaStripsSize_nominal",
+    "jet2_hfsigmaEtaEta_nominal",
+    "jet2_hfsigmaPhiPhi_nominal",
+    # --- PU ID discriminant (BASELINE_ALIASES) ---
+    "jet1_puIdDisc_nominal",
+    "jet2_puIdDisc_nominal",
 ]
 # ----------------------------------------------------------------------
 # VBF: additional variables (pair-based, nominal only)
@@ -397,8 +411,16 @@ VAR_SETS: Dict[str, List[str]] = {
     "met": MET_VARS,
     "jet_kinematics": JETS_PLOT_VARS,
     # "vbf_additional": VBF_ADDITIONAL_VARS,
-    # "jet_id": JET_ID_VARIABLES,
+    "jet_id": JET_ID_VARIABLES,
 }
+
+# VAR_SETS keys included by get_all_vars() when no explicit group selection is
+# given -- preserves the plotter's pre-existing default variable list.
+# "jet_id" (PU-DNN input variables) is opt-in only via `only_groups`/--variables,
+# since it's a large group (~40 vars) that most existing plotting runs don't want.
+DEFAULT_VAR_SET_KEYS: List[str] = [
+    "vbf_training", "ggh_training", "muon_plots", "dimuon_plots", "met", "jet_kinematics",
+]
 
 
 def unique_preserve_order(seq: List[str]) -> List[str]:
@@ -406,11 +428,20 @@ def unique_preserve_order(seq: List[str]) -> List[str]:
     unique_vars = list(dict.fromkeys(seq))
     return unique_vars
 
-def get_all_vars(test = False) -> List[str]:
-    """Get full list of unique vars from all sets."""
+def get_all_vars(test = False, only_groups: List[str] = None) -> List[str]:
+    """Get full list of unique vars from the selected VAR_SETS groups.
+
+    only_groups: VAR_SETS keys to include; None uses DEFAULT_VAR_SET_KEYS
+    (the plotter's original always-on set, excluding opt-in groups like "jet_id").
+    """
+    group_keys = only_groups if only_groups else DEFAULT_VAR_SET_KEYS
+    unknown = [k for k in group_keys if k not in VAR_SETS]
+    if unknown:
+        raise ValueError(f"Unknown variable group(s) {unknown}; choices are {list(VAR_SETS.keys())}")
+
     all_vars = []
-    for var_list in VAR_SETS.values():
-        all_vars.extend(var_list)
+    for key in group_keys:
+        all_vars.extend(VAR_SETS[key])
 
     if test:  # just fetch the first 5 vars for testing
         all_vars = all_vars[:5]
