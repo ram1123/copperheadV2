@@ -1,0 +1,99 @@
+{
+    "schema_version": 2,
+    "corrections": [
+        {
+            "name": "BS_ebe_mass_res_calibration",
+            "description": "Dimuon Mass resolution calibration with BeamSpot Constraint correction applied",
+            "version": 1,
+            "inputs": [
+                {
+                    "name": "leading_mu_pt",
+                    "type": "real",
+                    "description": "Transverse momentum of the leading muon (GeV)"
+                },
+                {
+                    "name": "leading_mu_abseta",
+                    "type": "real",
+                    "description": "Absolute pseudorapidity of the leading muon"
+                },
+                {
+                    "name": "subleading_mu_abseta",
+                    "type": "real",
+                    "description": "Absolute pseudorapidity of the subleading muon"
+                }
+            ],
+            "output": {
+                "name": "correction_factor",
+                "type": "real"
+            },
+            "data": {
+                "nodetype": "multibinning",
+                "inputs": [
+                    "leading_mu_pt",
+                    "leading_mu_abseta",
+                    "subleading_mu_abseta"
+                ],
+                "edges": [
+                    [
+                        30.0,
+                        45.0,
+                        52.0,
+                        62.0,
+                        200.0
+                    ],
+                    [
+                        0.0,
+                        0.9,
+                        1.8,
+                        2.4
+                    ],
+                    [
+                        0.0,
+                        0.9,
+                        1.8,
+                        2.4
+                    ]
+                ],
+                "content": [
+                    1.9671590100451637,
+                    1.6869939932488345,
+                    1.1707057899960287,
+                    1.665076278844809,
+                    2.044303089978435,
+                    1.50904728744413,
+                    1.1771824354942546,
+                    1.5210319322042458,
+                    0.7997027959964205,
+                    1.590861974787529,
+                    1.722225253499991,
+                    1.4930687465572936,
+                    1.716364972006543,
+                    1.4637928339992663,
+                    1.1020961608540008,
+                    1.4927622895598494,
+                    1.4093586688313369,
+                    1.119360391431253,
+                    1.940410011353454,
+                    1.749803796358821,
+                    1.2121783778998887,
+                    1.729382613195211,
+                    1.121453985371673,
+                    1.5021130243044816,
+                    1.453319134398924,
+                    1.4962875655414725,
+                    1.4094534345477756,
+                    1.8758268671469132,
+                    1.1111903420174205,
+                    1.2965154288294618,
+                    1.6684774629895638,
+                    1.1134484523561123,
+                    1.1562749432835602,
+                    1.402750703203245,
+                    1.439767951718525,
+                    1.356362300226686
+                ],
+                "flow": "clamp"
+            }
+        }
+    ]
+}

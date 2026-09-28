@@ -80,6 +80,17 @@ def build_common_parser() -> argparse.ArgumentParser:
         help="Path to the sample configuration YAML file",
     )
     parser.add_argument(
+        "--switches-yaml",
+        dest="switches_yaml",
+        default="configs/switches/switches_official.yaml",
+        action="store",
+        help=(
+            "Path to the switches yaml ('switches: {key: {year: value}}')."
+            "switches file is loaded per run."
+            "Only consumed by run_stage1.py."
+        ),
+    )
+    parser.add_argument(
         "-frac",
         "--change_fraction",
         dest="fraction",

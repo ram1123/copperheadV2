@@ -14,6 +14,8 @@ def get_dask_client(
     Create or reuse a Dask client (local or gateway).
     """
     if use_gateway:
+        import os
+
         from dask_gateway import Gateway
         logger.info("Creating new Dask Gateway client")
         gateway = Gateway(
@@ -32,7 +34,11 @@ def get_dask_client(
             "XRD_CONNECTIONWINDOW": "120",
             "XRD_TIMEOUTRESOLUTION": "5",
         }
+        # Apply on the workers (existing behavior) and also on this driver
+        # process, since some remote I/O (e.g. any XRootD access that happens
+        # before/outside the distributed task graph) runs here, not on workers.
         client.run(lambda env=xrd_env: __import__("os").environ.update(env))
+        os.environ.update(xrd_env)
     else:
         from distributed import Client
         logger.info("Creating new local Dask client")

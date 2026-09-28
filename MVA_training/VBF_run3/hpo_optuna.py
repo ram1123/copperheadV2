@@ -2,8 +2,8 @@
 """
 python MVA_training/VBF_new/hpo_optuna.py \
   --config configs/dnn_run3_vbf.yaml \
-  --data-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf \
-  --out-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf/hpo_optuna \
+  --data-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf_all \
+  --out-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf_all/hpo_optuna \
   --folds 0,1,2 \
   --n-trials 50
 """
@@ -189,15 +189,15 @@ def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
         ]
 
     # ---- optimizer / regularization ----
-    lr = trial.suggest_float("lr", 2.5e-4, 1.2e-3, log=True)
+    lr = trial.suggest_float("lr", 1e-5, 8e-4, log=True)
     weight_decay = trial.suggest_float("weight_decay", 1e-5, 2e-3, log=True)
 
-    label_smoothing = trial.suggest_float("label_smoothing", 0.0, 0.04)
-    grad_clip_norm = trial.suggest_float("grad_clip_norm", 1.0, 4.5)
+    label_smoothing = trial.suggest_float("label_smoothing", 0.01, 0.20)
+    grad_clip_norm = trial.suggest_float("grad_clip_norm", 0.5, 3.0)
 
     # (optional) training dynamics
     # keep batch size fixed unless you want to benchmark GPU memory/time carefully
-    batch_size = trial.suggest_categorical("batch_size", [2048, 4096])
+    batch_size = trial.suggest_categorical("batch_size", [512, 2048])
 
     return dict(
         activation=activation,

@@ -75,3 +75,50 @@ overrides:
         params:
             sigma: { val: 2.5, min: 0.2, max: 4.0 }
             exp_peak: { const: true }
+
+    # Both muons in the endcap (|eta|>1.8) at the lowest leading-pT bin: worse muon
+    # momentum resolution + FSR/bremsstrahlung losses systematically bias the
+    # reconstructed dimuon mass down relative to the true Z pole. Verified across every
+    # year/sample checked (2022preEE/2022postEE/2023 Data+MC, 2026 MC): max reconstructed
+    # mass is consistently ~93.2-93.7 GeV with only ~0.13-0.17% of events above 92 GeV.
+    # Fitting the default [80,100] range/fit_range leaves RooCMSShape trying to describe
+    # an essentially empty 92-100 GeV tail, which was destabilizing the fit (status=303,
+    # n2 pinned at its upper bound, zero parameter uncertainties). Restrict the observable
+    # itself (not just fit_range) to [80,92] so those few tail events are excluded from
+    # the dataset entirely, matching the exact override precedence (wins over "30-45_*").
+    "30-45_EE":
+        # Both muons in the endcap at the lowest leading-pT bin: worse muon momentum
+        # resolution + FSR/bremsstrahlung losses systematically bias the reconstructed
+        # dimuon mass down and left-skew it. Fixed in two steps (2026-09-15), each
+        # empirically bisected against the real 2022preEE Data category and cross-checked
+        # visually (pull-plot flatness) + chi2/ndf, see
+        # .claude/reports/investigations/2026-09-14_ebe-calib-fit-audit-and-run.md:
+        #   1. Range restriction: real data max is ~93.2-93.7 GeV across every
+        #      year/sample checked, only ~0.13-0.17% of events above 92 GeV -- the
+        #      default [80,100] range/fit_range left RooCMSShape trying to describe an
+        #      essentially empty 92-100 GeV tail (status=303, zero uncertainties).
+        #   2. The data also has a real, elevated shoulder from ~80-85 GeV that the
+        #      model fits badly (systematic +2..+4 sigma pull) if included -- trimmed the
+        #      low edge to 84 too, rather than trying to model that shoulder.
+        # bwz_mZ/bwz_Width (BW pole mass/natural width) then pinned at their default
+        # bounds -- both are degenerate with sigma/mean here (natural width and pole mass
+        # trading off against DCB sigma and its mean-relative-to-BW offset to describe
+        # the same observed width/shift). Fully fixing both to PDG was worse (chi2/ndf~5,
+        # "mean" overcompensating); widening their floors to 89.0/0.7 landed in a broad,
+        # flat plateau where fit quality stops improving (chi2/ndf~1.95-1.96 whether
+        # bwz_Width's floor is 0.5 or 0.7) -- final: chi2/ndf~1.96, pulls flat across the
+        # whole range, sigma~1.2-1.4 GeV (consistent with neighboring categories' 1.1-1.9
+        # GeV, vs. the pre-fix 0.54 GeV outlier). NOTE: because bwz_Width still sits
+        # exactly at its floor (a genuine flat likelihood direction), HESSE returns 0 for
+        # every parameter's uncertainty, including sigma_err -- Minos was tried and
+        # doesn't help because the pipeline reads sigma.getError() (Hessian-based)
+        # regardless. This is a known, accepted limitation for this specific category.
+        observable:
+            range: [84.0, 92.0]
+            fit_range: [84.0, 92.0]
+            full_range: [84.0, 92.0]
+            fft_cache_range: [84.0, 92.0]
+        params:
+            n2: { min: 1.0 }
+            bwz_mZ: { min: 89.0 }
+            bwz_Width: { min: 0.7 }

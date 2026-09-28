@@ -94,6 +94,7 @@ LINEAR_SCALE = False
 USE_GATEWAY = True
 CLUSTER_INDEX = 0
 USE_COMPACTED = "compacted"  # "", "compacted", "compacted_WithDNNScore"
+FORCE_COMPACT = False  # True to redo compaction from scratch even if it already exists on disk
 
 
 if __name__ == "__main__":
@@ -119,4 +120,5 @@ if __name__ == "__main__":
         use_compacted=USE_COMPACTED,
         dry_run=DRY_RUN,
         force_rerun=FORCE,
+        force_compact=FORCE_COMPACT,
     )

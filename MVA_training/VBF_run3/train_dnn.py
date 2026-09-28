@@ -22,8 +22,8 @@ Notes:
 
 python train_dnn.py \
   --config configs/dnn_run3_vbf.yaml \
-  --data-dir dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT> \
-  --out-dir   dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>/trained \
+  --data-dir dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>_<JJ_ETA_REGION> \
+  --out-dir   dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>_<JJ_ETA_REGION>/trained \
   --log-level INFO
 """
 
@@ -55,7 +55,7 @@ from sklearn.metrics import (
     roc_auc_score,
     roc_curve,
 )
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 
 # --------------------------------------------------------------------------------
@@ -476,26 +476,117 @@ class ParquetDataset(Dataset):
         )
 
 
+class InMemoryBatchLoader:
+    """
+    Vectorized replacement for `DataLoader(ParquetDataset(...), num_workers=0)`.
+
+    `ParquetDataset` already materializes the whole fold into `x`/`y`/`w` numpy
+    arrays (via `_load_fold_data_cached`), so the per-sample `Dataset.__getitem__`
+    + `DataLoader` collate path bought nothing: it does one Python-level function
+    call per *row* per epoch (not per batch), which dominates wall time once a
+    fold has millions of rows and starves the GPU. Profiled at 8% GPU utilization
+    training on a ~3.1M-row jj_non_central HPO fold (~6.5x jj_both_central's
+    ~476k rows, and ~8-11x slower per HPO trial) -- see
+    .claude/reports/implementations/2026-09-11_vectorized-in-memory-dataloader.md.
+    This produces every batch with a single vectorized tensor index instead: one
+    `torch.randperm`/`torch.arange` per epoch plus one fancy-index per batch, no
+    per-row Python loop and no worker processes needed (there is no I/O left to
+    overlap once the whole fold is already in RAM).
+
+    Reproduces the iteration contract `train_one_fold`/`evaluate` rely on: yields
+    `(x, y, w)` CPU tensors per batch, last (possibly smaller) batch included
+    (`DataLoader`'s `drop_last=False` equivalent), and shuffled draws come from
+    the same global torch RNG call (`torch.randperm(n)`, no explicit generator)
+    that `DataLoader(shuffle=True)`'s `RandomSampler` used -- so `set_seed(...)`
+    still makes iteration order reproducible.
+
+    When the underlying dataset carries systematic-variation inputs (i.e. it was
+    built with ``variation_spec``, the ``--use_adversarial`` path), pass its
+    ``xvar``/``var_slot_idx``/``var_feat_idx``/``n_variations`` through so this
+    loader also yields the `[B, V, F]` variation tensor as a 4th batch element,
+    reproducing `ParquetDataset.__getitem__`'s per-row broadcast
+    (`xv[var_slot_idx, var_feat_idx] = xvar[idx]`) as one vectorized fancy-index
+    per batch instead of a per-row Python loop -- otherwise this loader would
+    silently drop the adversarial term's input and `train_one_fold`'s
+    ``batch[3]`` would index past the end of a 3-tuple.
+    """
+
+    def __init__(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        w: np.ndarray,
+        batch_size: int,
+        shuffle: bool,
+        pin_memory: bool = False,
+        xvar: Optional[np.ndarray] = None,
+        var_slot_idx: Optional[np.ndarray] = None,
+        var_feat_idx: Optional[np.ndarray] = None,
+        n_variations: int = 0,
+    ) -> None:
+        self.x = torch.from_numpy(x)
+        self.y = torch.from_numpy(y)
+        self.w = torch.from_numpy(w)
+        # NOTE: pinning is applied per-yielded-batch in __iter__, not here -- fancy
+        # indexing (self.x[idx]) always returns a fresh, unpinned tensor, so pinning
+        # the whole (dataset-sized) tensor once would never actually propagate to
+        # what gets returned per batch.
+        self.pin_memory = bool(pin_memory)
+        self.batch_size = int(batch_size)
+        self.shuffle = bool(shuffle)
+
+        self.n_variations = int(n_variations)
+        if self.n_variations > 0:
+            self.xvar = torch.from_numpy(xvar)
+            self.var_slot_idx = torch.from_numpy(var_slot_idx)
+            self.var_feat_idx = torch.from_numpy(var_feat_idx)
+
+    def __len__(self) -> int:
+        n = self.x.shape[0]
+        bs = max(self.batch_size, 1)
+        return (n + bs - 1) // bs
+
+    def __iter__(self):
+        n = self.x.shape[0]
+        perm = torch.randperm(n) if self.shuffle else torch.arange(n)
+        for start in range(0, n, self.batch_size):
+            idx = perm[start : start + self.batch_size]
+            xb, yb, wb = self.x[idx], self.y[idx], self.w[idx]
+            if self.n_variations > 0:
+                # xb.repeat() (not .expand()) so the result is a real, writable
+                # tensor -- the fancy-index assignment below needs its own storage.
+                xvb = xb.unsqueeze(1).repeat(1, self.n_variations, 1)
+                xvb[:, self.var_slot_idx, self.var_feat_idx] = self.xvar[idx]
+                if self.pin_memory:
+                    xb, yb, wb, xvb = xb.pin_memory(), yb.pin_memory(), wb.pin_memory(), xvb.pin_memory()
+                yield xb, yb, wb, xvb
+            else:
+                if self.pin_memory:
+                    xb, yb, wb = xb.pin_memory(), yb.pin_memory(), wb.pin_memory()
+                yield xb, yb, wb
+
+
 def make_dataloader(
-    ds: Dataset,
+    ds: "ParquetDataset",
     batch_size: int,
     shuffle: bool,
     num_workers: int,
     prefetch_factor: Optional[int],
     pin_memory: bool,
-) -> DataLoader:
-    kwargs: Dict[str, Any] = dict(
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        drop_last=False,
+) -> InMemoryBatchLoader:
+    # num_workers/prefetch_factor are accepted for call-site compatibility but no
+    # longer used: `ds` is always a fully in-memory ParquetDataset (see
+    # InMemoryBatchLoader's docstring above) -- worker processes only ever added
+    # multiprocessing overhead here, they never had real I/O to overlap.
+    del num_workers, prefetch_factor
+    n_variations = getattr(ds, "n_variations", 0)
+    return InMemoryBatchLoader(
+        ds.x, ds.y, ds.w, batch_size=batch_size, shuffle=shuffle, pin_memory=pin_memory,
+        xvar=ds.xvar if n_variations > 0 else None,
+        var_slot_idx=ds.var_slot_idx if n_variations > 0 else None,
+        var_feat_idx=ds.var_feat_idx if n_variations > 0 else None,
+        n_variations=n_variations,
     )
-    # prefetch_factor must be None if num_workers == 0
-    if num_workers > 0:
-        kwargs["prefetch_factor"] = prefetch_factor if prefetch_factor is not None else 2
-        kwargs["persistent_workers"] = True
-    return DataLoader(ds, **kwargs)
 
 
 @lru_cache(maxsize=64)
@@ -1152,7 +1243,7 @@ class EarlyStopping:
 @torch.no_grad()
 def evaluate(
     model: nn.Module,
-    loader: DataLoader,
+    loader: InMemoryBatchLoader,
     device: torch.device,
     cfg: TrainConfig,
     pos_weight_t: Optional[torch.Tensor],

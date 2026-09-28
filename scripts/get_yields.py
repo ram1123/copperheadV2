@@ -19,6 +19,15 @@ time python scripts/get_yields.py \
     --categorizer cutbased \
     --output-csv yield_20May_cutbased_0p92522.csv \
     --summary-output-csv yield_20May_cutbased_0p92522_summary.csv
+
+    /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
+
+time python scripts/get_yields.py \
+    --input /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics/stage1_output \
+    --years all \
+    --categorizer cutbased \
+    --output-csv yield_Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics.csv \
+    --summary-output-csv yield_Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics_summary.csv
 """
 
 import argparse
@@ -325,6 +334,22 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--data-only",
+        action="store_true",
+        help=(
+            "Only compute yields for the data process (skip all MC). "
+            "Faster, and immune to any MC sample that fails to load."
+        ),
+    )
+    parser.add_argument(
+        "--data-glob",
+        default="data*",
+        help=(
+            "Sample-dir glob for the data process (matched under <load_path>/). "
+            "Default 'data*' takes every era; e.g. 'data_[C-G]' to drop data_B."
+        ),
+    )
+    parser.add_argument(
         "--output-csv",
         default="",
         help="Optional output CSV path override for the per-sample yields table.",
@@ -363,13 +388,13 @@ def main() -> None:
     # regions = ["h-sidebands", "z-peak"]
     regions = [
         "h-sidebands",
-        "h-peak"
+        # "h-peak"
         # "signal",
     ]
 
     # categories = ["vbf", "ggh"]
-    # categories = ["vbf"]
-    categories = ["nocat", "vbf", "ggh"]
+    categories = ["vbf"]
+    # categories = ["nocat", "vbf", "ggh"]
     # categories = ["nocat"]
 
 
@@ -384,6 +409,8 @@ def main() -> None:
         "2023",
         "2023BPix",
         "2024",
+        "2025",
+        "2026"
     ]
 
     years_arg_explicit = any(
@@ -440,13 +467,16 @@ def main() -> None:
             year=year,
         )
 
-        processes = set()
-        for group_name, group_samples in combined_sample_dict.items():
-            if group_name == "DYVBF" and not do_vbf_filter_study:
-                continue
-            processes.update(group_samples)
-        processes.add("data*")
-        processes = order_processes(list(processes))
+        if args.data_only:
+            processes = [args.data_glob]
+        else:
+            processes = set()
+            for group_name, group_samples in combined_sample_dict.items():
+                if group_name == "DYVBF" and not do_vbf_filter_study:
+                    continue
+                processes.update(group_samples)
+            processes.add(args.data_glob)
+            processes = order_processes(list(processes))
         print(f"Processes to compute yields for (total {len(processes)}):")
         print(processes)
 
@@ -472,6 +502,11 @@ def main() -> None:
     ggh_samples_by_year: Dict[str, set[str]] = {}
     vbf_samples_by_year: Dict[str, set[str]] = {}
     background_samples_by_year: Dict[str, set[str]] = {}
+    # Per-year map of background group name (e.g. "TOP", "VV", "EWK", "DY") ->
+    # its sample names, so the summary can break the single background_yield
+    # total down by physics process instead of only reporting the sum.
+    bkg_group_samples_by_year: Dict[str, Dict[str, set[str]]] = {}
+    all_bkg_groups: set[str] = set()
     for year in years:
         bkg_sample_dict, sig_sample_dict, _ = get_bkg_sig_dicts(
             yaml_path=args.sample_config,
@@ -485,6 +520,10 @@ def main() -> None:
         background_samples_by_year[year] = set(
             sample for samples in bkg_sample_dict.values() for sample in samples
         )
+        bkg_group_samples_by_year[year] = {
+            group: set(samples) for group, samples in bkg_sample_dict.items()
+        }
+        all_bkg_groups.update(bkg_sample_dict.keys())
 
     def classify_sample(row: pd.Series) -> str:
         sample = row["sample"]
@@ -511,6 +550,15 @@ def main() -> None:
                 ].sum(),
                 "signal_yield": g.loc[g["sample_type"] == "signal", "yield"].sum(),
                 "background_yield": g.loc[g["sample_type"] == "background", "yield"].sum(),
+                **{
+                    f"bkg_yield_{group}": g.loc[
+                        g["sample"].isin(
+                            bkg_group_samples_by_year.get(g.name[0], {}).get(group, set())
+                        ),
+                        "yield",
+                    ].sum()
+                    for group in sorted(all_bkg_groups)
+                },
                 "mc_yield": g.loc[
                     g["sample_type"].isin(["signal", "background"]), "yield"
                 ].sum(),

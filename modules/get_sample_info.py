@@ -115,8 +115,9 @@ def list_all_datasets(yaml_file):
                     # logger.debug(f"{year_key:10} {process_group:10} {sample_name:29} {ds:150} {str(value):>9}")
 
                     # For the RUCIO requests
-                    print(f'dy{count}=( $(dasgoclient --query="dataset = {ds}"))')
-                    print('dy1+=(${dy' + str(count) + '[@]})')
+                    print(f'{ds}')
+                    # print(f'dy{count}=( $(dasgoclient --query="dataset = {ds}"))')
+                    # print('dy1+=(${dy' + str(count) + '[@]})')
 
 
 # # Example usage:

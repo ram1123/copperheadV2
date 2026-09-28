@@ -120,7 +120,7 @@ These paths must point to the correct **Stage-1 compacted outputs**.
 ## Standard Calibration Run
 
 ```bash
-bash stage1_loop_Improved.sh \
+bash run_analysis_pipeline.sh \
   -v <NanoAODv> \
   -y <year> \
   -k
