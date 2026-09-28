@@ -22,7 +22,7 @@ nanoaodv="12"
 label="label_output"
 output_root="test/output"
 reference_dir="test/reference"
-reference_switches_file="test/reference/switches.yaml"
+reference_switches_file="test/reference/switches_official.yaml"
 
 IFS=',' read -r -a years <<< "$years_csv"
 

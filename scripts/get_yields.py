@@ -23,11 +23,11 @@ time python scripts/get_yields.py \
     /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation
 
 time python scripts/get_yields.py \
-    --input /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation/  \
-    -y 2025 \
+    --input /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics/stage1_output \
+    --years all \
     --categorizer cutbased \
-    --output-csv yield_20May_cutbased_0p92522.csv \
-    --summary-output-csv yield_10Sep_2025_summary.csv    
+    --output-csv yield_Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics.csv \
+    --summary-output-csv yield_Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics_summary.csv
 """
 
 import argparse
@@ -388,13 +388,13 @@ def main() -> None:
     # regions = ["h-sidebands", "z-peak"]
     regions = [
         "h-sidebands",
-        "h-peak"
+        # "h-peak"
         # "signal",
     ]
 
     # categories = ["vbf", "ggh"]
-    # categories = ["vbf"]
-    categories = ["nocat", "vbf", "ggh"]
+    categories = ["vbf"]
+    # categories = ["nocat", "vbf", "ggh"]
     # categories = ["nocat"]
 
 
@@ -502,6 +502,11 @@ def main() -> None:
     ggh_samples_by_year: Dict[str, set[str]] = {}
     vbf_samples_by_year: Dict[str, set[str]] = {}
     background_samples_by_year: Dict[str, set[str]] = {}
+    # Per-year map of background group name (e.g. "TOP", "VV", "EWK", "DY") ->
+    # its sample names, so the summary can break the single background_yield
+    # total down by physics process instead of only reporting the sum.
+    bkg_group_samples_by_year: Dict[str, Dict[str, set[str]]] = {}
+    all_bkg_groups: set[str] = set()
     for year in years:
         bkg_sample_dict, sig_sample_dict, _ = get_bkg_sig_dicts(
             yaml_path=args.sample_config,
@@ -515,6 +520,10 @@ def main() -> None:
         background_samples_by_year[year] = set(
             sample for samples in bkg_sample_dict.values() for sample in samples
         )
+        bkg_group_samples_by_year[year] = {
+            group: set(samples) for group, samples in bkg_sample_dict.items()
+        }
+        all_bkg_groups.update(bkg_sample_dict.keys())
 
     def classify_sample(row: pd.Series) -> str:
         sample = row["sample"]
@@ -541,6 +550,15 @@ def main() -> None:
                 ].sum(),
                 "signal_yield": g.loc[g["sample_type"] == "signal", "yield"].sum(),
                 "background_yield": g.loc[g["sample_type"] == "background", "yield"].sum(),
+                **{
+                    f"bkg_yield_{group}": g.loc[
+                        g["sample"].isin(
+                            bkg_group_samples_by_year.get(g.name[0], {}).get(group, set())
+                        ),
+                        "yield",
+                    ].sum()
+                    for group in sorted(all_bkg_groups)
+                },
                 "mc_yield": g.loc[
                     g["sample_type"].isin(["signal", "background"]), "yield"
                 ].sum(),

@@ -95,7 +95,7 @@ jobs:
               -m 1 \
               -z \
               -Z \
-              -w test/reference/switches.yaml \
+              -w test/reference/switches_official.yaml \
               -S test/output
           '
 

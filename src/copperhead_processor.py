@@ -1928,7 +1928,7 @@ class EventProcessor(processor.ProcessorABC):
                 )
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
-            # Gate by branch-title LHA IDs using pdf_supported_lha_ids in switches.yaml.
+            # Gate by branch-title LHA IDs using pdf_supported_lha_ids in switches_official.yaml.
             # Only 103-member NNPDF3.1 symmhessian+as sets (306000/325300) are supported;
             # other sets receive unity weights because they need different prescriptions.
             # Supported sets with corrupt weights (st_tchannel_*, tt_inclusive_amcatnlo)

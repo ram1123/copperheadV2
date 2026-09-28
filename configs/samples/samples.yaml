@@ -13,7 +13,7 @@ data:
     "2024": [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
     "2025": [data_B, data_C, data_D, data_E, data_F, data_G]
     "2026": [data_A, data_B, data_D] # data_C excluded: low-PU era
-    run3: [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
+    run3: [data_A, data_B, data_C, data_D, data_E, data_F, data_G, data_H, data_I]
 
 # --------------------------------------------------
 
