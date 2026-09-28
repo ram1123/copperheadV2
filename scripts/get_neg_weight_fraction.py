@@ -9,9 +9,14 @@ Uses the standard CMS formula:
 This is correct for amcatnloFXFX where weights are NOT unit (±1)
 but large numbers (~100-1000 per event).
 
+The negative-weight fraction printed by default is only a uniform-|weight|
+equivalent derived from N_eff; pass --count-signs to measure it from the
+Events genWeight branch (reads every event, so much slower).
+
 Usage:
     python get_neg_weight_fraction.py /path/to/files/*.root --xsec 3.05
     python get_neg_weight_fraction.py --filelist files.txt --xsec 3.05 --lumi 8.1
+    python get_neg_weight_fraction.py /path/to/files/*.root --count-signs
 """
 import argparse
 import glob
@@ -28,6 +33,9 @@ def main():
                         help="Cross section in pb (from XSDB)")
     parser.add_argument("--lumi", type=float, default=None,
                         help="Data luminosity in fb⁻¹ (to compute MC/data ratio)")
+    parser.add_argument("--count-signs", action="store_true",
+                        help="Measure the negative-weight fraction from Events genWeight "
+                             "(slow: reads every event)")
     args = parser.parse_args()
 
     # Collect input files
@@ -66,9 +74,16 @@ def main():
     # This equals N_total * (1 - 2*f_neg)² for uniform |weight|
     N_eff = total_sumw ** 2 / total_sumw2
 
-    # Back-compute f_neg for reference (assumes uniform |weight|)
-    penalty_ratio = N_eff / total_count          # = (1 - 2*f_neg)²
-    f_neg = (1.0 - math.sqrt(penalty_ratio)) / 2.0
+    # Uniform-|weight| equivalent only; not a measured fraction when |weight| varies
+    penalty_ratio = N_eff / total_count          # = (1 - 2*f_neg)² if |weight| uniform
+    f_neg_equiv = (1.0 - math.sqrt(penalty_ratio)) / 2.0
+
+    f_neg_measured = None
+    if args.count_signs:
+        rdf = ROOT.RDataFrame("Events", input_files)
+        n_all = rdf.Count()
+        n_neg = rdf.Filter("genWeight < 0").Count()
+        f_neg_measured = n_neg.GetValue() / n_all.GetValue()  # triggers a single event loop
 
     print(f"\n{'='*55}")
     print(f"Total generated events  : {total_count:>20,.0f}")
@@ -77,7 +92,9 @@ def main():
     print(f"")
     print(f"N_eff = sumw²/sumw2     : {N_eff:>20,.0f}")
     print(f"N_eff / N_total         : {penalty_ratio:>20.4f}  ({penalty_ratio*100:.2f}%)")
-    print(f"Neg. weight fraction    : {f_neg:>20.4f}  ({f_neg*100:.2f}%)")
+    print(f"Neg. frac (uniform-|w| equiv.): {f_neg_equiv:>14.4f}  ({f_neg_equiv*100:.2f}%)")
+    if f_neg_measured is not None:
+        print(f"Neg. frac (genWeight < 0)     : {f_neg_measured:>14.4f}  ({f_neg_measured*100:.2f}%)")
     print(f"Stat penalty (1/ratio)  : {1/penalty_ratio:>20.2f}x more events needed vs LO")
 
     if args.xsec:
