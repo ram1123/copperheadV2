@@ -8,7 +8,7 @@ hmm_base: /work/projects/hmm
 # )
 
 # what to run
-# years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
+years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
 # years: ["2022preEE", "2022postEE", "2023", "2023BPix"]
@@ -18,7 +18,7 @@ hmm_base: /work/projects/hmm
 # years: ["2022preEE"]
 # years: ["2022postEE"]
 # years: ["2024", "2025", "2026"]
-years: ["2024"]
+# years: ["2024"]
 # years: ["2025"]
 # years: ["2024", "2025"]
 # years: ["2023", "2023BPix"]
@@ -65,7 +65,9 @@ years: ["2024"]
 # run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV"
 # run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN"
 
-run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation"
+run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics"
+# run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation"
+# run_tag: "FilterEvents_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4"
 # run_tag: "FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN"
 # run_tag: "FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV"
 # run_tag: "test"
@@ -79,12 +81,37 @@ run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation"
 # Can also be set per-invocation without editing this file:
 #   snakemake ... --config switches_yaml=configs/switches/switches_official.yaml
 
-switches_yaml: configs/switches/switches_official.yaml
-# switches_yaml: configs/switches/switches_official_systematics.yaml
+# switches_yaml: configs/switches/switches_official.yaml
+switches_yaml: configs/switches/switches_official_systematics.yaml
 
 # switches_yaml: configs/switches/switches_JetPt25GeV.yaml
 # switches_yaml: configs/switches/switches_JetPt25GeV_PUDNN.yaml
 # switches_yaml: configs/switches/switches_official_Both_HEHF_50GeV.yaml
+# switches_yaml: configs/switches/switches_JetPt25GeV_PUDNN_EventFilter_JetStrat4.yaml
+
+# Optional: load the stage-2 VBF DNN from dnn/trained_models/<dnn_model_label>/
+# instead of the current run_tag's label (default ""). Training output is unaffected.
+dnn_model_label: "Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics"
+# dnn_model_label: ""
+
+# Optional: years slug of the model dir to load, e.g. the combined-year model
+# (dnn/trained_models/<label>/2022preEE-...-2026_h-peak_vbf_all). Empty = each stage2 job's own year.
+dnn_model_years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
+# dnn_model_years: []
+
+# Run stage2 / stage2_plot / stage3 with systematic variations (WITH_VARIATIONS=1).
+# false = nominal only, outputs get a _NoSyst suffix.
+with_variations: false
+
+# Output-dir postfix for stage2 / stage2_plot / stage3 (the -o flag of run_analysis_pipeline.sh).
+# Empty = the date the snakemake command starts (e.g. Sep29_2026). Set it explicitly to point
+# stage2_plot/stage3 at a stage-2 output from an earlier day, or when resuming a run on a later day.
+save_postfix: ""
+
+# Dijet |eta| phase space for stage2 / stage2_plot / stage3 (JJ_ETA_REGION): "all" or one of
+# modules/selection.py's PAIR_JJ_ETA_REGIONS (jj_both_central, jj_non_central, ...). Also selects the
+# DNN model dir <years>_h-peak_vbf_<jj_eta_region>. Non-"all" regions get their own state/log names.
+jj_eta_region: "all"
 
 # dask gateway
 use_gateway: true
@@ -95,7 +122,7 @@ cluster_index: 0
 # checks passing). Off by default since this is irreversible; f1_0 is kept
 # forever otherwise (compaction never deletes it on its own). Only takes
 # effect for the Snakemake-driven stage1Compact rule.
-cleanup_f1_0_after_compact: false
+cleanup_f1_0_after_compact: true
 
 # plotting workflow
 plot_vbf_filter_study: true

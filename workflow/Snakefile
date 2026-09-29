@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 
 configfile: "workflow/config.yaml"
@@ -8,6 +9,28 @@ HMM_USER = os.environ["USER"]
 
 USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
 CLEANUP_F1_0_AFTER_COMPACT = config.get("cleanup_f1_0_after_compact", False)
+
+# Run stage2/stage3 against existing compacted stage-1 + DNN outputs, skipping their upstream markers.
+STAGE23_STANDALONE = config.get("stage23_standalone", False)
+
+# Load the stage-2 VBF DNN from dnn/trained_models/<dnn_model_label>/ instead of this run_tag's label.
+DNN_MODEL_LABEL = config.get("dnn_model_label", "")
+
+# Years slug of the model dir to load (e.g. a combined-year model); "" = the stage2 job's own year.
+DNN_MODEL_YEARS = ",".join(config.get("dnn_model_years", []) or [])
+
+# Run stage2/stage2_plot/stage3 with systematic variations; all three must agree (it sets the _NoSyst path suffix).
+VARIATIONS_ENV = "WITH_VARIATIONS=1 " if config.get("with_variations", False) else ""
+
+# Output-dir postfix shared by stage2/stage2_plot/stage3; fixed at DAG start so a job crossing midnight
+# doesn't split them across dates. Same format as common_workflow.sh's default (date +%b%d_%Y).
+SAVE_POSTFIX = config.get("save_postfix") or datetime.now().strftime("%b%d_%Y")
+
+# Dijet-eta phase space for stage2/stage2_plot/stage3 (JJ_ETA_REGION); also picks the DNN model dir's region.
+# Non-"all" values are appended to their .done/.log names so different regions don't share markers.
+STAGE23_JJ_ETA_REGION = config.get("jj_eta_region") or "all"
+JJ_ENV = f"JJ_ETA_REGION={STAGE23_JJ_ETA_REGION} " if STAGE23_JJ_ETA_REGION != "all" else ""
+JJ_TAG = f"_{STAGE23_JJ_ETA_REGION}" if STAGE23_JJ_ETA_REGION != "all" else ""
 
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
@@ -421,7 +444,9 @@ rule stage1Compact:
 # ---------------------------------------
 rule pu_dnn_train:
     input:
-        STATEDIR + f"/stage1_compact_{{year}}.done"
+        lambda wc: [] if USE_EXISTING_STAGE1 else [
+            STATEDIR + f"/stage1_compact_{wc.year}.done"
+        ]
     output:
         done=STATEDIR + "/pu_dnn_train_{year}.done",
     log:
@@ -468,7 +493,7 @@ def dnn_env_flags():
 
 rule dnn_pre:
     input:
-        expand(STATEDIR + "/stage1_compact_{year}.done", year=DNN_YEARS),
+        [] if USE_EXISTING_STAGE1 else expand(STATEDIR + "/stage1_compact_{year}.done", year=DNN_YEARS),
     output:
         done=STATEDIR + "/dnn_pre.done",
     log:
@@ -565,12 +590,14 @@ rule vbf_dnn:
 # ---------------------------------------
 rule stage2:
     input:
-        STATEDIR + "/stage1_compact_{year}.done",
-        STATEDIR + "/dnn_train.done",
+        lambda wc: [] if STAGE23_STANDALONE else [
+            STATEDIR + f"/stage1_compact_{wc.year}.done",
+            STATEDIR + "/dnn_train.done",
+        ],
     output:
-        done=STATEDIR + "/stage2_{year}.done",
+        done=STATEDIR + "/stage2_{year}" + JJ_TAG + ".done",
     log:
-        LOGDIR + "/stage2_{year}.log",
+        LOGDIR + "/stage2_{year}" + JJ_TAG + ".log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
@@ -578,6 +605,11 @@ rule stage2:
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
         gw=lambda wc: gw_flags(),
+        model_env=(f"MODEL_LABEL={DNN_MODEL_LABEL} " if DNN_MODEL_LABEL else "")
+        + (f"MODEL_YEARS={DNN_MODEL_YEARS} " if DNN_MODEL_YEARS else ""),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=JJ_ENV,
     resources:
         gateway=1,
     shell:
@@ -585,12 +617,13 @@ rule stage2:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.var_env}{params.model_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
             -y "{wildcards.year}" \
             -m 2 \
+            -o {params.postfix} \
             {params.gw} \
             > {log} 2>&1
 
@@ -601,28 +634,32 @@ rule stage2:
 
 rule stage2_plot:
     input:
-        STATEDIR + "/stage2_{year}.done",
+        STATEDIR + "/stage2_{year}" + JJ_TAG + ".done",
     output:
-        done=STATEDIR + "/stage2_plot_{year}.done",
+        done=STATEDIR + "/stage2_plot_{year}" + JJ_TAG + ".done",
     log:
-        LOGDIR + "/stage2_plot_{year}.log",
+        LOGDIR + "/stage2_plot_{year}" + JJ_TAG + ".log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
         nano=lambda wc: nano_for_year(wc.year),
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=JJ_ENV,
     shell:
         r"""
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.var_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
             -y "{wildcards.year}" \
             -m 2p \
+            -o {params.postfix} \
             > {log} 2>&1
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
@@ -632,28 +669,32 @@ rule stage2_plot:
 
 rule stage3:
     input:
-        STATEDIR + "/stage2_{year}.done",
+        STATEDIR + "/stage2_{year}" + JJ_TAG + ".done",
     output:
-        done=STATEDIR + "/stage3_{year}.done",
+        done=STATEDIR + "/stage3_{year}" + JJ_TAG + ".done",
     log:
-        LOGDIR + "/stage3_{year}.log",
+        LOGDIR + "/stage3_{year}" + JJ_TAG + ".log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
         nano=lambda wc: nano_for_year(wc.year),
         yaml=lambda wc: yaml_for_year(wc.year),
         label=lambda wc: label_for_year(wc.year),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=JJ_ENV,
     shell:
         r"""
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.var_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
             -y "{wildcards.year}" \
             -m 3 \
+            -o {params.postfix} \
             > {log} 2>&1
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
@@ -663,8 +704,8 @@ rule stage3:
 
 rule stage23_all:
     input:
-        expand(STATEDIR + "/stage2_plot_{year}.done", year=YEARS),
-        expand(STATEDIR + "/stage3_{year}.done", year=YEARS),
+        expand(STATEDIR + "/stage2_plot_{year}" + JJ_TAG + ".done", year=YEARS),
+        expand(STATEDIR + "/stage3_{year}" + JJ_TAG + ".done", year=YEARS),
 
 
 # ---------------------------------------
@@ -1002,8 +1043,8 @@ rule MassCalibrationDataClosure:
 
 rule summary:
     input:
-        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS),
-        expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
+        INITIAL_STAGE1_DONE,
+        INITIAL_STAGE1_COMPACT_DONE,
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
         #expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
     output:

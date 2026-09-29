@@ -116,3 +116,46 @@ prod = yaml.safe_load(open("configs/switches/switches_official.yaml"))["switches
 ref = yaml.safe_load(open("test/reference/switches_official.yaml"))["switches"]
 print("missing from test/reference/switches_official.yaml:", sorted(set(prod) - set(ref)))
 ```
+
+## MuonScaRe resolution smearing can give astronomically large or negative muon pT in Run 3 MC (open, found 2026-09-29)
+
+**Symptom.** Some Run 3 MC muons leave stage-1 with pT of 10^17–10^61 GeV, sometimes negative,
+mostly at |eta| ≈ 1.8–2.2. Found with `scripts/sync_parquet_dimuon.py` in a dir-vs-dir compare
+of two stage-1 runs: 6 DY events were flagged only on `dimuon_mass`. The muon pT values were
+identical in both runs; the dimuon mass computed from them is float64 cancellation noise
+(e.g. -2.2e47, 0, 1e11 GeV). So those differences are noise and point to bad inputs, not a code
+change between the two runs.
+
+**Cause.** `pt_resol` in `src/corrections/MuonScaRe.py` smears as `pt * (1 + k*std*rndm)`,
+where `rndm = CrystallBall.invcdf(u)` for a uniform `u` from the `HashPRNG`. The tail branch
+goes as `(NC/u)**(1/(n-1))`, so when the payload's `cb_params` tail parameter `n` is close to 1
+the exponent is huge and ordinary `u` values explode (n = 1.004 gives an exponent of about 250).
+`filter_boundaries` only resets pT when the *input* pT is outside [26, 200] GeV or the output is
+NaN. It never checks that the output is finite and sensible, so huge or negative values pass through.
+
+**Scale per payload** (`data/roch_corr/`: repo `invcdf` over |eta| 0–2.4 x nTrackerLayers 6–18,
+312 bins; "bad" = |rndm| > 100 or non-finite for u down to 1e-12):
+
+| Payload | Bad bins | Worst |
+|---|---|---|
+| 2022_Summer22 | 54 | n = 1.008 |
+| 2022_Summer22EE | 52 | n = 1.004 at \|eta\| ≈ 2.05 |
+| 2023_Summer23 | 50 | n = 1.012 at \|eta\| ≈ 2.05–2.15 |
+| 2023_Summer23BPix | 52 | n = 1.003 |
+| 2024_Summer24 | 42 | \|rndm\| up to ~1e19 |
+| 2025_muon_scalesmearing_VXBS | 26 | \|rndm\| ≤ ~1.4e3 (mild) |
+
+Some bins also have `n = 0`, `alpha = 0` (apparently unfitted). Those give NaN, which
+`filter_boundaries` already resets to the input pT.
+
+**Expected impact (not measured).** Affected events get a meaningless dimuon mass, so the
+110–150 GeV window should drop them in stage-2: a small MC efficiency loss rather than signal-region
+contamination. The 6 events in the sync diff are a lower bound, since only events whose mass noise
+happened to differ between runs showed up. To size it, count muons with pT > 1e4 or pT < 0 per
+sample and year in the stage-1 MC parquet.
+
+**Open questions before fixing.** Not yet checked against the official MUO MuonScaRe reference
+code: does it behave the same way, and does MUO recommend a guard? One candidate fix is to keep the
+unsmeared pT when the smeared value is non-finite, negative, or far from the input. That would be an
+implementation choice, not a CMS recommendation, and it changes stage-1 output (sync references would
+need regenerating).
