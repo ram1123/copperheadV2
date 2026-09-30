@@ -43,11 +43,16 @@ Options:
         Default: unset (falls back to configs/switches/switches_official.yaml).
 
 Env vars:
+  WITH_VARIATIONS Set to 1 to run stage2/stage3 with systematic variations.
+                Default 0 (nominal only; stage-2 output dir gets a _NoSyst suffix).
   MODEL_YEARS   Comma-separated years used to build the DNN model directory name
                 (dnn/trained_models/<label>/<MODEL_YEARS>_<region>_<category>_<JJ_ETA_REGION>),
                 independent of the years passed via -y. Defaults to -y's years.
                 Use this to run stage2/stage3 for one year (-y) while loading a
                 model trained on a different (e.g. combined) set of years.
+  MODEL_LABEL   Label directory the DNN model is loaded from
+                (dnn/trained_models/<MODEL_LABEL>/...) for stage2 / compact -D,
+                independent of -l. Defaults to -l. Does not affect DNN training output.
   JJ_ETA_REGION Restricts the dijet |eta| phase space to one of
                 modules/selection.py's PAIR_JJ_ETA_REGIONS (jj_both_central,
                 jj_non_central, jj_one_fwd25_one_central, jj_one_he_one_central,

@@ -65,8 +65,8 @@ years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
 # run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV"
 # run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN"
 
-run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics"
-# run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation"
+# run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics"
+run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation"
 # run_tag: "FilterEvents_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4"
 # run_tag: "FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN"
 # run_tag: "FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV"
@@ -81,8 +81,8 @@ run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics"
 # Can also be set per-invocation without editing this file:
 #   snakemake ... --config switches_yaml=configs/switches/switches_official.yaml
 
-# switches_yaml: configs/switches/switches_official.yaml
-switches_yaml: configs/switches/switches_official_systematics.yaml
+switches_yaml: configs/switches/switches_official.yaml
+# switches_yaml: configs/switches/switches_official_systematics.yaml
 
 # switches_yaml: configs/switches/switches_JetPt25GeV.yaml
 # switches_yaml: configs/switches/switches_JetPt25GeV_PUDNN.yaml
@@ -112,6 +112,11 @@ save_postfix: ""
 # modules/selection.py's PAIR_JJ_ETA_REGIONS (jj_both_central, jj_non_central, ...). Also selects the
 # DNN model dir <years>_h-peak_vbf_<jj_eta_region>. Non-"all" regions get their own state/log names.
 jj_eta_region: "all"
+
+# Stage-1 prestage JSON variant: "" = prestage_output/processor_samples_<year>_NanoAODv<v>.json;
+# "LumiSplit" = the Summer24 MC split disjointly across 2024/2025/2026 by lumi (PC guideline: 2025+2026
+# are one year sharing Summer24 MC with 2024) -- produced by scripts/split_prestage_by_year_lumi.py.
+prestage_tag: ""
 
 # dask gateway
 use_gateway: true

@@ -27,6 +27,7 @@ common_defaults() {
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
     do_vbf_filter_study="${DO_VBF_FILTER_STUDY:-0}"
+    prestage_tag="${PRESTAGE_TAG:-}"  # stage-1 reads processor_samples_<year>_NanoAODv<v>_<tag>.json when set
     chunksize="600000"
     max_file_len="900"
     save_root="/work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean"
@@ -103,7 +104,8 @@ except Exception:
     dnn_base_dir="dnn/trained_models/${label}/${dnn_model_years_slug}_${region}_${category}_${dnn_jj_eta_region}"
     dnn_hpo_dir="${dnn_base_dir}/hpo_optuna/${dnn_hpo_label}"
     dnn_best_json="${OPTUNA_BEST_JSON:-${dnn_hpo_dir}/optuna_best.json}"
-    dnn_model_path="./${dnn_base_dir}"
+    # MODEL_LABEL lets stage2/compact load a model trained under a different run label; training still writes to dnn_base_dir.
+    dnn_model_path="./dnn/trained_models/${MODEL_LABEL:-${label}}/${dnn_model_years_slug}_${region}_${category}_${dnn_jj_eta_region}"
 
     # jj_eta_region for the actual VBF stage-2 category selection / stage-3 datacards --
     # independent of dnn_jj_eta_region above (that one is what phase-space subset the DNN was
@@ -286,6 +288,9 @@ append_stage1_args() {
         # small samples -- update_sync_references.sh appeared to hang because stage-1 was actually
         # processing 158M real events instead of ~1k sync events.
         printf '%s\n' "--sync"
+    fi
+    if [[ -n "${prestage_tag}" ]]; then
+        printf '%s\n' "--prestage-tag" "${prestage_tag}"
     fi
     if [[ "${is_cutflow}" == "1" ]]; then
         # -z/--sync (sample-list selection) and -Z/--isCutflow (per-chunk cutflow shard

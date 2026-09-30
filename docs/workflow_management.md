@@ -128,6 +128,9 @@ Stage-1:
 
 - `switches_yaml` -- standalone switches file used by `stage1` instead of
   `configs/switches/switches_official.yaml`.
+- `prestage_tag` -- stage-1 reads `prestage_output/processor_samples_<year>_NanoAODv<v>_<tag>.json` instead of
+  the plain file (passed as `PRESTAGE_TAG`). Use `LumiSplit` for the Summer24 MC split across 2024/2025/2026 by
+  luminosity (see [2024 / 2025-26 Year Grouping and MC Split](Run3_2024_2025_2026_MC_split.md)). Empty = plain file.
 - `cleanup_f1_0_after_compact` -- after `stage1Compact` passes its sanity check, `rm -rf` the raw `f1_0`
   output for that year. **Irreversible**; only the compacted output is kept.
 

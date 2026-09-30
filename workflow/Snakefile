@@ -32,6 +32,10 @@ STAGE23_JJ_ETA_REGION = config.get("jj_eta_region") or "all"
 JJ_ENV = f"JJ_ETA_REGION={STAGE23_JJ_ETA_REGION} " if STAGE23_JJ_ETA_REGION != "all" else ""
 JJ_TAG = f"_{STAGE23_JJ_ETA_REGION}" if STAGE23_JJ_ETA_REGION != "all" else ""
 
+# Prestage JSON variant for stage-1 (PRESTAGE_TAG), e.g. "LumiSplit" -> processor_samples_<year>_NanoAODv<v>_LumiSplit.json.
+PRESTAGE_TAG = config.get("prestage_tag") or ""
+PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
+
 YEARS = config["years"]
 RUN_TAG = config.get("run_tag", "default")
 PLOT_VBF_FILTER_STUDY = config.get("plot_vbf_filter_study", False)
@@ -317,6 +321,7 @@ rule stage1:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
             "_status/stage1_summary.log"
         ),
+        prestage_env=PRESTAGE_ENV,
     resources:
         gateway=1,
     shell:
@@ -325,7 +330,7 @@ rule stage1:
         set -x
         mkdir -p {params.logdir} {params.statedir}
         ts=$(date +"%Y-%m-%d_%H-%M-%S")
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.prestage_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
