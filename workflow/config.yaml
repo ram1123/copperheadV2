@@ -29,8 +29,8 @@ run_tag: "FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation"
 # Can also be set per-invocation without editing this file:
 #   snakemake ... --config switches_yaml=configs/switches/switches_official.yaml
 
-# switches_yaml: configs/switches/switches_official.yaml
-switches_yaml: configs/switches/switches_official_systematics.yaml
+switches_yaml: configs/switches/switches_official.yaml
+# switches_yaml: configs/switches/switches_official_systematics.yaml
 
 # switches_yaml: configs/switches/switches_JetPt25GeV.yaml
 # switches_yaml: configs/switches/switches_JetPt25GeV_PUDNN.yaml
