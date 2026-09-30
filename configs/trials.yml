@@ -6,6 +6,146 @@ trials:
         stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/"
         comment: "What plotter should use by default"
 
+    # --- Sep22 family: switches_official.yaml as of 99199e4 (Sep22; vs the Aug30 non-Syst baseline: do_jet_horn_puid 50 -> false,
+    # do_add_jet_ID_vars -> true, do_pdf -> false for non-Syst runs, pdf_excluded_samples/pdf_supported_lha_ids added).
+    # Switch values below are read from each run's stage1_output/<year>/switches_used_*.yaml.
+
+    Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto:
+        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto/stage1_output/"
+        comment: "Sep22 OfficialRecomendation (same switches) + lepton IP cuts and an extra loose-lepton veto (AN-19-124 baseline). 2024 compacted; 2025 IN PROGRESS (f1_0 only, 5 samples as of Sep 30)."
+        changed:
+            muon_ip: "selected muons now require |dxy| < 0.05 cm, |dz| < 0.1 cm (muon_dxy_cut/muon_dz_cut)"
+            muon_multiplicity: "nmuons == 2 -> nmuons >= 2 AND exactly 2 loose muons (pT > 10, looseId, pfRelIso04_all < 0.25, same IP cuts); cutflow rows nMuons_ge2 / nLooseMuons_eq2"
+            electron_veto: "electron_pt_cut 20 -> 10 GeV; adds pfRelIso03_all < 0.25 and IP cuts (barrel |dxy|<0.05, |dz|<0.1; endcap |dxy|<0.1, |dz|<0.2, split on |eta+deltaEtaSC| = 1.479)"
+        date: September 30, 2026
+        years: 2024, 2025
+        gitSHA: 995731a6b51147140138c4a765d5e949fe57ef7a
+        NOTE: "The lepton changes were UNCOMMITTED at run time (configs/parameters/muon.yaml, electron.yaml, src/copperhead_processor.py; 65-66 diff hunks) -- gitSHA alone does not reproduce this run; see stage1_output/<year>/git_info_*.txt. Only on /work, no EOS copy yet."
+
+    Run3_nanoAODv12_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto:
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto/stage1_output/"
+        comment: "nanoAODv12 half of the IPAdditionalLepVeto trial above (same lepton changes). IN PROGRESS as of Sep 30: 2023BPix compacted (16 samples); 2023 f1_0 only, not compacted; 2022preEE just started (data_C only); 2022postEE not started."
+        date: September 30, 2026
+        years: 2022preEE, "2023", "2023BPix"
+        gitSHA: 995731a6b51147140138c4a765d5e949fe57ef7a
+        NOTE: "Same uncommitted lepton changes as the v15 sibling (65-66 diff hunks) -- see stage1_output/<year>/git_info_*.txt. Only on /work."
+
+    Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4:
+        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4/stage1_output/"
+        comment: "Event-filter JVM (like OfficialRecomendation) but default 25 GeV jets with NO HE/HF horn pT cut, PU-DNN score gating on, jer_strat 4; do_THU/do_nnlops/do_pdf off; save_four_jets_kinematics on. Presumably from configs/switches/switches_JetPt25GeV_PUDNN_EventFilter_JetStrat4.yaml. 2024 only."
+        changed:
+            do_jet_horn_ptcut: {from: 50, to: false}
+            do_use_pu_dnn_score: {from: false, to: true}
+            jer_strat: 4 (same as official)
+        date: September 29, 2026
+        years: 2024
+        gitSHA: 34bc240867add1b0beb86b42611d888c49f6d3bd
+        NOTE: "2 runs (Sep28, Sep29), both at 34bc240, dirty tree (61-62 hunks). Also copied to EOS: /eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/<same label>."
+
+    Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation:
+        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation/stage1_output/"
+        comment: "Sep22 re-run of the official-recommendation baseline (no systematics). Current run_tag in workflow/config.yaml. 2024 only."
+        date: September 27, 2026
+        years: 2024
+        gitSHA: d0664a456e4f4a92e054f4b9029340129982361a
+        NOTE: "2 git_info files (Sep27), both d0664a4, dirty tree (59-60 hunks). Also copied to EOS: /eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/<same label>."
+
+    Run3_nanoAODv15_FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN:
+        stage1: "{base_dir}/Run3_nanoAODv15_FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN/stage1_output/"
+        comment: "Sep22 FilterJets (JVM removes jets, not events), default 25 GeV jets, no horn pT cut, jer_strat -1, PU-DNN score gating on; do_THU/do_nnlops/do_pdf off. Compare with the _DefaultjetPt25GeV sibling (identical except PU-DNN, and save_four_jets_kinematics). 2024 only."
+        changed:
+            do_use_pu_dnn_score: {from: false, to: true}
+        date: September 27, 2026
+        years: 2024
+        gitSHA: d0664a456e4f4a92e054f4b9029340129982361a
+        NOTE: "Runs Sep25 (88 hunks) and Sep27 (53 hunks), both d0664a4, dirty tree. Also copied to EOS under the same label."
+
+    Run3_nanoAODv15_FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV:
+        stage1: "{base_dir}/Run3_nanoAODv15_FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV/stage1_output/"
+        comment: "Sep22 FilterJets, default 25 GeV jets, no horn pT cut, jer_strat -1, NO PU-DNN -- the no-DNN baseline for the _PUDNN sibling. 2024 only."
+        date: September 26, 2026
+        years: 2024
+        gitSHA: d0664a456e4f4a92e054f4b9029340129982361a
+        NOTE: "Runs Sep26 04:03 (91 hunks) and Sep26 20:39 (53 hunks), both d0664a4, dirty tree. Also copied to EOS under the same label."
+
+    Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics:
+        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics/stage1_output/"
+        comment: "SAME selection/corrections as Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics -- re-run only to add the systematic variations missing there (see `changed`). Supersedes the Aug30 _Systematics trial. do_jec_unc/do_jer_unc/do_pdf/save_muon_roccor_variations on in both. nanoAODv15 half (2024/2025/2026). /work copy also has stage2_histograms/ and stage3_datacards_Sep29_2026{,_jj_both_central}/."
+        changed: # vs the Aug30 _Systematics trial, from switches_used_*.yaml; all years
+            save_all_weight_variations: {from: false, to: true}
+            do_save_partial_weights: {from: false, to: true}
+            pdf_supported_lha_ids: {from: "(not present)", to: [306000, 325300]}
+            pdf_excluded_samples: {from: "(not present)", to: [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q, st_tchannel]}
+            do_met_xy_correction: {from: "(not present)", to: false} # key added, stays off -- no effect
+        date: September 24, 2026
+        years: 2024, 2025, 2026
+        gitSHA: d41465b8533069517de6692c5fad732e737912b3
+        NOTE: "2024 first run at 99199e4, then d41465b; 2025 all d41465b; 2026 at d41465b then 7be5783 (Sep24, last run). Dirty tree throughout (30-84 hunks). EOS copy (stage1 only) under the same label."
+
+    Run3_nanoAODv12_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics:
+        stage1: "{base_dir}/Run3_nanoAODv12_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics/stage1_output/"
+        comment: "nanoAODv12 half (2022preEE/2022postEE/2023/2023BPix) of the Sep22 Systematics trial above. SAME selection/corrections as Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics -- re-run only to add the missing systematic variations (see `changed`); supersedes it. /work copy also has stage2_histograms/ and stage3_datacards_Sep29_2026{,_jj_both_central}/."
+        changed: # vs the Aug30 _Systematics trial, from switches_used_*.yaml; all years
+            save_all_weight_variations: {from: false, to: true}
+            do_save_partial_weights: {from: false, to: true}
+            pdf_supported_lha_ids: {from: "(not present)", to: [306000, 325300]}
+            pdf_excluded_samples: {from: "(not present)", to: [dyTo2Mu_MLL_10To50, ttjets_fh, ttjets_sl, wz_1l1nu2q, st_tchannel]}
+            do_met_xy_correction: {from: "(not present)", to: false} # key added, stays off -- no effect
+        date: September 24, 2026
+        years: 2022preEE, 2022postEE, "2023", "2023BPix"
+        gitSHA: d41465b8533069517de6692c5fad732e737912b3
+        NOTE: "Mostly 99199e4 (Sep23) then d41465b (Sep23); 2023BPix's first run was at 9d8376e (Sep22); 2022postEE's last run was at d0664a4 (Sep24). Dirty tree (25-75 hunks). EOS copy (stage1 only) under the same label."
+
+    # --- Aug30-family follow-ups (EOS only)
+
+    Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_validation_21Sep:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_validation_21Sep/stage1_output/"
+        comment: "Validation re-run of the v12 Aug30 baseline after the selection-module cleanup (b91296d 'cleaned selection module'); do_pdf off. 2022preEE only, f1_0 (not compacted)."
+        date: September 21, 2026
+        years: 2022preEE
+        gitSHA: b91296d8c15c3a1932dbe3065dd75ff8dec22591
+        NOTE: "Single git_info (15 hunks)."
+
+    Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics/stage1_output/"
+        comment: "Aug30 official recommendation WITH systematics (do_jec_unc/do_jer_unc/save_muon_roccor_variations on; do_jet_horn_puid false). nanoAODv15 half. Has stage2_histograms/ and stage3_datacards_Sep25_2026/. SUPERSEDED by Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics: same selection/corrections, but this run is missing systematic variations (save_all_weight_variations, do_save_partial_weights and PDF LHA-id handling were off/absent) -- see that trial's `changed`."
+        date: September 18, 2026
+        years: 2024, 2025, 2026
+        gitSHA: 80ef0616a5ed934f8404a0973846df0a75d5381c
+        NOTE: "Sep16-18, commits a379459 -> 4a41eb7 -> 4316ddf/80ef061; last run per year: 2024 4316ddf, 2025 80ef061, 2026 4316ddf. Dirty tree (29-112 hunks)."
+
+    Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics/stage1_output/"
+        comment: "nanoAODv12 half of the Aug30 _Systematics trial above. SUPERSEDED by Run3_nanoAODv12_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics: same selection/corrections, but missing systematic variations added there (see that trial's `changed`). Has stage2_histograms/ and many stage3 dirs: Sep18_2026_jj_{both_central,both_fwd25}, Sep22_2026_jj_{both_central,combined,non_central}, Sep23_2026_jj_{all3combined,one_fwd25_one_central}, Sep24_2026{,_jj_all3combined}. Used for the Sep18 impacts run (see .claude/reports/registry.md)."
+        date: September 18, 2026
+        years: 2022preEE, 2022postEE, "2023", "2023BPix"
+        gitSHA: 4316ddfae150eef75ae43cf37469a7267f98d1b7
+        NOTE: "Sep16-18; last run per year: 2022preEE 80ef061, 2022postEE/2023/2023BPix 4316ddf. Dirty tree (33-107 hunks)."
+
+    Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_DYReRun:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_DYReRun/stage1_output/"
+        comment: "DY-only re-run (dyTo2Mu_M-50_aMCatNLO) of the v15 Aug30 baseline, same switches, to be spliced into the baseline via scripts/splice_sample_across_years.py (docs/Additional_Scripts.md). Reason for the rerun not recorded in the run dir."
+        date: September 15, 2026
+        years: 2024, 2025, 2026
+        gitSHA: 6b4211b0bb020ba7af08377565256d70cbcb52aa
+        NOTE: "One git_info per year, all 6b4211b, dirty tree (53 hunks)."
+
+    Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_DYReRun:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_DYReRun/stage1_output/"
+        comment: "DY-only re-run (dyTo2L_M-50_incl) of the v12 Aug30 baseline; nanoAODv12 half of the _DYReRun trial above."
+        date: September 15, 2026
+        years: 2022preEE, 2022postEE, "2023", "2023BPix"
+        gitSHA: 6b4211b0bb020ba7af08377565256d70cbcb52aa
+        NOTE: "2022preEE ran at 9895ff6 (57 hunks), other years at 6b4211b (53 hunks)."
+
+    Run3_nanoAODv15_Verify_After_MergeWithMain:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_Verify_After_MergeWithMain/stage1_output/"
+        comment: "Verification run after merging with main (stage-1 regression check, not a physics scenario). 2026 only, f1_0 (not compacted), 18 samples."
+        date: September 13, 2026
+        years: 2026
+        gitSHA: 34d97ed58da68957ac7e5c61947833aba5459a59
+        NOTE: "6 attempts Sep12-13, all 34d97ed, dirty tree (31-37 hunks). Kept as verification evidence."
+
     Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_MuonID-tightId:
         stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_MuonID-tightId/stage1_output/"
         comment: "Muon-ID variation, otherwise identical to the OfficialRecomendation baseline (nanoAODv15, FilterEvents Aug30, tightPassLepVeto jet ID): muon_id changed from mediumId to tightId."
@@ -20,23 +160,23 @@ trials:
         NOTE: "configs/parameters/muon.yaml's muon_id edit was UNCOMMITTED (dirty tree) at run time, so gitSHA alone does not reproduce it -- full diff captured in stage1_output/2025/git_info_20260911_111643.txt (also an earlier same-label run: git_info_20260911_031503.txt). Only 2025 was actually processed under this label, though the muon.yaml edit itself covers every Run3 year."
 
     Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation:
-        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation/stage1_output/"
-        comment: "THE baseline -- the official recommendation. NanoAODv15, official years 2024/2025/2026 (see the nanoAODv12 sibling trial for 2022/2023, the official version for those years). Also has stage2_histograms/ and stage3_datacards_Sep09_2026/ under this same label (not just stage1)."
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation/stage1_output/"  # moved to EOS; no longer under {base_dir}
+        comment: "THE baseline -- the official recommendation. NanoAODv15, official years 2024/2025/2026 (see the nanoAODv12 sibling trial for 2022/2023, the official version for those years). Also has stage2_histograms/, stage3_datacards_Sep09_2026/ and stage3_datacards_Sep12_2026_jj_{both_central,combined,non_central}/ under this same label (not just stage1)."
         date: September 02, 2026
-        years: 2022preEE, 2022postEE, "2023", "2023BPix", 2024, 2025, 2026
+        years: 2024, 2025, 2026
         gitSHA: 6f4ec8f54f84e0e928f58ad13292c5cd0d40a257
-        NOTE: "Reprocessed repeatedly Aug30-Sep02 2026, mostly on 2024 (12 attempts, 4 different commits: 0aa1c45 -> 67cf2bf -> dbbfb92 -> c7fe91a); 2025 and 2026 each have exactly one run, both at 6f4ec8f (the gitSHA recorded above). The 2022preEE/2022postEE/2023/2023BPix subdirectories present under THIS (v15) label have no git_info_*.txt at all -- no recorded provenance -- and are NOT the official ones for those years (v12 is, per the sibling trial); treat them as non-canonical leftovers, not a second source for those years. Every git_info_*.txt in this run showed uncommitted config diffs (14-27 hunks) -- see the per-year stage1_output/<year>/git_info_*.txt for the exact state of any specific run."
+        NOTE: "Reprocessed repeatedly Aug30-Sep02 2026, mostly on 2024 (12 attempts, 4 different commits: 0aa1c45 -> 67cf2bf -> dbbfb92 -> c7fe91a); 2025 and 2026 each have exactly one run, both at 6f4ec8f (the gitSHA recorded above). The 2022preEE/2022postEE/2023/2023BPix leftovers that used to sit under THIS (v15) label were not carried over to the EOS copy (only 2024/2025/2026 exist there); v12 is the official source for those years. 2024 and 2026 also have a later git_info_20260916_01*.txt at 6b4211b (Sep16, right after the _DYReRun trial). Every git_info_*.txt in this run showed uncommitted config diffs (14-27 hunks) -- see the per-year stage1_output/<year>/git_info_*.txt for the exact state of any specific run."
 
     Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation:
-        stage1: "{base_dir}/Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation/stage1_output/"
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation/stage1_output/"  # moved to EOS; no longer under {base_dir}
         comment: "THE baseline -- the official recommendation, nanoAODv12 half: official version for 2022preEE/2022postEE/2023/2023BPix (the nanoAODv15 sibling trial is official for 2024/2025/2026). Same selection intent as the v15 sibling, different NanoAOD campaign because that's what those years were produced with."
         date: September 09, 2026
         years: 2022preEE, 2022postEE, "2023", "2023BPix"
         gitSHA: 74b7c063ecedd8b531ca02f0257209477f682613
-        NOTE: "Single commit across all 5 git_info_*.txt files (one per year, 2022preEE has two). Working tree was dirty at run time (23 diff hunks) -- see stage1_output/<year>/git_info_*.txt for the exact state."
+        NOTE: "Single commit across the 5 original git_info_*.txt files (one per year, 2022preEE has two). Working tree was dirty at run time (23 diff hunks) -- see stage1_output/<year>/git_info_*.txt for the exact state. Every year also has a later git_info_20260916_01*.txt at 6b4211b (Sep16, right after the _DYReRun trial)."
 
     Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Cutflow:
-        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Cutflow/stage1_output/"
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Cutflow/stage1_output/"  # moved to EOS; no longer under {base_dir}
         comment: "Cutflow companion run of the nanoAODv15 OfficialRecomendation baseline -- same selection, run with -z/--isCutflow so PackedSelection.cutflow(...) JSON/npz get written per chunk (see .claude/reports/implementations/2026-09-09_cutflow-api-review-and-fixes.md and its 2026-09-10 mass-region-rows addendum for what was fixed in the cutflow bookkeeping itself). 2025 only."
         date: September 09, 2026
         years: 2025
@@ -44,7 +184,7 @@ trials:
         NOTE: "Single git_info_*.txt (stage1_output/2025/git_info_20260909_173755.txt); working tree was dirty at run time (27 diff hunks, mostly configs/parameters/switches_official.yaml key renames/reorganization) -- see that file for the exact state."
 
     Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_AddHE50:
-        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_AddHE50/stage1_output/"
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_AddHE50/stage1_output/"  # moved to EOS; no longer under {base_dir}
         comment: "HE-region jet pT variation of the nanoAODv15 OfficialRecomendation baseline: do_jet_horn_ptcut set to 50 GeV in the HE region (2.5 < |eta| <= 3.0). 2025 only."
         changed:
             do_jet_horn_ptcut:
@@ -57,16 +197,16 @@ trials:
         NOTE: "Single commit across all 3 git_info_*.txt files (stage1_output/2025/). Working tree was dirty at run time (15 diff hunks) -- the do_jet_horn_ptcut value itself wasn't visible as a changed line in that specific diff (only its comment/docstring was), so the prior/baseline value isn't confirmed here from the diff alone -- see stage1_output/2025/git_info_*.txt directly if the exact before-value matters."
 
     Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV:
-        stage1: "{base_dir}/Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV/stage1_output/"
-        comment: "FilterJets variant of the nanoAODv15 baseline family: jet veto maps remove individual jets (do_jet_veto_maps_filterJets) rather than whole events (do_jet_veto_maps_filterEvents, used by the OfficialRecomendation/FilterEvents family) -- default 25 GeV jet pT threshold, no PU-DNN."
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV/stage1_output/"  # moved to EOS; no longer under {base_dir}
+        comment: "FilterJets variant of the nanoAODv15 baseline family: jet veto maps remove individual jets (do_jet_veto_maps_filterJets) rather than whole events (do_jet_veto_maps_filterEvents, used by the OfficialRecomendation/FilterEvents family) -- default 25 GeV jet pT threshold, no PU-DNN. Also has stage2_histograms/ and stage3_datacards_Sep23_2026/, stage3_datacards_Sep25_2026/."
         date: September 03, 2026
         years: 2024, 2025, 2026
         gitSHA: 906d636b28e902c9dd07991f2f4add5c093c1d0a
         NOTE: "Per-year commit differs: 2024 ran at d33c6e5 (Sep01), 2025 ran at 6f4ec8f (Sep03, the gitSHA recorded above), 2026 ran at 906d636 (Sep01, 3 attempts/retries). Every run's working tree was dirty -- see stage1_output/<year>/git_info_*.txt for the exact per-year state."
 
     Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN:
-        stage1: "{base_dir}/Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN/stage1_output/"
-        comment: "Same as Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV (FilterJets family, default 25 GeV jet pT) plus the pileup-jet DNN score gating (MVA_training/pileup_dnn/train_pu_dnn.py) turned on. 2024 only."
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV_PUDNN/stage1_output/"  # moved to EOS; no longer under {base_dir}
+        comment: "Same as Run3_nanoAODv15_FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV (FilterJets family, default 25 GeV jet pT) plus the pileup-jet DNN score gating (MVA_training/pileup_dnn/train_pu_dnn.py) turned on. 2024 only. Also has stage2_histograms/ and stage3_datacards_Sep23_2026/, stage3_datacards_Sep25_2026/."
         changed:
             do_use_pu_dnn_score:
                 from: false
@@ -76,6 +216,72 @@ trials:
         years: 2024
         gitSHA: 9be0709aefbd47335f2eaa7cfa15de3d094c4679
         NOTE: "Same commit across both git_info_*.txt files (stage1_output/2024/). Working tree was dirty at run time (17 diff hunks); the diff also showed jer_strat going 4 -> -1 in the same hunk block, but that isn't confirmed as intentional for THIS scenario specifically (vs. incidental drift already present in the working tree) -- see stage1_output/2024/git_info_20260906_113953.txt for the exact state."
+
+    # --- July08 / May runs (EOS only; no switches_used_*.yaml snapshots -- see git_info_*.txt for state)
+
+    Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024_Syst:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024_Syst/stage1_output/"
+        comment: "FilterJets + PU-DNN (trained on 2024) with systematics. INCOMPLETE: 2024 f1_0 only (11 samples), 2025 only data_B; not compacted."
+        date: August 26, 2026
+        years: 2024, 2025
+        gitSHA: f7b1d74a84e2aba79cc4095ad48dd32b6b663d17
+        NOTE: "All runs f7b1d74 (Aug25-26), dirty tree (35-39 hunks)."
+
+    Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets_Syst:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets_Syst/stage1_output/"
+        comment: "FilterJets, default 25 GeV jets, no PU-DNN, with systematics. 2025 only (compacted, 25 samples)."
+        date: August 26, 2026
+        years: 2025
+        gitSHA: f7b1d74a84e2aba79cc4095ad48dd32b6b663d17
+        NOTE: "5 runs Aug26, all f7b1d74, dirty tree (42-68 hunks)."
+
+    Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024/stage1_output/"
+        comment: "FilterJets + PU-DNN score gating, DNN trained on 2024. nanoAODv15 years."
+        date: August 25, 2026
+        years: 2024, 2025
+        gitSHA: 3f89deae5a3689ae62dd2c80eeefd748cb895f5a
+        NOTE: "2024: first run 27e4221 (Jul17), then da93f3b (Aug12-13); 2025: 9dfe804 (Aug20) then 3f89dea (Aug25). Dirty tree (31-48 hunks)."
+
+    Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets/stage1_output/"
+        comment: "FilterJets, default 25 GeV jets, no PU-DNN -- no-DNN baseline for the July08 PUDNN_TrainOn2024 trial. nanoAODv15 years."
+        date: August 25, 2026
+        years: 2024, 2025
+        gitSHA: 3f89deae5a3689ae62dd2c80eeefd748cb895f5a
+        NOTE: "2024 all da93f3b (Aug11-13); 2025 went 1e74310 -> 5c6d3dd -> 9dfe804 -> 3f89dea (Aug18-25). Dirty tree (25-44 hunks)."
+
+    Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2022postEE/stage1_output/"
+        comment: "FilterJets + PU-DNN score gating, DNN trained on 2022postEE. nanoAODv12 years. Has stage2_histograms/ and stage3_datacards_Aug24_2026/."
+        date: August 21, 2026
+        years: 2022preEE, 2022postEE, "2023", "2023BPix"
+        gitSHA: 9dfe8043e1c384d613d7f0d575b114b3effb15a9
+        NOTE: "All runs 9dfe804 (Aug20-21), dirty tree (33 hunks)."
+
+    Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets/stage1_output/"
+        comment: "FilterJets, default 25 GeV jets, no PU-DNN -- no-DNN baseline for the v12 July08 PUDNN_TrainOn2022postEE trial. Has stage2_histograms/ and stage3_datacards_Aug25_2026/."
+        date: August 12, 2026
+        years: 2022preEE, 2022postEE, "2023", "2023BPix"
+        gitSHA: da93f3bf48f5e883674b6ff07bd06b5af98483e2
+        NOTE: "All runs da93f3b (Aug11-12), dirty tree (19-26 hunks)."
+
+    Run3_nanoAODv12_FilterJets_May28_tightPassLepVeto_JER0:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_May28_tightPassLepVeto_JER0/stage1_output/"
+        comment: "FilterJets, tightPassLepVeto, JER strategy 0 (per label). Small test: 2022preEE only, 5 samples (data_C, data_D, DY 0j/1j/...), f1_0 only."
+        date: May 31, 2026
+        years: 2022preEE
+        gitSHA: 1ffd6adbfff0c41fc7b2bcaa00db928f8c03d732
+        NOTE: "Single git_info, dirty tree (105 hunks, incl. configs/parameters/switches.yaml and PySR07MayV2 Z-pT param files)."
+
+    Run3_nanoAODv12_FilterJets_May14_PySR07MayV2:
+        stage1: "/eos/purdue/store/user/rasharma/hmm/reducedNtuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_May14_PySR07MayV2/stage1_output/"
+        comment: "FilterJets with the PySR07MayV2 Z-pT reweighting parameters (data/zpt_rewgt/zpt_rewgt_params_IncDY_aMCatNLO_PySR07MayV2.yaml). Has stage2_histograms/ and stage3_datacards_{May20_2026,Jun01_2026,Jun02_2026_vbf_filter_study}/."
+        date: May 19, 2026
+        years: 2022preEE, 2022postEE, "2023", "2023BPix"
+        gitSHA: f44348ffb0789b4b5dce3b464c07bce598cf9f17
+        NOTE: "2023/2023BPix first ran at 96c9636/6d93982 (May15); every year's last run at f44348f (May19). Dirty tree (70-152 hunks). f1_0 only (not compacted)."
 
     Run3_JetIDFix_pySR:
         base_dir: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean
