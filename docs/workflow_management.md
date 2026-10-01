@@ -140,8 +140,11 @@ Skipping upstream steps:
   `MassCalibration*` rules, `dnn_pre`, `pu_dnn_train` and `summary`, and drop stage-1 from `all` /
   `all_stage1`. Use when stage-1 output for `run_tag` already exists.
 - `stage23_standalone` -- drop all inputs of `stage2` (`stage1Compact` and `dnn_train`), so stage-2/3 run on their own.
+- `plots_standalone` -- drop only the `stage1Compact` input of `plots`, so plots run on existing `compacted/`
+  output (e.g. after `cleanup_f1_0_after_compact` removed `f1_0` and the compact marker is gone). Unlike
+  `use_existing_stage1`, every other rule keeps its stage-1 dependencies.
 
-`use_existing_stage1` and `stage23_standalone` only remove Snakemake's dependency checks: they do not
+`use_existing_stage1`, `stage23_standalone` and `plots_standalone` only remove Snakemake's dependency checks: they do not
 confirm that the stage-1 output or DNN model actually exist. If they are missing, the job fails when it runs.
 
 VBF DNN:
@@ -217,7 +220,10 @@ snakemake -s workflow/Snakefile plot_all \
   --config use_existing_stage1=True
 ```
 
-Without `use_existing_stage1=True`, `plots` first schedules `stage1`/`stage1Compact` for any year whose
+To skip the dependency for `plots` alone, use `--config plots_standalone=True` instead; add
+`'years=["2023BPix","2024"]'` to `--config` to restrict the years.
+
+Without `use_existing_stage1=True` (or `plots_standalone=True`), `plots` first schedules `stage1`/`stage1Compact` for any year whose
 `.done` marker is missing.
 
 ### Run only the DNN

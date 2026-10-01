@@ -13,6 +13,9 @@ CLEANUP_F1_0_AFTER_COMPACT = config.get("cleanup_f1_0_after_compact", False)
 # Run stage2/stage3 against existing compacted stage-1 + DNN outputs, skipping their upstream markers.
 STAGE23_STANDALONE = config.get("stage23_standalone", False)
 
+# Run plots against existing compacted stage-1 output, skipping only the stage1Compact marker (zpt/DNN/etc. unaffected).
+PLOTS_STANDALONE = config.get("plots_standalone", False)
+
 # Load the stage-2 VBF DNN from dnn/trained_models/<dnn_model_label>/ instead of this run_tag's label.
 DNN_MODEL_LABEL = config.get("dnn_model_label", "")
 
@@ -276,8 +279,6 @@ rule all:
 
 rule plot_all:
     input:
-        # (2) stage1Compact for all years
-        # expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
         PLOT_DONE,
 
@@ -718,7 +719,7 @@ rule stage23_all:
 # ---------------------------------------
 rule plots:
     input:
-        lambda wc: [] if USE_EXISTING_STAGE1 else [
+        lambda wc: [] if (USE_EXISTING_STAGE1 or PLOTS_STANDALONE) else [
             STATEDIR + f"/stage1_compact_{wc.year}.done"
         ]
     output:
