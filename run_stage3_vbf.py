@@ -1,3 +1,19 @@
+"""
+Stage-3 for the VBF channel: turns stage-2 DNN-score histograms into Combine shape templates
+(stage3_templates_*/) and SR/SB datacards (stage3_datacards_*/) for one year.
+`--years 2025_2026` is a merged stage-3 year: it sums the 2025 and 2026 stage-2 histograms
+into one set of templates with one set of year-uncorrelated nuisances (PC guideline).
+
+How to run (repo root, `default` pixi env; stage-2 must have run for the year, or for both
+2025 and 2026 when using 2025_2026). Usually driven by `run_analysis_pipeline.sh -m 3`:
+    ./run_in_pixi.sh default python run_stage3_vbf.py --years <year> -input <save_path> \
+        -l <label> --save_postfix <postfix> [--no_variations] [--jj_eta_region <region>]
+
+Example:
+    WITH_VARIATIONS=1 bash run_analysis_pipeline.sh -m 3 -y 2025_2026 -v 15 -o Sep29_2026 \
+        -c configs/datasets/dataset_nanoAODv15_run3.yaml \
+        -l Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics
+"""
 import argparse
 import os
 import time
@@ -11,6 +27,7 @@ from stage3.edit_datacard4DY_matchedJets import (
 )
 from stage3.make_datacards import build_datacards
 from stage3.make_templates import to_templates
+from modules.classify_year import component_years
 from modules.sample_config import get_all_dicts
 from omegaconf import OmegaConf
 parser = build_common_parser()
@@ -81,10 +98,17 @@ parameters = {
     "templates_vars": [],  # "dimuon_mass"],
 }
 
-_, _, parameters["grouping"] = get_all_dicts(
-    yaml_path=args.sample_config,
-    year=year,
-)
+# A merged year (e.g. 2025_2026) sums its component years' stage-2 histograms, so it
+# takes the union of their sample groupings; a process must map to one group in all.
+parameters["grouping"] = {}
+for comp_year in component_years(year):
+    _, _, comp_grouping = get_all_dicts(yaml_path=args.sample_config, year=comp_year)
+    for dataset, group in comp_grouping.items():
+        if parameters["grouping"].setdefault(dataset, group) != group:
+            raise ValueError(
+                f"{dataset} is grouped as {parameters['grouping'][dataset]} and {group} "
+                f"in the component years of {year}; stage-3 can't sum it into one template."
+            )
 
 # Whether alpha_s is emitted as its own `alpha_s_unc` nuisance next to `pdf_unc`, or
 # combined with it into `pdf_alpha_s_unc`. Per era, from stage3/VBF/switches.yaml
@@ -99,14 +123,25 @@ parameters["split_pdf_alpha_s"] = {
     y: bool(stage3_switches["split_pdf_alpha_s"][y]) for y in years
 }
 
-stage2_histogram_path = stage2_histogram_directory(
-    args.input_path,
-    f"score_{args.label}",
-    stage2_model_suffix,
-    args.no_variations,
-    year,
-)
-divide_dy_into_matched_jets = has_matched_jet_histograms(stage2_histogram_path)
+stage2_histogram_paths = [
+    stage2_histogram_directory(
+        args.input_path,
+        f"score_{args.label}",
+        stage2_model_suffix,
+        args.no_variations,
+        comp_year,
+    )
+    for comp_year in component_years(year)
+]
+dy_split_per_path = [has_matched_jet_histograms(p) for p in stage2_histogram_paths]
+if len(set(dy_split_per_path)) != 1:
+    raise ValueError(
+        f"The component years of {year} disagree on the DY matched-jet split "
+        f"({dict(zip(map(str, stage2_histogram_paths), dy_split_per_path))}); rerun stage-2 "
+        f"with the same divide_dy_into_matched_jets setting for all of them."
+    )
+divide_dy_into_matched_jets = dy_split_per_path[0]
+stage2_histogram_path = ", ".join(map(str, stage2_histogram_paths))
 parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets
 if divide_dy_into_matched_jets:
     parameters["grouping"] = split_dy_grouping(parameters["grouping"])

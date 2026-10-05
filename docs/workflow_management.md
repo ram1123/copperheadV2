@@ -53,7 +53,7 @@ Opt-in rules (not part of `all`; request them explicitly):
 
 - `pu_dnn_train`
 - `dnn_pre` -> `dnn_hpo` -> `dnn_train` (VBF DNN)
-- `stage2` -> `stage2_plot`, `stage3`
+- `stage2` -> `stage2_plot`, `stage2_plot_run3`, `stage3` -> `stage3_validate`
 - `MassCalibrationMC`, `MassCalibrationMCClosure`, `MassCalibrationData`, `MassCalibrationDataClosure`
   (their lines in `all` are commented out)
 
@@ -64,7 +64,9 @@ The aggregate convenience targets are:
 - `DY_ReRun` (`stage1` + `stage1Compact` only)
 - `plot_all` (`plots` only)
 - `vbf_dnn` (VBF DNN chain)
-- `stage23_all` (`stage2_plot` + `stage3` for every year in `years`)
+- `stage23_all` (`stage2_plot` + `stage3` + `stage3_validate` for every year in `years`, plus the
+  merged stage-3 year `2025_2026` when both components are in `years`, plus `stage2_plot_run3`
+  when `years` has more than one Run 3 year)
 
 ## What each rule does
 
@@ -107,6 +109,31 @@ The aggregate convenience targets are:
 - `stage2`, `stage2_plot`, `stage3`
   Per-year stage-2 histograms (`-m 2`), stage-2 plots (`-m 2p`) and stage-3 datacards (`-m 3`). `stage2`
   depends on `stage1Compact` for its year and on `dnn_train`, because it evaluates the VBF DNN.
+
+- `stage2_plot_run3`
+  Stage-2 data/MC plot of the VBF DNN score summed over all Run 3 years in `years` (nominal
+  histograms, luminosity summed from `configs/parameters/lumi.yaml`). Runs `-m 2p` over those
+  years, which also redoes the cheap per-year plots. All stage-2 DNN plots go to
+  `validation/stage2_dnn_score/<label>/<save_postfix>[_<jj_eta_region>][_NoSyst]/<year>/DNN_score_vbf_<region>[_log].{pdf,txt}`
+  (`<year>` = `Run3` for this rule).
+
+- `stage3_validate`
+  Mandatory check of the stage-3 shape templates before any fit, one job per stage-3 year. It runs
+  [plot_template_systematics.py](../scripts/plot_template_systematics.py) (one PNG+PDF per nuisance,
+  showing nominal/Up/Down per process with Up/nominal and Down/nominal ratios, plus
+  `systematics_summary.csv`) and
+  [plot_template_negative_bins.py](../scripts/plot_template_negative_bins.py) (nominal shapes per
+  process, negative bins marked). Outputs go to
+  `validation/stage3_templates/<label>/<save_postfix>[_<jj_eta_region>]/`:
+  `template_systematics/<year>/` and `templates_nominal_<year>.pdf`. The job **fails** on a hard
+  error -- a non-finite bin, or a negative bin in any non-data template (stage-3 clips negative
+  bins to zero, so one surviving means the templates are broken); the errors are listed in
+  `template_systematics/<year>/validation_errors.txt`. Everything else is a warning in the CSV and
+  the log, to review before trusting a fit: `missing Up/Down`, `up==down!=nominal` (a variation
+  whose effect does not depend on its direction -- usually a bug, see
+  [known issues](known_issues.md)), `same-sign shift`, and a yield shift above 50%.
+  [run_jj_region_scan.sh](../scripts/run_jj_region_scan.sh) runs the same check as its `validate`
+  step, always after stage-3 and before the stats step.
 
 - `summary`
   Prints the SUCCESS/FAILED counts from `logs/<run_tag>/failed_jobs.log` and fails if any job failed.
@@ -255,7 +282,9 @@ snakemake -s workflow/Snakefile stage23_all \
   --config stage23_standalone=True
 ```
 
-This runs `stage2` -> `stage2_plot` and `stage3` for every year in `years`. For a single year, request
+This runs `stage2` -> `stage2_plot` and `stage3` -> `stage3_validate` for every year in `years`.
+Check the `stage3_validate` outputs (see [What each rule does](#what-each-rule-does)) before running
+the significance/limit fits on these templates. For a single year, request
 `state/<run_tag>/stage3_<year>.done` instead of `stage23_all`. Years already marked done are skipped;
 add `--forcerun stage2` to redo them.
 

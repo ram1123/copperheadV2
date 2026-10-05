@@ -495,6 +495,10 @@ build_stage2_cmd() {
     if [[ "${jj_eta_region}" != "all" ]]; then
         cmd+=(--jj_eta_region "${jj_eta_region}")
     fi
+    # DUMP_SCORES=1: also save per-event nominal DNN scores, the input of the DNN bin scan
+    if [[ "${DUMP_SCORES:-0}" == "1" ]]; then
+        cmd+=(--dump_scores)
+    fi
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_gateway_args)
@@ -725,6 +729,17 @@ combine_vbf_cards() {
     )
 }
 
+# True if card exists, is non-empty and is not older than any of its input cards.
+vbf_card_is_current() {
+    local card="$1"; shift
+    [[ -s "${card}" ]] || return 1
+    local input
+    for input in "$@"; do
+        [[ "${input}" -nt "${card}" ]] && return 1
+    done
+    return 0
+}
+
 ensure_vbf_card() {
     local year="$1"
     local card_dir
@@ -733,21 +748,30 @@ ensure_vbf_card() {
     stem="$(vbf_card_stem "${year}")"
     local card_path="${card_dir}/${stem}.txt"
 
-    if [[ -s "${card_path}" ]]; then
+    # jj_combined* has no SR/SB cards; ensure_vbf_jjcombined_card owns its freshness
+    if [[ "${jj_eta_region}" == jj_combined* && -s "${card_path}" ]]; then
         return 0
     fi
-    rm -f "${card_path}"
 
     case "${year}" in
-        2016preVFP|2016postVFP|2017|2018|2022preEE|2022postEE|2023|2023BPix|2024|2025|2026)
+        # 2025_2026 is a real stage-3 year (histograms summed in stage3/make_templates.py),
+        # so it has its own SR/SB datacards rather than a combineCards.py of 2025 + 2026
+        2016preVFP|2016postVFP|2017|2018|2022preEE|2022postEE|2023|2023BPix|2024|2025|2026|2025_2026)
             local sr="datacard_vbf_SR_${year}.txt"
             local sb="datacard_vbf_SB_${year}.txt"
             [[ -f "${card_dir}/${sr}" && -f "${card_dir}/${sb}" ]] || die "Missing VBF SR/SB datacards for ${year}"
+            # reuse only if no newer stage-3 rerun rewrote the SR/SB cards
+            if vbf_card_is_current "${card_path}" "${card_dir}/${sr}" "${card_dir}/${sb}"; then
+                return 0
+            fi
+            rm -f "${card_path}"
             combine_vbf_cards "${card_dir}" "${stem}.txt" "SR_${year}=${sr}" "SB_${year}=${sb}"
             ;;
         2016)
             ensure_vbf_card 2016preVFP
             ensure_vbf_card 2016postVFP
+            vbf_card_is_current "${card_path}" "${card_dir}/$(vbf_card_stem 2016preVFP).txt" "${card_dir}/$(vbf_card_stem 2016postVFP).txt" && return 0
+            rm -f "${card_path}"
             combine_vbf_cards "${card_dir}" "${stem}.txt" \
                 "preVFP=HMuMu_13TeV_2016preVFP.txt" \
                 "postVFP=HMuMu_13TeV_2016postVFP.txt"
@@ -756,6 +780,8 @@ ensure_vbf_card() {
             ensure_vbf_card 2016
             ensure_vbf_card 2017
             ensure_vbf_card 2018
+            vbf_card_is_current "${card_path}" "${card_dir}/$(vbf_card_stem 2016).txt" "${card_dir}/$(vbf_card_stem 2017).txt" "${card_dir}/$(vbf_card_stem 2018).txt" && return 0
+            rm -f "${card_path}"
             combine_vbf_cards "${card_dir}" "${stem}.txt" \
                 "y2016=HMuMu_13TeV_2016.txt" \
                 "y2017=HMuMu_13TeV_2017.txt" \
@@ -767,20 +793,23 @@ ensure_vbf_card() {
             ensure_vbf_card 2023
             ensure_vbf_card 2023BPix
             ensure_vbf_card 2024
-            ensure_vbf_card 2025
-            ensure_vbf_card 2026
+            # PC guideline: 2025+2026 enter Run 3 as one year
+            ensure_vbf_card 2025_2026
+            vbf_card_is_current "${card_path}" "${card_dir}/$(vbf_card_stem 2022preEE).txt" "${card_dir}/$(vbf_card_stem 2022postEE).txt" "${card_dir}/$(vbf_card_stem 2023).txt" "${card_dir}/$(vbf_card_stem 2023BPix).txt" "${card_dir}/$(vbf_card_stem 2024).txt" "${card_dir}/$(vbf_card_stem 2025_2026).txt" && return 0
+            rm -f "${card_path}"
             combine_vbf_cards "${card_dir}" "${stem}.txt" \
                 "y2022preEE=HMuMu_13TeV_2022preEE.txt" \
                 "y2022postEE=HMuMu_13TeV_2022postEE.txt" \
                 "y2023=HMuMu_13TeV_2023.txt" \
                 "y2023BPix=HMuMu_13TeV_2023BPix.txt" \
                 "y2024=HMuMu_13TeV_2024.txt" \
-                "y2025=HMuMu_13TeV_2025.txt" \
-                "y2026=HMuMu_13TeV_2026.txt"
+                "y2025_2026=HMuMu_13TeV_2025_2026.txt"
             ;;
         Run2Run3|run2run3|Run2+Run3|run2+run3)
             ensure_vbf_card Run2
             ensure_vbf_card Run3
+            vbf_card_is_current "${card_path}" "${card_dir}/$(vbf_card_stem Run2).txt" "${card_dir}/$(vbf_card_stem Run3).txt" && return 0
+            rm -f "${card_path}"
             combine_vbf_cards "${card_dir}" "${stem}.txt" \
                 "Run2=HMuMu_13TeV_Run2.txt" \
                 "Run3=HMuMu_13TeV_Run3.txt"
@@ -795,11 +824,42 @@ ensure_vbf_card() {
 
 JJ_CENTRAL_NONCENTRAL_REGIONS=(jj_both_central jj_non_central)
 
-# --- VBF jj-eta-region (central + non-central) combination --------------------------------
-# Combines the already-built jj_both_central and jj_non_central per-year cards into one card,
-# treating the two phase spaces as separate channels 
+# Regions combined by modes 12-14. JJ_COMBINE_REGIONS (comma-separated) overrides the default
+# 2-way pair, e.g. the exact 3-way split jj_both_central,jj_one_fwd25_one_central,jj_both_fwd25.
+jj_combine_regions() {
+    if [[ -n "${JJ_COMBINE_REGIONS:-}" ]]; then
+        local -a regions
+        IFS=',' read -r -a regions <<< "${JJ_COMBINE_REGIONS}"
+        # jj_non_central = NOT both-central, so it overlaps every other non-central region.
+        if [[ " ${regions[*]} " == *" jj_non_central "* ]]; then
+            local r
+            for r in "${regions[@]}"; do
+                [[ "${r}" == "jj_non_central" || "${r}" == "jj_both_central" ]] \
+                    || die "JJ_COMBINE_REGIONS: jj_non_central overlaps ${r} (events would be double-counted)"
+            done
+        fi
+        printf '%s\n' "${regions[@]}"
+    else
+        printf '%s\n' "${JJ_CENTRAL_NONCENTRAL_REGIONS[@]}"
+    fi
+}
+
+# Pseudo jj_eta_region naming the combined card dir; default 2-way keeps the old "jj_combined".
+jj_combined_name() {
+    if [[ -z "${JJ_COMBINE_REGIONS:-}" ]]; then
+        printf 'jj_combined'
+        return
+    fi
+    local r out="jj_combined"
+    while read -r r; do out+="_${r#jj_}"; done < <(jj_combine_regions)
+    printf '%s' "${out}"
+}
+
+# --- VBF jj-eta-region combination -------------------------------------------------------
+# Combines the already-built per-year cards of the jj_combine_regions() phase spaces into one
+# card, treating them as separate channels (they must be mutually exclusive).
 #
-# "jj_combined" is a bash-only pseudo-value for ${jj_eta_region}, recognized only by these
+# "jj_combined[_...]" is a bash-only pseudo-value for ${jj_eta_region}, recognized only by these
 # functions (via vbf_card_dir()/stage3_output_postfix()) -- it is never a valid
 # run_stage2_vbf.py/run_stage3_vbf.py --jj_eta_region choice, since stage2/3 always need one
 # real phase space to select events by. Works for any year token ensure_vbf_card accepts,
@@ -807,7 +867,7 @@ JJ_CENTRAL_NONCENTRAL_REGIONS=(jj_both_central jj_non_central)
 ensure_vbf_jjcombined_card() {
     local year="$1"
     local saved_jj_eta_region="${jj_eta_region}"
-    jj_eta_region="jj_combined"
+    jj_eta_region="$(jj_combined_name)"
 
     local combined_dir
     combined_dir="$(vbf_card_dir)"
@@ -816,15 +876,11 @@ ensure_vbf_jjcombined_card() {
     stem="$(vbf_card_stem "${year}")"
     local card_path="${combined_dir}/${stem}.txt"
 
-    if [[ -s "${card_path}" ]]; then
-        jj_eta_region="${saved_jj_eta_region}"
-        return 0
-    fi
-    rm -f "${card_path}"
-
     local region region_dir region_card rel_path
-    local -a combine_args=()
-    for region in "${JJ_CENTRAL_NONCENTRAL_REGIONS[@]}"; do
+    local -a combine_args=() regions=() region_cards=()
+    mapfile -t regions < <(jj_combine_regions)
+    [[ ${#regions[@]} -ge 2 ]] || die "jj-region combination needs >= 2 valid regions (JJ_COMBINE_REGIONS='${JJ_COMBINE_REGIONS:-}')"
+    for region in "${regions[@]}"; do
         jj_eta_region="${region}"
         ensure_vbf_card "${year}"
         region_dir="$(vbf_card_dir)"
@@ -832,23 +888,29 @@ ensure_vbf_jjcombined_card() {
         [[ -f "${region_card}" ]] || die "Missing ${region} VBF card for ${year}: ${region_card}"
         rel_path="$(realpath --relative-to="${combined_dir}" "${region_card}")"
         combine_args+=("${region}=${rel_path}")
+        region_cards+=("${region_card}")
     done
 
-    jj_eta_region="jj_combined"
+    jj_eta_region="$(jj_combined_name)"
+    if vbf_card_is_current "${card_path}" "${region_cards[@]}"; then
+        jj_eta_region="${saved_jj_eta_region}"
+        return 0
+    fi
+    rm -f "${card_path}"
     combine_vbf_cards "${combined_dir}" "${stem}.txt" "${combine_args[@]}"
     [[ -s "${card_path}" ]] || die "Failed to build non-empty combined jj-region VBF card ${card_path}"
 
     jj_eta_region="${saved_jj_eta_region}"
 }
 
-# Runs card+workspace+significance+limit under jj_eta_region="jj_combined" for one year, then
+# Runs card+workspace+significance+limit under the jj_combined_name() pseudo-region for one year, then
 # restores the caller's jj_eta_region. Reuses ensure_vbf_workspace/run_vbf_significance/
 # run_vbf_limit unchanged: since ensure_vbf_jjcombined_card already wrote the combined card,
 # their own internal ensure_vbf_card call just finds it already there and returns immediately.
 run_vbf_jjcombined_significance_and_limit() {
     local year="$1"
     local saved_jj_eta_region="${jj_eta_region}"
-    jj_eta_region="jj_combined"
+    jj_eta_region="$(jj_combined_name)"
 
     ensure_vbf_jjcombined_card "${year}"
     ensure_vbf_workspace "${year}"
@@ -861,7 +923,7 @@ run_vbf_jjcombined_significance_and_limit() {
 run_vbf_jjcombined_impacts() {
     local year="$1"
     local saved_jj_eta_region="${jj_eta_region}"
-    jj_eta_region="jj_combined"
+    jj_eta_region="$(jj_combined_name)"
 
     ensure_vbf_jjcombined_card "${year}"
     run_vbf_impacts "${year}"
@@ -869,9 +931,20 @@ run_vbf_jjcombined_impacts() {
     jj_eta_region="${saved_jj_eta_region}"
 }
 
+run_vbf_jjcombined_lhscan() {
+    local year="$1"
+    local saved_jj_eta_region="${jj_eta_region}"
+    jj_eta_region="$(jj_combined_name)"
+
+    ensure_vbf_jjcombined_card "${year}"
+    run_vbf_lhscan "${year}"
+
+    jj_eta_region="${saved_jj_eta_region}"
+}
+
 collect_vbf_jjcombined_summaries() {
     local saved_jj_eta_region="${jj_eta_region}"
-    jj_eta_region="jj_combined"
+    jj_eta_region="$(jj_combined_name)"
 
     collect_vbf_significance_summary
     collect_vbf_limit_summary
@@ -888,7 +961,10 @@ ensure_vbf_workspace() {
     ensure_vbf_card "${year}"
     (
         cd "${card_dir}"
-        [[ -f "${stem}.root" ]] || text2workspace.py "${stem}.txt" -m 125
+        # rebuild when the card changed after the workspace was made (e.g. a stage-3 rerun)
+        if [[ ! -f "${stem}.root" || "${stem}.txt" -nt "${stem}.root" ]]; then
+            text2workspace.py "${stem}.txt" -m 125
+        fi
     )
 }
 
@@ -904,7 +980,7 @@ collect_vbf_significance_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_significance_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 Run3)
+    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
     local year stem sig_log stat_log sig_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"
@@ -938,7 +1014,7 @@ collect_vbf_limit_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_limit_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 Run3)
+    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
     local year stem lim_log stat_log lim_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"
@@ -997,6 +1073,7 @@ run_vbf_significance() {
 combine_root_tree_entries() {
     local root_path="$1"
     local tree_name="$2"
+    local selection="${3:-}"
     python3 -c "
 import ROOT
 ROOT.gErrorIgnoreLevel = ROOT.kFatal
@@ -1008,7 +1085,7 @@ if not f or f.IsZombie():
     print(0)
 else:
     t = f.Get('${tree_name}')
-    print(t.GetEntries() if t else 0)
+    print((t.GetEntries('${selection}') if '${selection}' else t.GetEntries()) if t else 0)
 " 2>/dev/null
 }
 
@@ -1067,20 +1144,37 @@ run_vbf_lhscan() {
     ensure_vbf_workspace "${year}"
     (
         cd "${card_dir}"
-        # Named (lnN/shape/param) systematics only - excludes autoMCStats bin-by-bin
-        # stat parameters and the DY rateParams, which stay floating in the
-        # "MCStat+DYNorm" scan below.
-        local named_systs
+        # Uncertainty breakdown by nested scans, each freezing one more group:
+        #   with_syst -> freeze_systs: Syst   (named lnN/shape/param nuisances)
+        #   freeze_systs -> freeze_systs_mcstat: MCStat (autoMCStats prop_bin* parameters)
+        #   freeze_systs_mcstat -> statonly: DYNorm (unconstrained DY rateParams)
+        #   statonly: data statistics only (allConstrainedNuisances + DY rateParams frozen)
+        local named_systs dy_rateparams
         named_systs="$(awk '$2=="lnN" || $2=="shape" || $2=="param" {print $1}' "${stem}.txt" | sort -u | paste -sd, -)"
-        combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters MH -n ".lhscan${year}_${save_postfix}.with_syst" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
-        combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters "MH,${named_systs}" -n ".lhscan${year}_${save_postfix}.with_syst.mcstat_dynorm" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
-        combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters MH,allConstrainedNuisances -n ".lhscan${year}_${save_postfix}.with_syst.statonly" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1
-        plot1DScan.py "higgsCombine.lhscan${year}_${save_postfix}.with_syst.MultiDimFit.mH125.root" \
+        dy_rateparams="$(awk '$2=="rateParam" {print $1}' "${stem}.txt" | sort -u | paste -sd, -)"
+        local scan="lhscan${year}_${save_postfix}.with_syst"
+        # Same strategy-0-then-2 fallback as run_vbf_impacts: a scan whose initial fit fails
+        # has no best-fit (quantileExpected == -1) row and plot1DScan.py asserts on it.
+        lhscan_fit() {
+            local name="$1" freeze="$2" strategy
+            for strategy in 0 2; do
+                combine -M MultiDimFit "${stem}.root" -m 125 --freezeParameters "${freeze}" -n "${name}" --algo grid --points 100 --setParameterRanges r=-5.0,5.0 -t -1 --expectSignal 1 --robustFit 1 --cminDefaultMinimizerStrategy "${strategy}"
+                [[ "$(combine_root_tree_entries "higgsCombine${name}.MultiDimFit.mH125.root" limit "quantileExpected==-1")" -ge 1 ]] && return 0
+                echo "run_vbf_lhscan: strategy ${strategy} scan ${name} has no best-fit point"
+            done
+            die "run_vbf_lhscan: no converged best fit for ${name}"
+        }
+        lhscan_fit ".${scan}" MH
+        lhscan_fit ".${scan}.freeze_systs" "MH,${named_systs}"
+        lhscan_fit ".${scan}.freeze_systs_mcstat" "MH,${named_systs},rgx{prop_bin.*}"
+        lhscan_fit ".${scan}.statonly" "MH,allConstrainedNuisances${dy_rateparams:+,${dy_rateparams}}"
+        plot1DScan.py "higgsCombine.${scan}.MultiDimFit.mH125.root" \
             --main-label "with-syst" \
             --main-color 1 \
-            --others "higgsCombine.lhscan${year}_${save_postfix}.with_syst.mcstat_dynorm.MultiDimFit.mH125.root:Stat+DYNorm:2" \
-               "higgsCombine.lhscan${year}_${save_postfix}.with_syst.statonly.MultiDimFit.mH125.root:Stat-only:4" \
-            --breakdown "Syst,DYNorm,Stat" \
+            --others "higgsCombine.${scan}.freeze_systs.MultiDimFit.mH125.root:Systs frozen:2" \
+               "higgsCombine.${scan}.freeze_systs_mcstat.MultiDimFit.mH125.root:Systs+MC stat frozen:8" \
+               "higgsCombine.${scan}.statonly.MultiDimFit.mH125.root:Stat-only:4" \
+            --breakdown "Syst,MCStat,DYNorm,Stat" \
             -o "lh_scan_${year}_${save_postfix}"
     )
 }

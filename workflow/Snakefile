@@ -718,10 +718,97 @@ rule stage3:
         """
 
 
+# Stage-2 DNN data/MC plot summed over all Run 3 years in YEARS (the per-year stage2_plot jobs
+# each see one year only). Reruns -m 2p over those years; the per-year plots it redoes are cheap.
+RUN3_PLOT_YEARS = [
+    y for y in YEARS
+    if y in ("2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026")
+]
+
+
+rule stage2_plot_run3:
+    input:
+        expand(STATEDIR + "/stage2_{year}" + JJ_TAG + ".done", year=RUN3_PLOT_YEARS),
+    output:
+        done=STATEDIR + "/stage2_plot_Run3" + JJ_TAG + ".done",
+    log:
+        LOGDIR + "/stage2_plot_Run3" + JJ_TAG + ".log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        nano=lambda wc: nano_for_year(RUN3_PLOT_YEARS[0]),
+        yaml=lambda wc: yaml_for_year(RUN3_PLOT_YEARS[0]),
+        label=lambda wc: label_for_year(RUN3_PLOT_YEARS[0]),
+        years=",".join(RUN3_PLOT_YEARS),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=JJ_ENV,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.jj_env}{params.var_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -c {params.yaml} \
+            -v {params.nano} \
+            -l {params.label} \
+            -y "{params.years}" \
+            -m 2p \
+            -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# Mandatory stage-3 template check before any fit: one plot per nuisance + CSV under
+# validation/stage3_templates/<label>/<postfix>[_<region>]/, and it fails the job on
+# non-finite or negative template bins (scripts/plot_template_systematics.py).
+rule stage3_validate:
+    input:
+        STATEDIR + "/stage3_{year}" + JJ_TAG + ".done",
+    output:
+        done=STATEDIR + "/stage3_validate_{year}" + JJ_TAG + ".done",
+    log:
+        LOGDIR + "/stage3_validate_{year}" + JJ_TAG + ".log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        tmpl_dir=lambda wc: (
+            f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/{label_for_year(wc.year)}/"
+            f"stage3_datacards_{SAVE_POSTFIX}{JJ_TAG}/stage3_templates_{SAVE_POSTFIX}{JJ_TAG}/"
+            f"score_{label_for_year(wc.year)}"
+        ),
+        val_dir=lambda wc: (
+            f"validation/stage3_templates/{label_for_year(wc.year)}/{SAVE_POSTFIX}{JJ_TAG}"
+        ),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {{
+        PYTHONPATH="$PWD:${{PYTHONPATH:-}}" PYTHONUNBUFFERED=1 python scripts/plot_template_systematics.py \
+            -i {params.tmpl_dir} -o {params.val_dir}/template_systematics/{wildcards.year} \
+            --years {wildcards.year}
+        PYTHONPATH="$PWD:${{PYTHONPATH:-}}" PYTHONUNBUFFERED=1 python scripts/plot_template_negative_bins.py \
+            -i {params.tmpl_dir} -o {params.val_dir}/templates_nominal_{wildcards.year}.pdf \
+            -t "{wildcards.year}{JJ_TAG}" --years {wildcards.year}
+        }} > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
 rule stage23_all:
     input:
         expand(STATEDIR + "/stage2_plot_{year}" + JJ_TAG + ".done", year=YEARS),
         expand(STATEDIR + "/stage3_{year}" + JJ_TAG + ".done", year=YEARS + STAGE3_EXTRA_YEARS),
+        expand(STATEDIR + "/stage3_validate_{year}" + JJ_TAG + ".done", year=YEARS + STAGE3_EXTRA_YEARS),
+        # only meaningful with more than one Run 3 year
+        [STATEDIR + "/stage2_plot_Run3" + JJ_TAG + ".done"] if len(RUN3_PLOT_YEARS) > 1 else [],
 
 
 # ---------------------------------------

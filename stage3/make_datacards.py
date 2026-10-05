@@ -316,12 +316,24 @@ def print_mc(yield_df, var_name, region, channel, year, bin_name):
 
         nuisances[group] = []
         variations = yield_df.loc[
-            ((yield_df.group == group) & (yield_df.year == year)), "variation"
+            (yield_df.group == group)
+            & (yield_df.year == year)
+            & (yield_df.var_name == var_name)
+            & (yield_df.region == region)
+            & (yield_df.channel == channel),
+            "variation",
         ].unique()
         for v in variations:
             if v == "nominal":
                 continue
             v_name = v.replace("Up", "").replace("Down", "")
+            # make_templates drops a negative/empty variation; combine needs both sides
+            if not {f"{v_name}Up", f"{v_name}Down"}.issubset(variations):
+                logger.warning(
+                    f"{group} {year} {region}: '{v_name}' has only one of Up/Down "
+                    f"templates; not applying this shape nuisance to {group}."
+                )
+                continue
             if v_name not in all_nuisances:
                 all_nuisances.append(v_name)
 

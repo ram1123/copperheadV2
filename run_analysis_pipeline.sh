@@ -168,6 +168,19 @@ for year in "${years[@]}"; do
     esac
 done
 
+# Stage-2 DNN data/MC plot summed over all Run 3 years, after the per-year ones
+if [[ "${mode}" =~ ^(2p|stage2_plot|23|stage23|all)$ && ${#years[@]} -gt 1 ]]; then
+    all_run3=1
+    for year in "${years[@]}"; do
+        [[ "${year}" =~ ^(2022preEE|2022postEE|2023|2023BPix|2024|2025|2026)$ ]] || all_run3=0
+    done
+    if [[ "${all_run3}" == "1" ]]; then
+        log "Processing year: Run3 (stage-2 DNN plot over ${years[*]})"
+        run_mode_from_nul < <(build_stage2_plot_cmd "Run3" "h-sidebands")
+        run_mode_from_nul < <(build_stage2_plot_cmd "Run3" "h-peak")
+    fi
+fi
+
 log "Program ended on $(date)"
 exec 3>&-
 finish_logging

@@ -64,6 +64,25 @@ def filterRegion(events, region="h-peak"):
     return mask, events[mask]
 
 
+# Why eta/dEta are rounded before every eta-boundary cut (|eta| 2.5/3.0, jj_dEta > 2.5):
+# NanoAOD stores jet eta with reduced float precision (~1e-3 steps), so many jets sit at
+# exactly |eta| = 2.5. Stage-1 recomputes the JES/JER-varied jet eta from the shifted
+# four-vector in float64, which adds ~1e-8 noise (2.5 -> 2.50000004). JES/JER only scale
+# pT, so that noise alone moved boundary jets across the jj_eta_region / HE-HF cuts for
+# EVERY jet variation, giving a fake, identical Up == Down shift even for sources with no
+# effect in the region.
+# Motivation: found in the Oct 2026 stage-3 template audit (scripts/plot_template_systematics.py
+# on the Oct04_2026_Syst VBF templates): 321 process/nuisance pairs had Up == Down != nominal;
+# e.g. 2023 ttjets_dl, jj_both_central SB: HF, HF_2023, jer5, jer6 all -0.649%, traced to 3
+# events with jet |eta| = 2.5 nominal vs 2.50000004 varied. Rounding to 1e-4 (finer than
+# NanoAOD's eta precision) removes the noise without merging genuinely different eta values.
+ETA_CUT_DECIMALS = 4
+
+
+def _abs_eta_for_cut(eta):
+    return np.round(abs(eta), ETA_CUT_DECIMALS)
+
+
 def applyRegionCatCuts(
     events,
     category: str,
@@ -153,7 +172,7 @@ def applyRegionCatCuts(
         )
         btag_cut = btagLoose_filter | btagMedium_filter
 
-        vbf_cut = (jj_mass > 400) & (jj_dEta > 2.5) & (jet1_pt > 35)
+        vbf_cut = (jj_mass > 400) & (np.round(jj_dEta, ETA_CUT_DECIMALS) > 2.5) & (jet1_pt > 35)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
 
         # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`
@@ -167,7 +186,7 @@ def applyRegionCatCuts(
             jet2_eta = varcol("jet2_eta")
 
             def _passes_he_hf_ptcut(pt, eta):
-                abs_eta = abs(eta)
+                abs_eta = _abs_eta_for_cut(eta)
                 in_he = (abs_eta > 2.5) & (abs_eta <= 3.0)
                 in_hf = abs_eta > 3.0
                 fail_he = (in_he & (pt < vbf_he_ptcut)) if vbf_he_ptcut is not None else (in_he & False)
@@ -273,8 +292,8 @@ def applyRegionCatCuts(
             jet1_eta = varcol("jet1_eta")
             jet2_eta = varcol("jet2_eta")
 
-            a1 = abs(jet1_eta)
-            a2 = abs(jet2_eta)
+            a1 = _abs_eta_for_cut(jet1_eta)
+            a2 = _abs_eta_for_cut(jet2_eta)
 
             # basic regions
             j1_c = a1 <= 2.5

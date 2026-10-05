@@ -372,6 +372,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         use_nominal_dnn_features_for_systs=False,
         use_transformer_vbf_channel=False,
         jj_eta_region="all",
+        dump_scores=False,
     ):
         NO_SCALE_FEATURES = {
             "year",
@@ -388,6 +389,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         # so the switch is resolved per dataset in process(), not here.
         self.divide_dy_by_year = divide_dy_by_year
         self.jj_eta_region = jj_eta_region
+        # also return the nominal per-event (score, weight), for DNN bin scans
+        self.dump_scores = dump_scores
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
         self.use_transformer_vbf_channel = use_transformer_vbf_channel
@@ -581,7 +584,12 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
         syst_variations = ["nominal"]
         if not self.no_variations:
-            syst_variations += stage2_shape_variations(fields)
+            # JES "Total" is the quadrature sum of the split sources also histogrammed here;
+            # keeping both would double-count JES in the datacard.
+            syst_variations += [
+                syst for syst in stage2_shape_variations(fields)
+                if syst not in ("Total_up", "Total_down")
+            ]
             # # Restrict the discovered shape systematics to the reduced JEC and
             # # Rochester-correction set requested for Stage-2 evaluation.
             # syst_variations += [
@@ -625,6 +633,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         }
 
         selected_events = 0
+        score_dump = []
         # Reuse DNN scores across weight variations, which share the same selection
         # and input features, to avoid redundant inference.
         score_cache = {}
@@ -768,12 +777,21 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                     val_sumw2="sumw2",
                     weight=category_weights * category_weights,
                 )
+                if self.dump_scores and variation == "nominal":
+                    score_dump.append({
+                        "region": region,
+                        "category": histogram_category,
+                        "score": np.asarray(scores[category_filter], dtype=np.float64),
+                        "weight": np.asarray(category_weights, dtype=np.float64),
+                    })
 
         return {
             dataset_key: {
                 "events": processor.value_accumulator(int, selected_events),
                 "chunks": processor.value_accumulator(int, 1),
                 "score_hists": score_hists,
+                # a list, so coffea's accumulate concatenates the chunks
+                "score_dump": score_dump,
             }
         }
 
@@ -952,6 +970,17 @@ if __name__ == "__main__":
         type=int,
         action="store",
         help="Number of folds for cross-validation (default: 4)",
+    )
+    parser.add_argument(
+        "--dump_scores",
+        dest="dump_scores",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Also save the nominal per-event DNN score and weight (per region and DY "
+            "category) to <hist dir>/<year>/scores/<sample>_scores.parquet, the input "
+            "of MVA_training/VBF_run3/scan_bins_for_dnn.py --stage2-scores."
+        ),
     )
     parser.add_argument(
         "--allow_nominal_feature_fallback",
@@ -1187,6 +1216,7 @@ if __name__ == "__main__":
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
                 use_transformer_vbf_channel=args.use_transformer_vbf_channel,
                 jj_eta_region=args.jj_eta_region,
+                dump_scores=args.dump_scores,
             ),
         )
         t5 = time.perf_counter()
@@ -1208,6 +1238,18 @@ if __name__ == "__main__":
                     f"chunks={output['chunks'].value}; "
                     f"selected events={output['events'].value}"
                 )
+            if args.dump_scores:
+                dump = output["score_dump"]
+                dump_df = pd.DataFrame({
+                    "region": np.concatenate([np.full(len(d["score"]), d["region"]) for d in dump]) if dump else [],
+                    "category": np.concatenate([np.full(len(d["score"]), d["category"]) for d in dump]) if dump else [],
+                    "score": np.concatenate([d["score"] for d in dump]) if dump else [],
+                    "weight": np.concatenate([d["weight"] for d in dump]) if dump else [],
+                })
+                dump_path = hist_save_path / "scores" / f"{sample_type}_scores.parquet"
+                dump_path.parent.mkdir(parents=True, exist_ok=True)
+                dump_df.to_parquet(dump_path, index=False)
+                logger.info(f"{year} {sample_type} per-event scores ({len(dump_df)}) on {dump_path}")
     else:
         logger.warning("No samples left to process after existing-output checks.")
 
