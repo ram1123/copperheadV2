@@ -179,7 +179,7 @@ def applyRegionCatCuts(
         )
         btag_cut = btagLoose_filter | btagMedium_filter
 
-        vbf_cut = (jj_mass > 400) & (_round_for_cut(jj_dEta) > 2.5) & (jet1_pt > 35)
+        vbf_cut = (jj_mass > 400) & (np.round(jj_dEta, ETA_CUT_DECIMALS) > 2.5) & (jet1_pt > 35)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
 
         # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`
