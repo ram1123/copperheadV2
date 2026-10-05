@@ -380,7 +380,24 @@ if __name__ == "__main__":
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     # logger.info(f"plot_settings: {plot_settings}")
-    binning = selection.binning
+    # the binning stage-2 actually filled these histograms with, saved next to them
+    year_binnings = {}
+    for comp_year in component_years:
+        copy_path = f"{args.load_path}/{comp_year}/dnn_binning.yaml"
+        if os.path.isfile(copy_path):
+            with open(copy_path) as f:
+                year_binnings[comp_year] = np.asarray(yaml.safe_load(f)["edges"], dtype=float)
+    if year_binnings:
+        first_year, binning = next(iter(year_binnings.items()))
+        for comp_year, edges in year_binnings.items():
+            if not np.array_equal(edges, binning):
+                raise ValueError(
+                    f"DNN binning differs between {first_year} and {comp_year} under {args.load_path}; "
+                    "they cannot be summed into one plot."
+                )
+    else:
+        logger.warning(f"No dnn_binning.yaml next to the histograms in {args.load_path}; using the default binning")
+        binning = selection.binning
     var = "DNN_score"
     region_name = args.region
     category = args.category

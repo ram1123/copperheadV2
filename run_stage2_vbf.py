@@ -4,7 +4,6 @@ import itertools
 import logging
 import os
 import pickle
-import shutil
 import time
 from pathlib import Path
 
@@ -373,6 +372,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         use_transformer_vbf_channel=False,
         jj_eta_region="all",
         dump_scores=False,
+        binning=None,
     ):
         NO_SCALE_FEATURES = {
             "year",
@@ -391,6 +391,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.jj_eta_region = jj_eta_region
         # also return the nominal per-event (score, weight), for DNN bin scans
         self.dump_scores = dump_scores
+        # resolved on the driver (selection.resolve_dnn_binning); workers only see the default
+        self.binning = np.asarray(selection.binning if binning is None else binning, dtype=float)
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
         self.use_transformer_vbf_channel = use_transformer_vbf_channel
@@ -618,7 +620,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 .StrCat(["vbf"], name="channel")
                 .StrCat(["value", "sumw2"], name="val_sumw2")
                 .StrCat(variations, name="variation", growth=True)
-                .Var(selection.binning, name=self.score_name)
+                .Var(self.binning, name=self.score_name)
                 .Double()
             )
 
@@ -799,58 +801,27 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         return accumulator
 
 
-def save_dnn_binning_config(dest_dir):
+def save_dnn_binning_config(dest_dir, edges, entry_key, entry, model_label, jj_eta_region):
     """
-    Drop a copy of the DNN binning config next to the histograms it produced.
-
-    The score axis is built from `selection.binning`, which is evaluated once
-    when modules.selection is imported. A config edited while stage2 is running
-    therefore no longer describes the histograms being written, so the copy is
-    checked against the edges actually used: if they have drifted, the in-use
-    edges are written instead and a warning is logged, so the file next to the
-    pickles is never a lie about how they were filled.
-
-    Parameters:
-    - dest_dir: directory holding this year's histograms
-    Returns:
-    - Path of the written file, or None if nothing could be written
+    Write the DNN binning these histograms are filled with next to them: the edges,
+    the config entry they came from (default or models/<model>/<region>) and its
+    metadata, so the plots and later scans read exactly what stage-2 used.
     """
-    dest_dir = Path(dest_dir)
-    src = Path(selection.DNN_BINNING_YAML)
-    dest = dest_dir / src.name
-
-    binning_in_use = np.asarray(selection.binning, dtype=float)
-    on_disk = None
-    if src.is_file():
-        try:
-            on_disk = np.asarray(selection.load_dnn_binning(src), dtype=float)
-        except Exception as exc:  # unreadable/invalid config -- fall back below
-            logger.warning(f"Could not re-read {src}: {exc}")
-
-    if on_disk is not None and np.array_equal(on_disk, binning_in_use):
-        shutil.copyfile(src, dest)
-    else:
-        logger.warning(
-            f"{src} no longer matches the binning these histograms were filled "
-            f"with (it was edited after import, or is unreadable). Writing the "
-            f"in-use edges to {dest} instead."
-        )
-        payload = {
-            "n_bins": len(binning_in_use) - 1,
-            "edges": [float(e) for e in binning_in_use],
-            "metadata": {
-                "generated_by": "run_stage2_vbf.py (edges in use at fill time)",
-                "source_config": str(src),
-                "note": (
-                    "the source config did not match these edges when the "
-                    "histograms were written"
-                ),
-            },
-        }
-        with open(dest, "w") as f:
-            yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
-
-    logger.info(f"Saved DNN binning ({len(binning_in_use) - 1} bins) to {dest}")
+    dest = Path(dest_dir) / Path(selection.DNN_BINNING_YAML).name
+    payload = {
+        "key": entry_key,
+        "model_label": model_label,
+        "jj_eta_region": jj_eta_region,
+        "n_bins": len(edges) - 1,
+        "edges": [float(e) for e in edges],
+        "metadata": {
+            "source_config": str(selection.DNN_BINNING_YAML),
+            **((entry or {}).get("metadata") or {}),
+        },
+    }
+    with open(dest, "w") as f:
+        yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
+    logger.info(f"Saved DNN binning ({len(edges) - 1} bins, {entry_key}) to {dest}")
     return dest
 
 
@@ -972,6 +943,16 @@ if __name__ == "__main__":
         help="Number of folds for cross-validation (default: 4)",
     )
     parser.add_argument(
+        "--allow_default_dnn_binning",
+        dest="allow_default_dnn_binning",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Use the 'default' DNN binning when configs/MVA/VBF/dnn_binning.yaml has no "
+            "entry for this model label and jj region (otherwise stage-2 stops)."
+        ),
+    )
+    parser.add_argument(
         "--dump_scores",
         dest="dump_scores",
         default=False,
@@ -1088,6 +1069,16 @@ if __name__ == "__main__":
     if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
+    # model label = dnn/trained_models/<MODEL_LABEL>/<years>_<region>_<category>_<jj region>
+    dnn_model_label = Path(args.model_path).parent.name
+    dnn_edges, dnn_binning_key, dnn_binning_entry = selection.resolve_dnn_binning(
+        dnn_model_label, args.jj_eta_region, allow_default=args.allow_default_dnn_binning,
+    )
+    logger.info(
+        f"DNN binning: {dnn_binning_key} ({len(dnn_edges) - 1} bins) for model "
+        f"'{dnn_model_label}', jj region '{args.jj_eta_region}'"
+    )
+
     sample_dict_by_year = {}
     for year in years:
         stage1_path = base_path / "stage1_output" / year / "f1_0"
@@ -1109,7 +1100,10 @@ if __name__ == "__main__":
         os.makedirs(hist_save_path, exist_ok=True)
         logger.info(f"{year} histograms will be saved to: {hist_save_path}")
         # keep the binning that produced these histograms alongside them
-        save_dnn_binning_config(hist_save_path)
+        save_dnn_binning_config(
+            hist_save_path, dnn_edges, dnn_binning_key, dnn_binning_entry,
+            dnn_model_label, args.jj_eta_region,
+        )
 
         full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
 
@@ -1217,6 +1211,7 @@ if __name__ == "__main__":
                 use_transformer_vbf_channel=args.use_transformer_vbf_channel,
                 jj_eta_region=args.jj_eta_region,
                 dump_scores=args.dump_scores,
+                binning=dnn_edges,
             ),
         )
         t5 = time.perf_counter()

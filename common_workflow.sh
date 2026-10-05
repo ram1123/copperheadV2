@@ -499,6 +499,10 @@ build_stage2_cmd() {
     if [[ "${DUMP_SCORES:-0}" == "1" ]]; then
         cmd+=(--dump_scores)
     fi
+    # ALLOW_DEFAULT_DNN_BINNING=1: use the default binning when there is no model/region entry
+    if [[ "${ALLOW_DEFAULT_DNN_BINNING:-0}" == "1" ]]; then
+        cmd+=(--allow_default_dnn_binning)
+    fi
     while IFS= read -r arg; do
         [[ -n "${arg}" ]] && cmd+=("${arg}")
     done < <(append_gateway_args)

@@ -159,3 +159,77 @@ code: does it behave the same way, and does MUO recommend a guard? One candidate
 unsmeared pT when the smeared value is non-finite, negative, or far from the input. That would be an
 implementation choice, not a CMS recommendation, and it changes stage-1 output (sync references would
 need regenerating).
+
+## VBF stage-3/stats problems found while running the jj-region scan (fixed 2026-10-04/05)
+
+Found while running `scripts/run_jj_region_scan.sh -o Oct04_2026_Syst` (label
+`Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit`).
+The template-level ones were caught by `scripts/plot_template_systematics.py`, now a mandatory
+gate after stage-3 (Snakemake `stage3_validate`, scan-script step `validate`). Open follow-ups
+are in `To-Do.md`.
+
+**1. One-sided shape nuisance breaks `text2workspace`.** `RuntimeError: Failed to find
+DY_matched01J_LHEFac_DY_matched01JUp`. In low-statistics cards (e.g. `jj_both_fwd25` 2023 SR,
+`DY_matched01J` nominal 1.6 events from a few large negative-weight events) one side of a variation
+had a negative yield and `make_templates` dropped it, but `make_datacards` declared the nuisance
+if *either* side existed, and looked at all regions of the group at once. Fix:
+`stage3/make_datacards.py` declares a shape nuisance for a process only if both Up and Down exist
+in that card's own region/channel, and logs a warning otherwise.
+
+**2. Stats pipeline reused stale cards/workspaces.** `ensure_vbf_card`/`ensure_vbf_workspace`
+(`common_workflow.sh`) returned early if `HMuMu_13TeV_<year>.txt`/`.root` existed, so after a
+stage-3 rerun the fit silently used the old card. Fix: rebuild whenever an input card is newer
+(`vbf_card_is_current`); same for the jj-combined card.
+
+**3. Likelihood scan without a best-fit point.** `plot1DScan.py` `assert bestfit is not None`:
+the scan's initial fit did not converge (no `quantileExpected == -1` row). Fix: `run_vbf_lhscan`
+uses `--robustFit 1` with minimizer strategy 0, falling back to 2, like the impacts, and fails
+loudly if neither gives a best fit.
+
+**4. Negative template bins and signal-only bins break the background-only fit.** Negative-weight
+NLO MC (mostly `DY_matched2J`) left negative bins (59-73 per region), and some high-score bins
+had signal but zero background. A background-only (r=0) Asimov fit then has a kink at its own
+minimum (r<0 predicts negative yields) and never converges, so r=0 impacts failed for
+`jj_both_fwd25`. Fix in `stage3/make_templates.py`: clip negative bins of every non-data template
+(nominal and variations) to 0, keeping sumw2; then give any bin with total background <= 0 a
+1e-5 floor on the largest background, in its nominal and all its variations (no shape effect),
+with the datacard yield updated. Before/after plots:
+`validation/stage3_templates/<label>/Oct04_2026_Syst_<region>/templates_nominal_{unclipped,clipped}.pdf`.
+
+**5. JES `Total` double-counted.** Stage-1 writes the `Total` JES variation next to the split
+sources, and stage-2 histogrammed every discovered shape variation, so every datacard had `Total`
+*and* the split sources (JES counted twice; `Total` was the largest nuisance, up to +-39%). Fix:
+`run_stage2_vbf.py` skips `Total_up/down` (training's `stage2_shape_variations` still returns it,
+the DNN "sweep" mode needs it).
+
+**6. Fake identical JES/JER shifts from eta float noise.** 321 (process, nuisance) pairs had
+Up == Down != nominal, with the *same* shift for unrelated sources (2023 `ttjets_dl`,
+`jj_both_central` SB: `HF`, `HF_2023`, `jer5`, `jer6` all -0.649%). Cause: NanoAOD stores jet eta
+coarsely, so many jets sit at exactly |eta| = 2.5; stage-1 recomputes the varied eta from the
+shifted four-vector (2.5 -> 2.50000004), so every JES/JER variation moved those jets across the
+`|eta| <= 2.5` region cut. Fix: `modules/selection.py` rounds |eta| and `jj_dEta` to 1e-4 before
+the eta-boundary cuts (`ETA_CUT_DECIMALS`). Needs a stage-2 rerun; validated: `HF`/`jer5`/`jer6`
+now select exactly the nominal events in `jj_both_central`.
+
+## Run 2 DNN binning silently used for the Run 3 per-region VBF models (fixed 2026-10-05)
+
+**Symptom.** `configs/MVA/VBF/dnn_binning.yaml` held a single binning, scanned 2026-08-08 on Run 2
+NanoV15 ntuples with the Run 2 DNN, and stage-2 used it for every model and jj region. The Run 3
+per-region DNNs put their scores in different ranges (signal peaks near 2.2 in `jj_both_central`,
+1.6-1.7 in `jj_one_fwd25_one_central`, 2.3 in `jj_both_fwd25`), so many of the 24 Run 2 bins were
+empty or had a negative background (negative-weight MC) -- the bins stage-3 later had to clip and
+floor -- and `jj_both_fwd25` had a single-event "golden" bin (2.57-2.87: S = 0.079, B = 0.0012 +-
+5600%, fake Asimov Z = 0.72).
+
+**Fix.** The config is keyed `models.<DNN model label>.<jj region>` (jj region `all` included), with
+the old binning kept as `default`. `modules.selection.resolve_dnn_binning` makes stage-2 stop when
+the entry is missing, unless `--allow_default_dnn_binning` is given; stage-2 writes the entry it used
+next to the histograms, which `plotter/plot_DNN_score.py` reads. Entries come from
+`MVA_training/VBF_run3/scan_bins_for_dnn.py --stage2-scores ... --write-config`, run on per-event
+scores dumped by stage-2 (`--dump_scores`), i.e. exactly the fit's selection, weights and model.
+First entries (plain Asimov scan, h-peak, all Run 3 years, model
+`Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics`):
+`jj_both_central` 16 bins (Asimov Z 0.655 -> 0.656), `jj_one_fwd25_one_central` 14 bins
+(1.649 -> 1.728), `jj_both_fwd25` 18 bins (1.506 -> 1.507, without the fake bin). The scan does
+not yet account for background MC statistics (To-Do.md item 5). The old file's per-bin Run 2 scan
+report is kept in `validation/dnn_binning_scan/default_run2/scan_report_from_config.txt`.

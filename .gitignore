@@ -1,5 +1,9 @@
 CLAUDE.md
 .claude/
+*History*/
+ebeMassResCalibration/
+zpt_rewgt/
+logs/
 figs
 validation/pu_dnn/
 validation/muon_*/
