@@ -1,4 +1,14 @@
 #!/bin/bash
+# Main driver of the H->mumu pipeline: runs one mode (-m: prestage, stage1, compact, stage2,
+# stage3, DNN, Z-pT fit, calibration, ...) for each year in -y. See usage() below for all modes.
+# -y 2025_2026 is a stage-3-only merged year (2025 + 2026 histograms summed).
+#
+# How to run (repo root, inside a pixi env, e.g. via ./run_in_pixi.sh default; stage-1 needs a VOMS proxy):
+#   bash run_analysis_pipeline.sh -m <mode> -y <year[,year...]> -v <nano> -c <dataset_yaml> -l <label>
+#
+# Example:
+#   ./run_in_pixi.sh default bash run_analysis_pipeline.sh -m 1 -y 2022preEE -v 12 \
+#       -c configs/datasets/dataset_nanoAODv12_run3.yaml
 set -euo pipefail
 
 usage() {
@@ -89,6 +99,11 @@ for year in "${years[@]}"; do
     log "  Background: ${bkg_groups}"
     log "  Signal: ${sig_groups}"
     log "  Save path: ${save_path}"
+
+    # 2025_2026 only exists from stage-3 on: it sums the 2025 and 2026 stage-2 histograms
+    if [[ "${year}" == "2025_2026" && ! "${mode}" =~ ^(3|stage3)$ ]]; then
+        die "Year 2025_2026 is stage-3 only (-m 3); run mode '${mode}' on 2025 and 2026 separately."
+    fi
 
     case "${mode}" in
         0|prestage)

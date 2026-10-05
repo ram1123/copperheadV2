@@ -40,6 +40,12 @@ PRESTAGE_TAG = config.get("prestage_tag") or ""
 PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
 
 YEARS = config["years"]
+# Stage-3-only merged years (modules/classify_year.py MERGED_YEARS) whose components are
+# all in YEARS; their stage3 job sums those components' stage-2 histograms.
+MERGED_STAGE3_YEARS = {"2025_2026": ("2025", "2026")}
+STAGE3_EXTRA_YEARS = [
+    y for y, comps in MERGED_STAGE3_YEARS.items() if all(c in YEARS for c in comps)
+]
 RUN_TAG = config.get("run_tag", "default")
 PLOT_VBF_FILTER_STUDY = config.get("plot_vbf_filter_study", False)
 
@@ -123,7 +129,7 @@ def _jet_region_targets_for(cat):
 PLOT_NJETS = sorted({njets_plot for cat in PLOT_CATS for njets_plot, _ in _jet_region_targets_for(cat)})
 
 wildcard_constraints:
-    year="|".join([str(y) for y in YEARS]),
+    year="|".join([str(y) for y in YEARS + STAGE3_EXTRA_YEARS]),
     rep="|".join(REPEATS),
     cat="|".join(PLOT_CATS),
     njets="|".join(ZPT_JETS_CATS),
@@ -146,6 +152,7 @@ YEAR_META = {
     "2024": ("run3", "15"),
     "2025": ("run3", "15"),
     "2026": ("run3", "15"),
+    "2025_2026": ("run3", "15"),
 }
 
 DATASET_YAMLS = {
@@ -675,7 +682,10 @@ rule stage2_plot:
 
 rule stage3:
     input:
-        STATEDIR + "/stage2_{year}" + JJ_TAG + ".done",
+        lambda wc: [
+            STATEDIR + f"/stage2_{y}" + JJ_TAG + ".done"
+            for y in MERGED_STAGE3_YEARS.get(wc.year, (wc.year,))
+        ],
     output:
         done=STATEDIR + "/stage3_{year}" + JJ_TAG + ".done",
     log:
@@ -711,7 +721,7 @@ rule stage3:
 rule stage23_all:
     input:
         expand(STATEDIR + "/stage2_plot_{year}" + JJ_TAG + ".done", year=YEARS),
-        expand(STATEDIR + "/stage3_{year}" + JJ_TAG + ".done", year=YEARS),
+        expand(STATEDIR + "/stage3_{year}" + JJ_TAG + ".done", year=YEARS + STAGE3_EXTRA_YEARS),
 
 
 # ---------------------------------------

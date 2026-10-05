@@ -131,6 +131,10 @@ lumi_syst = {
     "2026": {
         "lumi2026": 5.0,
     },    
+    # One lnN for the merged year. 2025 and 2026 share the same 5% placeholder
+    "2025_2026": {
+        "lumi2025_2026": 5.0,
+    },
 }
 
 nuisance_titles = {

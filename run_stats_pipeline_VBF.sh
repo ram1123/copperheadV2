@@ -9,6 +9,8 @@ Modes:
   4|combine_vbf              Build the VBF datacard + Combine workspace for -y (a single
                               year, or a pseudo-year like Run3/Run2/Run2Run3 to combine
                               already-built per-year cards into one).
+                              2025_2026 is one stage-3 year (its own SR/SB cards, 2025 + 2026
+                              histograms summed); Run3 uses it in place of 2025 and 2026.
   5|combine_vbf_significance Run signal / stat-only significance fits.
   6|combine_vbf_summary      (Re)collect the significance summary CSV only.
   7|combine_vbf_impacts      Run nuisance-parameter impacts. Blinded, so no observed
@@ -35,9 +37,16 @@ Modes:
                               regions directly. Requires combine_vbf/combine_vbf_all/vbf_limit
                               to have already been run for -y under JJ_ETA_REGION=jj_both_central
                               and JJ_ETA_REGION=jj_non_central (so both per-region cards exist).
+                              JJ_COMBINE_REGIONS (comma-separated, mutually exclusive) overrides
+                              the region pair, e.g. the exact 3-way split
+                              jj_both_central,jj_one_fwd25_one_central,jj_both_fwd25; its cards go
+                              to stage3_datacards_<-o>_jj_combined_<regions>/.
   13|combine_vbf_jjregions_impacts
                               Same jj-region combination as mode 12, then impacts (r=1/r=0,
                               blinded) on the combined card instead of significance/limit.
+  14|combine_vbf_jjregions_lhscan
+                              Same jj-region combination as mode 12, then the 1D likelihood
+                              scan (Asimov, r=1 injected) on the combined card.
 
 Common options:
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 commands built by this wrapper.
@@ -108,6 +117,9 @@ for year in "${years[@]}"; do
             ;;
         13|combine_vbf_jjregions_impacts)
             run_vbf_jjcombined_impacts "${year}"
+            ;;
+        14|combine_vbf_jjregions_lhscan)
+            run_vbf_jjcombined_lhscan "${year}"
             ;;
         *)
             die "Invalid stats mode '${mode}'."

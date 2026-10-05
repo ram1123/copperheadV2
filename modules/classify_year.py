@@ -1,3 +1,15 @@
+# Stage-3-only pseudo-years whose stage-2 histograms are summed into one set of templates
+# (PC guideline: 2025+2026 is one year). Stage-1/2 always run on the component years.
+MERGED_YEARS = {
+    "2025_2026": ("2025", "2026"),
+}
+
+
+def component_years(year: str) -> tuple:
+    """Stage-2 years whose histograms make up `year`; a plain year is its own component."""
+    return MERGED_YEARS.get(str(year), (str(year),))
+
+
 def classify_year(year: str) -> dict:
     run2 = any(x in year for x in ["2016", "2017", "2018", "RERECO"])
     run3 = any(x in year for x in ["22", "23", "24","25"])

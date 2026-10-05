@@ -383,7 +383,7 @@ if __name__ == "__main__":
         logger.info(f"Prestage sample file: {sample_path}")
         if args.sync:
             sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path
-        logger.debug(f"Sample path: {sample_path}")
+        logger.info(f"Sample path: {sample_path}")
         with open(sample_path) as file:
             samples = json.loads(file.read())
 
