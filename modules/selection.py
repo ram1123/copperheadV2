@@ -79,8 +79,15 @@ def filterRegion(events, region="h-peak"):
 ETA_CUT_DECIMALS = 4
 
 
+def _round_for_cut(x):
+    # Same arithmetic as np.round (rint(x*10^d)/10^d), but via the rint ufunc so it also
+    # works on dask-awkward arrays (preprocess_dnn.py); np.round raises NotImplementedError there.
+    scale = 10.0**ETA_CUT_DECIMALS
+    return np.rint(x * scale) / scale
+
+
 def _abs_eta_for_cut(eta):
-    return np.round(abs(eta), ETA_CUT_DECIMALS)
+    return _round_for_cut(abs(eta))
 
 
 def applyRegionCatCuts(
@@ -172,7 +179,7 @@ def applyRegionCatCuts(
         )
         btag_cut = btagLoose_filter | btagMedium_filter
 
-        vbf_cut = (jj_mass > 400) & (np.round(jj_dEta, ETA_CUT_DECIMALS) > 2.5) & (jet1_pt > 35)
+        vbf_cut = (jj_mass > 400) & (_round_for_cut(jj_dEta) > 2.5) & (jet1_pt > 35)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
 
         # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`

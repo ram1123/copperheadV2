@@ -80,8 +80,15 @@ parse_common_args() {
     # JJ_ETA_REGION env var, if set, overrides it. Resolved here so this wrapper
     # and preprocess_dnn.py agree on the value that gets baked into dnn_base_dir
     # below and passed via --jj-eta-region.
-    if [[ -n "${JJ_ETA_REGION:-}" ]]; then
+    # The YAML fallback is for DNN training (dnn* modes) only: stage-2/compact must load the model of
+    # the region they select, else an edited YAML silently swaps the model (Oct 2026: an inclusive
+    # stage-2 loaded the jj_non_central model). DNN_MODEL_REGION forces a deliberate mismatch.
+    if [[ -n "${DNN_MODEL_REGION:-}" ]]; then
+        dnn_jj_eta_region="${DNN_MODEL_REGION}"
+    elif [[ -n "${JJ_ETA_REGION:-}" ]]; then
         dnn_jj_eta_region="${JJ_ETA_REGION}"
+    elif [[ "${mode}" != dnn* ]]; then
+        dnn_jj_eta_region="all"
     else
         dnn_jj_eta_region="$(python3 -c '
 import sys, yaml
@@ -116,6 +123,9 @@ except Exception:
     # source-of-truth fallback here since stage2/3 aren't driven by a persistent config file
     # the way DNN training is -- unset means "all".
     jj_eta_region="${JJ_ETA_REGION:-all}"
+    if [[ "${mode}" != dnn* && "${dnn_jj_eta_region}" != "${jj_eta_region}" ]]; then
+        echo "[WARNING] DNN model region '${dnn_jj_eta_region}' (DNN_MODEL_REGION) != selected region '${jj_eta_region}'" >&2
+    fi
 
     # PU-DNN (jet-level HS-vs-PU classifier, MVA_training/pileup_dnn/train_pu_dnn.py)
     # is unrelated to the VBF category DNN above: it trains on stage1's own
@@ -1205,5 +1215,6 @@ print_run_configuration() {
     echo "  Category: ${category}"
     echo "  VBF filter study: ${do_vbf_filter_study}"
     echo "  jj_eta_region (stage2/3): ${jj_eta_region}"
+    echo "  DNN model: ${dnn_model_path}"
     echo "  isMC: ${is_mc}"
 }

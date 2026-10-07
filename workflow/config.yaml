@@ -62,6 +62,30 @@ save_postfix: ""
 # DNN model dir <years>_h-peak_vbf_<jj_eta_region>. Non-"all" regions get their own state/log names.
 jj_eta_region: "all"
 
+# Several regions in one DAG (stage23_all / stats_all run one stage2->stage3->stats chain each).
+# [] = just jj_eta_region above.
+# jj_eta_regions: ["all", "jj_both_central", "jj_one_fwd25_one_central", "jj_both_fwd25"]
+jj_eta_regions: []
+
+# Mutually exclusive regions the stats_all target combines into one multi-channel card (stats modes
+# 12-14; never jj_non_central together with the forward regions). [] = no combination.
+# jj_combine_regions: ["jj_both_central", "jj_one_fwd25_one_central", "jj_both_fwd25"]
+jj_combine_regions: []
+
+# One label for every year's stage2 / stage2_plot / stage3 / stats instead of the per-year
+# Run3_nanoAODv<12|15>_<run_tag>; required by the stats rules when the years map to different labels
+# (the Run3 card combines per-year cards from one label dir). "" = per-year labels.
+# stage23_label: "Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics"
+stage23_label: ""
+
+# Stats rules (stats_all target, combine pixi env): years/pseudo-years for significance + limit
+# ([] = all stage-3 years + Run3 when its component years are present) and for the expensive
+# blinded impacts + likelihood scans ([] = Run3).
+stats_years: []
+scan_years: []
+run_impacts: true
+run_lhscan: true
+
 # Stage-1 prestage JSON variant: "" = prestage_output/processor_samples_<year>_NanoAODv<v>.json;
 # "LumiSplit" = the Summer24 MC split disjointly across 2024/2025/2026 by lumi (PC guideline: 2025+2026
 # are one year sharing Summer24 MC with 2024) -- produced by scripts/split_prestage_by_year_lumi.py.
