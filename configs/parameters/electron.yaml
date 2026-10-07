@@ -58,3 +58,93 @@ electron_id_v12: # The keys are same for v12 and v15
   "2024": mvaIso_WP90
   "2025": mvaIso_WP90
   "2026": mvaIso_WP90
+electron_iso_cut: # pfRelIso03_all
+  2016preVFP: 0.25
+  2016postVFP: 0.25
+  "2017": 0.25
+  "2018": 0.25
+  2016_RERECO: 0.25
+  "2017_RERECO": 0.25
+  "2018_RERECO": 0.25
+  2022preEE: 0.25
+  2022postEE: 0.25
+  "2023": 0.25
+  "2023BPix": 0.25
+  "2024": 0.25
+  "2025": 0.25
+  "2026": 0.25
+electron_dxy_cut_barrel: # |dxy| [cm], |eta_SC| < 1.479
+  2016preVFP: 0.05
+  2016postVFP: 0.05
+  "2017": 0.05
+  "2018": 0.05
+  2016_RERECO: 0.05
+  "2017_RERECO": 0.05
+  "2018_RERECO": 0.05
+  2022preEE: 0.05
+  2022postEE: 0.05
+  "2023": 0.05
+  "2023BPix": 0.05
+  "2024": 0.05
+  "2025": 0.05
+  "2026": 0.05
+electron_dz_cut_barrel: # |dz| [cm]
+  2016preVFP: 0.1
+  2016postVFP: 0.1
+  "2017": 0.1
+  "2018": 0.1
+  2016_RERECO: 0.1
+  "2017_RERECO": 0.1
+  "2018_RERECO": 0.1
+  2022preEE: 0.1
+  2022postEE: 0.1
+  "2023": 0.1
+  "2023BPix": 0.1
+  "2024": 0.1
+  "2025": 0.1
+  "2026": 0.1
+electron_dxy_cut_endcap: # |dxy| [cm], |eta_SC| >= 1.479
+  2016preVFP: 0.1
+  2016postVFP: 0.1
+  "2017": 0.1
+  "2018": 0.1
+  2016_RERECO: 0.1
+  "2017_RERECO": 0.1
+  "2018_RERECO": 0.1
+  2022preEE: 0.1
+  2022postEE: 0.1
+  "2023": 0.1
+  "2023BPix": 0.1
+  "2024": 0.1
+  "2025": 0.1
+  "2026": 0.1
+electron_dz_cut_endcap: # |dz| [cm]
+  2016preVFP: 0.2
+  2016postVFP: 0.2
+  "2017": 0.2
+  "2018": 0.2
+  2016_RERECO: 0.2
+  "2017_RERECO": 0.2
+  "2018_RERECO": 0.2
+  2022preEE: 0.2
+  2022postEE: 0.2
+  "2023": 0.2
+  "2023BPix": 0.2
+  "2024": 0.2
+  "2025": 0.2
+  "2026": 0.2
+electron_pt_cut_lepton_ip_veto: # electron-veto pT threshold used only with switch do_lepton_ip_veto (official: electron_pt_cut)
+  2016preVFP: 10.0
+  2016postVFP: 10.0
+  '2017': 10.0
+  '2018': 10.0
+  2016_RERECO: 10.0
+  '2017_RERECO': 10.0
+  '2018_RERECO': 10.0
+  2022preEE: 10.0
+  2022postEE: 10.0
+  "2023": 10.0
+  "2023BPix": 10.0
+  "2024": 10.0
+  "2025": 10.0
+  "2026": 10.0

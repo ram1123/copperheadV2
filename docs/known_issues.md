@@ -210,6 +210,12 @@ shifted four-vector (2.5 -> 2.50000004), so every JES/JER variation moved those 
 `|eta| <= 2.5` region cut. Fix: `modules/selection.py` rounds |eta| and `jj_dEta` to 1e-4 before
 the eta-boundary cuts (`ETA_CUT_DECIMALS`). Needs a stage-2 rerun; validated: `HF`/`jer5`/`jer6`
 now select exactly the nominal events in `jj_both_central`.
+Follow-up (fixed 2026-10-06): that rounding used `np.round`, which is not a ufunc and raises
+`NotImplementedError` on dask-awkward arrays, so every `preprocess_dnn.py` run (it passes lazy
+arrays to `applyRegionCatCuts`) crashed after 15-20 s. Now `_round_for_cut` =
+`np.rint(x * 1e4) / 1e4`, numpy's own `around` arithmetic, bit-identical to `np.round(x, 4)` on
+numpy, awkward and dask-awkward (2M values plus the 2.5/3.0 boundaries checked). Keep every
+numpy call in `applyRegionCatCuts` a ufunc.
 
 ## Run 2 DNN binning silently used for the Run 3 per-region VBF models (fixed 2026-10-05)
 
