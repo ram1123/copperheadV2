@@ -2194,6 +2194,24 @@ class EventProcessor(processor.ProcessorABC):
             "PV_npvsGood": events.PV.npvsGood,
         })
 
+        # --- Muon impact parameters: always saved (needed to study/tune IP cuts from ntuples) ---
+        _add_block(out_dict, {
+            "mu1_dxy":        mu1.dxy,
+            "mu2_dxy":        mu2.dxy,
+            "mu1_dxyErr":     mu1.dxyErr,
+            "mu2_dxyErr":     mu2.dxyErr,
+            "mu1_dxybs":      mu1.dxybs,
+            "mu2_dxybs":      mu2.dxybs,
+            "mu1_dz":         mu1.dz,
+            "mu2_dz":         mu2.dz,
+            "mu1_dzErr":      mu1.dzErr,
+            "mu2_dzErr":      mu2.dzErr,
+            "mu1_ip3d":       mu1.ip3d,
+            "mu2_ip3d":       mu2.ip3d,
+            "mu1_sip3d":      mu1.sip3d,
+            "mu2_sip3d":      mu2.sip3d,
+        })
+
         # --- Extra muon variables  ----------------------
         save_full_muon_detail = self.config["switches"].get("save_full_muon_detail", False)
         if save_full_muon_detail:
@@ -2210,22 +2228,7 @@ class EventProcessor(processor.ProcessorABC):
                 "mu2_pt_roch" : mu2.pt_roch,
                 "mu2_pt_fsr" : mu2.pt_fsr,
                 # "mu2_pt_gf" : mu2.pt_gf,
-
-                # Impact parameters / beamspot / PV
-                "mu1_dxy":        mu1.dxy,
-                "mu2_dxy":        mu2.dxy,
-                "mu1_dxyErr":     mu1.dxyErr,
-                "mu2_dxyErr":     mu2.dxyErr,
-                "mu1_dxybs":      mu1.dxybs,
-                "mu2_dxybs":      mu2.dxybs,
-                "mu1_dz":         mu1.dz,
-                "mu2_dz":         mu2.dz,
-                "mu1_dzErr":      mu1.dzErr,
-                "mu2_dzErr":      mu2.dzErr,
-                "mu1_ip3d":       mu1.ip3d,
-                "mu2_ip3d":       mu2.ip3d,
-                "mu1_sip3d":      mu1.sip3d,
-                "mu2_sip3d":      mu2.sip3d,
+                # (impact parameters are saved unconditionally above)
 
                 # IDs / quality flags
                 "mu1_highPurity":     mu1.highPurity,
@@ -2380,6 +2383,22 @@ class EventProcessor(processor.ProcessorABC):
         # Charge correlation
         q1q2 = mu1.charge * mu2.charge   # should be -1 for selected OS events
 
+        # Dimuon impact-parameter variables: always saved, like the per-muon IPs above
+        _add_block(out_dict, {
+            "mu12_dxy_sum":       dxy_sum,
+            "mu12_dxy_diff":      dxy_diff,
+            "mu12_dxy_absdiff":   dxy_absdiff,
+            "mu12_dz_sum":        dz_sum,
+            "mu12_dz_diff":       dz_diff,
+            "mu12_dz_absdiff":    dz_absdiff,
+            "mu12_sip3d_sum":     sip_sum,
+            "mu12_sip3d_diff":    sip_diff,
+            "mu12_sip3d_absdiff": sip_absdiff,
+            "mu12_sip3d_prod":    sip_prod,
+            "mu12_sip3d_min":     sip_min,
+            "mu12_sip3d_max":     sip_max,
+        })
+
         if save_full_muon_detail:
             _add_block(out_dict, {
                 # pt correlations
@@ -2411,20 +2430,6 @@ class EventProcessor(processor.ProcessorABC):
                 "mu12_iso04_min":      iso_min,
                 "mu12_iso04_max":      iso_max,
                 "mu12_iso04_asym":     iso_asym,
-
-                # impact parameters
-                "mu12_dxy_sum":       dxy_sum,
-                "mu12_dxy_diff":      dxy_diff,
-                "mu12_dxy_absdiff":   dxy_absdiff,
-                "mu12_dz_sum":        dz_sum,
-                "mu12_dz_diff":       dz_diff,
-                "mu12_dz_absdiff":    dz_absdiff,
-                "mu12_sip3d_sum":     sip_sum,
-                "mu12_sip3d_diff":    sip_diff,
-                "mu12_sip3d_absdiff": sip_absdiff,
-                "mu12_sip3d_prod":    sip_prod,
-                "mu12_sip3d_min":     sip_min,
-                "mu12_sip3d_max":     sip_max,
 
                 # track-quality correlations
                 "mu12_nStations_min":      nStations_min,
