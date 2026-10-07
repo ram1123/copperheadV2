@@ -712,7 +712,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 do_vbf_filter_study=self.do_vbf_filter_study,
                 variation=variation,
                 jj_eta_region=self.jj_eta_region,
-                # year=year,
+                year=year,
             )
             if self.use_transformer_vbf_channel:
                 region_events = region_events[
