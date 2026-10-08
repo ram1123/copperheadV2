@@ -64,6 +64,32 @@ def filterRegion(events, region="h-peak"):
     return mask, events[mask]
 
 
+# Why eta/dEta are rounded before every eta-boundary cut (|eta| 2.5/3.0, jj_dEta > 2.5):
+# NanoAOD stores jet eta with reduced float precision (~1e-3 steps), so many jets sit at
+# exactly |eta| = 2.5. Stage-1 recomputes the JES/JER-varied jet eta from the shifted
+# four-vector in float64, which adds ~1e-8 noise (2.5 -> 2.50000004). JES/JER only scale
+# pT, so that noise alone moved boundary jets across the jj_eta_region / HE-HF cuts for
+# EVERY jet variation, giving a fake, identical Up == Down shift even for sources with no
+# effect in the region.
+# Motivation: found in the Oct 2026 stage-3 template audit (scripts/plot_template_systematics.py
+# on the Oct04_2026_Syst VBF templates): 321 process/nuisance pairs had Up == Down != nominal;
+# e.g. 2023 ttjets_dl, jj_both_central SB: HF, HF_2023, jer5, jer6 all -0.649%, traced to 3
+# events with jet |eta| = 2.5 nominal vs 2.50000004 varied. Rounding to 1e-4 (finer than
+# NanoAOD's eta precision) removes the noise without merging genuinely different eta values.
+ETA_CUT_DECIMALS = 4
+
+
+def _round_for_cut(x):
+    # Same arithmetic as np.round (rint(x*10^d)/10^d), but via the rint ufunc so it also
+    # works on dask-awkward arrays (preprocess_dnn.py); np.round raises NotImplementedError there.
+    scale = 10.0**ETA_CUT_DECIMALS
+    return np.rint(x * scale) / scale
+
+
+def _abs_eta_for_cut(eta):
+    return _round_for_cut(abs(eta))
+
+
 def applyRegionCatCuts(
     events,
     category: str,
@@ -153,7 +179,7 @@ def applyRegionCatCuts(
         )
         btag_cut = btagLoose_filter | btagMedium_filter
 
-        vbf_cut = (jj_mass > 400) & (jj_dEta > 2.5) & (jet1_pt > 35)
+        vbf_cut = (jj_mass > 400) & (_round_for_cut(jj_dEta) > 2.5) & (jet1_pt > 35)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
 
         # Optional HE/HF jet pT mitigation, folded directly into `vbf_cut`
@@ -167,7 +193,7 @@ def applyRegionCatCuts(
             jet2_eta = varcol("jet2_eta")
 
             def _passes_he_hf_ptcut(pt, eta):
-                abs_eta = abs(eta)
+                abs_eta = _abs_eta_for_cut(eta)
                 in_he = (abs_eta > 2.5) & (abs_eta <= 3.0)
                 in_hf = abs_eta > 3.0
                 fail_he = (in_he & (pt < vbf_he_ptcut)) if vbf_he_ptcut is not None else (in_he & False)
@@ -273,8 +299,8 @@ def applyRegionCatCuts(
             jet1_eta = varcol("jet1_eta")
             jet2_eta = varcol("jet2_eta")
 
-            a1 = abs(jet1_eta)
-            a2 = abs(jet2_eta)
+            a1 = _abs_eta_for_cut(jet1_eta)
+            a2 = _abs_eta_for_cut(jet2_eta)
 
             # basic regions
             j1_c = a1 <= 2.5
@@ -595,20 +621,18 @@ binning_DNN_HIG19006 = np.array([
 
 # ------------------------------------------------------------------
 # Active DNN binning.
-# Derived by MVA_training/VBF_run3/scan_bins_for_dnn.py and persisted to
-# configs/MVA/VBF/dnn_binning.yaml, so re-running the significance scan
-# updates the binning here without editing this file. The overhead on the
-# upper-most edge is already baked into the YAML.
+# Derived by MVA_training/VBF_run3/scan_bins_for_dnn.py and kept in
+# configs/MVA/VBF/dnn_binning.yaml as a `default` entry plus one entry per
+# DNN model label and jj region (`models: {<model label>: {<jj region>: ...}}`).
+# The overhead on the upper-most edge is already baked into the YAML. Stage-2
+# requires the model/region entry (jj region "all" included); `default` is only
+# used on request (--allow_default_dnn_binning) and as `selection.binning`.
 # ------------------------------------------------------------------
-def load_dnn_binning(path=DNN_BINNING_YAML):
-    """
-    Load the VBF DNN bin edges from the YAML config.
+class MissingDnnBinningError(LookupError):
+    """No binning entry for the (model label, jj region) stage-2 is about to use."""
 
-    Parameters:
-    - path: YAML file holding an `edges` list (see scan_bins_for_dnn.py)
-    Returns:
-    - edges: np.ndarray of strictly increasing bin edges
-    """
+
+def _read_binning_config(path):
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(
@@ -617,14 +641,66 @@ def load_dnn_binning(path=DNN_BINNING_YAML):
         )
     with open(path) as f:
         cfg = yaml.safe_load(f) or {}
+    # pre-model-keyed format: the whole file is the default entry
+    if "edges" in cfg:
+        cfg = {"default": cfg}
+    return cfg
 
-    edges = cfg.get("edges")
+
+def _checked_edges(entry, where):
+    edges = (entry or {}).get("edges")
     if edges is None or len(edges) < 2:
-        raise ValueError(f"'edges' is missing or has fewer than 2 entries in {path}")
+        raise ValueError(f"'edges' is missing or has fewer than 2 entries in {where}")
     edges = np.asarray(edges, dtype=float)
     if np.any(np.diff(edges) <= 0):
-        raise ValueError(f"'edges' in {path} must be strictly increasing: {edges}")
+        raise ValueError(f"'edges' in {where} must be strictly increasing: {edges}")
     return edges
+
+
+def load_dnn_binning(path=DNN_BINNING_YAML):
+    """
+    Load the `default` VBF DNN bin edges from the YAML config.
+
+    Parameters:
+    - path: binning YAML (see scan_bins_for_dnn.py)
+    Returns:
+    - edges: np.ndarray of strictly increasing bin edges
+    """
+    cfg = _read_binning_config(path)
+    if "default" not in cfg:
+        raise ValueError(f"No 'default' DNN binning entry in {path}")
+    return _checked_edges(cfg["default"], f"{path} [default]")
+
+
+def resolve_dnn_binning(model_label, jj_eta_region="all", path=DNN_BINNING_YAML, allow_default=False):
+    """
+    Pick the DNN binning for one model and jj region.
+
+    Uses `models[model_label][jj_eta_region]`, for every jj region including "all".
+    A missing entry raises MissingDnnBinningError unless allow_default is set, so
+    no model is silently filled with bins scanned for another one (that is how the
+    Run 2 binning ended up on the Run 3 per-region models, docs/known_issues.md).
+    Returns (edges, entry_key, entry), entry_key being "default" or
+    "models/<model_label>/<jj_eta_region>".
+    """
+    cfg = _read_binning_config(path)
+    entry = ((cfg.get("models") or {}).get(model_label) or {}).get(jj_eta_region)
+    if entry is not None:
+        key = f"models/{model_label}/{jj_eta_region}"
+        return _checked_edges(entry, f"{path} [{key}]"), key, entry
+    if not allow_default:
+        raise MissingDnnBinningError(
+            f"No DNN binning for model '{model_label}' / jj region '{jj_eta_region}' in {path}. "
+            "Run MVA_training/VBF_run3/scan_bins_for_dnn.py --write-config for it, or pass "
+            "--allow_default_dnn_binning to use the 'default' binning on purpose."
+        )
+    if "default" not in cfg:
+        raise ValueError(f"No 'default' DNN binning entry in {path}")
+    logger.warning(
+        f"Using the 'default' DNN binning for model '{model_label}' / jj region "
+        f"'{jj_eta_region}' (--allow_default_dnn_binning)"
+    )
+    return _checked_edges(cfg["default"], f"{path} [default]"), "default", cfg["default"]
 
 
 binning = load_dnn_binning()

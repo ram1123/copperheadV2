@@ -1140,12 +1140,19 @@ class EventProcessor(processor.ProcessorABC):
         else:
             events["Muon", "pt_roch"] = events.Muon.pt
 
+        # Optional lepton/IP veto (switch do_lepton_ip_veto, default off = official selection):
+        # muon IP cuts, exactly-2-loose-muons veto, and an iso+IP-qualified electron veto down to
+        # electron_pt_cut_lepton_ip_veto. Cut values: configs/parameters/{muon,electron}.yaml.
+        do_lepton_ip_veto = self.config["switches"].get("do_lepton_ip_veto", False)
         muon_selection = (
             (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester #FIXME: Why pt_raw
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
+        if do_lepton_ip_veto:
+            muon_ip = (abs(events.Muon.dxy) < self.config["muon_dxy_cut"]) & (abs(events.Muon.dz) < self.config["muon_dz_cut"])
+            muon_selection = muon_selection & muon_ip # AN-19-124 baseline IP cuts
 
         # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
         # logger.info(f"Debug event muon pt_raw after roccor: {events.Muon.pt_raw[debug_mask_2].compute()}")
@@ -1161,6 +1168,8 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
         self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
         self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
+        if do_lepton_ip_veto:
+            self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
         self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
@@ -1175,6 +1184,17 @@ class EventProcessor(processor.ProcessorABC):
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
         self.selection.add("muon_iso", ak.any(events.Muon.pfRelIso04_all < self.config["muon_iso_cut"], axis=1))
+        if do_lepton_ip_veto:
+            # Extra loose-muon veto: exactly 2 loose muons (rejects >2); selected muons are a subset of loose,
+            # so with nmuons>=2 this leaves exactly the 2 selected muons
+            loose_muon = (
+                (events.Muon.pt_raw > self.config["loose_muon_pt_cut"])
+                & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+                & events.Muon[self.config["loose_muon_id"]]
+                & (events.Muon.pfRelIso04_all < self.config["loose_muon_iso_cut"])
+                & muon_ip
+            )
+            loose_muon_veto = (ak.sum(loose_muon, axis=1) == 2)
         # logger.info(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
 
         # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
@@ -1335,12 +1355,26 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         ecal_gap = (1.44 < abs(events.Electron.eta)) & (1.57 > abs(events.Electron.eta)) # Source: line 460 of https://cms.cern.ch/iCMS/analysisadmin/cadilines?id=1973&ancode=EGM-17-001&tp=an&line=EGM-17-001
+        electron_pt_cut = self.config["electron_pt_cut_lepton_ip_veto"] if do_lepton_ip_veto else self.config["electron_pt_cut"]
         electron_selection = (
-            (events.Electron.pt > self.config["electron_pt_cut"])
+            (events.Electron.pt > electron_pt_cut)
             & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
             & events.Electron[electron_id]
             & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
         )
+        if do_lepton_ip_veto:
+            # EGM-style IP cuts, split barrel/endcap on supercluster eta
+            ele_is_barrel = abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479
+            electron_ip = ak.where(
+                ele_is_barrel,
+                (abs(events.Electron.dxy) < self.config["electron_dxy_cut_barrel"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_barrel"]),
+                (abs(events.Electron.dxy) < self.config["electron_dxy_cut_endcap"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_endcap"]),
+            )
+            electron_selection = (
+                electron_selection
+                & (events.Electron.pfRelIso03_all < self.config["electron_iso_cut"])
+                & electron_ip
+            )
         # self.selection.add("electron_pT", ak.any(events.Electron.pt > self.config["electron_pt_cut"], axis=1))
         # self.selection.add("electron_eta", ak.any(abs(events.Electron.eta) < self.config["electron_eta_cut"], axis=1))
         # self.selection.add("electron_id", ak.any(events.Electron[electron_id], axis=1))
@@ -1381,8 +1415,15 @@ class EventProcessor(processor.ProcessorABC):
 
         pv_good = (events.PV.npvsGood > 0)
         self.selection.add("PV_npvsGood", pv_good)
-        event_filter = event_filter & (nmuons == 2)
-        self.selection.add("nmuons", nmuons==2)
+        if do_lepton_ip_veto:
+            # >=2 only: the loose-muon veto below is the single multiplicity cut (selected muons are a subset of loose)
+            event_filter = event_filter & (nmuons >= 2)
+            self.selection.add("nMuons_ge2", nmuons >= 2)
+            event_filter = event_filter & loose_muon_veto
+            self.selection.add("nLooseMuons_eq2", loose_muon_veto)
+        else:
+            event_filter = event_filter & (nmuons == 2)
+            self.selection.add("nmuons", nmuons==2)
 
         event_filter = event_filter & (mm_charge == -1)
         self.selection.add("mm_charge", mm_charge==-1)
@@ -2194,6 +2235,24 @@ class EventProcessor(processor.ProcessorABC):
             "PV_npvsGood": events.PV.npvsGood,
         })
 
+        # --- Muon impact parameters: always saved (needed to study/tune IP cuts from ntuples) ---
+        _add_block(out_dict, {
+            "mu1_dxy":        mu1.dxy,
+            "mu2_dxy":        mu2.dxy,
+            "mu1_dxyErr":     mu1.dxyErr,
+            "mu2_dxyErr":     mu2.dxyErr,
+            "mu1_dxybs":      mu1.dxybs,
+            "mu2_dxybs":      mu2.dxybs,
+            "mu1_dz":         mu1.dz,
+            "mu2_dz":         mu2.dz,
+            "mu1_dzErr":      mu1.dzErr,
+            "mu2_dzErr":      mu2.dzErr,
+            "mu1_ip3d":       mu1.ip3d,
+            "mu2_ip3d":       mu2.ip3d,
+            "mu1_sip3d":      mu1.sip3d,
+            "mu2_sip3d":      mu2.sip3d,
+        })
+
         # --- Extra muon variables  ----------------------
         save_full_muon_detail = self.config["switches"].get("save_full_muon_detail", False)
         if save_full_muon_detail:
@@ -2210,22 +2269,7 @@ class EventProcessor(processor.ProcessorABC):
                 "mu2_pt_roch" : mu2.pt_roch,
                 "mu2_pt_fsr" : mu2.pt_fsr,
                 # "mu2_pt_gf" : mu2.pt_gf,
-
-                # Impact parameters / beamspot / PV
-                "mu1_dxy":        mu1.dxy,
-                "mu2_dxy":        mu2.dxy,
-                "mu1_dxyErr":     mu1.dxyErr,
-                "mu2_dxyErr":     mu2.dxyErr,
-                "mu1_dxybs":      mu1.dxybs,
-                "mu2_dxybs":      mu2.dxybs,
-                "mu1_dz":         mu1.dz,
-                "mu2_dz":         mu2.dz,
-                "mu1_dzErr":      mu1.dzErr,
-                "mu2_dzErr":      mu2.dzErr,
-                "mu1_ip3d":       mu1.ip3d,
-                "mu2_ip3d":       mu2.ip3d,
-                "mu1_sip3d":      mu1.sip3d,
-                "mu2_sip3d":      mu2.sip3d,
+                # (impact parameters are saved unconditionally above)
 
                 # IDs / quality flags
                 "mu1_highPurity":     mu1.highPurity,
@@ -2380,6 +2424,22 @@ class EventProcessor(processor.ProcessorABC):
         # Charge correlation
         q1q2 = mu1.charge * mu2.charge   # should be -1 for selected OS events
 
+        # Dimuon impact-parameter variables: always saved, like the per-muon IPs above
+        _add_block(out_dict, {
+            "mu12_dxy_sum":       dxy_sum,
+            "mu12_dxy_diff":      dxy_diff,
+            "mu12_dxy_absdiff":   dxy_absdiff,
+            "mu12_dz_sum":        dz_sum,
+            "mu12_dz_diff":       dz_diff,
+            "mu12_dz_absdiff":    dz_absdiff,
+            "mu12_sip3d_sum":     sip_sum,
+            "mu12_sip3d_diff":    sip_diff,
+            "mu12_sip3d_absdiff": sip_absdiff,
+            "mu12_sip3d_prod":    sip_prod,
+            "mu12_sip3d_min":     sip_min,
+            "mu12_sip3d_max":     sip_max,
+        })
+
         if save_full_muon_detail:
             _add_block(out_dict, {
                 # pt correlations
@@ -2411,20 +2471,6 @@ class EventProcessor(processor.ProcessorABC):
                 "mu12_iso04_min":      iso_min,
                 "mu12_iso04_max":      iso_max,
                 "mu12_iso04_asym":     iso_asym,
-
-                # impact parameters
-                "mu12_dxy_sum":       dxy_sum,
-                "mu12_dxy_diff":      dxy_diff,
-                "mu12_dxy_absdiff":   dxy_absdiff,
-                "mu12_dz_sum":        dz_sum,
-                "mu12_dz_diff":       dz_diff,
-                "mu12_dz_absdiff":    dz_absdiff,
-                "mu12_sip3d_sum":     sip_sum,
-                "mu12_sip3d_diff":    sip_diff,
-                "mu12_sip3d_absdiff": sip_absdiff,
-                "mu12_sip3d_prod":    sip_prod,
-                "mu12_sip3d_min":     sip_min,
-                "mu12_sip3d_max":     sip_max,
 
                 # track-quality correlations
                 "mu12_nStations_min":      nStations_min,
@@ -2741,9 +2787,12 @@ class EventProcessor(processor.ProcessorABC):
                 "muon_eta",
                 "muon_id",
                 "muon_isGlobal_or_Tracker",
+                "muon_ip",          # only with do_lepton_ip_veto
                 "muon_selection",
                 "muon_iso",
-                "nmuons",
+                "nmuons",           # official; with do_lepton_ip_veto replaced by the next two
+                "nMuons_ge2",
+                "nLooseMuons_eq2",
                 "mm_charge",
                 "electron_veto",
                 "leading_muon_pt",

@@ -1,3 +1,27 @@
+"""
+Scan the VBF DNN-score binning (dnn_vbf_score_atanh) for the highest total Asimov Z, and
+compare it with the binning currently in configs/MVA/VBF/dnn_binning.yaml on the same events.
+
+Inputs (one of):
+  --stage2-scores <stage2 hist dir>  per-event nominal scores dumped by stage-2 with
+        --dump_scores (DUMP_SCORES=1 run_analysis_pipeline.sh -m 2 ...), i.e. exactly the
+        selection, weights and per-region DNN used in the fit. Signal = VBF + ggH (what r
+        scales), background = every other non-data sample.
+  --stage1-path/--compacted-tag      legacy: stage-1 parquet carrying dnn_vbf_score_atanh.
+Outputs go to --output-dir (default validation/dnn_binning_scan/<input name>/): the scan
+plots, best_binning_*.txt, binning_comparison.txt (+ .pdf) and dnn_binning_scanned.yaml.
+configs/MVA/VBF/dnn_binning.yaml is only overwritten with --write-config.
+
+How to run (repo root, default pixi env):
+    ./run_in_pixi.sh default python MVA_training/VBF_run3/scan_bins_for_dnn.py \
+        --stage2-scores <.../stage2_histograms/score_<label>_<postfix>_<region>_NoSyst> \
+        [--years 2022preEE,...] [--region h-peak] [--output-dir DIR] [--write-config]
+
+Example (jj_both_central, all Run 3 years):
+    L=Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit
+    ./run_in_pixi.sh default python MVA_training/VBF_run3/scan_bins_for_dnn.py \
+        --stage2-scores /work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/$L/stage2_histograms/score_${L}_Oct05_2026_ScoreDump_jj_both_central_NoSyst
+"""
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -900,6 +924,187 @@ def collect_bkg(process_globs, selection, category="vbf", region_name="h-peak"):
     )
 
 
+# ------------------------------------
+# Stage-2 per-event score dumps
+# ------------------------------------
+SIGNAL_SAMPLE_PREFIXES = ("vbf", "ggh")
+
+
+def collect_stage2_scores(hist_dir, years=None, region="h-peak", signal_prefixes=SIGNAL_SAMPLE_PREFIXES):
+    """
+    Read <hist_dir>/<year>/scores/<sample>_scores.parquet written by run_stage2_vbf.py
+    --dump_scores. Returns ((sig_score, sig_w, sig_year), (bkg_score, bkg_w, bkg_year),
+    years_used); the year arrays hold the index of the year in years_used, for BinGuard.
+    Data samples are skipped; samples starting with signal_prefixes are signal.
+    """
+    import pandas as pd
+
+    hist_dir = Path(hist_dir)
+    if not years:
+        years = sorted(p.parent.name for p in hist_dir.glob("*/scores"))
+    years_used = [y for y in years if (hist_dir / y / "scores").is_dir()]
+    if not years_used:
+        raise FileNotFoundError(f"No <year>/scores dumps under {hist_dir} for years {years}")
+    parts = {"sig": ([], [], []), "bkg": ([], [], [])}
+    for iy, year in enumerate(years_used):
+        for path in sorted((hist_dir / year / "scores").glob("*_scores.parquet")):
+            sample = path.name[: -len("_scores.parquet")]
+            if sample.startswith("data"):
+                continue
+            df = pd.read_parquet(path)
+            df = df[df["region"] == region]
+            kind = "sig" if sample.lower().startswith(tuple(signal_prefixes)) else "bkg"
+            logger.info(f"{year} {sample}: {len(df)} events in {region} -> {kind}")
+            parts[kind][0].append(df["score"].to_numpy(float))
+            parts[kind][1].append(df["weight"].to_numpy(float))
+            parts[kind][2].append(np.full(len(df), float(iy)))
+    out = []
+    for kind in ("sig", "bkg"):
+        if not parts[kind][0]:
+            raise ValueError(f"No {kind} events found in {hist_dir} for {region}")
+        out.append(tuple(np.concatenate(a) for a in parts[kind]))
+    return out[0], out[1], years_used
+
+
+# ------------------------------------
+# Compare two binnings on the same events
+# ------------------------------------
+def evaluate_binning(edges, sig_score, sig_w, bkg_score, bkg_w):
+    """Per-bin S, B, raw counts, Asimov Z and background MC relative stat error."""
+    edges = np.asarray(edges, float)
+    lo, hi = edges[0], np.nextafter(edges[-1], -np.inf)
+    s, b = np.clip(sig_score, lo, hi), np.clip(bkg_score, lo, hi)
+    S, _ = np.histogram(s, bins=edges, weights=sig_w)
+    B, _ = np.histogram(b, bins=edges, weights=bkg_w)
+    B_w2, _ = np.histogram(b, bins=edges, weights=bkg_w ** 2)
+    S_n, _ = np.histogram(s, bins=edges)
+    B_n, _ = np.histogram(b, bins=edges)
+    z2 = z2_asimov(S, B)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        b_rel = np.where(B > 0, np.sqrt(B_w2) / B, np.inf)
+    return {
+        "edges": edges, "S": S, "B": B, "S_n": S_n, "B_n": B_n,
+        "Z": np.sqrt(np.maximum(z2, 0.0)), "Z_tot": float(np.sqrt(np.sum(z2))),
+        "B_rel_stat": b_rel,
+    }
+
+
+def binning_table(name, res):
+    lines = [f"## {name}: {len(res['edges']) - 1} bins, total Asimov Z = {res['Z_tot']:.4f}",
+             f"#   {'bin':>3} {'low':>8} {'high':>8} {'S':>9} {'B':>11} {'S_raw':>8} {'B_raw':>8} {'B_relstat':>9} {'Z':>6}"]
+    for i in range(len(res["S"])):
+        lines.append(
+            f"#   {i:3d} {res['edges'][i]:8.4f} {res['edges'][i + 1]:8.4f} {res['S'][i]:9.4f} "
+            f"{res['B'][i]:11.4f} {res['S_n'][i]:8d} {res['B_n'][i]:8d} {res['B_rel_stat'][i]:9.3f} {res['Z'][i]:6.4f}"
+        )
+    return lines
+
+
+def plot_binning_comparison(results, sig_score, sig_w, bkg_score, bkg_w, outfile):
+    """Signal/background score shapes with each binning's edges, and per-bin Z per binning."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 8), sharex=True,
+                                   gridspec_kw={"height_ratios": [2, 1]})
+    fine = np.linspace(min(r["edges"][0] for r in results.values()),
+                       max(r["edges"][-1] for r in results.values()), 150)
+    ax1.hist(bkg_score, bins=fine, weights=bkg_w, histtype="step", color="tab:gray", label="background")
+    ax1.hist(sig_score, bins=fine, weights=sig_w * 1000, histtype="step", color="tab:red", label="signal x1000")
+    ax1.set_yscale("log")
+    ax1.set_ylabel("weighted events / fine bin")
+    styles = {0: ("tab:blue", "--"), 1: ("tab:green", ":")}
+    for k, (name, res) in enumerate(results.items()):
+        color, ls = styles.get(k, ("k", "-"))
+        for e in res["edges"]:
+            ax1.axvline(e, color=color, ls=ls, lw=0.8)
+        centers = 0.5 * (res["edges"][1:] + res["edges"][:-1])
+        ax2.step(res["edges"], np.append(res["Z"], res["Z"][-1]), where="post", color=color, ls=ls,
+                 label=f"{name}: {len(res['S'])} bins, Z_tot={res['Z_tot']:.3f}")
+        ax2.plot(centers, res["Z"], "o", color=color, ms=3)
+    ax1.legend(loc="upper right")
+    ax2.set_ylabel("per-bin Asimov Z")
+    ax2.set_xlabel("dnn_vbf_score_atanh")
+    ax2.legend(loc="upper left", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(outfile)
+    fig.savefig(str(outfile).replace(".pdf", ".png"))
+    plt.close(fig)
+    logger.info(f"Saved binning comparison plot to {outfile}")
+
+
+def load_current_edges(path):
+    """Edges of a binning YAML: a single entry (stage-2 copy, old flat file) or the config's default."""
+    with open(path) as f:
+        cfg = yaml.safe_load(f)
+    entry = cfg if "edges" in cfg else cfg["default"]
+    return np.asarray(entry["edges"], float)
+
+
+def stage2_binning_copy(hist_dir, years):
+    """The dnn_binning.yaml stage-2 wrote next to the histograms of the first year found, or None."""
+    for year in years:
+        path = Path(hist_dir) / year / "dnn_binning.yaml"
+        if path.is_file():
+            return path
+    return None
+
+
+def update_config_entry(edges, model_label, jj_region, metadata,
+                        config_path=DNN_BINNING_YAML, last_edge_overhead=LAST_EDGE_OVERHEAD, ndigits=6):
+    """
+    Set models[model_label][jj_region] in the binning config, leaving every other entry
+    untouched. Serialised with a lock file and written via a temporary file + rename, so
+    concurrent scans or a crash cannot leave a half-written or clobbered config.
+    """
+    import fcntl
+    import os
+
+    edges = np.asarray(edges, dtype=float).copy()
+    raw_last_edge = float(edges[-1])
+    edges[-1] = raw_last_edge + last_edge_overhead
+    entry = {
+        "n_bins": len(edges) - 1,
+        "edges": [round(float(e), ndigits) for e in edges],
+        "metadata": {
+            "generated_by": str(Path(__file__).resolve().relative_to(REPO_ROOT)),
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "score": "dnn_vbf_score_atanh",
+            "last_edge_overhead": last_edge_overhead,
+            "last_edge_before_overhead": round(raw_last_edge, ndigits),
+            **(metadata or {}),
+        },
+    }
+    config_path = Path(config_path)
+    import hashlib
+    import tempfile
+    # lock outside the repo, so it never shows up next to the config; stable name across processes
+    config_id = hashlib.md5(str(config_path.resolve()).encode()).hexdigest()[:12]
+    lock_path = Path(tempfile.gettempdir()) / f"dnn_binning_{config_id}.lock"
+    with open(lock_path, "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f) or {}
+        if "edges" in cfg:  # pre-model-keyed format: the whole file was the default entry
+            cfg = {"default": cfg}
+        cfg.setdefault("models", {}).setdefault(model_label, {})[jj_region] = entry
+        tmp = config_path.with_suffix(".yaml.tmp")
+        with open(tmp, "w") as f:
+            f.write(
+                "# VBF DNN-score (dnn_vbf_score_atanh) bin edges, read by modules/selection.py.\n"
+                "# models.<DNN model label>.<jj region> (jj region 'all' included): the binning stage-2 uses,\n"
+                "# written by MVA_training/VBF_run3/scan_bins_for_dnn.py --write-config. default: only used with\n"
+                "# --allow_default_dnn_binning and as selection.binning for legacy Run 2 scripts.\n"
+                "# Each last edge includes the overhead in its metadata. Scan reports are under\n"
+                "# validation/dnn_binning_scan/ (see each entry's metadata.report).\n"
+            )
+            yaml.safe_dump(cfg, f, sort_keys=False, default_flow_style=None, width=120)
+        os.replace(tmp, config_path)
+    logger.info(f"Updated {config_path}: models/{model_label}/{jj_region} ({entry['n_bins']} bins)")
+    return config_path
+
+
 # -----------------------
 # Command line interface
 # -----------------------
@@ -913,29 +1118,38 @@ DEFAULT_YEAR = "*"
 
 
 def parse_args(argv=None):
-    """Parse the stage1 inputs that select which samples the scan runs over."""
+    """Parse the inputs that select which events the scan runs over."""
     parser = argparse.ArgumentParser(
-        description=(
-            "Scan DNN score binnings for the best total Asimov Z and write the "
-            f"winning edges to {DNN_BINNING_YAML}."
-        ),
+        description="Scan DNN score binnings for the best total Asimov Z and compare with the current binning.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
-        "--stage1-path",
-        default=DEFAULT_STAGE1_PATH,
-        help="Base stage1 ntuple directory (holds stage1_output/<year>/...).",
-    )
-    parser.add_argument(
-        "--compacted-tag",
-        default=DEFAULT_COMPACTED_TAG,
-        help="Tag of the compacted_<tag> directory to read the DNN scores from.",
-    )
-    parser.add_argument(
-        "--year",
-        default=DEFAULT_YEAR,
-        help="Year subdirectory to glob; '*' runs over all years.",
-    )
+    parser.add_argument("--stage2-scores", default=None,
+                        help="stage-2 histogram dir holding <year>/scores/*_scores.parquet (from --dump_scores)")
+    parser.add_argument("--years", default="", help="comma-separated years for --stage2-scores (default: all found)")
+    parser.add_argument("--region", default="h-peak", help="mass region the scan uses")
+    parser.add_argument("--signal", default="vbf,ggh",
+                        help="comma-separated sample-name prefixes counted as signal (--stage2-scores)")
+    parser.add_argument("--stage1-path", default=DEFAULT_STAGE1_PATH,
+                        help="legacy input: base stage1 ntuple directory (holds stage1_output/<year>/...).")
+    parser.add_argument("--compacted-tag", default=DEFAULT_COMPACTED_TAG,
+                        help="legacy input: tag of the compacted_<tag> directory with the DNN scores.")
+    parser.add_argument("--year", default=DEFAULT_YEAR, help="legacy input: year subdirectory to glob; '*' = all.")
+    parser.add_argument("--output-dir", default=None,
+                        help="where scan plots/reports go (default validation/dnn_binning_scan/<input name>)")
+    parser.add_argument("--compare-binning", default=None,
+                        help="binning YAML to compare with (default: the dnn_binning.yaml stage-2 wrote "
+                             f"next to the scanned histograms, else the default entry of {DNN_BINNING_YAML})")
+    parser.add_argument("--write-config", default=False, action=argparse.BooleanOptionalAction,
+                        help=f"store the scanned binning as models.<model label>.<jj region> in {DNN_BINNING_YAML}")
+    parser.add_argument("--model-label", default=None,
+                        help="DNN model label for --write-config (default: from the stage-2 binning copy)")
+    parser.add_argument("--jj-region", default=None,
+                        help="jj region for --write-config (default: from the stage-2 binning copy)")
+    parser.add_argument("--max-nbins", type=int, default=70, help="largest fine-bin count scanned")
+    parser.add_argument("--frac-tol", type=float, default=0.01, help="allowed local Z^2 loss per merge")
+    parser.add_argument("--min-total-events-per-bin", type=float, default=15,
+                        help="minimum raw (unweighted) S+B per bin")
+    parser.add_argument("--min-signal-per-bin", type=float, default=0.05, help="minimum weighted S per bin")
     parser.add_argument(
         "--enforce-min-per-year",
         dest="enforce_min_per_year",
@@ -943,8 +1157,7 @@ def parse_args(argv=None):
         action=argparse.BooleanOptionalAction,
         help=(
             "Require the per-bin minima to be met by every data-taking year "
-            "separately instead of by the years summed together. Needs a 'year' "
-            "column in the input parquet."
+            "separately instead of by the years summed together."
         ),
     )
     parser.add_argument(
@@ -961,74 +1174,59 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-# -----------------------
-# Example driver snippet
-# -----------------------
 if __name__ == "__main__":
-    from modules import selection
-
-    from distributed import Client
-
     args = parse_args()
-    stage1_path = args.stage1_path
-    compacted_tag = args.compacted_tag
-    year = args.year
 
-    client = Client(
-        n_workers=64, threads_per_worker=1, processes=True, memory_limit="2 GiB"
-    )
-    print("Local scale Client created")
-    sig_globs = {
-        "vbf_powheg_dipole": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/vbf_powheg_dipole/**/*.parquet",
-        # "ggh_powhegPS": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ggh_powhegPS/**/*.parquet",
-    }
-    sig_score, sig_w, sig_years = collect_scores(sig_globs, selection)
+    if args.stage2_scores:
+        input_name = Path(args.stage2_scores.rstrip("/")).name
+        years = [y for y in args.years.split(",") if y]
+        (sig_score, sig_w, sig_years), (bkg_score, bkg_w, bkg_years), years_used = collect_stage2_scores(
+            args.stage2_scores, years, region=args.region,
+            signal_prefixes=tuple(x.lower() for x in args.signal.split(",") if x),
+        )
+        input_desc = {"stage2_scores": args.stage2_scores, "years": years_used, "region": args.region,
+                      "signal": args.signal}
+    else:
+        from modules import selection
+        from distributed import Client
 
-    bkg_globs = {
-        "dy_VBF_filter": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_VBF_filter/**/*.parquet",
-        # "dy_M-100To200_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-100To200_MiNNLO/**/*.parquet",
-        "dy_M-Incl_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*MiNNLO/**/*.parquet",
-        # "dyInclM-50_aMCatNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy*M-50_aMCatNLO/**/*.parquet",
-        # "dy_M-50_MiNNLO": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/dy_M-50_MiNNLO/**/*.parquet",
-        "ewk_incl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk*/**/*.parquet",
-        # "ewk_lljj_mll50_mjj120": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_lljj_mll50_mjj120/**/*.parquet",
-        # "ewk_zlljj": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ewk_zlljj/**/*.parquet",
-        "ttjets_dl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_dl/**/*.parquet",
-        "ttjets_sl": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ttjets_sl/**/*.parquet",
-        "zz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/zz*/**/*.parquet",
-        # "ww": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/ww_*/**/*.parquet",
-        # "wz": f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}/wz_*/**/*.parquet",
-    }
-    
-    bkg_score, bkg_w, bkg_years = collect_scores(bkg_globs, selection)
+        stage1_path, compacted_tag, year = args.stage1_path, args.compacted_tag, args.year
+        input_name = f"stage1_{Path(stage1_path).name}_{compacted_tag}"
+        client = Client(n_workers=64, threads_per_worker=1, processes=True, memory_limit="2 GiB")
+        print("Local scale Client created")
+        base = f"{stage1_path}/stage1_output/{year}/compacted_{compacted_tag}"
+        sig_globs = {"vbf_powheg_dipole": f"{base}/vbf_powheg_dipole/**/*.parquet"}
+        sig_score, sig_w, sig_years = collect_scores(sig_globs, selection)
+        bkg_globs = {
+            "dy_VBF_filter": f"{base}/dy_VBF_filter/**/*.parquet",
+            "dy_M-Incl_MiNNLO": f"{base}/dy*MiNNLO/**/*.parquet",
+            "ewk_incl": f"{base}/ewk*/**/*.parquet",
+            "ttjets_dl": f"{base}/ttjets_dl/**/*.parquet",
+            "ttjets_sl": f"{base}/ttjets_sl/**/*.parquet",
+            "zz": f"{base}/zz*/**/*.parquet",
+        }
+        bkg_score, bkg_w, bkg_years = collect_scores(bkg_globs, selection)
+        input_desc = {"stage1_path": stage1_path, "compacted_tag": compacted_tag}
+
+    output_dir = Path(args.output_dir) if args.output_dir else REPO_ROOT / "validation" / "dnn_binning_scan" / input_name
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     enforce_min_per_year = args.enforce_min_per_year
     if enforce_min_per_year and (sig_years is None or bkg_years is None):
-        raise ValueError(
-            "--enforce-min-per-year was requested but the inputs carry no 'year' "
-            "column; re-run without it or use ntuples that store the year."
-        )
-    if enforce_min_per_year:
-        years_found = np.unique(np.concatenate([sig_years, bkg_years]))
-        print(f"Enforcing per-bin guards per year, years found: {years_found}")
+        raise ValueError("--enforce-min-per-year needs per-event years in the inputs.")
 
     score_min = float(min(sig_score.min(), bkg_score.min()))
     score_upper = float(max(sig_score.max(), bkg_score.max()))
-    print(f"compacted path: {stage1_path}/stage1_output/{year}/compacted_{compacted_tag}")
-    print(f"score_min: {score_min}")
-    print(f"score_upper: {score_upper}")
-    print(
-        f"Derived dnn_vbf_score_atanh range: [{score_min:.6f}, {score_upper:.6f}]"
-    )
+    print(f"Signal events: {len(sig_score)} (sum w = {sig_w.sum():.4f}); "
+          f"background events: {len(bkg_score)} (sum w = {bkg_w.sum():.2f})")
+    print(f"Derived dnn_vbf_score_atanh range: [{score_min:.6f}, {score_upper:.6f}]")
 
-    # frac_tol = 0.005  # allow merge if local Z² drop <= 1%
-    frac_tol = 0.01  # recommended
-    max_nbins = 70  # max number of bins to try
-    #------------------------------
-    # min_total_events_per_bin=5.0
-    min_total_events_per_bin= 15
+    frac_tol = args.frac_tol
+    max_nbins = args.max_nbins
+    min_total_events_per_bin = args.min_total_events_per_bin
+    min_signal_per_bin = args.min_signal_per_bin
     min_background_per_bin = args.min_background_per_bin
-    
+
     nb, edges, S_NoWgt_bins, S_bins, B_NoWgt_bins, B_bins, Z_bins, Ztot = (
         scan_nbins_for_best_edges(
             sig_score,
@@ -1039,65 +1237,83 @@ if __name__ == "__main__":
             score_min=score_min,
             score_max=score_upper,
             min_total_events_per_bin=min_total_events_per_bin,
-            min_signal_per_bin=0.05,
+            min_signal_per_bin=min_signal_per_bin,
             min_background_per_bin=min_background_per_bin,
             clamp_edges=True,
-            frac_tol=frac_tol,  # allow merge if local Z² drop <= 1%
+            frac_tol=frac_tol,
+            output_dir=output_dir,
             sig_years=sig_years,
             bkg_years=bkg_years,
             enforce_min_per_year=enforce_min_per_year,
         )
     )
-
-    print(f"max xbins: {max_nbins}")
     print(f"Best nbins = {nb}, total Asimov Z = {Ztot:.3f}")
-    print("edges = np.array([")
-    for e in edges:
-        print(f"  {e:.6f},")
-    print("])")
-    print("Per-bin (S, B, Z):")
-    for i, (S_norm, S, B_norm, B, Z) in enumerate(
-        zip(S_bins, S_NoWgt_bins, B_bins, B_NoWgt_bins, Z_bins)
-    ):
-        print(
-            f"#   bin {i:2}: ({edges[i]:.3f},{edges[i+1]:.3f}): "
-            f"S={S_norm:>4f}({S:>7})  "
-            f"B={B_norm:>4f}({B:>7})  "
-            f"Z={Z:.2f}\n"
-        )
-    # ------------------------------------
-    # Save best binning to a text file
-    # ------------------------------------
+
     report_lines = format_binning_report(
         nb, edges, S_bins, S_NoWgt_bins, B_bins, B_NoWgt_bins, Z_bins, Ztot
     )
-    txt_path = (
-        OUTPUT_DIR
-        / f"best_binning_{max_nbins}bins_{str(frac_tol).replace('.', 'p')}.txt"
-    )
-    txt_path.parent.mkdir(parents=True, exist_ok=True)
+    txt_path = output_dir / f"best_binning_{max_nbins}bins_{str(frac_tol).replace('.', 'p')}.txt"
     with open(txt_path, "w") as f:
         f.write("\n".join(report_lines) + "\n")
     logger.info(f"Saved best binning to {txt_path}")
 
-    # ------------------------------------
-    # Save best binning to the YAML config consumed downstream
-    # ------------------------------------
-    save_edges_to_yaml(
-        edges,
-        metadata={
-            "best_nbins_from_scan": int(nb),
-            "max_nbins_scanned": max_nbins,
-            "total_asimov_Z": round(float(Ztot), 4),
-            "frac_tol": frac_tol,
-            "min_total_events_per_bin": min_total_events_per_bin,
-            "min_signal_per_bin": 0.05,
-            "min_background_per_bin": min_background_per_bin,
-            "enforce_min_per_year": enforce_min_per_year,
-            "score_min": round(score_min, 6),
-            "score_max": round(score_upper, 6),
-            "stage1_path": stage1_path,
-            "compacted_tag": compacted_tag,
-        },
-        report_lines=report_lines,
-    )
+    metadata = {
+        "best_nbins_from_scan": int(nb),
+        "max_nbins_scanned": max_nbins,
+        "total_asimov_Z": round(float(Ztot), 4),
+        "frac_tol": frac_tol,
+        "min_total_events_per_bin": min_total_events_per_bin,
+        "min_signal_per_bin": min_signal_per_bin,
+        "min_background_per_bin": min_background_per_bin,
+        "enforce_min_per_year": enforce_min_per_year,
+        "score_min": round(score_min, 6),
+        "score_max": round(score_upper, 6),
+        **input_desc,
+    }
+    # scanned binning in the downstream format, for review before adopting it
+    save_edges_to_yaml(edges, output_path=output_dir / "dnn_binning_scanned.yaml",
+                       metadata=metadata, report_lines=report_lines)
+
+    # ---- compare with the binning currently in use, on the same events ----
+    copy_path = stage2_binning_copy(args.stage2_scores, years_used) if args.stage2_scores else None
+    compare_path = args.compare_binning or copy_path or DNN_BINNING_YAML
+    current_edges = load_current_edges(compare_path)
+    scanned_padded = np.asarray(edges, float).copy()
+    scanned_padded[-1] += LAST_EDGE_OVERHEAD
+    results = {
+        "current": evaluate_binning(current_edges, sig_score, sig_w, bkg_score, bkg_w),
+        "scanned": evaluate_binning(scanned_padded, sig_score, sig_w, bkg_score, bkg_w),
+    }
+    cur, new = results["current"], results["scanned"]
+    gain = 100.0 * (new["Z_tot"] / cur["Z_tot"] - 1.0) if cur["Z_tot"] > 0 else float("nan")
+    summary = [
+        f"# DNN binning comparison on {input_name}, region {args.region}",
+        f"# current: {compare_path}",
+        f"# signal events {len(sig_score)} (sum w {sig_w.sum():.4f}), background events {len(bkg_score)} (sum w {bkg_w.sum():.2f})",
+        f"# total Asimov Z: current {cur['Z_tot']:.4f} ({len(cur['S'])} bins) -> scanned {new['Z_tot']:.4f} ({len(new['S'])} bins), {gain:+.1f}%",
+        "# Asimov Z here has no systematics and no MC-stat uncertainty; check B_relstat in the",
+        "# highest-score bins, where background MC statistics limit the actual fit.",
+        "",
+    ] + binning_table("current", cur) + [""] + binning_table("scanned", new)
+    cmp_path = output_dir / "binning_comparison.txt"
+    with open(cmp_path, "w") as f:
+        f.write("\n".join(summary) + "\n")
+    print("\n".join(summary[:4]))
+    print(f"Comparison written to {cmp_path}")
+    plot_binning_comparison(results, sig_score, sig_w, bkg_score, bkg_w, output_dir / "binning_comparison.pdf")
+
+    if args.write_config:
+        copy_info = {}
+        if copy_path:
+            with open(copy_path) as f:
+                copy_info = yaml.safe_load(f) or {}
+        model_label = args.model_label or copy_info.get("model_label")
+        jj_region = args.jj_region or copy_info.get("jj_eta_region")
+        if not model_label or not jj_region:
+            raise SystemExit("--write-config needs --model-label and --jj-region (not found in the stage-2 binning copy)")
+        for name, given, seen in (("model label", args.model_label, copy_info.get("model_label")),
+                                  ("jj region", args.jj_region, copy_info.get("jj_eta_region"))):
+            if given and seen and given != seen:
+                raise SystemExit(f"--{name.replace(' ', '-')} {given} disagrees with the stage-2 run ({seen})")
+        update_config_entry(edges, model_label, jj_region,
+                            {**metadata, "report": str(cmp_path.relative_to(REPO_ROOT))})

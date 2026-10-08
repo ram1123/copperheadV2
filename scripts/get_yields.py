@@ -438,6 +438,11 @@ def main() -> None:
     default_outfile = f"yield_{dataset_tag}_{categorizer_tag}{suffix}_{tagYear}_VBFgT0p966_V2.csv"
     # default_outfile = f"yield_{dataset_tag}_{categorizer_tag}{suffix}_{tagYear}.csv"
     outfile = args.output_csv if args.output_csv else default_outfile
+    
+    directory_path = Path("validation/figs/yields/")
+    directory_path.mkdir(parents=True, exist_ok=True)
+    outfile = directory_path / outfile
+
     print(f"Will write yields to: {outfile}")
 
     # Start Dask client

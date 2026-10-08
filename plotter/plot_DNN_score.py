@@ -1,3 +1,24 @@
+"""
+Stage-2 (mode 2p) data/MC plot of the VBF DNN score from the stage-2 histogram pickles,
+for one region (h-sidebands, or h-peak with data blinded). -y takes one year, a
+comma-separated list, or a pseudo-year (Run3, run2, 2016) that sums its component years
+(nominal only) with their summed luminosity. Output (one folder per run label, stage-2
+postfix tag and year; <tag> is --mva_name without its leading "<label>_"):
+<save_path>/<label>/<tag>/<year>/DNN_score_<category>_<region>[_log].{pdf,txt}
+with <save_path> = validation/stage2_dnn_score by default.
+
+How to run (repo root, default pixi env):
+    ./run_in_pixi.sh default python plotter/plot_DNN_score.py --load <stage2_histograms/score_dir> \
+        -label <label> -cat vbf -y <year|Run3> --region <h-sidebands|h-peak> --mva_name <tag>
+run_analysis_pipeline.sh -m 2p makes these per year, plus Run3 when given several Run3 years.
+
+Example (Run3 sideband plot, jj_both_central):
+    L=Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit
+    T=${L}_Oct04_2026_Syst_JESfix_jj_both_central
+    ./run_in_pixi.sh default python plotter/plot_DNN_score.py \
+        --load /work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/$L/stage2_histograms/score_$T \
+        -label $L -cat vbf -y Run3 --region h-sidebands --mva_name $T
+"""
 import awkward as ak
 import dask_awkward as dak
 import dask
@@ -56,7 +77,6 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         # logger.info(dask.compute(sample_hist_l))
         # logger.info("=" * 50 )
 
-        sample_hist = sum(sample_hist_l)
         to_project_setting = {
             "region" : region_name,
             "channel" : category,
@@ -64,21 +84,14 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
             # "sample_group": group_name,
         }
         logger.debug(f"to_project_setting: {to_project_setting}")
-        logger.debug(f"sample_hist: {sample_hist}")
 
-        #  Print/check the type of sample_hist and its keys
-        logger.info(f"Type of sample_hist: {type(sample_hist)}")
-        logger.info(f"Keys in sample_hist: {sample_hist.axes.name}")
-
-        to_project_setting_val = to_project_setting.copy()
-        logger.debug(f"to_project_setting_val: {to_project_setting_val}")
-        to_project_setting_val["val_sumw2"] = "value"
-        logger.debug(f"to_project_setting_val: {to_project_setting_val}")
-        hist_val = sample_hist[to_project_setting_val].view()
-        # ------------------------------------------------------
-        to_project_setting_w2 = to_project_setting.copy()
-        to_project_setting_w2["val_sumw2"] = "sumw2"
-        hist_w2 = sample_hist[to_project_setting_w2].view()
+        # Slice "nominal" per histogram, then add the arrays: histograms from different years
+        # (e.g. -y Run3) have different, year-tagged variation axes, so they can't be added
+        # as whole histograms.
+        to_project_setting_val = {**to_project_setting, "val_sumw2": "value"}
+        to_project_setting_w2 = {**to_project_setting, "val_sumw2": "sumw2"}
+        hist_val = sum(np.asarray(h[to_project_setting_val].view()) for h in sample_hist_l)
+        hist_w2 = sum(np.asarray(h[to_project_setting_w2].view()) for h in sample_hist_l)
         logger.info(f"to_project_setting: {to_project_setting}")
         logger.info(f"hist_val {group_name}: {hist_val}")
         logger.info(f"hist_w2 {group_name}: {hist_w2}")
@@ -115,8 +128,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
     if not os.path.exists(full_save_path):
         os.makedirs(full_save_path)
     # tag = "Run2_nanoAODv12_AK8jets"
-    dnn_tag = plot_var
-    full_save_fname = f"{full_save_path}/{var}_{region_name}_{dnn_tag}.pdf"
+    full_save_fname = f"{full_save_path}/{var}_{category}_{region_name}.pdf"
     logger.info(f"full_save_fname: {full_save_fname}")
     # raise ValueError
 
@@ -261,9 +273,9 @@ if __name__ == "__main__":
         "-save",
         "--save_path",
         dest="save_path",
-        default="validation/from_stage2/",
+        default="validation/stage2_dnn_score",
         action="store",
-        help="string value production category we're working on",
+        help="base output dir; plots go to <save_path>/<label>/<tag>/<year>/",
     )
     parser.add_argument(
     "-y",
@@ -319,25 +331,31 @@ if __name__ == "__main__":
     logger.setLevel(args.log_level)
     
     year = args.year
-    if year == "run2":
-        year_param = "*"
-    elif year == "2016":
-        year_param = "2016*"
+    # -y takes one year, a comma-separated list, or a pseudo-year summing its component years
+    pseudo_years = {
+        "run2": ["2016preVFP", "2016postVFP", "2017", "2018"],
+        "run3": ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"],
+        "2016": ["2016preVFP", "2016postVFP"],
+        "2022": ["2022preEE", "2022postEE"],
+    }
+    if year.lower() in pseudo_years:
+        component_years = pseudo_years[year.lower()]
     else:
-        year_param = year
+        component_years = [y for y in year.split(",") if y]
+    # only the component years this stage-2 output actually has
+    component_years = [y for y in component_years if os.path.isdir(f"{args.load_path}/{y}")]
+    if not component_years:
+        raise ValueError(f"No stage-2 histogram dirs for year '{year}' under {args.load_path}")
+    logger.info(f"Year '{year}' -> component years {component_years}")
 
-    load_path = (
-        f"{args.load_path}"
-        f"/{year_param}"
-    )
-
-    logger.info(f"Looking for pickled histograms in: {load_path}")
-
-    pickled_filelist = glob.glob(f"{load_path}/*.pkl")
-    logger.info(f"load_path : {load_path}")
-    # logger.info(f"pickled_hists : {pickled_filelist}")
-
-    pickled_hist_dict = getPickledHist_byFname(pickled_filelist, load_path)
+    pickled_hist_dict = {}
+    for comp_year in component_years:
+        load_path = f"{args.load_path}/{comp_year}"
+        pickled_filelist = sorted(glob.glob(f"{load_path}/*.pkl"))
+        logger.info(f"load_path : {load_path} ({len(pickled_filelist)} files)")
+        # prefix the year so the same sample in two years stays two entries
+        for key, hist in getPickledHist_byFname(pickled_filelist, load_path).items():
+            pickled_hist_dict[f"{comp_year}{key}"] = hist
     logger.info(f"pickled_hist_dict.keys() : {pickled_hist_dict.keys()}")
     sample_group_dict = load_group_process_indicators(args.sample_config)
     logger.info(f"sample_group_dict (from {args.sample_config}) : {sample_group_dict}")
@@ -349,12 +367,12 @@ if __name__ == "__main__":
     with open(infile_lumi, "r") as f:
         lumi_config = yaml.safe_load(f)
     lumi_dict = lumi_config.get("integrated_lumis", {})
-    lumi = lumi_dict.get(year, 0.0)
-    # convert from pb to fb
-    lumi = round(lumi / 1000.0, 1)
-    if lumi == 0.0:
-        logger.error(f"lumi for year {year} is not defined!")
-        raise ValueError(f"lumi for year {year} is not defined!")
+    missing_lumi = [y for y in component_years if not lumi_dict.get(y)]
+    if missing_lumi:
+        logger.error(f"lumi for year(s) {missing_lumi} is not defined!")
+        raise ValueError(f"lumi for year(s) {missing_lumi} is not defined!")
+    # summed over the component years, converted from pb to fb
+    lumi = round(sum(lumi_dict[y] for y in component_years) / 1000.0, 1)
 
     lumi_val = lumi
 
@@ -362,14 +380,33 @@ if __name__ == "__main__":
     with open(plot_setting_fname, "r") as file:
         plot_settings = json.load(file)
     # logger.info(f"plot_settings: {plot_settings}")
-    binning = selection.binning
+    # the binning stage-2 actually filled these histograms with, saved next to them
+    year_binnings = {}
+    for comp_year in component_years:
+        copy_path = f"{args.load_path}/{comp_year}/dnn_binning.yaml"
+        if os.path.isfile(copy_path):
+            with open(copy_path) as f:
+                year_binnings[comp_year] = np.asarray(yaml.safe_load(f)["edges"], dtype=float)
+    if year_binnings:
+        first_year, binning = next(iter(year_binnings.items()))
+        for comp_year, edges in year_binnings.items():
+            if not np.array_equal(edges, binning):
+                raise ValueError(
+                    f"DNN binning differs between {first_year} and {comp_year} under {args.load_path}; "
+                    "they cannot be summed into one plot."
+                )
+    else:
+        logger.warning(f"No dnn_binning.yaml next to the histograms in {args.load_path}; using the default binning")
+        binning = selection.binning
     var = "DNN_score"
     region_name = args.region
     category = args.category
     output_tag = args.mva_name
     if args.do_vbf_filter_study and "_vbf_filter_study" not in output_tag:
         output_tag = f"{output_tag}_vbf_filter_study"
-    full_save_path = f"{args.save_path}/{args.year}/Reg_{region_name}/Cat_{category}/{output_tag}_NoVHveto/"
+    # <tag> = stage-2 postfix (+ jj region, _NoSyst, ...) without the repeated label
+    run_tag = output_tag[len(args.label) + 1:] if output_tag.startswith(f"{args.label}_") else output_tag
+    full_save_path = os.path.join(args.save_path, args.label, run_tag, args.year)
     plotStage2DNN_score(
         hist_dict_bySampleGroup,
         var,

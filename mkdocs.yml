@@ -37,6 +37,7 @@ nav:
     - Introduction:
           - Introduction and Setup: Introduction.md
           - Basic Information: Run3_all_basic_Information.md
+          - 2024 / 2025-26 Year Grouping and MC Split: Run3_2024_2025_2026_MC_split.md
 
     - Running:
           - Get Yields: GetYields.md

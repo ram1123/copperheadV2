@@ -511,13 +511,13 @@ years:
                 skip_sample: False
                 datasets:
                     - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-                cross_section_pb: 0.0135096
-                notes: NONE
-                cross_section_source: "LHCHWG twiki (ggF N3LO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 51.96*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV ggF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: NONE
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "HXSWG"
                 references:
                     - "POWHEG"
@@ -526,13 +526,13 @@ years:
                 skip_sample: True
                 datasets:
                     - None
-                cross_section_pb: 0.00105742
-                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
-                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: 2.6e-4
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "pdg"
                 references:
                     - "POWHEG (with dipole recoil)"
@@ -542,13 +542,13 @@ years:
                 datasets:
                     - /VBF-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
                     - /VBF-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
-                cross_section_pb: 0.00105742
-                notes: NONE
-                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: NONE
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: NONE
                 references:
                     - "aMC@NLO"
@@ -558,16 +558,32 @@ years:
                 datasets:
                     - /VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
                     - /VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
-                cross_section_pb: 0.00105742
-                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
-                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: 2.6e-4
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "pdg"
                 references:
                     - "POWHEG "
+
+            vbf_powheg_herwig:
+                skip_sample: False
+                datasets:
+                    - /VBFH-Hto2Mu_Par-M-125_TuneCH3_13p6TeV_powheg-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /VBFH-Hto2Mu_Par-M-125_TuneCH3_13p6TeV_powheg-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.00088319
+                notes: "Herwig7 (CH3) parton-shower variation of the nominal POWHEG VBF sample, used for the signal PS uncertainty; same sigma x BR as nominal = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG + Herwig7 (TuneCH3)"
 
 
     "2025":
@@ -1074,13 +1090,13 @@ years:
                 skip_sample: False
                 datasets:
                     - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-                cross_section_pb: 0.0135096
-                notes: NONE
-                cross_section_source: "LHCHWG twiki (ggF N3LO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 51.96*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV ggF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: NONE
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "HXSWG"
                 references:
                     - "POWHEG"
@@ -1089,13 +1105,13 @@ years:
                 skip_sample: True
                 datasets:
                     - None
-                cross_section_pb: 0.00105742
-                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
-                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: 2.6e-4
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "pdg"
                 references:
                     - "POWHEG (with dipole recoil)"
@@ -1105,13 +1121,13 @@ years:
                 datasets:
                     - /VBF-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
                     - /VBF-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
-                cross_section_pb: 0.00105742
-                notes: NONE
-                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: NONE
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: NONE
                 references:
                     - "aMC@NLO"
@@ -1121,16 +1137,32 @@ years:
                 datasets:
                     - /VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
                     - /VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
-                cross_section_pb: 0.00105742
-                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
-                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: 2.6e-4
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "pdg"
                 references:
                     - "POWHEG "
+
+            vbf_powheg_herwig:
+                skip_sample: False
+                datasets:
+                    - /VBFH-Hto2Mu_Par-M-125_TuneCH3_13p6TeV_powheg-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /VBFH-Hto2Mu_Par-M-125_TuneCH3_13p6TeV_powheg-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.00088319
+                notes: "Herwig7 (CH3) parton-shower variation of the nominal POWHEG VBF sample, used for the signal PS uncertainty; same sigma x BR as nominal = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG + Herwig7 (TuneCH3)"
 
     "2026":
         Data:
@@ -1449,13 +1481,13 @@ years:
                 datasets:
                     # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
                     - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-                cross_section_pb: 0.0135096
-                notes: NONE
-                cross_section_source: "LHCHWG twiki (ggF N3LO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 51.96*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV ggF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: NONE
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "HXSWG"
                 references:
                     - "POWHEG"
@@ -1466,13 +1498,13 @@ years:
                     # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
                     - /VBF-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
                     - /VBF-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
-                cross_section_pb: 0.00105742
-                notes: NONE
-                cross_section_source: "LHCHWG twiki (VBF NNLO QCD + NLO EW)" # https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#ggF_N3LO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: NONE
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: NONE
                 references:
                     - "aMC@NLO"
@@ -1483,13 +1515,30 @@ years:
                     # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
                     - /VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
                     - /VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
-                cross_section_pb: 0.00105742
-                notes: "total cross-section = cross-section TIMES branching ratio = 4.067*2.6*10^{-4}"
-                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/LHCHWG136TeVxsec_extrap#VBF_approx_NNLO_QCD_NLO_EW
+                cross_section_pb: 0.00088319
+                notes: "total cross-section = cross-section TIMES branching ratio = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38; was 4.067*2.6e-4 (BR typo) until 2026-10-08"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
                 kfactor:
                     value: 1.00
                     source: "HXSWG"
-                branching_ratio: 2.6e-4
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
                 br_source: "pdg"
                 references:
                     - "POWHEG "
+
+            vbf_powheg_herwig:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /VBFH-Hto2Mu_Par-M-125_TuneCH3_13p6TeV_powheg-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /VBFH-Hto2Mu_Par-M-125_TuneCH3_13p6TeV_powheg-herwig7/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.00088319
+                notes: "Herwig7 (CH3) parton-shower variation of the nominal POWHEG VBF sample, used for the signal PS uncertainty; same sigma x BR as nominal = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG + Herwig7 (TuneCH3)"

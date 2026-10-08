@@ -12,6 +12,18 @@ switches:
         "2024": false
         "2025": false
         "2026": false
+    do_lepton_ip_veto: # muon IP + loose-muon veto + iso/IP electron veto (configs/parameters/{muon,electron}.yaml)
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": false
+        "2025": false
+        "2026": false
     do_add_jet_ID_vars:
         '2016preVFP': false
         '2016postVFP': false

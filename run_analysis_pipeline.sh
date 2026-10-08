@@ -1,4 +1,14 @@
 #!/bin/bash
+# Main driver of the H->mumu pipeline: runs one mode (-m: prestage, stage1, compact, stage2,
+# stage3, DNN, Z-pT fit, calibration, ...) for each year in -y. See usage() below for all modes.
+# -y 2025_2026 is a stage-3-only merged year (2025 + 2026 histograms summed).
+#
+# How to run (repo root, inside a pixi env, e.g. via ./run_in_pixi.sh default; stage-1 needs a VOMS proxy):
+#   bash run_analysis_pipeline.sh -m <mode> -y <year[,year...]> -v <nano> -c <dataset_yaml> -l <label>
+#
+# Example:
+#   ./run_in_pixi.sh default bash run_analysis_pipeline.sh -m 1 -y 2022preEE -v 12 \
+#       -c configs/datasets/dataset_nanoAODv12_run3.yaml
 set -euo pipefail
 
 usage() {
@@ -10,7 +20,8 @@ Modes:
   cutflow_merge                Merges the per-chunk cutflow_*.npz shards from a stage-1
                                 -Z/--isCutflow run into one whole-dataset cutflow per sample
                                 (scripts/merge_cutflow_npz_file.py), writing
-                                <save_path>/stage1_output/<year>/f1_0/<sample>/cutflow_merged_<sample>.json.
+                                <save_path>/stage1_output/<year>/cutflow/cutflow_merged_<sample>.{json,npz}
+                                (outside f1_0). Also runs automatically at the start of 1a|compact.
                                 Run after the stage1 -Z run it merges, with the same -l/-y/-S.
   2|stage2
   2p|stage2_plot
@@ -43,16 +54,24 @@ Options:
         Default: unset (falls back to configs/switches/switches_official.yaml).
 
 Env vars:
+  WITH_VARIATIONS Set to 1 to run stage2/stage3 with systematic variations.
+                Default 0 (nominal only; stage-2 output dir gets a _NoSyst suffix).
   MODEL_YEARS   Comma-separated years used to build the DNN model directory name
                 (dnn/trained_models/<label>/<MODEL_YEARS>_<region>_<category>_<JJ_ETA_REGION>),
                 independent of the years passed via -y. Defaults to -y's years.
                 Use this to run stage2/stage3 for one year (-y) while loading a
                 model trained on a different (e.g. combined) set of years.
+  MODEL_LABEL   Label directory the DNN model is loaded from
+                (dnn/trained_models/<MODEL_LABEL>/...) for stage2 / compact -D,
+                independent of -l. Defaults to -l. Does not affect DNN training output.
   JJ_ETA_REGION Restricts the dijet |eta| phase space to one of
                 modules/selection.py's PAIR_JJ_ETA_REGIONS (jj_both_central,
                 jj_non_central, jj_one_fwd25_one_central, jj_one_he_one_central,
                 jj_one_fwd30_one_central, jj_both_fwd25, jj_both_he,
                 jj_both_fwd30, jj_one_he_one_fwd30) or "all" (default).
+  DY_MATCHED_JETS Stage-2 DY split (run_stage2_vbf.py --dy_matched_jets): gen_2j (default,
+                DY_matched01J/2J) or reco_012 (DY_recoMatched0J/1J/2J = number of the two
+                VBF reco jets with a gen-jet match). Stage-3 detects it; use a new -o postfix.
 
   pu_dnn_train mode (all optional, sensible defaults shown):
   PU_DNN_DY_GLOB       Compacted sample-name glob for the HS-jet proxy (default: dyTo2Mu_M-50_aMCatNLO)
@@ -85,6 +104,11 @@ for year in "${years[@]}"; do
     log "  Signal: ${sig_groups}"
     log "  Save path: ${save_path}"
 
+    # 2025_2026 only exists from stage-3 on: it sums the 2025 and 2026 stage-2 histograms
+    if [[ "${year}" == "2025_2026" && ! "${mode}" =~ ^(3|stage3)$ ]]; then
+        die "Year 2025_2026 is stage-3 only (-m 3); run mode '${mode}' on 2025 and 2026 separately."
+    fi
+
     case "${mode}" in
         0|prestage)
             run_mode_from_nul < <(build_prestage_cmd "${year}" "$(data_streams_for_year "${year}")")
@@ -93,6 +117,8 @@ for year in "${years[@]}"; do
             run_mode_from_nul < <(build_stage1_cmd "${year}")
             ;;
         1a|compact)
+            # Mandatory first: keep the cutflow outside f1_0, which may be deleted after compaction.
+            run_cutflow_merge "${year}"
             run_mode_from_nul < <(build_compact_cmd "${year}")
             ;;
         cutflow_merge)
@@ -147,6 +173,19 @@ for year in "${years[@]}"; do
             ;;
     esac
 done
+
+# Stage-2 DNN data/MC plot summed over all Run 3 years, after the per-year ones
+if [[ "${mode}" =~ ^(2p|stage2_plot|23|stage23|all)$ && ${#years[@]} -gt 1 ]]; then
+    all_run3=1
+    for year in "${years[@]}"; do
+        [[ "${year}" =~ ^(2022preEE|2022postEE|2023|2023BPix|2024|2025|2026)$ ]] || all_run3=0
+    done
+    if [[ "${all_run3}" == "1" ]]; then
+        log "Processing year: Run3 (stage-2 DNN plot over ${years[*]})"
+        run_mode_from_nul < <(build_stage2_plot_cmd "Run3" "h-sidebands")
+        run_mode_from_nul < <(build_stage2_plot_cmd "Run3" "h-peak")
+    fi
+fi
 
 log "Program ended on $(date)"
 exec 3>&-

@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 
 configfile: "workflow/config.yaml"
@@ -9,7 +10,66 @@ HMM_USER = os.environ["USER"]
 USE_EXISTING_STAGE1 = config.get("use_existing_stage1", False)
 CLEANUP_F1_0_AFTER_COMPACT = config.get("cleanup_f1_0_after_compact", False)
 
+# Run stage2/stage3 against existing compacted stage-1 + DNN outputs, skipping their upstream markers.
+STAGE23_STANDALONE = config.get("stage23_standalone", False)
+
+# Run plots against existing compacted stage-1 output, skipping only the stage1Compact marker (zpt/DNN/etc. unaffected).
+PLOTS_STANDALONE = config.get("plots_standalone", False)
+
+# Load the stage-2 VBF DNN from dnn/trained_models/<dnn_model_label>/ instead of this run_tag's label.
+DNN_MODEL_LABEL = config.get("dnn_model_label", "")
+
+# Years slug of the model dir to load (e.g. a combined-year model); "" = the stage2 job's own year.
+DNN_MODEL_YEARS = ",".join(config.get("dnn_model_years", []) or [])
+
+# Run stage2/stage2_plot/stage3 with systematic variations; all three must agree (it sets the _NoSyst path suffix).
+VARIATIONS_ENV = "WITH_VARIATIONS=1 " if config.get("with_variations", False) else ""
+
+# Output-dir postfix shared by stage2/stage2_plot/stage3; fixed at DAG start so a job crossing midnight
+# doesn't split them across dates. Same format as common_workflow.sh's default (date +%b%d_%Y).
+SAVE_POSTFIX = config.get("save_postfix") or datetime.now().strftime("%b%d_%Y")
+
+# Dijet-eta phase space for stage2/stage2_plot/stage3 (JJ_ETA_REGION); also picks the DNN model dir's region.
+# Non-"all" values are appended to their .done/.log names (the {jjtag} wildcard) so regions don't share markers.
+STAGE23_JJ_ETA_REGION = config.get("jj_eta_region") or "all"
+# Regions stage23_all / stats_all run (one stage2->stage3->stats chain each); default: just jj_eta_region.
+STAGE23_JJ_ETA_REGIONS = config.get("jj_eta_regions") or [STAGE23_JJ_ETA_REGION]
+# Mutually exclusive regions combined into one multi-channel card (stats modes 12-14); [] = no combination.
+JJ_COMBINE_REGIONS = config.get("jj_combine_regions") or []
+if "jj_non_central" in JJ_COMBINE_REGIONS and len(JJ_COMBINE_REGIONS) > 2:
+    raise ValueError("jj_combine_regions: jj_non_central overlaps the forward regions (double-counting)")
+JJ_COMBINED_NAME = "jj_combined" + "".join("_" + r.removeprefix("jj_") for r in JJ_COMBINE_REGIONS)  # = common_workflow.sh jj_combined_name()
+
+
+def jj_tag(region):
+    return "" if region == "all" else f"_{region}"
+
+
+def jj_env(jjtag):
+    return f"JJ_ETA_REGION={jjtag[1:]} " if jjtag else ""
+
+
+STAGE23_JJ_TAGS = [jj_tag(r) for r in STAGE23_JJ_ETA_REGIONS]
+
+# DY split for stage2 (run_stage2_vbf.py --dy_matched_jets); stage3 detects it from the histogram names.
+DY_MATCHED_JETS = config.get("dy_matched_jets") or ""
+DY_MATCHED_JETS_ENV = f"DY_MATCHED_JETS={DY_MATCHED_JETS} " if DY_MATCHED_JETS else ""
+# Interim signal BR fix for stage-1 made with BR(H->mumu) = 2.6e-4 (run_stage3_vbf.py --signal_xsec_rescale):
+# stage3 writes to <save_postfix>_SigXS, so validate/stats read from there too.
+SIGXS_ENV = "SIGNAL_XSEC_RESCALE=1 " if config.get("signal_xsec_rescale", False) else ""
+STAGE3_POSTFIX = SAVE_POSTFIX + ("_SigXS" if SIGXS_ENV else "")
+
+# Prestage JSON variant for stage-1 (PRESTAGE_TAG), e.g. "LumiSplit" -> processor_samples_<year>_NanoAODv<v>_LumiSplit.json.
+PRESTAGE_TAG = config.get("prestage_tag") or ""
+PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
+
 YEARS = config["years"]
+# Stage-3-only merged years (modules/classify_year.py MERGED_YEARS) whose components are
+# all in YEARS; their stage3 job sums those components' stage-2 histograms.
+MERGED_STAGE3_YEARS = {"2025_2026": ("2025", "2026")}
+STAGE3_EXTRA_YEARS = [
+    y for y, comps in MERGED_STAGE3_YEARS.items() if all(c in YEARS for c in comps)
+]
 RUN_TAG = config.get("run_tag", "default")
 PLOT_VBF_FILTER_STUDY = config.get("plot_vbf_filter_study", False)
 
@@ -93,7 +153,7 @@ def _jet_region_targets_for(cat):
 PLOT_NJETS = sorted({njets_plot for cat in PLOT_CATS for njets_plot, _ in _jet_region_targets_for(cat)})
 
 wildcard_constraints:
-    year="|".join([str(y) for y in YEARS]),
+    year="|".join([str(y) for y in YEARS + STAGE3_EXTRA_YEARS]),
     rep="|".join(REPEATS),
     cat="|".join(PLOT_CATS),
     njets="|".join(ZPT_JETS_CATS),
@@ -101,6 +161,8 @@ wildcard_constraints:
     zpt_mode   = "|".join(PLOT_ZPT_MODES),
     var_set    = "|".join(PLOT_VAR_SETS),
     jj_eta_region = "|".join(JJ_ETA_REGIONS + SINGLE_JET_ETA_REGIONS),
+    # optional group: Snakemake only matches the empty ("all") tag this way, not via a bare "" alternative
+    jjtag = "(?:" + "|".join(sorted({jj_tag(r) for r in STAGE23_JJ_ETA_REGIONS + JJ_COMBINE_REGIONS} - {""})) + ")?",
 
 RUN2_YEARS = ["2016preVFP", "2016postVFP", "2017", "2018"]
 RUN3_YEARS = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025"]
@@ -116,6 +178,7 @@ YEAR_META = {
     "2024": ("run3", "15"),
     "2025": ("run3", "15"),
     "2026": ("run3", "15"),
+    "2025_2026": ("run3", "15"),
 }
 
 DATASET_YAMLS = {
@@ -152,6 +215,15 @@ def label_for_year(year: str) -> str:
     # nano = "12"
     era_tag = "Run2" if era == "run2" else "Run3"
     return f"{era_tag}_nanoAODv{nano}_{RUN_TAG}"
+
+
+# One label for every year's stage2/stage2_plot/stage3/stats (e.g. a v15 label whose stage1_output
+# symlinks the v12 2022-2023 years); "" = label_for_year(year). The Run3 stats card needs one label.
+STAGE23_LABEL = config.get("stage23_label") or ""
+
+
+def stage23_label(year: str) -> str:
+    return STAGE23_LABEL or label_for_year(year)
 
 
 def plot_base_for_year(year: str) -> str:
@@ -249,8 +321,6 @@ rule all:
 
 rule plot_all:
     input:
-        # (2) stage1Compact for all years
-        # expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
         # (3) plotter (after stage1)
         PLOT_DONE,
 
@@ -294,6 +364,7 @@ rule stage1:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
             "_status/stage1_summary.log"
         ),
+        prestage_env=PRESTAGE_ENV,
     resources:
         gateway=1,
     shell:
@@ -302,7 +373,7 @@ rule stage1:
         set -x
         mkdir -p {params.logdir} {params.statedir}
         ts=$(date +"%Y-%m-%d_%H-%M-%S")
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.prestage_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
           -c {params.yaml} \
           -v {params.nano} \
           -l {params.label} \
@@ -400,6 +471,13 @@ rule stage1Compact:
         # since this is irreversible (f1_0 is otherwise never deleted).
         # -----------------------------
         if [[ "{params.cleanup_f1_0}" == "1" ]]; then
+            # never delete cutflow shards that were not saved outside f1_0 (run_cutflow_merge, -m compact)
+            if find "$BASE/f1_0" -name 'cutflow_*.npz' -print -quit 2>/dev/null | grep -q . \
+                    && ! ls "$BASE"/cutflow/cutflow_merged_*.json > /dev/null 2>&1; then
+                echo "ERROR: $BASE/f1_0 has cutflow shards but $BASE/cutflow/ has no merged cutflow; not deleting f1_0"
+                echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
+                exit 1
+            fi
             echo "cleanup_f1_0_after_compact enabled; removing $BASE/f1_0"
             rm -rf "$BASE/f1_0"
         fi
@@ -421,7 +499,9 @@ rule stage1Compact:
 # ---------------------------------------
 rule pu_dnn_train:
     input:
-        STATEDIR + f"/stage1_compact_{{year}}.done"
+        lambda wc: [] if USE_EXISTING_STAGE1 else [
+            STATEDIR + f"/stage1_compact_{wc.year}.done"
+        ]
     output:
         done=STATEDIR + "/pu_dnn_train_{year}.done",
     log:
@@ -468,7 +548,7 @@ def dnn_env_flags():
 
 rule dnn_pre:
     input:
-        expand(STATEDIR + "/stage1_compact_{year}.done", year=DNN_YEARS),
+        [] if USE_EXISTING_STAGE1 else expand(STATEDIR + "/stage1_compact_{year}.done", year=DNN_YEARS),
     output:
         done=STATEDIR + "/dnn_pre.done",
     log:
@@ -565,19 +645,27 @@ rule vbf_dnn:
 # ---------------------------------------
 rule stage2:
     input:
-        STATEDIR + "/stage1_compact_{year}.done",
-        STATEDIR + "/dnn_train.done",
+        lambda wc: [] if STAGE23_STANDALONE else [
+            STATEDIR + f"/stage1_compact_{wc.year}.done",
+            STATEDIR + "/dnn_train.done",
+        ],
     output:
-        done=STATEDIR + "/stage2_{year}.done",
+        done=STATEDIR + "/stage2_{year}{jjtag}.done",
     log:
-        LOGDIR + "/stage2_{year}.log",
+        LOGDIR + "/stage2_{year}{jjtag}.log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
         nano=lambda wc: nano_for_year(wc.year),
         yaml=lambda wc: yaml_for_year(wc.year),
-        label=lambda wc: label_for_year(wc.year),
+        label=lambda wc: stage23_label(wc.year),
         gw=lambda wc: gw_flags(),
+        model_env=(f"MODEL_LABEL={DNN_MODEL_LABEL} " if DNN_MODEL_LABEL else "")
+        + (f"MODEL_YEARS={DNN_MODEL_YEARS} " if DNN_MODEL_YEARS else ""),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=lambda wc: jj_env(wc.jjtag),
+        dy_env=DY_MATCHED_JETS_ENV,
     resources:
         gateway=1,
     shell:
@@ -585,12 +673,13 @@ rule stage2:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.dy_env}{params.var_env}{params.model_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
             -y "{wildcards.year}" \
             -m 2 \
+            -o {params.postfix} \
             {params.gw} \
             > {log} 2>&1
 
@@ -601,28 +690,32 @@ rule stage2:
 
 rule stage2_plot:
     input:
-        STATEDIR + "/stage2_{year}.done",
+        STATEDIR + "/stage2_{year}{jjtag}.done",
     output:
-        done=STATEDIR + "/stage2_plot_{year}.done",
+        done=STATEDIR + "/stage2_plot_{year}{jjtag}.done",
     log:
-        LOGDIR + "/stage2_plot_{year}.log",
+        LOGDIR + "/stage2_plot_{year}{jjtag}.log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
         nano=lambda wc: nano_for_year(wc.year),
         yaml=lambda wc: yaml_for_year(wc.year),
-        label=lambda wc: label_for_year(wc.year),
+        label=lambda wc: stage23_label(wc.year),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=lambda wc: jj_env(wc.jjtag),
     shell:
         r"""
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.var_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
             -y "{wildcards.year}" \
             -m 2p \
+            -o {params.postfix} \
             > {log} 2>&1
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
@@ -632,29 +725,121 @@ rule stage2_plot:
 
 rule stage3:
     input:
-        STATEDIR + "/stage2_{year}.done",
+        lambda wc: [
+            STATEDIR + f"/stage2_{y}{wc.jjtag}.done"
+            for y in MERGED_STAGE3_YEARS.get(wc.year, (wc.year,))
+        ],
     output:
-        done=STATEDIR + "/stage3_{year}.done",
+        done=STATEDIR + "/stage3_{year}{jjtag}.done",
     log:
-        LOGDIR + "/stage3_{year}.log",
+        LOGDIR + "/stage3_{year}{jjtag}.log",
     params:
         logdir=LOGDIR,
         statedir=STATEDIR,
         nano=lambda wc: nano_for_year(wc.year),
         yaml=lambda wc: yaml_for_year(wc.year),
-        label=lambda wc: label_for_year(wc.year),
+        label=lambda wc: stage23_label(wc.year),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=lambda wc: jj_env(wc.jjtag),
+        sigxs_env=SIGXS_ENV,
     shell:
         r"""
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.var_env}{params.sigxs_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
             -y "{wildcards.year}" \
             -m 3 \
+            -o {params.postfix} \
             > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# Stage-2 DNN data/MC plot summed over all Run 3 years in YEARS (the per-year stage2_plot jobs
+# each see one year only). Reruns -m 2p over those years; the per-year plots it redoes are cheap.
+RUN3_PLOT_YEARS = [
+    y for y in YEARS
+    if y in ("2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026")
+]
+
+
+rule stage2_plot_run3:
+    input:
+        expand(STATEDIR + "/stage2_{year}{{jjtag}}.done", year=RUN3_PLOT_YEARS),
+    output:
+        done=STATEDIR + "/stage2_plot_Run3{jjtag}.done",
+    log:
+        LOGDIR + "/stage2_plot_Run3{jjtag}.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        nano=lambda wc: nano_for_year(RUN3_PLOT_YEARS[0]),
+        yaml=lambda wc: yaml_for_year(RUN3_PLOT_YEARS[0]),
+        label=lambda wc: stage23_label(RUN3_PLOT_YEARS[0]),
+        years=",".join(RUN3_PLOT_YEARS),
+        var_env=VARIATIONS_ENV,
+        postfix=SAVE_POSTFIX,
+        jj_env=lambda wc: jj_env(wc.jjtag),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.jj_env}{params.var_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+            -c {params.yaml} \
+            -v {params.nano} \
+            -l {params.label} \
+            -y "{params.years}" \
+            -m 2p \
+            -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# Mandatory stage-3 template check before any fit: one plot per nuisance + CSV under
+# validation/stage3_templates/<label>/<postfix>[_<region>]/, and it fails the job on
+# non-finite or negative template bins (scripts/plot_template_systematics.py).
+rule stage3_validate:
+    input:
+        STATEDIR + "/stage3_{year}{jjtag}.done",
+    output:
+        done=STATEDIR + "/stage3_validate_{year}{jjtag}.done",
+    log:
+        LOGDIR + "/stage3_validate_{year}{jjtag}.log",
+    params:
+        logdir=LOGDIR,
+        statedir=STATEDIR,
+        tmpl_dir=lambda wc: (
+            f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/{stage23_label(wc.year)}/"
+            f"stage3_datacards_{STAGE3_POSTFIX}{wc.jjtag}/stage3_templates_{STAGE3_POSTFIX}{wc.jjtag}/"
+            f"score_{stage23_label(wc.year)}"
+        ),
+        val_dir=lambda wc: (
+            f"validation/stage3_templates/{stage23_label(wc.year)}/{STAGE3_POSTFIX}{wc.jjtag}"
+        ),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {{
+        PYTHONPATH="$PWD:${{PYTHONPATH:-}}" PYTHONUNBUFFERED=1 python scripts/plot_template_systematics.py \
+            -i {params.tmpl_dir} -o {params.val_dir}/template_systematics/{wildcards.year} \
+            --years {wildcards.year}
+        PYTHONPATH="$PWD:${{PYTHONPATH:-}}" PYTHONUNBUFFERED=1 python scripts/plot_template_negative_bins.py \
+            -i {params.tmpl_dir} -o {params.val_dir}/templates_nominal_{wildcards.year}.pdf \
+            -t "{wildcards.year}{wildcards.jjtag}" --years {wildcards.year}
+        }} > {log} 2>&1
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
@@ -663,8 +848,220 @@ rule stage3:
 
 rule stage23_all:
     input:
-        expand(STATEDIR + "/stage2_plot_{year}.done", year=YEARS),
-        expand(STATEDIR + "/stage3_{year}.done", year=YEARS),
+        expand(STATEDIR + "/stage2_plot_{year}{jjtag}.done", year=YEARS, jjtag=STAGE23_JJ_TAGS),
+        expand(STATEDIR + "/stage3_{year}{jjtag}.done", year=YEARS + STAGE3_EXTRA_YEARS, jjtag=STAGE23_JJ_TAGS),
+        expand(STATEDIR + "/stage3_validate_{year}{jjtag}.done", year=YEARS + STAGE3_EXTRA_YEARS, jjtag=STAGE23_JJ_TAGS),
+        # only meaningful with more than one Run 3 year
+        expand(STATEDIR + "/stage2_plot_Run3{jjtag}.done", jjtag=STAGE23_JJ_TAGS) if len(RUN3_PLOT_YEARS) > 1 else [],
+
+
+# ---------------------------------------
+# Stats on the validated stage-3 cards (same steps as scripts/run_jj_region_scan.sh), run in the
+# `combine` pixi env through ./run_in_pixi.sh while snakemake itself stays in `default`:
+#   stats             run_stats_pipeline_VBF.sh -m 11 (card+workspace+significance+expected limit), per region
+#   stats_jj_combined -m 12, jj_combine_regions combined into one multi-channel card
+#   impacts/lhscan    -m 7/8 per region, -m 13/14 on the combination (blinded Asimov), scan_years only
+# One job per region covers all stats_years: the summary CSVs are rebuilt from every year's logs,
+# so per-year jobs in one card dir would race. Not in `rule all`; request stats_all, e.g.
+#   snakemake -s workflow/Snakefile stats_all -j 3 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 \
+#       --config run_tag=<tag> stage23_standalone=True with_variations=True save_postfix=Oct05_2026_Syst_RegBins \
+#       stage23_label=Run3_nanoAODv15_<tag> \
+#       'jj_eta_regions=[all,jj_both_central,jj_one_fwd25_one_central,jj_both_fwd25]' \
+#       'jj_combine_regions=[jj_both_central,jj_one_fwd25_one_central,jj_both_fwd25]'
+# ---------------------------------------
+STAGE3_YEARS = YEARS + STAGE3_EXTRA_YEARS
+# Per-year cards each pseudo-year combines (= common_workflow.sh ensure_vbf_card).
+STATS_PSEUDO_YEARS = {"Run3": ("2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025_2026")}
+STATS_YEARS = config.get("stats_years") or STAGE3_YEARS + [
+    p for p, comps in STATS_PSEUDO_YEARS.items() if all(c in STAGE3_YEARS for c in comps)
+]
+# Years/pseudo-years for impacts + likelihood scans (expensive); default Run3 when it is in stats_years.
+SCAN_YEARS = config.get("scan_years") or [y for y in ("Run3",) if y in STATS_YEARS]
+RUN_IMPACTS = bool(config.get("run_impacts", True)) and bool(SCAN_YEARS)
+RUN_LHSCAN = bool(config.get("run_lhscan", True)) and bool(SCAN_YEARS)
+JJ_COMBINE_ENV = f"JJ_COMBINE_REGIONS={','.join(JJ_COMBINE_REGIONS)} "
+
+
+def stats_label():
+    """The one label every stats year's cards live under (the Run3 card combines them)."""
+    labels = {stage23_label(y) for y in STAGE3_YEARS}
+    if len(labels) != 1:
+        raise ValueError(
+            f"stats rules need one label for all stage-3 years, got {sorted(labels)}; "
+            "set stage23_label in workflow/config.yaml"
+        )
+    return labels.pop()
+
+
+STATS_PARAMS = dict(
+    logdir=LOGDIR,
+    statedir=STATEDIR,
+    postfix=STAGE3_POSTFIX,
+    stats_years=",".join(STATS_YEARS),
+    scan_years=",".join(SCAN_YEARS),
+)
+
+
+rule stats:
+    input:
+        lambda wc: expand(STATEDIR + "/stage3_validate_{year}" + wc.jjtag + ".done", year=STAGE3_YEARS),
+    output:
+        done=STATEDIR + "/stats{jjtag}.done",
+    log:
+        LOGDIR + "/stats{jjtag}.log",
+    params:
+        **STATS_PARAMS,
+        label=lambda wc: stats_label(),
+        jj_env=lambda wc: jj_env(wc.jjtag),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.jj_env}./run_in_pixi.sh combine bash run_stats_pipeline_VBF.sh \
+            -m 11 -y {params.stats_years} -l {params.label} -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule stats_jj_combined:
+    input:
+        expand(STATEDIR + "/stats{jjtag}.done", jjtag=[jj_tag(r) for r in JJ_COMBINE_REGIONS]),
+    output:
+        done=STATEDIR + f"/stats_{JJ_COMBINED_NAME}.done",
+    log:
+        LOGDIR + f"/stats_{JJ_COMBINED_NAME}.log",
+    params:
+        **STATS_PARAMS,
+        label=lambda wc: stats_label(),
+        combine_env=JJ_COMBINE_ENV,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.combine_env}./run_in_pixi.sh combine bash run_stats_pipeline_VBF.sh \
+            -m 12 -y {params.stats_years} -l {params.label} -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# Blinded impacts (Asimov r=1 and r=0) and 1D likelihood scan (Asimov r=1) per region.
+rule impacts:
+    input:
+        STATEDIR + "/stats{jjtag}.done",
+    output:
+        done=STATEDIR + "/impacts{jjtag}.done",
+    log:
+        LOGDIR + "/impacts{jjtag}.log",
+    params:
+        **STATS_PARAMS,
+        label=lambda wc: stats_label(),
+        jj_env=lambda wc: jj_env(wc.jjtag),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.jj_env}./run_in_pixi.sh combine bash run_stats_pipeline_VBF.sh \
+            -m 7 -y {params.scan_years} -l {params.label} -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule lhscan:
+    input:
+        STATEDIR + "/stats{jjtag}.done",
+    output:
+        done=STATEDIR + "/lhscan{jjtag}.done",
+    log:
+        LOGDIR + "/lhscan{jjtag}.log",
+    params:
+        **STATS_PARAMS,
+        label=lambda wc: stats_label(),
+        jj_env=lambda wc: jj_env(wc.jjtag),
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.jj_env}./run_in_pixi.sh combine bash run_stats_pipeline_VBF.sh \
+            -m 8 -y {params.scan_years} -l {params.label} -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule impacts_jj_combined:
+    input:
+        STATEDIR + f"/stats_{JJ_COMBINED_NAME}.done",
+    output:
+        done=STATEDIR + f"/impacts_{JJ_COMBINED_NAME}.done",
+    log:
+        LOGDIR + f"/impacts_{JJ_COMBINED_NAME}.log",
+    params:
+        **STATS_PARAMS,
+        label=lambda wc: stats_label(),
+        combine_env=JJ_COMBINE_ENV,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.combine_env}./run_in_pixi.sh combine bash run_stats_pipeline_VBF.sh \
+            -m 13 -y {params.scan_years} -l {params.label} -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule lhscan_jj_combined:
+    input:
+        STATEDIR + f"/stats_{JJ_COMBINED_NAME}.done",
+    output:
+        done=STATEDIR + f"/lhscan_{JJ_COMBINED_NAME}.done",
+    log:
+        LOGDIR + f"/lhscan_{JJ_COMBINED_NAME}.log",
+    params:
+        **STATS_PARAMS,
+        label=lambda wc: stats_label(),
+        combine_env=JJ_COMBINE_ENV,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        {params.combine_env}./run_in_pixi.sh combine bash run_stats_pipeline_VBF.sh \
+            -m 14 -y {params.scan_years} -l {params.label} -o {params.postfix} \
+            > {log} 2>&1
+
+        echo "{rule} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule stats_all:
+    input:
+        rules.stage23_all.input,
+        expand(STATEDIR + "/stats{jjtag}.done", jjtag=STAGE23_JJ_TAGS),
+        expand(STATEDIR + "/impacts{jjtag}.done", jjtag=STAGE23_JJ_TAGS) if RUN_IMPACTS else [],
+        expand(STATEDIR + "/lhscan{jjtag}.done", jjtag=STAGE23_JJ_TAGS) if RUN_LHSCAN else [],
+        [STATEDIR + f"/stats_{JJ_COMBINED_NAME}.done"] if JJ_COMBINE_REGIONS else [],
+        [STATEDIR + f"/impacts_{JJ_COMBINED_NAME}.done"] if JJ_COMBINE_REGIONS and RUN_IMPACTS else [],
+        [STATEDIR + f"/lhscan_{JJ_COMBINED_NAME}.done"] if JJ_COMBINE_REGIONS and RUN_LHSCAN else [],
 
 
 # ---------------------------------------
@@ -672,7 +1069,7 @@ rule stage23_all:
 # ---------------------------------------
 rule plots:
     input:
-        lambda wc: [] if USE_EXISTING_STAGE1 else [
+        lambda wc: [] if (USE_EXISTING_STAGE1 or PLOTS_STANDALONE) else [
             STATEDIR + f"/stage1_compact_{wc.year}.done"
         ]
     output:
@@ -1002,8 +1399,8 @@ rule MassCalibrationDataClosure:
 
 rule summary:
     input:
-        expand(STATEDIR + "/stage1_{year}_rep{rep}.done", year=YEARS, rep=REPEATS),
-        expand(STATEDIR + "/stage1_compact_{year}.done", year=YEARS),
+        INITIAL_STAGE1_DONE,
+        INITIAL_STAGE1_COMPACT_DONE,
         expand(STATEDIR + "/zpt_step0_{year}.done", year=YEARS),
         #expand(STATEDIR + "/mass_calibration_Data_{year}.done", year=YEARS),
     output:

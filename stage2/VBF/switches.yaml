@@ -2,10 +2,12 @@
 # src/lib/get_parameters.py, which only globs configs/parameters/*.yaml).
 # Same shape as configs/parameters/switches.yaml: one per-era block per switch.
 switches:
-    # true: every DY sample histogram is split on gjj_mass > 0 into
-    # <sample>_matched2J_hist.pkl and <sample>_matched01J_hist.pkl.
+    # true: every DY sample histogram is split into matched-jet components. How is set by
+    # run_stage2_vbf.py --dy_matched_jets (env DY_MATCHED_JETS): gen_2j (default) splits on
+    # gjj_mass > 0 into <sample>_matched2J/_matched01J_hist.pkl; reco_012 into
+    # <sample>_recoMatched0J/1J/2J_hist.pkl (gen-matched VBF reco jets).
     # Stage3 does not read this file: run_stage3_vbf.py detects the split from the
-    # histograms this switch produced (has_matched_jet_histograms).
+    # histograms this switch produced (detect_dy_split_scheme).
     divide_dy_into_matched_jets:
         '2016preVFP': true
         '2016postVFP': true

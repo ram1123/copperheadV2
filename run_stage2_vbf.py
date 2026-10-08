@@ -1,10 +1,27 @@
+"""
+Stage-2 for the VBF channel: VBF DNN scores of the compacted stage-1 ntuples, filled into
+per-sample histograms (stage2_histograms/score_<label>_<postfix>[_<jj region>][_NoSyst]/<year>/).
+DY can be split into matched-jet components (stage2/VBF/switches.yaml + --dy_matched_jets).
+
+How to run (repo root, `default` pixi env). Usually driven by `run_analysis_pipeline.sh -m 2`
+(env DY_MATCHED_JETS -> --dy_matched_jets) or the Snakemake stage2 rule (config dy_matched_jets):
+    ./run_in_pixi.sh default python run_stage2_vbf.py -y <year> -input <save_path> -l <label> \
+        --model_tag <tag> --model_path <dnn model dir> -bkg DY ... --save_postfix <postfix> \
+        [--no_variations] [--jj_eta_region <region>] [--dy_matched_jets gen_2j|reco_012]
+
+Example (2023 DY only, nominal, DY split by number of gen-matched VBF jets):
+    ./run_in_pixi.sh default python run_stage2_vbf.py -y 2023 \
+        -input /work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/<label> -l <label> \
+        --model_tag trained_best_optuna_v1_multifold_050Trials \
+        --model_path ./dnn/trained_models/<model label>/<years>_h-peak_vbf_all \
+        -bkg DY --save_postfix DY012test --no_variations --dy_matched_jets reco_012
+"""
 import argparse
 import glob
 import itertools
 import logging
 import os
 import pickle
-import shutil
 import time
 from pathlib import Path
 
@@ -12,6 +29,7 @@ import awkward as ak
 import hist
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import torch
 import yaml
 from cli.common_argparser import build_common_parser
@@ -30,7 +48,15 @@ from modules.systematics import (  # noqa: F401
 
 
 DATASET_SEPARATOR = "::"
-DY_MATCH_CATEGORIES = ("matched01J", "matched2J")
+# DY split definitions (--dy_matched_jets); distinct file names so the two never mix.
+#   gen_2j:   >=2 lepton-isolated gen jets (gjj_mass > 0) or not
+#   reco_012: how many of the two selected reco jets have a matched gen jet
+DY_MATCH_CATEGORIES_BY_SCHEME = {
+    "gen_2j": ("matched01J", "matched2J"),
+    "reco_012": ("recoMatched0J", "recoMatched1J", "recoMatched2J"),
+}
+# nominal-jet flags, used for every variation so an event stays in one DY component
+RECO_MATCH_FIELDS = ("jet1_hasMatchedGenJet_nominal", "jet2_hasMatchedGenJet_nominal")
 
 # --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
 
@@ -99,23 +125,62 @@ def histogram_output_name(sample_name, histogram_category):
     return f"{sample_name}_{histogram_category}_hist.pkl"
 
 
-def histogram_output_names(sample_name, divide_dy_into_matched_jets=False):
+def histogram_output_names(sample_name, divide_dy_into_matched_jets=False, dy_matched_jets="gen_2j"):
     """Return the output basenames expected for one Stage-2 sample."""
     if divide_dy_into_matched_jets and is_dy_sample(sample_name):
         return [
             histogram_output_name(sample_name, category)
-            for category in DY_MATCH_CATEGORIES
+            for category in DY_MATCH_CATEGORIES_BY_SCHEME[dy_matched_jets]
         ]
     return [histogram_output_name(sample_name, "hist")]
 
 
-def dy_matched_jet_filters(gjj_mass):
-    """Split events into the requested complementary gjj_mass categories."""
-    matched2J_filter = ak.to_numpy(ak.materialize(gjj_mass > 0))
-    return {
-        "matched01J": ~matched2J_filter,
-        "matched2J": matched2J_filter,
-    }
+def dy_matched_jet_filters(events, dy_matched_jets="gen_2j"):
+    """Split events into the complementary DY categories of one scheme."""
+    if dy_matched_jets == "gen_2j":
+        matched2J_filter = ak.to_numpy(ak.materialize(events.gjj_mass > 0))
+        return {
+            "matched01J": ~matched2J_filter,
+            "matched2J": matched2J_filter,
+        }
+    missing = [f for f in RECO_MATCH_FIELDS if f not in events.fields]
+    if missing:
+        raise KeyError(f"reco_012 DY split needs stage-1 columns {missing} (MC, nominal)")
+    n_matched = sum(
+        ak.to_numpy(ak.fill_none(ak.materialize(events[field]), False)).astype(int)
+        for field in RECO_MATCH_FIELDS
+    )
+    return {f"recoMatched{n}J": n_matched == n for n in (0, 1, 2)}
+
+
+def attach_reco_match_flags(events):
+    """coffea's lazy parquet reader can't materialize nullable-bool columns (arrow gives dtype
+    object), so read the two match flags of this chunk with pyarrow; null (no jet) -> False."""
+    md = events.metadata
+    table = pq.read_table(md["filename"], columns=list(RECO_MATCH_FIELDS)).slice(
+        md["entrystart"], md["entrystop"] - md["entrystart"]
+    )
+    for field in RECO_MATCH_FIELDS:
+        flags = table.column(field).fill_null(False).to_numpy().astype(bool)
+        events = ak.with_field(events, flags, field)
+    return events
+
+
+def check_dy_scheme_not_mixed(hist_dir, dy_matched_jets):
+    """Refuse to add one DY split's histograms next to the other's: the stage-2 plotter
+    globs every pkl in the directory and would count DY twice."""
+    for scheme, categories in DY_MATCH_CATEGORIES_BY_SCHEME.items():
+        if scheme == dy_matched_jets:
+            continue
+        clashes = [
+            f.name for c in categories for f in Path(hist_dir).glob(f"*_{c}_hist.pkl")
+        ]
+        if clashes:
+            raise FileExistsError(
+                f"{hist_dir} already holds DY histograms split with '{scheme}' "
+                f"({clashes[:3]}...); use a new --save_postfix for --dy_matched_jets "
+                f"{dy_matched_jets}."
+            )
 
 
 def get_variation(wgt_variation, sys_variation):
@@ -368,10 +433,13 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         no_variations=False,
         do_vbf_filter_study=False,
         divide_dy_by_year=None,
+        dy_matched_jets="gen_2j",
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
         use_transformer_vbf_channel=False,
         jj_eta_region="all",
+        dump_scores=False,
+        binning=None,
     ):
         NO_SCALE_FEATURES = {
             "year",
@@ -387,7 +455,12 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         # Per-era `divide_dy_into_matched_jets`; one stage2 run can span several eras,
         # so the switch is resolved per dataset in process(), not here.
         self.divide_dy_by_year = divide_dy_by_year
+        self.dy_matched_jets = dy_matched_jets
         self.jj_eta_region = jj_eta_region
+        # also return the nominal per-event (score, weight), for DNN bin scans
+        self.dump_scores = dump_scores
+        # resolved on the driver (selection.resolve_dnn_binning); workers only see the default
+        self.binning = np.asarray(selection.binning if binning is None else binning, dtype=float)
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
         self.use_transformer_vbf_channel = use_transformer_vbf_channel
@@ -581,7 +654,12 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
         syst_variations = ["nominal"]
         if not self.no_variations:
-            syst_variations += stage2_shape_variations(fields)
+            # JES "Total" is the quadrature sum of the split sources also histogrammed here;
+            # keeping both would double-count JES in the datacard.
+            syst_variations += [
+                syst for syst in stage2_shape_variations(fields)
+                if syst not in ("Total_up", "Total_down")
+            ]
             # # Restrict the discovered shape systematics to the reduced JEC and
             # # Rochester-correction set requested for Stage-2 evaluation.
             # syst_variations += [
@@ -610,7 +688,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 .StrCat(["vbf"], name="channel")
                 .StrCat(["value", "sumw2"], name="val_sumw2")
                 .StrCat(variations, name="variation", growth=True)
-                .Var(selection.binning, name=self.score_name)
+                .Var(self.binning, name=self.score_name)
                 .Double()
             )
 
@@ -618,13 +696,17 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             self.divide_dy_by_year, year
         )
         histogram_categories = (
-            DY_MATCH_CATEGORIES if divide_dy_sample else ("hist",)
+            DY_MATCH_CATEGORIES_BY_SCHEME[self.dy_matched_jets]
+            if divide_dy_sample else ("hist",)
         )
         score_hists = {
             category: make_score_hist() for category in histogram_categories
         }
+        if divide_dy_sample and self.dy_matched_jets == "reco_012":
+            events = attach_reco_match_flags(events)
 
         selected_events = 0
+        score_dump = []
         # Reuse DNN scores across weight variations, which share the same selection
         # and input features, to avoid redundant inference.
         score_cache = {}
@@ -639,6 +721,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             category= "vbf"
             sel_cols = columns_for_selection(category, variation, events.fields)
             needed_cols = set(sel_cols + [weight_variation])
+            if divide_dy_sample and self.dy_matched_jets == "reco_012":
+                needed_cols.update(RECO_MATCH_FIELDS)
             if self.use_transformer_vbf_channel:
                 needed_cols.add(TRANSFORMER_SCORE_FIELD)
 
@@ -701,12 +785,17 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 do_vbf_filter_study=self.do_vbf_filter_study,
                 variation=variation,
                 jj_eta_region=self.jj_eta_region,
-                # year=year,
+                year=year,
             )
             if self.use_transformer_vbf_channel:
                 region_events = region_events[
                     region_events[TRANSFORMER_SCORE_FIELD] >= transformer_threshold()
                 ]
+            # before fillEventNans: its fill_none(0) turns the ?bool match flags into a bool|int union
+            reco_dy_filters = (
+                dy_matched_jet_filters(region_events, "reco_012")
+                if divide_dy_sample and self.dy_matched_jets == "reco_012" else None
+            )
             region_events = fillEventNans(region_events, category=category)
             if region == "h-sidebands":
                 # Pin nominal and shifted dimuon masses to 125 GeV so sideband DNN
@@ -747,8 +836,10 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 "variation": variation,
                 self.score_name: scores,
             }
-            if divide_dy_sample:
-                category_filters = dy_matched_jet_filters(region_events.gjj_mass)
+            if reco_dy_filters is not None:
+                category_filters = reco_dy_filters
+            elif divide_dy_sample:
+                category_filters = dy_matched_jet_filters(region_events, self.dy_matched_jets)
             else:
                 category_filters = {"hist": np.ones(len(scores), dtype=bool)}
 
@@ -768,12 +859,21 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                     val_sumw2="sumw2",
                     weight=category_weights * category_weights,
                 )
+                if self.dump_scores and variation == "nominal":
+                    score_dump.append({
+                        "region": region,
+                        "category": histogram_category,
+                        "score": np.asarray(scores[category_filter], dtype=np.float64),
+                        "weight": np.asarray(category_weights, dtype=np.float64),
+                    })
 
         return {
             dataset_key: {
                 "events": processor.value_accumulator(int, selected_events),
                 "chunks": processor.value_accumulator(int, 1),
                 "score_hists": score_hists,
+                # a list, so coffea's accumulate concatenates the chunks
+                "score_dump": score_dump,
             }
         }
 
@@ -781,58 +881,27 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         return accumulator
 
 
-def save_dnn_binning_config(dest_dir):
+def save_dnn_binning_config(dest_dir, edges, entry_key, entry, model_label, jj_eta_region):
     """
-    Drop a copy of the DNN binning config next to the histograms it produced.
-
-    The score axis is built from `selection.binning`, which is evaluated once
-    when modules.selection is imported. A config edited while stage2 is running
-    therefore no longer describes the histograms being written, so the copy is
-    checked against the edges actually used: if they have drifted, the in-use
-    edges are written instead and a warning is logged, so the file next to the
-    pickles is never a lie about how they were filled.
-
-    Parameters:
-    - dest_dir: directory holding this year's histograms
-    Returns:
-    - Path of the written file, or None if nothing could be written
+    Write the DNN binning these histograms are filled with next to them: the edges,
+    the config entry they came from (default or models/<model>/<region>) and its
+    metadata, so the plots and later scans read exactly what stage-2 used.
     """
-    dest_dir = Path(dest_dir)
-    src = Path(selection.DNN_BINNING_YAML)
-    dest = dest_dir / src.name
-
-    binning_in_use = np.asarray(selection.binning, dtype=float)
-    on_disk = None
-    if src.is_file():
-        try:
-            on_disk = np.asarray(selection.load_dnn_binning(src), dtype=float)
-        except Exception as exc:  # unreadable/invalid config -- fall back below
-            logger.warning(f"Could not re-read {src}: {exc}")
-
-    if on_disk is not None and np.array_equal(on_disk, binning_in_use):
-        shutil.copyfile(src, dest)
-    else:
-        logger.warning(
-            f"{src} no longer matches the binning these histograms were filled "
-            f"with (it was edited after import, or is unreadable). Writing the "
-            f"in-use edges to {dest} instead."
-        )
-        payload = {
-            "n_bins": len(binning_in_use) - 1,
-            "edges": [float(e) for e in binning_in_use],
-            "metadata": {
-                "generated_by": "run_stage2_vbf.py (edges in use at fill time)",
-                "source_config": str(src),
-                "note": (
-                    "the source config did not match these edges when the "
-                    "histograms were written"
-                ),
-            },
-        }
-        with open(dest, "w") as f:
-            yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
-
-    logger.info(f"Saved DNN binning ({len(binning_in_use) - 1} bins) to {dest}")
+    dest = Path(dest_dir) / Path(selection.DNN_BINNING_YAML).name
+    payload = {
+        "key": entry_key,
+        "model_label": model_label,
+        "jj_eta_region": jj_eta_region,
+        "n_bins": len(edges) - 1,
+        "edges": [float(e) for e in edges],
+        "metadata": {
+            "source_config": str(selection.DNN_BINNING_YAML),
+            **((entry or {}).get("metadata") or {}),
+        },
+    }
+    with open(dest, "w") as f:
+        yaml.safe_dump(payload, f, sort_keys=False, default_flow_style=False)
+    logger.info(f"Saved DNN binning ({len(edges) - 1} bins, {entry_key}) to {dest}")
     return dest
 
 
@@ -954,6 +1023,27 @@ if __name__ == "__main__":
         help="Number of folds for cross-validation (default: 4)",
     )
     parser.add_argument(
+        "--allow_default_dnn_binning",
+        dest="allow_default_dnn_binning",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Use the 'default' DNN binning when configs/MVA/VBF/dnn_binning.yaml has no "
+            "entry for this model label and jj region (otherwise stage-2 stops)."
+        ),
+    )
+    parser.add_argument(
+        "--dump_scores",
+        dest="dump_scores",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help=(
+            "Also save the nominal per-event DNN score and weight (per region and DY "
+            "category) to <hist dir>/<year>/scores/<sample>_scores.parquet, the input "
+            "of MVA_training/VBF_run3/scan_bins_for_dnn.py --stage2-scores."
+        ),
+    )
+    parser.add_argument(
         "--allow_nominal_feature_fallback",
         dest="allow_nominal_feature_fallback",
         default=True,
@@ -1006,6 +1096,19 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "--dy_matched_jets",
+        dest="dy_matched_jets",
+        default="gen_2j",
+        choices=sorted(DY_MATCH_CATEGORIES_BY_SCHEME),
+        help=(
+            "How DY is split when divide_dy_into_matched_jets (stage2/VBF/switches.yaml) is on. "
+            "'gen_2j' (default): <sample>_matched01J/matched2J on gjj_mass > 0 (>=2 gen jets). "
+            "'reco_012': <sample>_recoMatched0J/1J/2J = number of the two selected reco jets "
+            "with a matched gen jet (nominal jets). Stage-3 detects the scheme from the file "
+            "names; the two can't share one histogram directory (use a new --save_postfix)."
+        ),
+    )
+    parser.add_argument(
         "--jj_eta_region",
         dest="jj_eta_region",
         default="all",
@@ -1033,6 +1136,7 @@ if __name__ == "__main__":
     # that a produced set of histograms always matches a recorded configuration.
     stage2_switches = load_stage2_switches()
     logger.info(f"stage2 switches (stage2/VBF/switches.yaml): {stage2_switches}")
+    logger.info(f"DY matched-jet split scheme (--dy_matched_jets): {args.dy_matched_jets}")
 
     start_time = time.time()
     client = get_dask_client(
@@ -1059,6 +1163,16 @@ if __name__ == "__main__":
     if args.no_variations:
         histDirName = f"{histDirName}_NoSyst"
 
+    # model label = dnn/trained_models/<MODEL_LABEL>/<years>_<region>_<category>_<jj region>
+    dnn_model_label = Path(args.model_path).parent.name
+    dnn_edges, dnn_binning_key, dnn_binning_entry = selection.resolve_dnn_binning(
+        dnn_model_label, args.jj_eta_region, allow_default=args.allow_default_dnn_binning,
+    )
+    logger.info(
+        f"DNN binning: {dnn_binning_key} ({len(dnn_edges) - 1} bins) for model "
+        f"'{dnn_model_label}', jj region '{args.jj_eta_region}'"
+    )
+
     sample_dict_by_year = {}
     for year in years:
         stage1_path = base_path / "stage1_output" / year / "f1_0"
@@ -1080,7 +1194,10 @@ if __name__ == "__main__":
         os.makedirs(hist_save_path, exist_ok=True)
         logger.info(f"{year} histograms will be saved to: {hist_save_path}")
         # keep the binning that produced these histograms alongside them
-        save_dnn_binning_config(hist_save_path)
+        save_dnn_binning_config(
+            hist_save_path, dnn_edges, dnn_binning_key, dnn_binning_entry,
+            dnn_model_label, args.jj_eta_region,
+        )
 
         full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
 
@@ -1127,12 +1244,14 @@ if __name__ == "__main__":
     skipped_existing = []
     for year, full_sample_dict in sample_dict_by_year.items():
         hist_save_path = base_path / "stage2_histograms" / histDirName / year
+        check_dy_scheme_not_mixed(hist_save_path, args.dy_matched_jets)
         for sample_type, sample_l in full_sample_dict.items():
             output_pkl_paths = [
                 hist_save_path / output_name
                 for output_name in histogram_output_names(
                     sample_type,
                     divide_dy_for_year(stage2_switches["divide_dy_into_matched_jets"], year),
+                    args.dy_matched_jets,
                 )
             ]
             existing_output_paths = [
@@ -1183,10 +1302,13 @@ if __name__ == "__main__":
                 no_variations=args.no_variations,
                 do_vbf_filter_study=args.do_vbf_filter_study,
                 divide_dy_by_year=stage2_switches["divide_dy_into_matched_jets"],
+                dy_matched_jets=args.dy_matched_jets,
                 allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
                 use_transformer_vbf_channel=args.use_transformer_vbf_channel,
                 jj_eta_region=args.jj_eta_region,
+                dump_scores=args.dump_scores,
+                binning=dnn_edges,
             ),
         )
         t5 = time.perf_counter()
@@ -1208,6 +1330,18 @@ if __name__ == "__main__":
                     f"chunks={output['chunks'].value}; "
                     f"selected events={output['events'].value}"
                 )
+            if args.dump_scores:
+                dump = output["score_dump"]
+                dump_df = pd.DataFrame({
+                    "region": np.concatenate([np.full(len(d["score"]), d["region"]) for d in dump]) if dump else [],
+                    "category": np.concatenate([np.full(len(d["score"]), d["category"]) for d in dump]) if dump else [],
+                    "score": np.concatenate([d["score"] for d in dump]) if dump else [],
+                    "weight": np.concatenate([d["weight"] for d in dump]) if dump else [],
+                })
+                dump_path = hist_save_path / "scores" / f"{sample_type}_scores.parquet"
+                dump_path.parent.mkdir(parents=True, exist_ok=True)
+                dump_df.to_parquet(dump_path, index=False)
+                logger.info(f"{year} {sample_type} per-event scores ({len(dump_df)}) on {dump_path}")
     else:
         logger.warning("No samples left to process after existing-output checks.")
 

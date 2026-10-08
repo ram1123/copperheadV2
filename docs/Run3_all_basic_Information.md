@@ -49,6 +49,12 @@ title: Bacic Information
 | 2023       | 17794.0                      | https://docs.google.com/presentation/d/1TjPem5jX0fzqvTGl271_nQFoVBabsrdrO0i8Qo1uD5E/edit?slide=id.g289f499aa6b_2_58 |
 | 2023BPix   | 9451.0                       | —                                                                                                                   |
 | 2024       | 108960.0                     | https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0  |
+| 2025       | 110840.0                     | https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2025                                             |
+| 2026       | 25950.0                      | Golden JSON, eras A+B+D (era C, low-PU, excluded) -- preliminary                                                    |
+
+The values actually used by the code are in [configs/parameters/lumi.yaml](../configs/parameters/lumi.yaml) (`integrated_lumis`); the rows above for 2022–2024 are older numbers and differ slightly from it (e.g. 2024 = 109820 pb⁻¹ there).
+
+**2024 and 2025/26 (PC guideline, Aug 2026):** 2025 and 2026 are treated as one year, and the Summer24 MC is shared between 2024 and 2025/26, split by luminosity fraction. See [2024 / 2025-26 Year Grouping and MC Split](Run3_2024_2025_2026_MC_split.md).
 
 ## Lumimask
 
