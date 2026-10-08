@@ -123,3 +123,24 @@ Context: `MVA_training/VBF_run3/scan_bins_for_dnn.py --stage2-scores` on the
      larger than the data's), instead of a relative-error threshold.
   3. Find which background sample dominates sum(w^2) in the top bins of each region
      (likely a DY sample) to judge whether requesting more MC is worthwhile.
+
+## 6. Signal cross section x BR was ~20% too high (2026-10-08)
+
+- **Problem:** every Run-3 signal entry in `configs/datasets/dataset_nanoAODv1{2,5}_run3.yaml`
+  used BR(H->mumu) = 2.6e-4 (ggH 51.96 x 2.6e-4 = 0.0135096 pb; VBF 4.067 x 2.6e-4 = 0.00105742 pb).
+  LHCHXSWG gives 2.1542e-4 at mH = 125.38. The stage-1 `separate_wgt_xsec` column confirms the old
+  values were applied (checked: 2024 and 2023BPix ggH, 2024 VBF, 2022preEE VBF dipole).
+- **Done 2026-10-08:** dataset YAMLs (the only cross-section source; the obsolete `configs/parameters/cross_sections.yaml` was deleted) now use
+  ggH 0.0110834 pb (51.45 x 2.1542e-4) and VBF 0.00088319 pb (4.0998 x 2.1542e-4), from LHCHXSWG1
+  `crosssections` @cbb6cf65 (R5 v1.1.3 + YR4 BR). Sources and uncertainties:
+  `.claude/skills/stats/references/signal-xsec-br.md`.
+- **Interim:** `run_stage3_vbf.py --signal_xsec_rescale` (pipeline: `SIGNAL_XSEC_RESCALE=1`) scales
+  the signal templates by 0.8204 (ggH) / 0.8352 (VBF) and writes `stage3_datacards_<postfix>_SigXS`.
+  Use it only on stage-1 made before the fix, or the signal gets scaled twice.
+- **To do:**
+  1. Rerun stage-1 for the signal samples only (`ggh_powhegPS`, `vbf_powheg`, `vbf_powheg_dipole`;
+     reset them with `scripts/reset_stage1_samples.sh`), all Run-3 years, then compact, stage-2 and
+     stage-3 **without** `--signal_xsec_rescale`. Check `separate_wgt_xsec` is 0.0110834 / 0.00088319.
+  2. Then remove `SIGNAL_XSEC_BR_RESCALE` / `--signal_xsec_rescale` and the `KNOWN_ISSUE` in `configs/trials.yml`.
+  3. ~~Datacard: add `BR_hmm` lnN 0.983/1.017 (ggH+qqH) and `QCDscale_ggH` lnN 0.930/1.040, both correlated
+     across years~~ done 2026-10-08 (`stage3/make_datacards.py` `signal_theory_lnN`).

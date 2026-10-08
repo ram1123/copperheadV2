@@ -413,19 +413,20 @@ build_compact_cmd() {
 }
 
 run_cutflow_merge() {
-    # Merges the per-chunk cutflow_*.npz shards stage-1 writes (-Z/--isCutflow)
-    # into one whole-dataset cutflow per sample, via scripts/merge_cutflow_npz_file.py.
-    # Every sample directory lives under stage1_output/<year>/f1_0/<sample>/ --
-    # same layout build_stage1_cmd's --save_path writes to and every other
-    # f1_0-based reader in this repo (fetch_hists_for_zpt_weights.py,
-    # categorizer.py, ...) already assumes.
+    # Merges the per-chunk cutflow_*.npz shards stage-1 writes (-Z/--isCutflow) into one
+    # whole-dataset cutflow per sample (scripts/merge_cutflow_npz_file.py), written OUTSIDE f1_0 to
+    # stage1_output/<year>/cutflow/cutflow_merged_<sample>.{json,npz}: compaction may delete f1_0
+    # (Snakefile cleanup_f1_0_after_compact), and the shards would be lost with it. Run automatically
+    # at the start of -m compact, and on its own as -m cutflow_merge.
     local year="$1"
     local base_dir="${save_path}/stage1_output/${year}/f1_0"
+    local out_dir="${save_path}/stage1_output/${year}/cutflow"
     if [[ ! -d "${base_dir}" ]]; then
         log "No stage1 output at ${base_dir}; skipping cutflow merge for year ${year}."
         return
     fi
-    local sample_dir sample_name out_json found
+    mkdir -p "${out_dir}"
+    local sample_dir sample_name out_json found n_merged=0
     for sample_dir in "${base_dir}"/*/; do
         [[ -d "${sample_dir}" ]] || continue
         sample_name="$(basename "${sample_dir}")"
@@ -434,9 +435,16 @@ run_cutflow_merge() {
             log "No cutflow_*.npz under ${sample_dir}; skipping ${sample_name} (${year})."
             continue
         fi
-        out_json="${sample_dir%/}/cutflow_merged_${sample_name}.json"
-        run_cmd python scripts/merge_cutflow_npz_file.py "${sample_dir}" -o "${out_json}"
+        out_json="${out_dir}/cutflow_merged_${sample_name}.json"
+        run_cmd python scripts/merge_cutflow_npz_file.py "${sample_dir}" -o "${out_json}" \
+            --out-npz "${out_dir}/cutflow_merged_${sample_name}.npz"
+        n_merged=$((n_merged + 1))
     done
+    if [[ "${n_merged}" == "0" ]]; then
+        log "WARNING: no cutflow shards in ${base_dir} (stage-1 run without -Z?); no cutflow saved for ${year}."
+    else
+        log "Saved merged cutflows of ${n_merged} sample(s) to ${out_dir}"
+    fi
 }
 
 build_pu_dnn_train_cmd() {
@@ -562,6 +570,14 @@ build_stage3_cmd() {
     fi
     if [[ "${do_vbf_filter_study}" == "1" ]]; then
         cmd+=(--vbf_filter_study)
+    fi
+    # DY_SCHEME=separate: DY and DYVBF as separate processes; cards land under <postfix>_DYsep
+    if [[ -n "${DY_SCHEME:-}" ]]; then
+        cmd+=(--dy_scheme "${DY_SCHEME}")
+    fi
+    # SIGNAL_XSEC_RESCALE=1: interim signal BR fix for pre-fix stage-1; cards land under <postfix>_SigXS
+    if [[ "${SIGNAL_XSEC_RESCALE:-0}" == "1" ]]; then
+        cmd+=(--signal_xsec_rescale)
     fi
     if [[ "${jj_eta_region}" != "all" ]]; then
         cmd+=(--jj_eta_region "${jj_eta_region}")

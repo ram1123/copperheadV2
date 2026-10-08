@@ -23,7 +23,9 @@ def has_matched_jet_histograms(directory):
     return any(Path(directory).glob("*matched*_hist.pkl"))
 
 
-def split_dy_grouping(grouping):
+def split_dy_grouping(grouping, keep_sample_groups=False):
+    """Map the matched-jet DY histograms to DY_matched01J/2J, or with
+    keep_sample_groups back to their sample group (DY, DYVBF) so they stay separate."""
     split_grouping = {}
     for dataset, group in grouping.items():
         if group not in DY_GROUPS:
@@ -31,6 +33,8 @@ def split_dy_grouping(grouping):
             continue
 
         for filename_category, matched_group in MATCHED_JET_GROUPS.items():
-            split_grouping[f"{dataset}_{filename_category}"] = matched_group
+            split_grouping[f"{dataset}_{filename_category}"] = (
+                group if keep_sample_groups else matched_group
+            )
 
     return split_grouping

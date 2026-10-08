@@ -463,6 +463,13 @@ rule stage1Compact:
         # since this is irreversible (f1_0 is otherwise never deleted).
         # -----------------------------
         if [[ "{params.cleanup_f1_0}" == "1" ]]; then
+            # never delete cutflow shards that were not saved outside f1_0 (run_cutflow_merge, -m compact)
+            if find "$BASE/f1_0" -name 'cutflow_*.npz' -print -quit 2>/dev/null | grep -q . \
+                    && ! ls "$BASE"/cutflow/cutflow_merged_*.json > /dev/null 2>&1; then
+                echo "ERROR: $BASE/f1_0 has cutflow shards but $BASE/cutflow/ has no merged cutflow; not deleting f1_0"
+                echo "{rule} {wildcards} ATTEMPT  FAILED" >> {FAIL_LOG}
+                exit 1
+            fi
             echo "cleanup_f1_0_after_compact enabled; removing $BASE/f1_0"
             rm -rf "$BASE/f1_0"
         fi

@@ -7,7 +7,11 @@ into one set of templates with one set of year-uncorrelated nuisances (PC guidel
 How to run (repo root, `default` pixi env; stage-2 must have run for the year, or for both
 2025 and 2026 when using 2025_2026). Usually driven by `run_analysis_pipeline.sh -m 3`:
     ./run_in_pixi.sh default python run_stage3_vbf.py --years <year> -input <save_path> \
-        -l <label> --save_postfix <postfix> [--no_variations] [--jj_eta_region <region>]
+        -l <label> --save_postfix <postfix> [--no_variations] [--jj_eta_region <region>] \
+        [--vbf_filter_study [--dy_scheme separate]] [--signal_xsec_rescale]
+
+`--signal_xsec_rescale` (pipeline: SIGNAL_XSEC_RESCALE=1) is the interim fix that rescales the
+signal for stage-1 made with BR(H->mumu) = 2.6e-4. Cards go to <postfix>_SigXS.
 
 Example:
     WITH_VARIATIONS=1 bash run_analysis_pipeline.sh -m 3 -y 2025_2026 -v 15 -o Sep29_2026 \
@@ -27,7 +31,7 @@ from stage3.edit_datacard4DY_matchedJets import (
 )
 from stage3.make_datacards import build_datacards
 from stage3.make_templates import to_templates
-from modules.classify_year import component_years
+from modules.classify_year import component_years, is_run2
 from modules.sample_config import get_all_dicts
 from omegaconf import OmegaConf
 parser = build_common_parser()
@@ -50,6 +54,30 @@ parser.add_argument(
         "datacards output directory."
     ),
 )
+parser.add_argument(
+    "--dy_scheme",
+    dest="dy_scheme",
+    default="matched",
+    choices=["matched", "separate"],
+    help=(
+        "With matched-jet DY histograms: 'matched' (default) merges all DY samples into "
+        "DY_matched01J/DY_matched2J; 'separate' keeps one process per sample group (DY, "
+        "DYVBF with --vbf_filter_study), each with its own rateParam, and writes to "
+        "<save_postfix>_DYsep."
+    ),
+)
+parser.add_argument(
+    "--signal_xsec_rescale",
+    dest="signal_xsec_rescale",
+    default=False,
+    action="store_true",
+    help=(
+        "Interim fix: rescale ggh_powhegPS/vbf_powheg templates from the BR(H->mumu) = 2.6e-4 "
+        "used in Run-3 stage-1 to the LHCHXSWG sigma x BR (stage3/make_templates.py "
+        "SIGNAL_XSEC_BR_RESCALE). Only for stage-1 made before the dataset-YAML fix; writes to "
+        "<save_postfix>_SigXS."
+    ),
+)
 args = parser.parse_args()
 
 years = args.years if args.years else [args.year]
@@ -57,18 +85,19 @@ years = args.years if args.years else [args.year]
 year = years[0]
 
 stage2_model_suffix = args.save_postfix if args.save_postfix else ""
-if args.do_vbf_filter_study:
-    stage2_model_suffix = (
-        f"{stage2_model_suffix}_vbf_filter_study"
-        if stage2_model_suffix
-        else "vbf_filter_study"
-    )
-if args.jj_eta_region != "all":
-    stage2_model_suffix = (
-        f"{stage2_model_suffix}_{args.jj_eta_region}"
-        if stage2_model_suffix
-        else args.jj_eta_region
-    )
+# 'separate' reads the same stage-2 histograms but must not overwrite the 'matched' cards
+stage3_output_suffix = (
+    f"{stage2_model_suffix}_DYsep" if args.dy_scheme == "separate" else stage2_model_suffix
+)
+if args.signal_xsec_rescale:
+    if any(is_run2(comp) for y in years for comp in component_years(y)):
+        raise ValueError("--signal_xsec_rescale only applies to Run-3 years (BR 2.6e-4 issue).")
+    stage3_output_suffix = f"{stage3_output_suffix}_SigXS" if stage3_output_suffix else "SigXS"
+for _tag, _on in (("vbf_filter_study", args.do_vbf_filter_study),
+                  (args.jj_eta_region, args.jj_eta_region != "all")):
+    if _on:
+        stage2_model_suffix = f"{stage2_model_suffix}_{_tag}" if stage2_model_suffix else _tag
+        stage3_output_suffix = f"{stage3_output_suffix}_{_tag}" if stage3_output_suffix else _tag
 
 # global parameters
 parameters = {
@@ -77,11 +106,12 @@ parameters = {
     "years": years,
     "global_path": args.input_path,
     "global_path_postfix": stage2_model_suffix,
-    "outpath_postfix": stage2_model_suffix,
+    "outpath_postfix": stage3_output_suffix,
     "label": args.label,
     "channels": ["vbf"],
     "regions": ["h-peak", "h-sidebands"],
     "no_variations": args.no_variations,
+    "signal_xsec_rescale": args.signal_xsec_rescale,
     "syst_variations": ["nominal"],
     # "syst_variations": ['nominal', 'Absolute', 'Absolute2018', 'BBEC1', 'BBEC12018', 'EC2', 'EC22018', 'HF', 'HF2018', 'RelativeBal', 'RelativeSample2018', 'FlavorQCD', 'jer1', 'jer2', 'jer3', 'jer4', 'jer5', 'jer6', ],
     # "syst_variations": ['nominal', 'Absolute', f'Absolute_{year}', 'BBEC1', f'BBEC1_{year}', 'EC2', f'EC2_{year}', 'HF', f'HF_{year}', 'RelativeBal', f'RelativeSample_{year}', 'FlavorQCD', 'jer1', 'jer2', 'jer3', 'jer4', 'jer5', 'jer6', ],
@@ -142,9 +172,16 @@ if len(set(dy_split_per_path)) != 1:
     )
 divide_dy_into_matched_jets = dy_split_per_path[0]
 stage2_histogram_path = ", ".join(map(str, stage2_histogram_paths))
-parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets
+if args.dy_scheme == "separate" and not divide_dy_into_matched_jets:
+    raise ValueError("--dy_scheme separate needs stage-2 histograms split into matched jets.")
+dy_separate = args.dy_scheme == "separate"
+# rateParams follow the processes: DY_matched01J/2J for 'matched', DY/DYVBF for 'separate'
+parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets and not dy_separate
+parameters["dy_separate_rate_params"] = dy_separate
 if divide_dy_into_matched_jets:
-    parameters["grouping"] = split_dy_grouping(parameters["grouping"])
+    parameters["grouping"] = split_dy_grouping(
+        parameters["grouping"], keep_sample_groups=dy_separate
+    )
 logger.info(
     "divide_dy_into_matched_jets=%s (stage2 directory: %s)",
     divide_dy_into_matched_jets,
@@ -154,8 +191,8 @@ logger.info(
 parameters["plot_groups"] = {
     "stack": (
         ["DY_matched01J", "DY_matched2J", "EWK", "TT+ST", "VV", "VVV"]
-        if divide_dy_into_matched_jets
-        else ["DY", "EWK", "TT+ST", "VV", "VVV"]
+        if parameters["divide_dy_into_matched_jets"]
+        else ["DY", "DYVBF", "EWK", "TT+ST", "VV", "VVV"]
     ),
     "step": ["VBF", "ggH"],
     "errorbar": ["Data"],

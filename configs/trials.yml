@@ -6,6 +6,20 @@ trials:
         stage1: "{base_dir}/Run3_nanoAODv12_FilterJetsHorn25GeV_pySR_Apr09_tightPassLepVeto_NoJER/stage1_output/"
         comment: "What plotter should use by default"
 
+    # KNOWN ISSUE (2026-10-08), every Run-3 trial below whose stage-1 predates the dataset-YAML fix:
+    # ggh_powhegPS / vbf_powheg / vbf_powheg_dipole were weighted with BR(H->mumu) = 2.6e-4 (YR4: ~2.154e-4 at mH = 125.38).
+    # The signal is ~18% (ggH) / ~16% (VBF) too high. Interim fix: run stage-3 with --signal_xsec_rescale (SIGNAL_XSEC_RESCALE=1).
+    # Real fix: rerun the signal samples' stage-1. See To-Do.md section 6.
+
+    Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit:
+        stage1: "{base_dir}/Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit/stage1_output/"
+        comment: "Current final-results label. 2022preEE-2023BPix are symlinks to the nanoAODv12 Sep22 _Systematics trial. 2024-2026 are their own stage-1 with per-year LumiSplit MC (PC guideline). Stage-2/3 postfix Oct07_2026_Syst_RegBins_mjj300 (stage-2 mjj 300 GeV fix)."
+        date: October 03, 2026
+        years: 2022preEE, 2022postEE, "2023", "2023BPix", 2024, 2025, 2026
+        gitSHA: 678e84a8ced222cd0905ae130f20bb70a22a6724
+        KNOWN_ISSUE: "Signal xsec x BR used BR = 2.6e-4: stage-1 separate_wgt_xsec is 0.0135096 (ggH) / 0.00105742 (VBF), checked 2026-10-08. Correct values: 0.0110834 / 0.00088319. Interim stage-3 rescale gives stage3_datacards_<postfix>_SigXS. TODO: rerun signal stage-1 (To-Do.md section 6)."
+        NOTE: "2024-2026 stage-1 at 678e84a (Oct 02-03), MLAnalysis submodule dirty; see stage1_output/<year>/git_info_*.txt."
+
     # --- Sep22 family: switches_official.yaml as of 99199e4 (Sep22; vs the Aug30 non-Syst baseline: do_jet_horn_puid 50 -> false,
     # do_add_jet_ID_vars -> true, do_pdf -> false for non-Syst runs, pdf_excluded_samples/pdf_supported_lha_ids added).
     # Switch values below are read from each run's stage1_output/<year>/switches_used_*.yaml.

@@ -20,7 +20,8 @@ Modes:
   cutflow_merge                Merges the per-chunk cutflow_*.npz shards from a stage-1
                                 -Z/--isCutflow run into one whole-dataset cutflow per sample
                                 (scripts/merge_cutflow_npz_file.py), writing
-                                <save_path>/stage1_output/<year>/f1_0/<sample>/cutflow_merged_<sample>.json.
+                                <save_path>/stage1_output/<year>/cutflow/cutflow_merged_<sample>.{json,npz}
+                                (outside f1_0). Also runs automatically at the start of 1a|compact.
                                 Run after the stage1 -Z run it merges, with the same -l/-y/-S.
   2|stage2
   2p|stage2_plot
@@ -113,6 +114,8 @@ for year in "${years[@]}"; do
             run_mode_from_nul < <(build_stage1_cmd "${year}")
             ;;
         1a|compact)
+            # Mandatory first: keep the cutflow outside f1_0, which may be deleted after compaction.
+            run_cutflow_merge "${year}"
             run_mode_from_nul < <(build_compact_cmd "${year}")
             ;;
         cutflow_merge)

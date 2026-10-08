@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import pandas as pd
 
@@ -31,17 +32,25 @@ class Variable(object):
 decorrelation_scheme = {
     "LHERen": [
         "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
-        "EWK", "TT+ST",
+        "EWK", "TT+ST", "VV",
     ],
     "LHEFac": [
         "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
-        "EWK", "TT+ST",
+        "EWK", "TT+ST", "VV",
     ],
     "pdf_unc": [
         "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
-        "EWK", "VBF", "ggH", "TT+ST",
+        "EWK", "VBF", "ggH", "TT+ST", "VV",
     ],
     # "pdf_unc": ["DY", "qqH_hmm", "ggH_hmm"],
+}
+
+# Interim, opt-in (--signal_xsec_rescale): Run-3 signal stage-1 used BR(H->mumu) = 2.6e-4.
+# Ratio of corrected sigma x BR (LHCHXSWG R5 + YR4 BR, mH = 125.38) to the value used; see stats skill signal-xsec-br.md.
+SIGNAL_XSEC_BR_RESCALE = {
+    "ggh_powhegPS": 51.45 * 2.1542e-4 / 0.0135096,
+    "vbf_powheg": 4.099837482 * 2.1542e-4 / 0.00105742,
+    "vbf_powheg_dipole": 4.099837482 * 2.1542e-4 / 0.00105742,  # 2022 VBF sample name
 }
 
 PDF_MEMBER_PREFIX = "wgt_pdfMemberHessEig" # Prefix of the per-eigenvector weight for PDF unc
@@ -53,6 +62,10 @@ PDF_UNC_COMBINATION = "hessian" # supported values are "hessian" or "rms"
 PDF_ALPHA_S_PREFIX = "wgt_pdfAlphaS"
 PDF_ALPHA_S_MEMBERS = ("wgt_pdfAlphaS101_up", "wgt_pdfAlphaS102_up")
 ALPHA_S_UNC_SCALE = 1.0
+
+# Groups whose QCD-scale (LHERen/LHEFac) variation keeps its normalization: they have no free
+# rateParam, so it is their only normalization uncertainty. DY floats, so it stays shape-only.
+LHE_SCALE_NORM_GROUPS = ("EWK", "TT+ST", "VV")
 
 shape_only = [
     "wgt_LHERen_up",
@@ -678,13 +691,20 @@ def make_templates(args, parameters={}):
                 the_hist_nominal = hist[slicer_nominal].project(var.name).values()
                 the_sumw2 = hist[slicer_sumw2].project(var.name).values()
 
-                if variation in shape_only:
+                lhe_norm = variation.startswith(("wgt_LHERen", "wgt_LHEFac")) and group in LHE_SCALE_NORM_GROUPS
+                if variation in shape_only and not lhe_norm:
                     if the_hist.sum() != 0:
                         scale = the_hist_nominal.sum() / the_hist.sum()
                     else:
                         scale = 1.0
                     the_hist = the_hist * scale
                     the_sumw2 = the_sumw2 * scale
+
+                xsec_rescale = SIGNAL_XSEC_BR_RESCALE.get(dataset) if parameters.get("signal_xsec_rescale", False) else None
+                if xsec_rescale is not None:
+                    the_hist = the_hist * xsec_rescale
+                    the_hist_nominal = the_hist_nominal * xsec_rescale
+                    the_sumw2 = the_sumw2 * xsec_rescale**2
 
                 # temporary overwrite for TT+ST group ----------------
                 # if group=="TT+ST":
@@ -809,7 +829,7 @@ def make_templates(args, parameters={}):
                     logger.debug(f"group_LHE after: {group_LHE}")
                     if group_LHE in decorrelation_scheme[variation_core]:
                         if variation_core == "pdf_unc" :
-                            suffix = "_"+group_LHE+str(year)
+                            suffix = "_"+group_LHE  # same PDF set in every year: correlated
                             logger.debug(f"pdf_unc suffix: {suffix}")
                         else:
                             suffix = "_"+group_LHE
@@ -819,6 +839,8 @@ def make_templates(args, parameters={}):
                     suffix = str(year)
                 elif variation_core in ["mu_roccor", "mu_scale", "mu_resol"]:
                     suffix = str(year)
+                elif re.fullmatch(r"jer\d", variation_core):
+                    suffix = "_" + str(year)  # JER SFs are derived per era: uncorrelated
                 elif variation_core in ["pu", "l1prefiring"]:
                     suffix = "_wgt"+str(year)
                 elif variation_core in ["qgl"]:
@@ -992,7 +1014,7 @@ def make_templates(args, parameters={}):
                     f"decorrelation scheme; not emitting a template."
                 )
             else:
-                pdf_suffix = "_" + group_LHE + str(year)
+                pdf_suffix = "_" + group_LHE  # correlated across years, like the normal path
                 for nuisance, delta in pdf_deltas.items():
                     # Floor downward bin yields at zero per PDF4LHC21 Sect. 6.3.2.
                     pdf_variations = {
