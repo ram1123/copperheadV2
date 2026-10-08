@@ -62,6 +62,15 @@ save_postfix: ""
 # DNN model dir <years>_h-peak_vbf_<jj_eta_region>. Non-"all" regions get their own state/log names.
 jj_eta_region: "all"
 
+# DY split in stage-2 (DY_MATCHED_JETS): "" / "gen_2j" = DY_matched01J/2J on >=2 gen jets;
+# "reco_012" = DY_recoMatched0J/1J/2J by how many of the two VBF reco jets are gen-matched,
+# one free rateParam each. Stage-3 detects it from the histograms. Use a new save_postfix.
+dy_matched_jets: ""
+
+# true: stage3 rescales the signal from BR(H->mumu) = 2.6e-4 (stage-1 before the dataset-YAML fix) and
+# writes to <save_postfix>_SigXS; stage3_validate / stats then read that directory.
+signal_xsec_rescale: false
+
 # Several regions in one DAG (stage23_all / stats_all run one stage2->stage3->stats chain each).
 # [] = just jj_eta_region above.
 # jj_eta_regions: ["all", "jj_both_central", "jj_one_fwd25_one_central", "jj_both_fwd25"]

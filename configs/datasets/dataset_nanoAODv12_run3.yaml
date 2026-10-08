@@ -466,6 +466,21 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
+            vbf_powheg_herwig:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCH3_13p6TeV_powheg-herwig7/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: 0.00088319
+                notes: "Herwig7 (CH3) parton-shower variation of the nominal POWHEG VBF sample, used for the signal PS uncertainty; same sigma x BR as nominal = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG + Herwig7 (TuneCH3)"
+
             vbf_aMCatNLO:
                 skip_sample: False
                 datasets:
@@ -954,6 +969,21 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
+            vbf_powheg_herwig:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCH3_13p6TeV_powheg-herwig7/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: 0.00088319
+                notes: "Herwig7 (CH3) parton-shower variation of the nominal POWHEG VBF sample, used for the signal PS uncertainty; same sigma x BR as nominal = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG + Herwig7 (TuneCH3)"
+
             vbf_aMCatNLO:
                 skip_sample: False
                 datasets:
@@ -1435,6 +1465,21 @@ years:
                 references:
                     - "POWHEG (with dipole recoil)"
 
+            vbf_powheg_herwig:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCH3_13p6TeV_powheg-herwig7/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: 0.00088319
+                notes: "Herwig7 (CH3) parton-shower variation of the nominal POWHEG VBF sample, used for the signal PS uncertainty; same sigma x BR as nominal = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG + Herwig7 (TuneCH3)"
+
             vbf_aMCatNLO:
                 skip_sample: False
                 datasets:
@@ -1913,6 +1958,21 @@ years:
                 br_source: "pdg"
                 references:
                     - "POWHEG (with dipole recoil)"
+
+            vbf_powheg_herwig:
+                skip_sample: False
+                datasets:
+                    - /VBFHto2Mu_M-125_TuneCH3_13p6TeV_powheg-herwig7/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 0.00088319
+                notes: "Herwig7 (CH3) parton-shower variation of the nominal POWHEG VBF sample, used for the signal PS uncertainty; same sigma x BR as nominal = 4.0998 * 2.1542e-4; LHCHXSWG1 crosssections repo @cbb6cf65 (R5 v1.1.3 xsec + YR4 BR), mH=125.38"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (13.6 TeV VBF N3LO QCD+NLO EW, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG + Herwig7 (TuneCH3)"
 
             vbf_aMCatNLO:
                 skip_sample: False

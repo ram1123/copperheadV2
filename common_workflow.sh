@@ -513,6 +513,10 @@ build_stage2_cmd() {
     if [[ "${jj_eta_region}" != "all" ]]; then
         cmd+=(--jj_eta_region "${jj_eta_region}")
     fi
+    # DY_MATCHED_JETS=reco_012: DY split into 0/1/2 gen-matched VBF jets (stage-3 detects it)
+    if [[ -n "${DY_MATCHED_JETS:-}" ]]; then
+        cmd+=(--dy_matched_jets "${DY_MATCHED_JETS}")
+    fi
     # DUMP_SCORES=1: also save per-event nominal DNN scores, the input of the DNN bin scan
     if [[ "${DUMP_SCORES:-0}" == "1" ]]; then
         cmd+=(--dump_scores)

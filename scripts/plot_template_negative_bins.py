@@ -40,8 +40,12 @@ import ROOT
 
 from modules.root_2dColorProfile import set_gradient_style
 
-BKG_PROCESSES = ["DY_matched01J", "DY_matched2J", "EWK", "TT+ST", "VV"]
-COLORS = {"DY_matched01J": ROOT.kAzure + 1, "DY_matched2J": ROOT.kBlue + 2, "EWK": ROOT.kViolet,
+# DY split either gen_2j (matched01J/2J) or reco_012 (recoMatched0J/1J/2J); absent ones are skipped
+BKG_PROCESSES = ["DY_matched01J", "DY_matched2J",
+                 "DY_recoMatched0J", "DY_recoMatched1J", "DY_recoMatched2J", "EWK", "TT+ST", "VV"]
+COLORS = {"DY_matched01J": ROOT.kAzure + 1, "DY_matched2J": ROOT.kBlue + 2,
+          "DY_recoMatched0J": ROOT.kCyan + 2, "DY_recoMatched1J": ROOT.kAzure + 1,
+          "DY_recoMatched2J": ROOT.kBlue + 2, "EWK": ROOT.kViolet,
           "TT+ST": ROOT.kOrange + 1, "VV": ROOT.kGreen + 2, "Total bkg": ROOT.kBlack}
 
 
@@ -119,7 +123,7 @@ def main():
     keep = []
     for year, channel, hists in pages:
         canvas.Clear()
-        canvas.Divide(3, 2)
+        canvas.Divide(4 if len(hists) > 6 else 3, 2)
         for i, (proc, h) in enumerate(hists.items(), start=1):
             pad = canvas.cd(i)
             pad.SetGrid()

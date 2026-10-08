@@ -19,7 +19,10 @@ import hist as hist_lib
 
 from modules.classify_year import MERGED_YEARS, component_years
 from modules.utils import logger
-from stage3.edit_datacard4DY_matchedJets import stage2_histogram_directory
+from stage3.edit_datacard4DY_matchedJets import (
+    ALL_MATCHED_DY_PROCESSES,
+    stage2_histogram_directory,
+)
 
 class Variable(object):
     def __init__(self, name_, caption_, nbins_, xmin_, xmax_):
@@ -31,15 +34,15 @@ class Variable(object):
 
 decorrelation_scheme = {
     "LHERen": [
-        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "DY", "DYVBF", *ALL_MATCHED_DY_PROCESSES,
         "EWK", "TT+ST", "VV",
     ],
     "LHEFac": [
-        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "DY", "DYVBF", *ALL_MATCHED_DY_PROCESSES,
         "EWK", "TT+ST", "VV",
     ],
     "pdf_unc": [
-        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
+        "DY", "DYVBF", *ALL_MATCHED_DY_PROCESSES,
         "EWK", "VBF", "ggH", "TT+ST", "VV",
     ],
     # "pdf_unc": ["DY", "qqH_hmm", "ggH_hmm"],

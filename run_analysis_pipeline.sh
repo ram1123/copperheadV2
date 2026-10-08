@@ -69,6 +69,9 @@ Env vars:
                 jj_non_central, jj_one_fwd25_one_central, jj_one_he_one_central,
                 jj_one_fwd30_one_central, jj_both_fwd25, jj_both_he,
                 jj_both_fwd30, jj_one_he_one_fwd30) or "all" (default).
+  DY_MATCHED_JETS Stage-2 DY split (run_stage2_vbf.py --dy_matched_jets): gen_2j (default,
+                DY_matched01J/2J) or reco_012 (DY_recoMatched0J/1J/2J = number of the two
+                VBF reco jets with a gen-jet match). Stage-3 detects it; use a new -o postfix.
 
   pu_dnn_train mode (all optional, sensible defaults shown):
   PU_DNN_DY_GLOB       Compacted sample-name glob for the HS-jet proxy (default: dyTo2Mu_M-50_aMCatNLO)

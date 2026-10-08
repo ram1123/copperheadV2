@@ -245,15 +245,19 @@ def build_datacards(var_name, yield_df, parameters):
                 datacard.write("---------------\n")
                 # nuisnace edit end ----------------------------
                 if parameters.get("divide_dy_into_matched_jets", False):
+                    # one free normalisation per DY component, per year, shared by SR and SB
                     datacard.write("\n")
-                    datacard.write(
-                        f"XSecAndNorm{year_savepath}DY01J rateParam * "
-                        "DY_matched01J 1 [0.2,5]\n"
-                    )
-                    datacard.write(
-                        f"XSecAndNorm{year_savepath}DY2J rateParam * "
-                        "DY_matched2J 1 [0.2,5]\n"
-                    )
+                    for dy_process in parameters.get(
+                        "dy_matched_processes", ["DY_matched01J", "DY_matched2J"]
+                    ):
+                        # DY_matched01J -> DY01J (unchanged names), DY_recoMatched0J -> DYreco0J
+                        norm_tag = dy_process.replace("DY_matched", "DY").replace(
+                            "DY_recoMatched", "DYreco"
+                        )
+                        datacard.write(
+                            f"XSecAndNorm{year_savepath}{norm_tag} rateParam * "
+                            f"{dy_process} 1 [0.2,5]\n"
+                        )
                 if parameters.get("dy_separate_rate_params", False):
                     # one free normalisation per DY sample, like the two matched-jet ones
                     datacard.write("\n")

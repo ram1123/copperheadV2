@@ -144,3 +144,27 @@ Context: `MVA_training/VBF_run3/scan_bins_for_dnn.py --stage2-scores` on the
   2. Then remove `SIGNAL_XSEC_BR_RESCALE` / `--signal_xsec_rescale` and the `KNOWN_ISSUE` in `configs/trials.yml`.
   3. ~~Datacard: add `BR_hmm` lnN 0.983/1.017 (ggH+qqH) and `QCDscale_ggH` lnN 0.930/1.040, both correlated
      across years~~ done 2026-10-08 (`stage3/make_datacards.py` `signal_theory_lnN`).
+
+## 7. Run-2 inputs still used in the Run-3 result (audit 2026-10-08)
+
+Checked against `stage1_output/2024/switches_used_*.yaml` of the `..._Systematics_LumiSplit` run.
+Details: `.claude/reports/investigations/2026-10-08_final-datacard-missing-systematics.md`.
+
+1. **NNLOPS ggH reweighting (highest priority).** `nnlops_file` in `configs/parameters/SF_filelist.yaml` is the
+   Run-2 `data/NNLOPS_reweight.root` for every Run-3 year. Commit 537bd52 says "from devUL. Will update to Run3 files".
+   `do_nnlops` is true and applies to every ggh sample (`src/copperhead_processor.py:1901`).
+   - **To do:** check the generator configuration (gridpack or McM request) of the Run-3
+     `GluGluH-Hto2Mu_..._13p6TeV_powheg-pythia8` sample. If it is already NNLOPS-like, turn `do_nnlops` off for Run 3,
+     because it is currently double-counted. Otherwise derive or obtain 13.6 TeV NNLOPS ratio graphs. Either way, rerun ggH stage-1.
+2. **VBF STXS uncertainties (`THU_VBF_*`).** `stxs_acc`, `uncert_deltas` and `powheg_xsec` in
+   `src/corrections/evaluator.py:568` are the Run-2 13 TeV stage-1.1 tables.
+   - **To do:** get the 13.6 TeV VBF STXS stage-1.1 uncertainty scheme from LHCHXSWG and replace the tables. Then rerun
+     VBF stage-1 (it can share the signal rerun in section 6). Until then, label the row "Run-2 values" on slides.
+3. **JER uncertainty split (`jer1`-`jer6`).** The \|eta\| 1.93 / 2.5 / 3.0 and pT 50 GeV boundaries in `src/corrections/jet.py:930` come
+   from the Run-2 JME recommendation.
+   - **To do:** check the current Run-3 JME recommendation for the JER uncertainty split and update the bins if it differs.
+4. **Dormant Run-2 values (not used now, but they become live if switched on):**
+   - `rate_syst_lookup` in `stage3/make_datacards.py` holds 2018 copies; the injection is commented out and Option A replaces it.
+     Delete it, or refresh it before re-enabling.
+   - `btag_sf_csv` is `DeepCSV_106XUL18SF.csv` for every Run-3 year (`SF_filelist.yaml`). Replace it before turning on
+     `do_btag_wgt` (also needed for the missing b-veto SF systematic).

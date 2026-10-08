@@ -51,6 +51,14 @@ def jj_env(jjtag):
 
 STAGE23_JJ_TAGS = [jj_tag(r) for r in STAGE23_JJ_ETA_REGIONS]
 
+# DY split for stage2 (run_stage2_vbf.py --dy_matched_jets); stage3 detects it from the histogram names.
+DY_MATCHED_JETS = config.get("dy_matched_jets") or ""
+DY_MATCHED_JETS_ENV = f"DY_MATCHED_JETS={DY_MATCHED_JETS} " if DY_MATCHED_JETS else ""
+# Interim signal BR fix for stage-1 made with BR(H->mumu) = 2.6e-4 (run_stage3_vbf.py --signal_xsec_rescale):
+# stage3 writes to <save_postfix>_SigXS, so validate/stats read from there too.
+SIGXS_ENV = "SIGNAL_XSEC_RESCALE=1 " if config.get("signal_xsec_rescale", False) else ""
+STAGE3_POSTFIX = SAVE_POSTFIX + ("_SigXS" if SIGXS_ENV else "")
+
 # Prestage JSON variant for stage-1 (PRESTAGE_TAG), e.g. "LumiSplit" -> processor_samples_<year>_NanoAODv<v>_LumiSplit.json.
 PRESTAGE_TAG = config.get("prestage_tag") or ""
 PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
@@ -657,6 +665,7 @@ rule stage2:
         var_env=VARIATIONS_ENV,
         postfix=SAVE_POSTFIX,
         jj_env=lambda wc: jj_env(wc.jjtag),
+        dy_env=DY_MATCHED_JETS_ENV,
     resources:
         gateway=1,
     shell:
@@ -664,7 +673,7 @@ rule stage2:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        {params.jj_env}{params.var_env}{params.model_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.dy_env}{params.var_env}{params.model_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
@@ -733,12 +742,13 @@ rule stage3:
         var_env=VARIATIONS_ENV,
         postfix=SAVE_POSTFIX,
         jj_env=lambda wc: jj_env(wc.jjtag),
+        sigxs_env=SIGXS_ENV,
     shell:
         r"""
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        {params.jj_env}{params.var_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.var_env}{params.sigxs_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \
@@ -811,11 +821,11 @@ rule stage3_validate:
         statedir=STATEDIR,
         tmpl_dir=lambda wc: (
             f"{HMM_BASE}/{HMM_USER}/hmm_ntuples/copperheadV1clean/{stage23_label(wc.year)}/"
-            f"stage3_datacards_{SAVE_POSTFIX}{wc.jjtag}/stage3_templates_{SAVE_POSTFIX}{wc.jjtag}/"
+            f"stage3_datacards_{STAGE3_POSTFIX}{wc.jjtag}/stage3_templates_{STAGE3_POSTFIX}{wc.jjtag}/"
             f"score_{stage23_label(wc.year)}"
         ),
         val_dir=lambda wc: (
-            f"validation/stage3_templates/{stage23_label(wc.year)}/{SAVE_POSTFIX}{wc.jjtag}"
+            f"validation/stage3_templates/{stage23_label(wc.year)}/{STAGE3_POSTFIX}{wc.jjtag}"
         ),
     shell:
         r"""
@@ -886,7 +896,7 @@ def stats_label():
 STATS_PARAMS = dict(
     logdir=LOGDIR,
     statedir=STATEDIR,
-    postfix=SAVE_POSTFIX,
+    postfix=STAGE3_POSTFIX,
     stats_years=",".join(STATS_YEARS),
     scan_years=",".join(SCAN_YEARS),
 )

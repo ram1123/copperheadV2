@@ -1,3 +1,21 @@
+"""
+Stage-2 for the VBF channel: VBF DNN scores of the compacted stage-1 ntuples, filled into
+per-sample histograms (stage2_histograms/score_<label>_<postfix>[_<jj region>][_NoSyst]/<year>/).
+DY can be split into matched-jet components (stage2/VBF/switches.yaml + --dy_matched_jets).
+
+How to run (repo root, `default` pixi env). Usually driven by `run_analysis_pipeline.sh -m 2`
+(env DY_MATCHED_JETS -> --dy_matched_jets) or the Snakemake stage2 rule (config dy_matched_jets):
+    ./run_in_pixi.sh default python run_stage2_vbf.py -y <year> -input <save_path> -l <label> \
+        --model_tag <tag> --model_path <dnn model dir> -bkg DY ... --save_postfix <postfix> \
+        [--no_variations] [--jj_eta_region <region>] [--dy_matched_jets gen_2j|reco_012]
+
+Example (2023 DY only, nominal, DY split by number of gen-matched VBF jets):
+    ./run_in_pixi.sh default python run_stage2_vbf.py -y 2023 \
+        -input /work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/<label> -l <label> \
+        --model_tag trained_best_optuna_v1_multifold_050Trials \
+        --model_path ./dnn/trained_models/<model label>/<years>_h-peak_vbf_all \
+        -bkg DY --save_postfix DY012test --no_variations --dy_matched_jets reco_012
+"""
 import argparse
 import glob
 import itertools
@@ -11,6 +29,7 @@ import awkward as ak
 import hist
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import torch
 import yaml
 from cli.common_argparser import build_common_parser
@@ -29,7 +48,15 @@ from modules.systematics import (  # noqa: F401
 
 
 DATASET_SEPARATOR = "::"
-DY_MATCH_CATEGORIES = ("matched01J", "matched2J")
+# DY split definitions (--dy_matched_jets); distinct file names so the two never mix.
+#   gen_2j:   >=2 lepton-isolated gen jets (gjj_mass > 0) or not
+#   reco_012: how many of the two selected reco jets have a matched gen jet
+DY_MATCH_CATEGORIES_BY_SCHEME = {
+    "gen_2j": ("matched01J", "matched2J"),
+    "reco_012": ("recoMatched0J", "recoMatched1J", "recoMatched2J"),
+}
+# nominal-jet flags, used for every variation so an event stays in one DY component
+RECO_MATCH_FIELDS = ("jet1_hasMatchedGenJet_nominal", "jet2_hasMatchedGenJet_nominal")
 
 # --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
 
@@ -98,23 +125,62 @@ def histogram_output_name(sample_name, histogram_category):
     return f"{sample_name}_{histogram_category}_hist.pkl"
 
 
-def histogram_output_names(sample_name, divide_dy_into_matched_jets=False):
+def histogram_output_names(sample_name, divide_dy_into_matched_jets=False, dy_matched_jets="gen_2j"):
     """Return the output basenames expected for one Stage-2 sample."""
     if divide_dy_into_matched_jets and is_dy_sample(sample_name):
         return [
             histogram_output_name(sample_name, category)
-            for category in DY_MATCH_CATEGORIES
+            for category in DY_MATCH_CATEGORIES_BY_SCHEME[dy_matched_jets]
         ]
     return [histogram_output_name(sample_name, "hist")]
 
 
-def dy_matched_jet_filters(gjj_mass):
-    """Split events into the requested complementary gjj_mass categories."""
-    matched2J_filter = ak.to_numpy(ak.materialize(gjj_mass > 0))
-    return {
-        "matched01J": ~matched2J_filter,
-        "matched2J": matched2J_filter,
-    }
+def dy_matched_jet_filters(events, dy_matched_jets="gen_2j"):
+    """Split events into the complementary DY categories of one scheme."""
+    if dy_matched_jets == "gen_2j":
+        matched2J_filter = ak.to_numpy(ak.materialize(events.gjj_mass > 0))
+        return {
+            "matched01J": ~matched2J_filter,
+            "matched2J": matched2J_filter,
+        }
+    missing = [f for f in RECO_MATCH_FIELDS if f not in events.fields]
+    if missing:
+        raise KeyError(f"reco_012 DY split needs stage-1 columns {missing} (MC, nominal)")
+    n_matched = sum(
+        ak.to_numpy(ak.fill_none(ak.materialize(events[field]), False)).astype(int)
+        for field in RECO_MATCH_FIELDS
+    )
+    return {f"recoMatched{n}J": n_matched == n for n in (0, 1, 2)}
+
+
+def attach_reco_match_flags(events):
+    """coffea's lazy parquet reader can't materialize nullable-bool columns (arrow gives dtype
+    object), so read the two match flags of this chunk with pyarrow; null (no jet) -> False."""
+    md = events.metadata
+    table = pq.read_table(md["filename"], columns=list(RECO_MATCH_FIELDS)).slice(
+        md["entrystart"], md["entrystop"] - md["entrystart"]
+    )
+    for field in RECO_MATCH_FIELDS:
+        flags = table.column(field).fill_null(False).to_numpy().astype(bool)
+        events = ak.with_field(events, flags, field)
+    return events
+
+
+def check_dy_scheme_not_mixed(hist_dir, dy_matched_jets):
+    """Refuse to add one DY split's histograms next to the other's: the stage-2 plotter
+    globs every pkl in the directory and would count DY twice."""
+    for scheme, categories in DY_MATCH_CATEGORIES_BY_SCHEME.items():
+        if scheme == dy_matched_jets:
+            continue
+        clashes = [
+            f.name for c in categories for f in Path(hist_dir).glob(f"*_{c}_hist.pkl")
+        ]
+        if clashes:
+            raise FileExistsError(
+                f"{hist_dir} already holds DY histograms split with '{scheme}' "
+                f"({clashes[:3]}...); use a new --save_postfix for --dy_matched_jets "
+                f"{dy_matched_jets}."
+            )
 
 
 def get_variation(wgt_variation, sys_variation):
@@ -367,6 +433,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         no_variations=False,
         do_vbf_filter_study=False,
         divide_dy_by_year=None,
+        dy_matched_jets="gen_2j",
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
         use_transformer_vbf_channel=False,
@@ -388,6 +455,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         # Per-era `divide_dy_into_matched_jets`; one stage2 run can span several eras,
         # so the switch is resolved per dataset in process(), not here.
         self.divide_dy_by_year = divide_dy_by_year
+        self.dy_matched_jets = dy_matched_jets
         self.jj_eta_region = jj_eta_region
         # also return the nominal per-event (score, weight), for DNN bin scans
         self.dump_scores = dump_scores
@@ -628,11 +696,14 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             self.divide_dy_by_year, year
         )
         histogram_categories = (
-            DY_MATCH_CATEGORIES if divide_dy_sample else ("hist",)
+            DY_MATCH_CATEGORIES_BY_SCHEME[self.dy_matched_jets]
+            if divide_dy_sample else ("hist",)
         )
         score_hists = {
             category: make_score_hist() for category in histogram_categories
         }
+        if divide_dy_sample and self.dy_matched_jets == "reco_012":
+            events = attach_reco_match_flags(events)
 
         selected_events = 0
         score_dump = []
@@ -650,6 +721,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             category= "vbf"
             sel_cols = columns_for_selection(category, variation, events.fields)
             needed_cols = set(sel_cols + [weight_variation])
+            if divide_dy_sample and self.dy_matched_jets == "reco_012":
+                needed_cols.update(RECO_MATCH_FIELDS)
             if self.use_transformer_vbf_channel:
                 needed_cols.add(TRANSFORMER_SCORE_FIELD)
 
@@ -718,6 +791,11 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 region_events = region_events[
                     region_events[TRANSFORMER_SCORE_FIELD] >= transformer_threshold()
                 ]
+            # before fillEventNans: its fill_none(0) turns the ?bool match flags into a bool|int union
+            reco_dy_filters = (
+                dy_matched_jet_filters(region_events, "reco_012")
+                if divide_dy_sample and self.dy_matched_jets == "reco_012" else None
+            )
             region_events = fillEventNans(region_events, category=category)
             if region == "h-sidebands":
                 # Pin nominal and shifted dimuon masses to 125 GeV so sideband DNN
@@ -758,8 +836,10 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 "variation": variation,
                 self.score_name: scores,
             }
-            if divide_dy_sample:
-                category_filters = dy_matched_jet_filters(region_events.gjj_mass)
+            if reco_dy_filters is not None:
+                category_filters = reco_dy_filters
+            elif divide_dy_sample:
+                category_filters = dy_matched_jet_filters(region_events, self.dy_matched_jets)
             else:
                 category_filters = {"hist": np.ones(len(scores), dtype=bool)}
 
@@ -1016,6 +1096,19 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "--dy_matched_jets",
+        dest="dy_matched_jets",
+        default="gen_2j",
+        choices=sorted(DY_MATCH_CATEGORIES_BY_SCHEME),
+        help=(
+            "How DY is split when divide_dy_into_matched_jets (stage2/VBF/switches.yaml) is on. "
+            "'gen_2j' (default): <sample>_matched01J/matched2J on gjj_mass > 0 (>=2 gen jets). "
+            "'reco_012': <sample>_recoMatched0J/1J/2J = number of the two selected reco jets "
+            "with a matched gen jet (nominal jets). Stage-3 detects the scheme from the file "
+            "names; the two can't share one histogram directory (use a new --save_postfix)."
+        ),
+    )
+    parser.add_argument(
         "--jj_eta_region",
         dest="jj_eta_region",
         default="all",
@@ -1043,6 +1136,7 @@ if __name__ == "__main__":
     # that a produced set of histograms always matches a recorded configuration.
     stage2_switches = load_stage2_switches()
     logger.info(f"stage2 switches (stage2/VBF/switches.yaml): {stage2_switches}")
+    logger.info(f"DY matched-jet split scheme (--dy_matched_jets): {args.dy_matched_jets}")
 
     start_time = time.time()
     client = get_dask_client(
@@ -1150,12 +1244,14 @@ if __name__ == "__main__":
     skipped_existing = []
     for year, full_sample_dict in sample_dict_by_year.items():
         hist_save_path = base_path / "stage2_histograms" / histDirName / year
+        check_dy_scheme_not_mixed(hist_save_path, args.dy_matched_jets)
         for sample_type, sample_l in full_sample_dict.items():
             output_pkl_paths = [
                 hist_save_path / output_name
                 for output_name in histogram_output_names(
                     sample_type,
                     divide_dy_for_year(stage2_switches["divide_dy_into_matched_jets"], year),
+                    args.dy_matched_jets,
                 )
             ]
             existing_output_paths = [
@@ -1206,6 +1302,7 @@ if __name__ == "__main__":
                 no_variations=args.no_variations,
                 do_vbf_filter_study=args.do_vbf_filter_study,
                 divide_dy_by_year=stage2_switches["divide_dy_into_matched_jets"],
+                dy_matched_jets=args.dy_matched_jets,
                 allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
                 use_transformer_vbf_channel=args.use_transformer_vbf_channel,

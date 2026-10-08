@@ -25,7 +25,8 @@ import time
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
 from stage3.edit_datacard4DY_matchedJets import (
-    has_matched_jet_histograms,
+    MATCHED_JET_GROUPS_BY_SCHEME,
+    detect_dy_split_scheme,
     split_dy_grouping,
     stage2_histogram_directory,
 )
@@ -61,7 +62,8 @@ parser.add_argument(
     choices=["matched", "separate"],
     help=(
         "With matched-jet DY histograms: 'matched' (default) merges all DY samples into "
-        "DY_matched01J/DY_matched2J; 'separate' keeps one process per sample group (DY, "
+        "DY_matched01J/DY_matched2J (stage-2 --dy_matched_jets gen_2j) or "
+        "DY_recoMatched0J/1J/2J (reco_012, detected from the histogram names); 'separate' keeps one process per sample group (DY, "
         "DYVBF with --vbf_filter_study), each with its own rateParam, and writes to "
         "<save_postfix>_DYsep."
     ),
@@ -163,14 +165,15 @@ stage2_histogram_paths = [
     )
     for comp_year in component_years(year)
 ]
-dy_split_per_path = [has_matched_jet_histograms(p) for p in stage2_histogram_paths]
+dy_split_per_path = [detect_dy_split_scheme(p) for p in stage2_histogram_paths]
 if len(set(dy_split_per_path)) != 1:
     raise ValueError(
         f"The component years of {year} disagree on the DY matched-jet split "
         f"({dict(zip(map(str, stage2_histogram_paths), dy_split_per_path))}); rerun stage-2 "
-        f"with the same divide_dy_into_matched_jets setting for all of them."
+        f"with the same divide_dy_into_matched_jets / --dy_matched_jets for all of them."
     )
-divide_dy_into_matched_jets = dy_split_per_path[0]
+dy_split_scheme = dy_split_per_path[0]
+divide_dy_into_matched_jets = dy_split_scheme is not None
 stage2_histogram_path = ", ".join(map(str, stage2_histogram_paths))
 if args.dy_scheme == "separate" and not divide_dy_into_matched_jets:
     raise ValueError("--dy_scheme separate needs stage-2 histograms split into matched jets.")
@@ -178,19 +181,25 @@ dy_separate = args.dy_scheme == "separate"
 # rateParams follow the processes: DY_matched01J/2J for 'matched', DY/DYVBF for 'separate'
 parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets and not dy_separate
 parameters["dy_separate_rate_params"] = dy_separate
+# the DY processes that each get a free rateParam in the 'matched' scheme
+parameters["dy_matched_processes"] = (
+    list(MATCHED_JET_GROUPS_BY_SCHEME[dy_split_scheme].values())
+    if parameters["divide_dy_into_matched_jets"] else []
+)
 if divide_dy_into_matched_jets:
     parameters["grouping"] = split_dy_grouping(
-        parameters["grouping"], keep_sample_groups=dy_separate
+        parameters["grouping"], keep_sample_groups=dy_separate, scheme=dy_split_scheme
     )
 logger.info(
-    "divide_dy_into_matched_jets=%s (stage2 directory: %s)",
+    "divide_dy_into_matched_jets=%s scheme=%s (stage2 directory: %s)",
     divide_dy_into_matched_jets,
+    dy_split_scheme,
     stage2_histogram_path,
 )
 
 parameters["plot_groups"] = {
     "stack": (
-        ["DY_matched01J", "DY_matched2J", "EWK", "TT+ST", "VV", "VVV"]
+        parameters["dy_matched_processes"] + ["EWK", "TT+ST", "VV", "VVV"]
         if parameters["divide_dy_into_matched_jets"]
         else ["DY", "DYVBF", "EWK", "TT+ST", "VV", "VVV"]
     ),
