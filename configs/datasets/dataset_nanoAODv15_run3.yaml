@@ -348,6 +348,62 @@ years:
                 references:
                     - "POWHEG"
 
+            st_t_top:
+                skip_sample: False
+                datasets:
+                    - /TBbarQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 47.241
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tq) t-channel = 145.0 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 47.241"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG+MadSpin"
+
+            st_t_antitop:
+                skip_sample: False
+                datasets:
+                    - /TbarBQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 28.40976
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tbar q) t-channel = 87.2 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 28.40976"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG+MadSpin"
+
+            st_s_top:
+                skip_sample: False
+                datasets:
+                    - /TBbartoLplusNuBbar-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 2.3601
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(t bbar) s-channel = 7.244 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 2.3601"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            st_s_antitop:
+                skip_sample: False
+                datasets:
+                    - /TbarBtoLminusNuB-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 1.47718
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tbar b) s-channel = 4.534 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 1.47718"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
         VV:
             ww_2l2nu:
                 skip_sample: False
@@ -453,6 +509,62 @@ years:
                 references:
                     - NONE
 
+            www:
+                skip_sample: False
+                datasets:
+                    - /WWW-4F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.2328
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00044 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            wwz:
+                skip_sample: False
+                datasets:
+                    - /WWZ-4F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.185
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00090 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            wzz:
+                skip_sample: False
+                datasets:
+                    - /WZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.0621
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00089 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            zzz:
+                skip_sample: False
+                datasets:
+                    - /ZZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.01591
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00088 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
         EWK:
             ewk_lljj:
                 skip_sample: True
@@ -497,6 +609,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /EWK-2Mu2J_Bin-M2Mu-105to160-M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /EWK-2Mu2J_Bin-M2Mu-105to160-M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
                 cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
@@ -584,6 +697,118 @@ years:
                 br_source: "pdg"
                 references:
                     - "POWHEG + Herwig7 (TuneCH3)"
+
+            ggh_amcatnlo:
+                skip_sample: False
+                datasets:
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; nominal amc@NLO ggH, needed as the baseline of the ggh_amcatnlo_TuneCP5Up/Down variations"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO"
+
+            ggh_amcatnlo_TuneCP5Up:
+                skip_sample: False
+                datasets:
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Up_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Up_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; CP5 tune-up variation of ggh_amcatnlo (same sigma x BR as nominal)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO TuneCP5Up"
+
+            ggh_amcatnlo_TuneCP5Down:
+                skip_sample: False
+                datasets:
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Down_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Down_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; CP5 tune-down variation of ggh_amcatnlo (same sigma x BR as nominal)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO TuneCP5Down"
+
+            wph_powheg:
+                skip_sample: False
+                datasets:
+                    - /WplusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /WplusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000191931
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.89096 * 2.1542e-4; W inclusive decays (gridpack HWplusJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (WH sigma_WpH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO"
+
+            wmh_powheg:
+                skip_sample: False
+                datasets:
+                    - /WminusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /WminusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000121169
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.56248 * 2.1542e-4; W inclusive decays (gridpack HWminusJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (WH sigma_WmH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO"
+
+            zh_powheg:
+                skip_sample: False
+                datasets:
+                    - /ZH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /ZH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000174609
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.81055 * 2.1542e-4; qq->ZH only (POWHEG HZJ has no gg->ZH); Z inclusive decays (gridpack HZJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ZH total 0.94055 minus sigma_ggZH 0.13 = qq->ZH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO (qq->ZH)"
+
+            tth_powheg:
+                skip_sample: False
+                datasets:
+                    - /TTH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /TTH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000126839
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.5888 * 2.1542e-4; inclusive top decays (gridpack ttH_inclusive_hdamp, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ttH NNLO+NNLL QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG"
 
 
     "2025":
@@ -927,6 +1152,62 @@ years:
                 references:
                     - "POWHEG"
 
+            st_t_top:
+                skip_sample: False
+                datasets:
+                    - /TBbarQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 47.241
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tq) t-channel = 145.0 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 47.241"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG+MadSpin"
+
+            st_t_antitop:
+                skip_sample: False
+                datasets:
+                    - /TbarBQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 28.40976
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tbar q) t-channel = 87.2 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 28.40976"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG+MadSpin"
+
+            st_s_top:
+                skip_sample: False
+                datasets:
+                    - /TBbartoLplusNuBbar-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 2.3601
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(t bbar) s-channel = 7.244 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 2.3601"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            st_s_antitop:
+                skip_sample: False
+                datasets:
+                    - /TbarBtoLminusNuB-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 1.47718
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tbar b) s-channel = 4.534 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 1.47718"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
         VV:
             ww_2l2nu:
                 skip_sample: False
@@ -1032,6 +1313,62 @@ years:
                 references:
                     - NONE
 
+            www:
+                skip_sample: False
+                datasets:
+                    - /WWW-4F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.2328
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00044 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            wwz:
+                skip_sample: False
+                datasets:
+                    - /WWZ-4F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.185
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00090 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            wzz:
+                skip_sample: False
+                datasets:
+                    - /WZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.0621
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00089 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            zzz:
+                skip_sample: False
+                datasets:
+                    - /ZZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.01591
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00088 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
         EWK:
             ewk_lljj:
                 skip_sample: True
@@ -1076,6 +1413,7 @@ years:
                 skip_sample: False
                 datasets:
                     - /EWK-2Mu2J_Bin-M2Mu-105to160-M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /EWK-2Mu2J_Bin-M2Mu-105to160-M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
                 cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
@@ -1163,6 +1501,118 @@ years:
                 br_source: "pdg"
                 references:
                     - "POWHEG + Herwig7 (TuneCH3)"
+
+            ggh_amcatnlo:
+                skip_sample: False
+                datasets:
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; nominal amc@NLO ggH, needed as the baseline of the ggh_amcatnlo_TuneCP5Up/Down variations"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO"
+
+            ggh_amcatnlo_TuneCP5Up:
+                skip_sample: False
+                datasets:
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Up_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Up_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; CP5 tune-up variation of ggh_amcatnlo (same sigma x BR as nominal)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO TuneCP5Up"
+
+            ggh_amcatnlo_TuneCP5Down:
+                skip_sample: False
+                datasets:
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Down_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Down_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; CP5 tune-down variation of ggh_amcatnlo (same sigma x BR as nominal)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO TuneCP5Down"
+
+            wph_powheg:
+                skip_sample: False
+                datasets:
+                    - /WplusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /WplusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000191931
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.89096 * 2.1542e-4; W inclusive decays (gridpack HWplusJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (WH sigma_WpH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO"
+
+            wmh_powheg:
+                skip_sample: False
+                datasets:
+                    - /WminusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /WminusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000121169
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.56248 * 2.1542e-4; W inclusive decays (gridpack HWminusJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (WH sigma_WmH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO"
+
+            zh_powheg:
+                skip_sample: False
+                datasets:
+                    - /ZH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /ZH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000174609
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.81055 * 2.1542e-4; qq->ZH only (POWHEG HZJ has no gg->ZH); Z inclusive decays (gridpack HZJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ZH total 0.94055 minus sigma_ggZH 0.13 = qq->ZH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO (qq->ZH)"
+
+            tth_powheg:
+                skip_sample: False
+                datasets:
+                    - /TTH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /TTH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000126839
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.5888 * 2.1542e-4; inclusive top decays (gridpack ttH_inclusive_hdamp, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ttH NNLO+NNLL QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG"
 
     "2026":
         Data:
@@ -1347,6 +1797,66 @@ years:
                 references:
                     - "POWHEG"
 
+            st_t_top:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /TBbarQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 47.241
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tq) t-channel = 145.0 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 47.241"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG+MadSpin"
+
+            st_t_antitop:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /TbarBQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 28.40976
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tbar q) t-channel = 87.2 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 28.40976"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG+MadSpin"
+
+            st_s_top:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /TBbartoLplusNuBbar-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 2.3601
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(t bbar) s-channel = 7.244 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 2.3601"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            st_s_antitop:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /TbarBtoLminusNuB-s-channel-4FS_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 1.47718
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG NNLO (MCFM/Liu et al.), 13.6 TeV, mt=172.5 GeV, page r26 (2026-10-02): sigma(tbar b) s-channel = 4.534 pb; times BR(W->lnu, l=e,mu,tau) = 0.3258 (same convention as ttjets_*) = 1.47718"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG NNLO"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
         VV:
             ww_2l2nu:
                 skip_sample: False
@@ -1446,6 +1956,66 @@ years:
                 references:
                     - NONE
 
+            www:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /WWW-4F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.2328
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00044 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            wwz:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /WWZ-4F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.185
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00090 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            wzz:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /WZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.0621
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00089 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            zzz:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /ZZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                cross_section_pb: 0.01591
+                cross_section_source: McM HIG-Run3Summer22wmLHEGS-00088 generator_parameters (aMC@NLO generator-level NLO cross section)
+                notes: "Generator NLO cross section from McM, same value in the Run3Summer22/23 and RunIII2024Summer24 requests; not cross-checked against XSDB (needs CERN SSO)"
+                kfactor:
+                    value: 1.0
+                    source: "NONE"
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
         EWK:
             ewk_mmjj_mll_105_160:
                 skip_sample: False
@@ -1466,6 +2036,7 @@ years:
                 datasets:
                     # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
                     - /EWK-2Mu2J_Bin-M2Mu-105to160-M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /EWK-2Mu2J_Bin-M2Mu-105to160-M2J-120_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
                 cross_section_pb: 0.06447
                 cross_section_source: "computed using gen cross-section analyzer script"
                 kfactor:
@@ -1542,3 +2113,122 @@ years:
                 br_source: "pdg"
                 references:
                     - "POWHEG + Herwig7 (TuneCH3)"
+
+            ggh_amcatnlo:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; nominal amc@NLO ggH, needed as the baseline of the ggh_amcatnlo_TuneCP5Up/Down variations"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO"
+
+            ggh_amcatnlo_TuneCP5Up:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Up_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Up_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; CP5 tune-up variation of ggh_amcatnlo (same sigma x BR as nominal)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO TuneCP5Up"
+
+            ggh_amcatnlo_TuneCP5Down:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Down_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /GluGluH-Hto2Mu_Par-M-125_TuneCP5Down_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.0110834
+                notes: "total cross-section = cross-section TIMES branching ratio = 51.45 * 2.1542e-4; CP5 tune-down variation of ggh_amcatnlo (same sigma x BR as nominal)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ggF N3LO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "aMC@NLO TuneCP5Down"
+
+            wph_powheg:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /WplusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /WplusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000191931
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.89096 * 2.1542e-4; W inclusive decays (gridpack HWplusJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (WH sigma_WpH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO"
+
+            wmh_powheg:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /WminusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /WminusH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000121169
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.56248 * 2.1542e-4; W inclusive decays (gridpack HWminusJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (WH sigma_WmH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO"
+
+            zh_powheg:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /ZH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+                    - /ZH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000174609
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.81055 * 2.1542e-4; qq->ZH only (POWHEG HZJ has no gg->ZH); Z inclusive decays (gridpack HZJ_HanythingJ_..._Vinclusive, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ZH total 0.94055 minus sigma_ggZH 0.13 = qq->ZH, NNLO QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG MiNLO (qq->ZH)"
+
+            tth_powheg:
+                skip_sample: False
+                datasets:
+                    # 2026-conditions MC not yet available; reusing 2025's (2024-conditions) files.
+                    - /TTH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+                    - /TTH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM
+                cross_section_pb: 0.000126839
+                notes: "total cross-section = cross-section TIMES branching ratio = 0.5888 * 2.1542e-4; inclusive top decays (gridpack ttH_inclusive_hdamp, Pythia H->mumu only)"
+                cross_section_source: "LHCHXSWG1 crosssections @cbb6cf65c1423183d16a057b18456804c0d002d8: R5/data/Higgs_cross_sections.csv v1.1.3 (ttH NNLO+NNLL QCD+NLO EW, 13.6 TeV, mH=125.38) x YR4/data/YR4_SM_branching_ratios.csv (mumu)" # https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections
+                kfactor:
+                    value: 1.00
+                    source: "HXSWG"
+                branching_ratio: 2.1542e-4 # YR4 H->mumu, linear interp. of mH=125.3 (2.159e-4) and 125.4 (2.153e-4)
+                br_source: "pdg"
+                references:
+                    - "POWHEG"

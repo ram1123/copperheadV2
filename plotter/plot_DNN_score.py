@@ -113,7 +113,7 @@ def plotStage2DNN_score(hist_dict_bySampleGroup, var, plot_settings, full_save_p
         else: # bkg MC
             bkg_MC_dict[group_name] = hist_dict
     # order bkg_MC_dict in a specific way for plotting, smallest yielding process first:
-    bkg_MC_order = ["VVV", "VV", "Ewk", "Top", "DYVBF", "DY","DYJ01", "DYJ2"]
+    bkg_MC_order = ["VVV", "VV", "Ewk", "Top", "DYVBF", "DY","DYJ01", "DYJ2", "DY2", "DY1", "DY0"]
     bkg_MC_dict = {process: bkg_MC_dict[process] for process in bkg_MC_order if process in bkg_MC_dict}
     logger.info(f"data_dict : {data_dict}")
     logger.info(f"bkg_MC_dict : {bkg_MC_dict}")
@@ -225,6 +225,12 @@ def arrangeHist_bySampleGroup(pickled_hist_dict, sample_group_dict):
     sample_group_dict: {plot_group_name: [process_name, ...]}, as built by
     load_group_process_indicators().
     """
+    # reco_012 DY split (<proc>_recoMatched{0,1,2}J): plot DY0/DY1/DY2 (incl. + VBF-filter DY) instead of DY/DYVBF
+    if any("_recoMatched" in name for name in pickled_hist_dict):
+        dy_procs = sample_group_dict.get("DY", []) + sample_group_dict.get("DYVBF", [])
+        sample_group_dict = {k: v for k, v in sample_group_dict.items() if k not in ("DY", "DYVBF")}
+        for n in (0, 1, 2):
+            sample_group_dict[f"DY{n}"] = [f"{proc}_recoMatched{n}J" for proc in dy_procs]
     hist_bySampleGroup = {sample_group: [] for sample_group in sample_group_dict.keys()}
     for hist_name, hist_instance in pickled_hist_dict.items():
         # loop over hist_name and add them to the appropriate sample group

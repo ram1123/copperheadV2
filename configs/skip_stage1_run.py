@@ -55,7 +55,7 @@ samples_to_skip = [
     # "ewk_mmjj_mll_105_160",
     "ewk_lljj",
     "ewk_lljj_mll50_mjj120",
-    "ewk_mmjj_mll_105_160_mjj120",
+    # "ewk_mmjj_mll_105_160_mjj120",  # Pythia8 counterpart of the Herwig7 nominal: EWK PS variation
     # --- top ---
     # "ttjets_dl",
     "ttjets_fh",
@@ -66,5 +66,5 @@ samples_to_skip = [
     "zz",
     # --- signal ---
     # "vbf_aMCatNLO",
-    "ggh_amcatnlo",
+    # "ggh_amcatnlo",  # nominal amc@NLO ggH: baseline for the ggh_amcatnlo_TuneCP5Up/Down variations
 ]

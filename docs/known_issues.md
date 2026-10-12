@@ -31,6 +31,14 @@ Environments that don't include the `cuda` feature (`ci`, `ci-legacy`, `combine`
 scoped per-feature via a named platform variant (`linux-64-cuda`) rather than applied
 workspace-wide, so plain `pixi shell -e ci` (etc.) just works.
 
+**2026-10-09 update (pixi 0.81, CVMFS project):** the CVMFS manifest still uses the deprecated
+`[system-requirements] cuda = "12.4"`, so `./enter_pixi.sh default` failed with
+`unsupported-platform` (`__cuda >= 12.4` missing; `ci` still runs without the override). With the override set, pixi then tried to re-install into the read-only CVMFS env (`CACHEDIR.TAG:
+Read-only file system`; `--frozen` doesn't help). `enter_pixi.sh` and `run_in_pixi.sh` now export
+`CONDA_OVERRIDE_CUDA=12.4` when `nvidia-smi` is absent and call `pixi run --as-is`, which uses the
+installed env without checking or updating it. The real fix is upstream: move the CUDA requirement
+to the `platforms` entry in the CVMFS `pixi.toml` and run `pixi lock` (v6 → v7) there.
+
 ## Orphaned/pre-existing broken scripts (fixed 2026-09-12)
 
 A repo-wide syntax sweep (`ast.parse` over every tracked `.py` file, done as part of a branch-merge

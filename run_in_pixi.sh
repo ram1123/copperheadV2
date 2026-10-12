@@ -45,8 +45,13 @@ fi
 
 export WORKDIR
 
+# GPU-less sessions lack the __cuda virtual package the cuda feature needs (docs/known_issues.md)
+if ! command -v nvidia-smi >/dev/null 2>&1; then
+    export CONDA_OVERRIDE_CUDA="${CONDA_OVERRIDE_CUDA:-12.4}"
+fi
+
 cd "$PIXI_PROJECT"
-exec pixi run -e "$PIXI_ENV" bash -c '
+exec pixi run --as-is -e "$PIXI_ENV" bash -c '
 set -euo pipefail
 cd "$WORKDIR"
 

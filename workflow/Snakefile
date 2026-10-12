@@ -250,6 +250,11 @@ ZPT_MAXEV = int(ZPT.get("max_events", 3000000))
 ZPT_BATCH = int(ZPT.get("batch", 65536))
 
 
+onstart:
+    # Live status page (workflow/snakemake_status_page.py): start it + its web server if not up, print the link.
+    if str(config.get("status_page", True)).lower() not in ("false", "0", "no"):
+        shell("python workflow/snakemake_status_page.py --ensure || true")
+
 #onstart:
 #    if USE_GW:
 #        print("use_gateway=True -- (re)creating the Dask Gateway cluster before the DAG runs")
