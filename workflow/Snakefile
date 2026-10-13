@@ -70,10 +70,6 @@ STAGE3_POSTFIX = SAVE_POSTFIX + DY_SCHEME_TAGS[DY_SCHEME] + ("_SigXS" if SIGXS_E
 PRESTAGE_TAG = config.get("prestage_tag") or ""
 PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
 
-# Prestage JSON variant for stage-1 (PRESTAGE_TAG), e.g. "LumiSplit" -> processor_samples_<year>_NanoAODv<v>_LumiSplit.json.
-PRESTAGE_TAG = config.get("prestage_tag") or ""
-PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
-
 YEARS = config["years"]
 # Stage-3-only merged years (modules/classify_year.py MERGED_YEARS) whose components are
 # all in YEARS; their stage3 job sums those components' stage-2 histograms.
