@@ -193,6 +193,31 @@ Stage-2 / stage-3:
   `JJ_ETA_REGION`): `all` (default) or one of `PAIR_JJ_ETA_REGIONS` in
   [modules/selection.py](../modules/selection.py), e.g. `jj_both_central`, `jj_non_central`. It also selects
   the DNN model directory `<model years>_h-peak_vbf_<jj_eta_region>`.
+- `dy_matched_jets` -- how `stage2` splits every DY sample (DY inclusive and the VBF-filter DY) into
+  sub-processes, passed as `DY_MATCHED_JETS` (`run_stage2_vbf.py --dy_matched_jets`):
+  - `reco_012` (default): by how many of the two selected VBF jets (jet1, jet2; nominal jets, also
+    used for every systematic variation) have a matched generator jet in NanoAOD
+    (`jet{1,2}_hasMatchedGenJet_nominal`, i.e. `Jet_genJetIdx != -1`): `<sample>_recoMatched0J/1J/2J`,
+    so DY with 0, 1 or 2 "real" (non-pileup) VBF jets.
+  - `gen_2j`: by whether the event has at least two generator jets isolated (dR > 0.3) from the
+    hard-process leptons (`gjj_mass > 0`): `<sample>_matched01J` / `<sample>_matched2J`. This looks at
+    gen jets only, not at the two selected reco jets, so it is not `reco_012` with 0J + 1J merged.
+
+  The two schemes write different file names and refuse to share a stage-2 directory: switching
+  needs a new `save_postfix`. Stage-3 detects the scheme from the histogram names.
+- `dy_scheme` -- how `stage3` groups the split DY into datacard processes, passed as `DY_SCHEME`
+  (`run_stage3_vbf.py --dy_scheme`). Each process gets a free normalisation
+  (`XSecAndNorm<year><tag> rateParam [0.2,5]`) and its own `LHERen`/`LHEFac`/PDF nuisances:
+  - `matched` (default): one process per stage-2 category (`reco_012`: `DY_recoMatched0J/1J/2J`;
+    `gen_2j`: `DY_matched01J/2J`). Cards in `stage3_datacards_<save_postfix>`.
+  - `merge01` (`reco_012` only): `DY_recoMatched01J` (0J + 1J summed) and `DY_recoMatched2J`. Cards in
+    `stage3_datacards_<save_postfix>_DY01`.
+  - `separate`: DY and DYVBF as processes instead of the matched-jet split. Cards in
+    `stage3_datacards_<save_postfix>_DYsep`.
+
+  Only `stage3` and later depend on it, so a second run with another `dy_scheme` reuses the stage-2
+  histograms. `stage3_validate` and the stats rules read the suffixed directory automatically; when
+  running `run_stats_pipeline_VBF.sh` by hand, pass the suffixed postfix as `-o` (e.g. `-o <postfix>_DY01`).
 
 Plotting (`plots` rule):
 

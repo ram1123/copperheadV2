@@ -126,3 +126,35 @@ python scripts/splice_sample_across_years.py \
 A single-`(old_base, new_base)`-pair bash equivalent, `scripts/splice_sample_dir.sh`,
 also still exists for a one-year/one-path-pair splice without the
 run_tag/`YEAR_META` templating.
+# Compare muon / jet kinematics between two NanoAOD samples
+
+`scripts/compare_nanoaod_muon_jet_kinematics.py` reads the first `--nevents` events
+from two NanoAOD samples (a directory, a glob, a file or a `root://` URL) and makes
+shape-normalised overlays with an A/B ratio panel, plus a χ²/KS summary in `summary.txt`.
+It was written to validate the private Herwig7 VBF H→µµ NanoAOD against the official
+Powheg+Pythia8 sample. It makes three groups of plots:
+
+- `raw_*`: all NanoAOD `Muon`/`Jet` objects with no cuts (multiplicity, pT, η, φ).
+- `sel_*`: a simple selection, **not** the stage-1 one. It applies no JEC/JER/Rochester
+  corrections and no jetId, which v15 does not store. Muons: pT>20, |η|<2.4, mediumId,
+  pfRelIso04<0.25, ≥2 opposite-sign. Jets: pT>25, |η|<4.7, ΔR(µ)>0.4. Plots cover the
+  leading/subleading muon and jet, m_µµ, pT_µµ, y_µµ, ΔR_µµ, N_jets, m_jj, Δη_jj,
+  Δφ_jj and the Zeppenfeld variable.
+- `gen_*`: prompt GenPart muons, GenJets with pT>25 and the generator Higgs. These
+  separate the shower/generator differences from detector, era and pileup differences.
+
+Events are weighted by `genWeight` (use `--unweighted` for unit weights).
+
+**Usage Example** (5k events each; needs a VOMS proxy in `X509_USER_PROXY` for the XRootD input):
+
+```bash
+./run_in_pixi.sh default python scripts/compare_nanoaod_muon_jet_kinematics.py \
+    --sample-a /eos/purdue/store/user/rasharma/fullSim/UL2018/VBFHToMuMu_M125_herwig7/NanoAODSIM_flat/UL2018/VBFHToMuMu_M125_herwig7/ \
+    --sample-b root://eos.cms.rcac.purdue.edu//store/mc/RunIISummer20UL17NanoAODv15/VBFHToMuMu_M125_TuneCP5_withDipoleRecoil_13TeV-powheg-pythia8/NANOAODSIM/150X_mc2017_realistic_v1-v1/2820000/6bf63a84-dbba-4f19-ae78-22ac25b4b705.root \
+    --label-a "Private Herwig7 (UL18)" --label-b "Official Powheg+Pythia8 (UL17)" \
+    --nevents 5000 --output validation/herwig_validation/VBFHToMuMu_M125/herwig7UL18_vs_pythia8UL17_5k
+```
+
+The private sample is UL2018 and the official one is UL17 (`RunIISummer20UL17NanoAODv15`),
+so differences in reco-level `raw_*`/`sel_*` plots can come from the era/pileup profile as
+well as from the parton shower. Use the `gen_*` plots to judge the generator itself.
