@@ -15,10 +15,27 @@ MATCHED_JET_GROUPS_BY_SCHEME = {
     },
 }
 MATCHED_JET_GROUPS = MATCHED_JET_GROUPS_BY_SCHEME["gen_2j"]
+# run_stage3_vbf.py --dy_scheme merge01: reco_012 histograms with 0J + 1J summed into one process
+MERGE01_GROUPS = {
+    "recoMatched0J": "DY_recoMatched01J",
+    "recoMatched1J": "DY_recoMatched01J",
+    "recoMatched2J": "DY_recoMatched2J",
+}
 # every split DY process name, for lists that must cover any scheme (e.g. LHE/PDF decorrelation)
-ALL_MATCHED_DY_PROCESSES = tuple(
-    process for groups in MATCHED_JET_GROUPS_BY_SCHEME.values() for process in groups.values()
-)
+ALL_MATCHED_DY_PROCESSES = tuple(dict.fromkeys(
+    process
+    for groups in (*MATCHED_JET_GROUPS_BY_SCHEME.values(), MERGE01_GROUPS)
+    for process in groups.values()
+))
+
+
+def dy_process_map(scheme, merge01=False):
+    """stage-2 file category -> datacard process for the stage-2 `scheme` (merge01: reco_012 only)."""
+    if merge01:
+        if scheme != "reco_012":
+            raise ValueError(f"--dy_scheme merge01 needs reco_012 stage-2 histograms, got {scheme}.")
+        return MERGE01_GROUPS
+    return MATCHED_JET_GROUPS_BY_SCHEME[scheme]
 
 
 def stage2_histogram_directory(
@@ -48,7 +65,7 @@ def has_matched_jet_histograms(directory):
     return detect_dy_split_scheme(directory) is not None
 
 
-def split_dy_grouping(grouping, keep_sample_groups=False, scheme="gen_2j"):
+def split_dy_grouping(grouping, keep_sample_groups=False, scheme="gen_2j", merge01=False):
     """Map the matched-jet DY histograms to the scheme's DY_* processes, or with
     keep_sample_groups back to their sample group (DY, DYVBF) so they stay separate."""
     split_grouping = {}
@@ -57,7 +74,7 @@ def split_dy_grouping(grouping, keep_sample_groups=False, scheme="gen_2j"):
             split_grouping[dataset] = group
             continue
 
-        for filename_category, matched_group in MATCHED_JET_GROUPS_BY_SCHEME[scheme].items():
+        for filename_category, matched_group in dy_process_map(scheme, merge01).items():
             split_grouping[f"{dataset}_{filename_category}"] = (
                 group if keep_sample_groups else matched_group
             )

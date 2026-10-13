@@ -52,12 +52,19 @@ def jj_env(jjtag):
 STAGE23_JJ_TAGS = [jj_tag(r) for r in STAGE23_JJ_ETA_REGIONS]
 
 # DY split for stage2 (run_stage2_vbf.py --dy_matched_jets); stage3 detects it from the histogram names.
-DY_MATCHED_JETS = config.get("dy_matched_jets") or ""
-DY_MATCHED_JETS_ENV = f"DY_MATCHED_JETS={DY_MATCHED_JETS} " if DY_MATCHED_JETS else ""
+DY_MATCHED_JETS = config.get("dy_matched_jets") or "reco_012"
+DY_MATCHED_JETS_ENV = f"DY_MATCHED_JETS={DY_MATCHED_JETS} "
+# How stage3 groups the split DY (run_stage3_vbf.py --dy_scheme); separate/merge01 write to their own postfix.
+DY_SCHEME = config.get("dy_scheme") or "matched"
+DY_SCHEME_TAGS = {"matched": "", "separate": "_DYsep", "merge01": "_DY01"}
+if DY_SCHEME not in DY_SCHEME_TAGS:
+    raise ValueError(f"dy_scheme must be one of {sorted(DY_SCHEME_TAGS)}, got {DY_SCHEME!r}")
+DY_SCHEME_ENV = f"DY_SCHEME={DY_SCHEME} " if DY_SCHEME != "matched" else ""
 # Interim signal BR fix for stage-1 made with BR(H->mumu) = 2.6e-4 (run_stage3_vbf.py --signal_xsec_rescale):
 # stage3 writes to <save_postfix>_SigXS, so validate/stats read from there too.
 SIGXS_ENV = "SIGNAL_XSEC_RESCALE=1 " if config.get("signal_xsec_rescale", False) else ""
-STAGE3_POSTFIX = SAVE_POSTFIX + ("_SigXS" if SIGXS_ENV else "")
+# same order run_stage3_vbf.py appends them in: <postfix>[_DYsep|_DY01][_SigXS]
+STAGE3_POSTFIX = SAVE_POSTFIX + DY_SCHEME_TAGS[DY_SCHEME] + ("_SigXS" if SIGXS_ENV else "")
 
 # Prestage JSON variant for stage-1 (PRESTAGE_TAG), e.g. "LumiSplit" -> processor_samples_<year>_NanoAODv<v>_LumiSplit.json.
 PRESTAGE_TAG = config.get("prestage_tag") or ""
@@ -748,12 +755,13 @@ rule stage3:
         postfix=SAVE_POSTFIX,
         jj_env=lambda wc: jj_env(wc.jjtag),
         sigxs_env=SIGXS_ENV,
+        dy_scheme_env=DY_SCHEME_ENV,
     shell:
         r"""
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        {params.jj_env}{params.var_env}{params.sigxs_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
+        {params.jj_env}{params.var_env}{params.sigxs_env}{params.dy_scheme_env}PYTHONUNBUFFERED=1 bash run_analysis_pipeline.sh \
             -c {params.yaml} \
             -v {params.nano} \
             -l {params.label} \

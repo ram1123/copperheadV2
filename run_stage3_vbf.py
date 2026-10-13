@@ -8,10 +8,12 @@ How to run (repo root, `default` pixi env; stage-2 must have run for the year, o
 2025 and 2026 when using 2025_2026). Usually driven by `run_analysis_pipeline.sh -m 3`:
     ./run_in_pixi.sh default python run_stage3_vbf.py --years <year> -input <save_path> \
         -l <label> --save_postfix <postfix> [--no_variations] [--jj_eta_region <region>] \
-        [--vbf_filter_study [--dy_scheme separate]] [--signal_xsec_rescale]
+        [--vbf_filter_study [--dy_scheme separate]] [--dy_scheme merge01] [--signal_xsec_rescale]
 
 `--signal_xsec_rescale` (pipeline: SIGNAL_XSEC_RESCALE=1) is the interim fix that rescales the
 signal for stage-1 made with BR(H->mumu) = 2.6e-4. Cards go to <postfix>_SigXS.
+`--dy_scheme merge01` (pipeline: DY_SCHEME=merge01) needs reco_012 stage-2 histograms and fits DY
+as two processes, DY_recoMatched01J (0J + 1J summed) and DY_recoMatched2J. Cards go to <postfix>_DY01.
 
 Example:
     WITH_VARIATIONS=1 bash run_analysis_pipeline.sh -m 3 -y 2025_2026 -v 15 -o Sep29_2026 \
@@ -25,8 +27,8 @@ import time
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
 from stage3.edit_datacard4DY_matchedJets import (
-    MATCHED_JET_GROUPS_BY_SCHEME,
     detect_dy_split_scheme,
+    dy_process_map,
     split_dy_grouping,
     stage2_histogram_directory,
 )
@@ -59,13 +61,15 @@ parser.add_argument(
     "--dy_scheme",
     dest="dy_scheme",
     default="matched",
-    choices=["matched", "separate"],
+    choices=["matched", "separate", "merge01"],
     help=(
         "With matched-jet DY histograms: 'matched' (default) merges all DY samples into "
         "DY_matched01J/DY_matched2J (stage-2 --dy_matched_jets gen_2j) or "
         "DY_recoMatched0J/1J/2J (reco_012, detected from the histogram names); 'separate' keeps one process per sample group (DY, "
         "DYVBF with --vbf_filter_study), each with its own rateParam, and writes to "
-        "<save_postfix>_DYsep."
+        "<save_postfix>_DYsep; 'merge01' (reco_012 only) sums recoMatched0J + 1J into "
+        "DY_recoMatched01J next to DY_recoMatched2J, one rateParam each, and writes to "
+        "<save_postfix>_DY01."
     ),
 )
 parser.add_argument(
@@ -87,10 +91,9 @@ years = args.years if args.years else [args.year]
 year = years[0]
 
 stage2_model_suffix = args.save_postfix if args.save_postfix else ""
-# 'separate' reads the same stage-2 histograms but must not overwrite the 'matched' cards
-stage3_output_suffix = (
-    f"{stage2_model_suffix}_DYsep" if args.dy_scheme == "separate" else stage2_model_suffix
-)
+# 'separate'/'merge01' read the same stage-2 histograms but must not overwrite the 'matched' cards
+DY_SCHEME_OUTPUT_TAG = {"separate": "_DYsep", "merge01": "_DY01"}
+stage3_output_suffix = stage2_model_suffix + DY_SCHEME_OUTPUT_TAG.get(args.dy_scheme, "")
 if args.signal_xsec_rescale:
     if any(is_run2(comp) for y in years for comp in component_years(y)):
         raise ValueError("--signal_xsec_rescale only applies to Run-3 years (BR 2.6e-4 issue).")
@@ -175,25 +178,28 @@ if len(set(dy_split_per_path)) != 1:
 dy_split_scheme = dy_split_per_path[0]
 divide_dy_into_matched_jets = dy_split_scheme is not None
 stage2_histogram_path = ", ".join(map(str, stage2_histogram_paths))
-if args.dy_scheme == "separate" and not divide_dy_into_matched_jets:
-    raise ValueError("--dy_scheme separate needs stage-2 histograms split into matched jets.")
+if args.dy_scheme != "matched" and not divide_dy_into_matched_jets:
+    raise ValueError(f"--dy_scheme {args.dy_scheme} needs stage-2 histograms split into matched jets.")
 dy_separate = args.dy_scheme == "separate"
+dy_merge01 = args.dy_scheme == "merge01"
 # rateParams follow the processes: DY_matched01J/2J for 'matched', DY/DYVBF for 'separate'
 parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets and not dy_separate
 parameters["dy_separate_rate_params"] = dy_separate
 # the DY processes that each get a free rateParam in the 'matched' scheme
 parameters["dy_matched_processes"] = (
-    list(MATCHED_JET_GROUPS_BY_SCHEME[dy_split_scheme].values())
+    list(dict.fromkeys(dy_process_map(dy_split_scheme, dy_merge01).values()))
     if parameters["divide_dy_into_matched_jets"] else []
 )
 if divide_dy_into_matched_jets:
     parameters["grouping"] = split_dy_grouping(
-        parameters["grouping"], keep_sample_groups=dy_separate, scheme=dy_split_scheme
+        parameters["grouping"], keep_sample_groups=dy_separate, scheme=dy_split_scheme,
+        merge01=dy_merge01,
     )
 logger.info(
-    "divide_dy_into_matched_jets=%s scheme=%s (stage2 directory: %s)",
+    "divide_dy_into_matched_jets=%s scheme=%s dy_scheme=%s (stage2 directory: %s)",
     divide_dy_into_matched_jets,
     dy_split_scheme,
+    args.dy_scheme,
     stage2_histogram_path,
 )
 

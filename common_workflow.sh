@@ -513,7 +513,7 @@ build_stage2_cmd() {
     if [[ "${jj_eta_region}" != "all" ]]; then
         cmd+=(--jj_eta_region "${jj_eta_region}")
     fi
-    # DY_MATCHED_JETS=reco_012: DY split into 0/1/2 gen-matched VBF jets (stage-3 detects it)
+    # DY_MATCHED_JETS: unset = run_stage2_vbf.py default (reco_012, 0/1/2 gen-matched VBF jets); stage-3 detects it
     if [[ -n "${DY_MATCHED_JETS:-}" ]]; then
         cmd+=(--dy_matched_jets "${DY_MATCHED_JETS}")
     fi
@@ -575,7 +575,7 @@ build_stage3_cmd() {
     if [[ "${do_vbf_filter_study}" == "1" ]]; then
         cmd+=(--vbf_filter_study)
     fi
-    # DY_SCHEME=separate: DY and DYVBF as separate processes; cards land under <postfix>_DYsep
+    # DY_SCHEME=separate: DY + DYVBF, cards under <postfix>_DYsep; merge01: DY 0J+1J merged, cards under <postfix>_DY01
     if [[ -n "${DY_SCHEME:-}" ]]; then
         cmd+=(--dy_scheme "${DY_SCHEME}")
     fi

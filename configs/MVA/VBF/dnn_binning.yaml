@@ -718,3 +718,204 @@ models:
         region: h-peak
         signal: vbf,ggh
         report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterJets_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_Systematics_LumiSplit_Oct12_2026_ScoreDump_NoSyst/binning_comparison.txt
+  Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit:
+    jj_both_central:
+      n_bins: 14
+      edges: [0.010247, 0.118368, 0.334609, 0.55085, 0.767092, 0.875212, 0.983333, 1.199574, 1.307695, 1.415815, 1.523936,
+        1.632057, 1.740177, 1.848298, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:28:36'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 67
+        max_nbins_scanned: 70
+        total_asimov_Z: 0.3132
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.010247
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_central_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_central_NoSyst/binning_comparison.txt
+    jj_one_fwd25_one_central:
+      n_bins: 15
+      edges: [0.005692, 0.115519, 0.225347, 0.335175, 0.445003, 0.554831, 0.774486, 0.994142, 1.10397, 1.213798, 1.323626,
+        1.433453, 1.543281, 1.653109, 1.762937, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:30:10'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 66
+        max_nbins_scanned: 70
+        total_asimov_Z: 0.8951
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.005692
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_one_fwd25_one_central_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_one_fwd25_one_central_NoSyst/binning_comparison.txt
+    jj_both_fwd25:
+      n_bins: 11
+      edges: [0.0, 0.154347, 0.61739, 0.771737, 0.926085, 1.080432, 1.234779, 1.389127, 1.543474, 1.697822, 1.852169, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:31:34'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 47
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.5646
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_fwd25_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_fwd25_NoSyst/binning_comparison.txt
+    all:
+      n_bins: 18
+      edges: [0.0, 0.113349, 0.226698, 0.453396, 0.566744, 0.680093, 0.793442, 0.906791, 1.02014, 1.133489, 1.360187, 1.473536,
+        1.586884, 1.700233, 1.813582, 1.926931, 2.04028, 2.153629, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:33:12'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 64
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.1599
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_JERStrat4_Systematics_LumiSplit_Oct12_2026_ScoreDump_NoSyst/binning_comparison.txt
+  Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit:
+    jj_both_central:
+      n_bins: 13
+      edges: [0.0, 0.134339, 0.403018, 0.537358, 0.806037, 0.940376, 1.074715, 1.343394, 1.477734, 1.612073, 1.880752, 2.015091,
+        2.149431, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:29:15'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 54
+        max_nbins_scanned: 70
+        total_asimov_Z: 0.3241
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_central_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_central_NoSyst/binning_comparison.txt
+    jj_one_fwd25_one_central:
+      n_bins: 16
+      edges: [0.005872, 0.109421, 0.212971, 0.31652, 0.420069, 0.627168, 0.834267, 1.041366, 1.248464, 1.352014, 1.455563,
+        1.559113, 1.662662, 1.766211, 1.869761, 1.97331, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:31:17'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 70
+        max_nbins_scanned: 70
+        total_asimov_Z: 0.8654
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.005872
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_one_fwd25_one_central_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_one_fwd25_one_central_NoSyst/binning_comparison.txt
+    jj_both_fwd25:
+      n_bins: 14
+      edges: [0.010988, 0.52837, 0.631846, 0.735322, 0.838799, 0.942275, 1.045751, 1.149228, 1.252704, 1.35618, 1.459656,
+        1.563133, 1.666609, 1.770085, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:32:18'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 70
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.2502
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.010988
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_fwd25_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_jj_both_fwd25_NoSyst/binning_comparison.txt
+    all:
+      n_bins: 19
+      edges: [0.0, 0.127269, 0.254538, 0.381807, 0.509076, 0.636345, 0.763614, 0.890882, 1.018151, 1.272689, 1.399958, 1.527227,
+        1.654496, 1.909034, 2.036303, 2.163572, 2.290841, 2.41811, 2.545378, 7.304329]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-12T20:33:45'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 7.254329
+        best_nbins_from_scan: 57
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.171
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 7.254329
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_NoSyst
+        years: ['2024']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_NoSyst/binning_comparison.txt

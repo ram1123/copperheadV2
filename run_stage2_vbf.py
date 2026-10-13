@@ -7,14 +7,14 @@ How to run (repo root, `default` pixi env). Usually driven by `run_analysis_pipe
 (env DY_MATCHED_JETS -> --dy_matched_jets) or the Snakemake stage2 rule (config dy_matched_jets):
     ./run_in_pixi.sh default python run_stage2_vbf.py -y <year> -input <save_path> -l <label> \
         --model_tag <tag> --model_path <dnn model dir> -bkg DY ... --save_postfix <postfix> \
-        [--no_variations] [--jj_eta_region <region>] [--dy_matched_jets gen_2j|reco_012]
+        [--no_variations] [--jj_eta_region <region>] [--dy_matched_jets reco_012|gen_2j]
 
 Example (2023 DY only, nominal, DY split by number of gen-matched VBF jets):
     ./run_in_pixi.sh default python run_stage2_vbf.py -y 2023 \
         -input /work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/<label> -l <label> \
         --model_tag trained_best_optuna_v1_multifold_050Trials \
         --model_path ./dnn/trained_models/<model label>/<years>_h-peak_vbf_all \
-        -bkg DY --save_postfix DY012test --no_variations --dy_matched_jets reco_012
+        -bkg DY --save_postfix DY012test --no_variations
 """
 import argparse
 import glob
@@ -125,7 +125,7 @@ def histogram_output_name(sample_name, histogram_category):
     return f"{sample_name}_{histogram_category}_hist.pkl"
 
 
-def histogram_output_names(sample_name, divide_dy_into_matched_jets=False, dy_matched_jets="gen_2j"):
+def histogram_output_names(sample_name, divide_dy_into_matched_jets=False, dy_matched_jets="reco_012"):
     """Return the output basenames expected for one Stage-2 sample."""
     if divide_dy_into_matched_jets and is_dy_sample(sample_name):
         return [
@@ -135,7 +135,7 @@ def histogram_output_names(sample_name, divide_dy_into_matched_jets=False, dy_ma
     return [histogram_output_name(sample_name, "hist")]
 
 
-def dy_matched_jet_filters(events, dy_matched_jets="gen_2j"):
+def dy_matched_jet_filters(events, dy_matched_jets="reco_012"):
     """Split events into the complementary DY categories of one scheme."""
     if dy_matched_jets == "gen_2j":
         matched2J_filter = ak.to_numpy(ak.materialize(events.gjj_mass > 0))
@@ -433,7 +433,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         no_variations=False,
         do_vbf_filter_study=False,
         divide_dy_by_year=None,
-        dy_matched_jets="gen_2j",
+        dy_matched_jets="reco_012",
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
         use_transformer_vbf_channel=False,
@@ -1098,13 +1098,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dy_matched_jets",
         dest="dy_matched_jets",
-        default="gen_2j",
+        default="reco_012",
         choices=sorted(DY_MATCH_CATEGORIES_BY_SCHEME),
         help=(
             "How DY is split when divide_dy_into_matched_jets (stage2/VBF/switches.yaml) is on. "
-            "'gen_2j' (default): <sample>_matched01J/matched2J on gjj_mass > 0 (>=2 gen jets). "
-            "'reco_012': <sample>_recoMatched0J/1J/2J = number of the two selected reco jets "
-            "with a matched gen jet (nominal jets). Stage-3 detects the scheme from the file "
+            "'reco_012' (default): <sample>_recoMatched0J/1J/2J = number of the two selected reco "
+            "jets with a matched gen jet (nominal jets). "
+            "'gen_2j': <sample>_matched01J/matched2J on gjj_mass > 0 (>=2 gen jets). "
+            "Stage-3 detects the scheme from the file "
             "names; the two can't share one histogram directory (use a new --save_postfix)."
         ),
     )
