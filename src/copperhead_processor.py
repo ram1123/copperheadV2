@@ -1144,13 +1144,15 @@ class EventProcessor(processor.ProcessorABC):
         # muon IP cuts, exactly-2-loose-muons veto, and an iso+IP-qualified electron veto down to
         # electron_pt_cut_lepton_ip_veto. Cut values: configs/parameters/{muon,electron}.yaml.
         do_lepton_ip_veto = self.config["switches"].get("do_lepton_ip_veto", False)
+        # do_muon_ip_cut: muon IP cuts alone (no extra lepton vetoes), to separate the two effects
+        do_muon_ip_cut = do_lepton_ip_veto or self.config["switches"].get("do_muon_ip_cut", False)
         muon_selection = (
             (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester #FIXME: Why pt_raw
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
-        if do_lepton_ip_veto:
+        if do_muon_ip_cut:
             muon_ip = (abs(events.Muon.dxy) < self.config["muon_dxy_cut"]) & (abs(events.Muon.dz) < self.config["muon_dz_cut"])
             muon_selection = muon_selection & muon_ip # AN-19-124 baseline IP cuts
 
@@ -1168,7 +1170,7 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
         self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
         self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
-        if do_lepton_ip_veto:
+        if do_muon_ip_cut:
             self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
         self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
 
@@ -2787,7 +2789,7 @@ class EventProcessor(processor.ProcessorABC):
                 "muon_eta",
                 "muon_id",
                 "muon_isGlobal_or_Tracker",
-                "muon_ip",          # only with do_lepton_ip_veto
+                "muon_ip",          # only with do_muon_ip_cut / do_lepton_ip_veto
                 "muon_selection",
                 "muon_iso",
                 "nmuons",           # official; with do_lepton_ip_veto replaced by the next two

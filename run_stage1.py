@@ -52,7 +52,7 @@ CHUNK_SIZE = 250_000
 # entry, which made the old "cycle to next redirector on tls_bad" logic a no-op --
 # any transient read error (even a spurious FileNotFoundError from a momentary
 # EOS/XRootD hiccup) permanently failed the whole dataset with zero retries.
-MAX_ATTEMPTS_PER_REDIRECTOR = 3
+MAX_ATTEMPTS_PER_REDIRECTOR = 1
 RETRY_BACKOFF_SECONDS = 20
 DATASET_ELEMENT_LIMITS = {
     "data_": MAX_FILE_LEN,  # None means no limit (use uproot's default behavior)
