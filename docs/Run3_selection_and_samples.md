@@ -229,7 +229,25 @@ The values actually used by the code are in [configs/parameters/lumi.yaml](../co
 
 ## MET/ Noise Filters
 
-[Official recommendations](https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2#Run_3_2022_and_2023_data_and_MC)
+[Official recommendations](https://cms-jme-jmar.docs.cern.ch/recommendations/met/noise_filters/#run-3)
+
+Events must pass every listed flag, in data and MC (`configs/parameters/misc.yaml`, `event_flags`).
+
+| Filter (`Flag_*`) | 2022preEE | 2022postEE | 2023 | 2023BPix | 2024 | 2025 | 2026 |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `goodVertices` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `globalSuperTightHalo2016Filter` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `EcalDeadCellTriggerPrimitiveFilter` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `BadPFMuonFilter` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `BadPFMuonDzFilter` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `hfNoisyHitsFilter` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `eeBadScFilter` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `ecalBadCalibFilter` | – | – | – | – | ✓ | – | – |
+| ECAL bad-calibration recipe (data only, runs 362433–367144) | – | ✓ | ✓ | – | – | – | – |
+
+ECAL bad-calibration recipe: the NanoAOD flag cannot be rerun, so data events in runs 362433–367144 (late 2022, early 2023)
+are rejected if PuppiMET $p_T > 100$ GeV and any jet (no jet ID) has $p_T > 50$ GeV, $-0.5 < \eta < -0.1$,
+$-2.1 < \phi < -1.8$, neutral or charged EM fraction $> 0.9$ and $\Delta\phi(\text{jet}, \text{MET}) > 2.9$. Not applied to MC.
 
 
 ## Sample Tables
