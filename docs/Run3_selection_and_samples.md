@@ -182,17 +182,16 @@ are not used in either category.
 | **ggH** | BDT score in the 110–150 GeV window; events split into BDT-score sub-categories using per-year bin edges (`BDT_edges.yaml` given to `run_stage2.py --edge_cfg_path`); signal extracted from a fit to $m_{\mu\mu}$ in each sub-category |
 | **VBF** | DNN score (`dnn_vbf_score_atanh`), trained in the h-peak region; binned per production and dijet-$\eta$ region (`configs/MVA/VBF/dnn_binning.yaml`); template fit to the DNN-score distribution in the signal region and sidebands |
 
-VBF dijet-$\eta$ regions (pairs of leading jets, central = $\lvert\eta\rvert \leq 2.5$):
+VBF dijet-$\eta$ regions, defined on the two leading jets (central = $\lvert\eta\rvert \leq 2.5$, forward = $\lvert\eta\rvert > 2.5$).
+The three regions are mutually exclusive and together cover the full VBF category:
 
-| Region | Definition |
-| --- | --- |
-| `all` (default) | No restriction |
-| `jj_both_central` | Both jets $\lvert\eta\rvert \leq 2.5$ |
-| `jj_non_central` | At least one jet $\lvert\eta\rvert > 2.5$ (complement of `jj_both_central`) |
+| Region | Code name | Definition |
+| --- | --- | --- |
+| Both central | `jj_both_central` | Both jets $\lvert\eta\rvert \leq 2.5$ |
+| One central, one forward | `jj_one_fwd25_one_central` | One jet $\lvert\eta\rvert \leq 2.5$, the other $\lvert\eta\rvert > 2.5$ |
+| Both forward | `jj_both_fwd25` | Both jets $\lvert\eta\rvert > 2.5$ |
 
-The `jj_both_central` and `jj_non_central` cards can be combined into one two-channel fit
-(`run_stats_pipeline_VBF.sh -m 12`), which covers the same phase space as `all`. A DNN is trained per region and should
-only be applied in the region it was trained on.
+A DNN is trained and binned per region, and should only be applied in the region it was trained on. 
 
 
 
