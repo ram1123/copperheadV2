@@ -410,6 +410,8 @@ VAR_SETS: Dict[str, List[str]] = {
     "dimuon_plots": DIMUON_PLOT_VARS,
     "met": MET_VARS,
     "jet_kinematics": JETS_PLOT_VARS,
+    # muon impact parameters + derived dimuon IP variables (always saved by stage-1 since Oct 2026)
+    "muon_ip": muon_ip_vars + mu12_ip_comb_vars,
     # "vbf_additional": VBF_ADDITIONAL_VARS,
     "jet_id": JET_ID_VARIABLES,
 }
@@ -418,8 +420,9 @@ VAR_SETS: Dict[str, List[str]] = {
 # given -- preserves the plotter's pre-existing default variable list.
 # "jet_id" (PU-DNN input variables) is opt-in only via `only_groups`/--variables,
 # since it's a large group (~40 vars) that most existing plotting runs don't want.
+# "muon_ip" is default: older ntuples without these columns just skip them (plotter warns once).
 DEFAULT_VAR_SET_KEYS: List[str] = [
-    "vbf_training", "ggh_training", "muon_plots", "dimuon_plots", "met", "jet_kinematics",
+    "vbf_training", "ggh_training", "muon_plots", "dimuon_plots", "met", "jet_kinematics", "muon_ip",
 ]
 
 

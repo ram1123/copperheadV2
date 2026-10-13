@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import logging
 from modules.utils import logger
+from modules.classify_year import component_years, is_run3
 
 rename_regions = {
     "h-peak": "SR",
@@ -110,20 +111,26 @@ lumi_syst = {
     },
     # Updated the lumi values from here: https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun3#2024
     # FIXME: WE should send this at a centralized YAML file
+    # Run 3: LUM 2022+2023+2024 combination nuisances (LumiRecommendationsRun3; cms-object-guidelines lumi.md §3).
+    # One calibration per calendar year, so preEE/postEE and 2023/BPix share the same values.
     "2022preEE": {
-        "lumi2022preEE": 1.4,
+        "lumi_Run3_1": 1.38,
     },
     "2022postEE": {
-        "lumi2022postEE": 1.4,
+        "lumi_Run3_1": 1.38,
     },
     "2023": {
-        "lumi2023": 1.3,
+        "lumi_Run3_1": 0.17,
+        "lumi_Run3_2": 1.27,
     },
     "2023BPix": {
-        "lumi2023BPix": 1.3,
+        "lumi_Run3_1": 0.17,
+        "lumi_Run3_2": 1.27,
     },
     "2024": {
-        "lumi2024": 1.6,
+        "lumi_Run3_1": 0.20,
+        "lumi_Run3_2": 0.68,
+        "lumi_Run3_3": 1.44,
     },
     "2025": {
         "lumi2025": 5.0,
@@ -131,6 +138,17 @@ lumi_syst = {
     "2026": {
         "lumi2026": 5.0,
     },    
+    # One lnN for the merged year. 2025 and 2026 share the same 5% placeholder
+    "2025_2026": {
+        "lumi2025_2026": 5.0,
+    },
+}
+
+# Signal theory lnN from LHCHXSWG (13.6 TeV, mH = 125.38; stats skill signal-xsec-br.md), correlated
+# across years. QCDscale_ggH = R5 ggF Theory + PDF-TH (linear); BR_hmm = YR4 THU (+) PU(mq) (+) PU(alpha_s).
+signal_theory_lnN = {
+    "BR_hmm": {"ggH_hmm": "0.983/1.017", "qqH_hmm": "0.983/1.017"},
+    "QCDscale_ggH": {"ggH_hmm": "0.930/1.040"},
 }
 
 nuisance_titles = {
@@ -227,15 +245,27 @@ def build_datacards(var_name, yield_df, parameters):
                 datacard.write("---------------\n")
                 # nuisnace edit end ----------------------------
                 if parameters.get("divide_dy_into_matched_jets", False):
+                    # one free normalisation per DY component, per year, shared by SR and SB
                     datacard.write("\n")
-                    datacard.write(
-                        f"XSecAndNorm{year_savepath}DY01J rateParam * "
-                        "DY_matched01J 1 [0.2,5]\n"
-                    )
-                    datacard.write(
-                        f"XSecAndNorm{year_savepath}DY2J rateParam * "
-                        "DY_matched2J 1 [0.2,5]\n"
-                    )
+                    for dy_process in parameters.get(
+                        "dy_matched_processes", ["DY_matched01J", "DY_matched2J"]
+                    ):
+                        # DY_matched01J -> DY01J (unchanged names), DY_recoMatched0J -> DYreco0J
+                        norm_tag = dy_process.replace("DY_matched", "DY").replace(
+                            "DY_recoMatched", "DYreco"
+                        )
+                        datacard.write(
+                            f"XSecAndNorm{year_savepath}{norm_tag} rateParam * "
+                            f"{dy_process} 1 [0.2,5]\n"
+                        )
+                if parameters.get("dy_separate_rate_params", False):
+                    # one free normalisation per DY sample, like the two matched-jet ones
+                    datacard.write("\n")
+                    for dy_group in ("DY", "DYVBF"):
+                        datacard.write(
+                            f"XSecAndNorm{year_savepath}{dy_group} rateParam * "
+                            f"{dy_group} 1 [0.2,5]\n"
+                        )
                 datacard.close()
                 logger.info(f"Saved datacard to {datacard_name}")
 
@@ -312,12 +342,24 @@ def print_mc(yield_df, var_name, region, channel, year, bin_name):
 
         nuisances[group] = []
         variations = yield_df.loc[
-            ((yield_df.group == group) & (yield_df.year == year)), "variation"
+            (yield_df.group == group)
+            & (yield_df.year == year)
+            & (yield_df.var_name == var_name)
+            & (yield_df.region == region)
+            & (yield_df.channel == channel),
+            "variation",
         ].unique()
         for v in variations:
             if v == "nominal":
                 continue
             v_name = v.replace("Up", "").replace("Down", "")
+            # make_templates drops a negative/empty variation; combine needs both sides
+            if not {f"{v_name}Up", f"{v_name}Down"}.issubset(variations):
+                logger.warning(
+                    f"{group} {year} {region}: '{v_name}' has only one of Up/Down "
+                    f"templates; not applying this shape nuisance to {group}."
+                )
+                continue
             if v_name not in all_nuisances:
                 all_nuisances.append(v_name)
 
@@ -358,6 +400,14 @@ def print_mc(yield_df, var_name, region, channel, year, bin_name):
             all_nuisances.append(lumi_unc)
             nuisance_lines[lumi_unc] = "{:<20} {:<9}".format(lumi_unc, "lnN")
             mc_df.loc[:, lumi_unc] = str(1 + value / 100)
+
+    if is_run3(component_years(year)[0]):
+        for unc, apply_to in signal_theory_lnN.items():
+            if unc not in all_nuisances:
+                all_nuisances.append(unc)
+                nuisance_lines[unc] = "{:<20} {:<9}".format(unc, "lnN")
+            for group, value in apply_to.items():
+                mc_df.loc[mc_df.group == group, unc] = value
 
     mc_df = mc_df.fillna("-")
 

@@ -56,6 +56,60 @@ JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_stats_pipeline_VBF.sh \
  time MODEL_YEARS="2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_stats_pipeline_VBF.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml          -v 12 -l Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics          -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026,Run3" -m 7
 ```
 
+# 12 October 2026
+
+```bash
+# Scan DNN binning then run the further steps:
+L=Run3_nanoAODv15_FilterJets_Oct08_tightPassLepVeto_DefaultjetPt25GeV_PUDNN_Systematics_LumiSplit
+ln -s Run3_nanoAODv15_FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN dnn/trained_models/$L
+
+# score dump + bin scan; "all" can't share a run with the split regions, so run it separately
+MODEL_LABEL=self HPO_LABEL=v1_multifold_025Trials bash scripts/run_jj_region_scan.sh \
+    -l $L -y 2024 -o Oct12_2026 -s scoredump,binscan
+MODEL_LABEL=self HPO_LABEL=v1_multifold_025Trials bash scripts/run_jj_region_scan.sh \
+    -l $L -y 2024 -o Oct12_2026 -s scoredump,binscan -r all
+
+HPO_LABEL=v1_multifold_025Trials ./run_in_pixi.sh default snakemake -s workflow/Snakefile stats_all \
+    -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 \
+    --configfile logs/plans/snakemake_plan3_2.yaml \
+    --config stage23_standalone=True with_variations=True save_postfix=Oct12_2026_Syst \
+        dnn_model_label=Run3_nanoAODv15_FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV_PUDNN \
+        'dnn_model_years=["2024"]' \
+        'jj_eta_regions=["all","jj_both_central","jj_one_fwd25_one_central","jj_both_fwd25"]' \
+        'jj_combine_regions=["jj_both_central","jj_one_fwd25_one_central","jj_both_fwd25"]' \
+        'scan_years=["2024"]' 
+
+```
+
+# 8 October 2026
+
+```bash
+(default) bash-4.4$ bash .claude/skills/run-copperheadV2-develop/detach_job.sh snakemake_plan3_1_2_3 bash -c \
+>   "./run_in_pixi.sh default snakemake -s workflow/Snakefile all_stage1 -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --configfile logs/plans/snakemake_plan3_2.yaml && \
+>    ./run_in_pixi.sh default snakemake -s workflow/Snakefile all_stage1 -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60 --configfile logs/plans/snakemake_plan3_3.yaml"
+
+Detached 'snakemake_plan3_1_2_3' (run 20261009T021627-12506): pid 12517, pgid 12517; log logs/detached/snakemake_plan3_1_2_3.log; status: grep ' snakemake_plan3_1_2_3 ' logs/detached/jobs.log
+(default) bash-4.4$ 
+```
+
+# 1 October 2026
+
+```bash
+snakemake -s workflow/Snakefile all_stage1 -j 2 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60     --config use_gateway=True switches_yaml=configs/switches/switches_official.yaml run_tag=FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation prestage_tag=LumiSplit 'years=["2024", "2025", "2026"]' plot_output_suffix=""
+
+snakemake -s workflow/Snakefile DY_ReRun -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60     --config use_gateway=True switches_yaml=configs/switches/switches_official_systematics.yaml run_tag=FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit prestage_tag=LumiSplit 'years=["2024", "2025", "2026"]' plot_output_suffix="" with_variations=True
+```
+
+# 29 September 2026
+
+```bash
+snakemake -s workflow/Snakefile all_stage1 -j 2 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60     --config use_gateway=True switches_yaml=configs/switches/switches_official.yaml run_tag=FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto
+
+snakemake -s workflow/Snakefile stage23_all     -j 4 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60     --config stage23_standalone=True with_variations=True jj_eta_region=jj_both_fwd25 use_gateway=True run_tag=FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics  save_postfix=Sep29_2026
+
+snakemake -s workflow/Snakefile stage23_all     -j 1 --resources gateway=1 --rerun-incomplete --restart-times 3 --latency-wait 60     --config stage23_standalone=True with_variations=True jj_eta_region=jj_one_fwd25_one_central use_gateway=True run_tag=FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics save_postfix=Sep29_2026
+```
+
 # 23 Aug 2026
 
 ```bash

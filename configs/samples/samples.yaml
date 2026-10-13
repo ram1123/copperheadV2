@@ -70,6 +70,20 @@ background:
                 2023: {}
                 2023BPix: {}
                 2024: {}
+                2025: {}
+                2026: {}
+                # Run-3 t/s-channel entries exist in the dataset YAMLs but are not validated yet; keep them
+                # out of the fit (2025/2026 otherwise fall back to the default list above). To enable, add:
+                #   - st_t_top
+                #   - st_t_antitop
+                #   - st_s_top
+                #   - st_s_antitop
+                # 2025:
+                #     - st_tw_top
+                #     - st_tw_antitop
+                # 2026:
+                #     - st_tw_top
+                #     - st_tw_antitop
 
         EWK:
             processes:
@@ -78,6 +92,7 @@ background:
                 # - ewk_lljj_mll50_mjj120
                 # - ewk_lljj
                 - ewk_mmjj_mll_105_160
+                # ewk_mmjj_mll_105_160_mjj120: Pythia8 PS variation of the Herwig7 nominal (same MG gridpack cuts); alternate template only, never add to this group.
             processes_per_year:
                 2022preEE:
                     - ewk_mmjj_mll_105_160
@@ -144,6 +159,11 @@ background:
                 2022postEE: {}
                 2023: {}
                 2023BPix: {}
+                # Run-3 www/wwz/wzz/zzz entries exist in the dataset YAMLs but are not validated yet; to
+                # enable a year, delete its {} line below (and the ones above) so it uses the default list.
+                2024: {}
+                2025: {}
+                2026: {}
 
 # --------------------------------------------------
 
@@ -171,6 +191,28 @@ signal:
             processes:
                 - ggh_powhegPS
             processes_per_year: {}
+
+        # Other production modes; group name is used as the process label. Enabling them also needs
+        # stage3/make_datacards.py signal_groups (currently only qqH_hmm, ggH_hmm) and their theory nuisances.
+        # WH_hmm:
+        #     processes:
+        #         - wph_powheg
+        #         - wmh_powheg
+        #     processes_per_year: {}
+        # ZH_hmm:
+        #     processes:
+        #         - zh_powheg
+        #     processes_per_year: {}
+        # ttH_hmm:
+        #     processes:
+        #         - tth_powheg
+        #     processes_per_year: {}
+
+        # Systematic-variation samples (alternate templates only; never add them to a group above,
+        # that would double-count the signal):
+        #   vbf_powheg_herwig                                  - VBF parton shower (vs vbf_powheg / vbf_powheg_dipole)
+        #   vbf_aMCatNLO_TuneCP5Up / vbf_aMCatNLO_TuneCP5Down  - VBF UE tune (vs vbf_aMCatNLO; 2022-2023 only)
+        #   ggh_amcatnlo_TuneCP5Up / ggh_amcatnlo_TuneCP5Down  - ggH UE tune (vs ggh_amcatnlo)
 
         # HIGGS:
         #     # Combined signal category (useful for inclusive plots / training)

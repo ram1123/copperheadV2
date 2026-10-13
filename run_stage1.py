@@ -52,7 +52,7 @@ CHUNK_SIZE = 250_000
 # entry, which made the old "cycle to next redirector on tls_bad" logic a no-op --
 # any transient read error (even a spurious FileNotFoundError from a momentary
 # EOS/XRootD hiccup) permanently failed the whole dataset with zero retries.
-MAX_ATTEMPTS_PER_REDIRECTOR = 3
+MAX_ATTEMPTS_PER_REDIRECTOR = 1
 RETRY_BACKOFF_SECONDS = 20
 DATASET_ELEMENT_LIMITS = {
     "data_": MAX_FILE_LEN,  # None means no limit (use uproot's default behavior)
@@ -142,7 +142,12 @@ def getSavePath(start_path: str, dataset_dict: dict, file_idx: int):
     Small wrapper function that returns the directory path to save the parquets
     from stage1
     """
-    fraction = round(dataset_dict["metadata"]["fraction"], 3)
+    # Lumi-split MC is a complete, independently normalized sample for its year, not a debug subset:
+    # keep it under f1_0 so compaction and every f1_0-based reader pick it up.
+    if "split_provenance" in dataset_dict["metadata"]:
+        fraction = 1.0
+    else:
+        fraction = round(dataset_dict["metadata"]["fraction"], 3)
     fraction_str = str(fraction).replace('.', '_')
     save_path = start_path + f"/f{fraction_str}/{dataset_dict['metadata']['dataset']}/{file_idx}"
     return save_path
@@ -302,6 +307,13 @@ if __name__ == "__main__":
         action=argparse.BooleanOptionalAction,
         help="If true, syncs files before preprocessing",
     )
+    parser.add_argument(
+        "--prestage-tag",
+        dest="prestage_tag",
+        default="",
+        help="Read prestage_output/processor_samples_<year>_NanoAODv<v>_<tag>.json instead of the plain file "
+             "(e.g. LumiSplit, written by scripts/split_prestage_by_year_lumi.py)",
+    )
     args = parser.parse_args()
 
     logger.setLevel(args.log_level)
@@ -366,9 +378,12 @@ if __name__ == "__main__":
         logger.info(f"[Timing] Time taken to create Dask Client: {round(t2 - t1, 3)} seconds")
         # -------------------------------------------------------------------------------------
         sample_path = "./prestage_output/processor_samples_"+args.year+"_NanoAODv"+str(args.NanoAODv)+".json" # INFO: Hardcoded filename
+        if args.prestage_tag:
+            sample_path = sample_path.replace(".json", f"_{args.prestage_tag}.json")
+        logger.info(f"Prestage sample file: {sample_path}")
         if args.sync:
             sample_path = sample_path.replace(".json", "_sync.json") # INFO: Hardcoded sample_path
-        logger.debug(f"Sample path: {sample_path}")
+        logger.info(f"Sample path: {sample_path}")
         with open(sample_path) as file:
             samples = json.loads(file.read())
 

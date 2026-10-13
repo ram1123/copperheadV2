@@ -148,3 +148,78 @@ muon_trigmatch_id:
     "2024": tightId
     "2025": tightId
     "2026": tightId
+muon_dxy_cut: # |dxy| [cm], AN-19-124 baseline
+    2016preVFP: 0.05
+    2016postVFP: 0.05
+    "2017": 0.05
+    "2018": 0.05
+    2016_RERECO: 0.05
+    "2017_RERECO": 0.05
+    "2018_RERECO": 0.05
+    2022preEE: 0.05
+    2022postEE: 0.05
+    "2023": 0.05
+    "2023BPix": 0.05
+    "2024": 0.05
+    "2025": 0.05
+    "2026": 0.05
+muon_dz_cut: # |dz| [cm], AN-19-124 baseline
+    2016preVFP: 0.1
+    2016postVFP: 0.1
+    "2017": 0.1
+    "2018": 0.1
+    2016_RERECO: 0.1
+    "2017_RERECO": 0.1
+    "2018_RERECO": 0.1
+    2022preEE: 0.1
+    2022postEE: 0.1
+    "2023": 0.1
+    "2023BPix": 0.1
+    "2024": 0.1
+    "2025": 0.1
+    "2026": 0.1
+loose_muon_pt_cut: # extra loose-muon veto; also uses muon_eta_cut, dxy/dz cuts
+    2016preVFP: 10.0
+    2016postVFP: 10.0
+    "2017": 10.0
+    "2018": 10.0
+    2016_RERECO: 10.0
+    "2017_RERECO": 10.0
+    "2018_RERECO": 10.0
+    2022preEE: 10.0
+    2022postEE: 10.0
+    "2023": 10.0
+    "2023BPix": 10.0
+    "2024": 10.0
+    "2025": 10.0
+    "2026": 10.0
+loose_muon_id:
+    2016preVFP: looseId
+    2016postVFP: looseId
+    "2017": looseId
+    "2018": looseId
+    2016_RERECO: looseId
+    "2017_RERECO": looseId
+    "2018_RERECO": looseId
+    2022preEE: looseId
+    2022postEE: looseId
+    "2023": looseId
+    "2023BPix": looseId
+    "2024": looseId
+    "2025": looseId
+    "2026": looseId
+loose_muon_iso_cut: # pfRelIso04_all (after FSR)
+    2016preVFP: 0.25
+    2016postVFP: 0.25
+    "2017": 0.25
+    "2018": 0.25
+    2016_RERECO: 0.25
+    "2017_RERECO": 0.25
+    "2018_RERECO": 0.25
+    2022preEE: 0.25
+    2022postEE: 0.25
+    "2023": 0.25
+    "2023BPix": 0.25
+    "2024": 0.25
+    "2025": 0.25
+    "2026": 0.25

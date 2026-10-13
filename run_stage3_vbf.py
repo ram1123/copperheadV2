@@ -1,3 +1,25 @@
+"""
+Stage-3 for the VBF channel: turns stage-2 DNN-score histograms into Combine shape templates
+(stage3_templates_*/) and SR/SB datacards (stage3_datacards_*/) for one year.
+`--years 2025_2026` is a merged stage-3 year: it sums the 2025 and 2026 stage-2 histograms
+into one set of templates with one set of year-uncorrelated nuisances (PC guideline).
+
+How to run (repo root, `default` pixi env; stage-2 must have run for the year, or for both
+2025 and 2026 when using 2025_2026). Usually driven by `run_analysis_pipeline.sh -m 3`:
+    ./run_in_pixi.sh default python run_stage3_vbf.py --years <year> -input <save_path> \
+        -l <label> --save_postfix <postfix> [--no_variations] [--jj_eta_region <region>] \
+        [--vbf_filter_study [--dy_scheme separate]] [--dy_scheme merge01] [--signal_xsec_rescale]
+
+`--signal_xsec_rescale` (pipeline: SIGNAL_XSEC_RESCALE=1) is the interim fix that rescales the
+signal for stage-1 made with BR(H->mumu) = 2.6e-4. Cards go to <postfix>_SigXS.
+`--dy_scheme merge01` (pipeline: DY_SCHEME=merge01) needs reco_012 stage-2 histograms and fits DY
+as two processes, DY_recoMatched01J (0J + 1J summed) and DY_recoMatched2J. Cards go to <postfix>_DY01.
+
+Example:
+    WITH_VARIATIONS=1 bash run_analysis_pipeline.sh -m 3 -y 2025_2026 -v 15 -o Sep29_2026 \
+        -c configs/datasets/dataset_nanoAODv15_run3.yaml \
+        -l Run3_nanoAODv15_FilterEvents_Sep22_tightPassLepVeto_OfficialRecomendation_Systematics
+"""
 import argparse
 import os
 import time
@@ -5,12 +27,14 @@ import time
 from cli.common_argparser import build_common_parser
 from modules.utils import logger
 from stage3.edit_datacard4DY_matchedJets import (
-    has_matched_jet_histograms,
+    detect_dy_split_scheme,
+    dy_process_map,
     split_dy_grouping,
     stage2_histogram_directory,
 )
 from stage3.make_datacards import build_datacards
 from stage3.make_templates import to_templates
+from modules.classify_year import component_years, is_run2
 from modules.sample_config import get_all_dicts
 from omegaconf import OmegaConf
 parser = build_common_parser()
@@ -33,6 +57,33 @@ parser.add_argument(
         "datacards output directory."
     ),
 )
+parser.add_argument(
+    "--dy_scheme",
+    dest="dy_scheme",
+    default="matched",
+    choices=["matched", "separate", "merge01"],
+    help=(
+        "With matched-jet DY histograms: 'matched' (default) merges all DY samples into "
+        "DY_matched01J/DY_matched2J (stage-2 --dy_matched_jets gen_2j) or "
+        "DY_recoMatched0J/1J/2J (reco_012, detected from the histogram names); 'separate' keeps one process per sample group (DY, "
+        "DYVBF with --vbf_filter_study), each with its own rateParam, and writes to "
+        "<save_postfix>_DYsep; 'merge01' (reco_012 only) sums recoMatched0J + 1J into "
+        "DY_recoMatched01J next to DY_recoMatched2J, one rateParam each, and writes to "
+        "<save_postfix>_DY01."
+    ),
+)
+parser.add_argument(
+    "--signal_xsec_rescale",
+    dest="signal_xsec_rescale",
+    default=False,
+    action="store_true",
+    help=(
+        "Interim fix: rescale ggh_powhegPS/vbf_powheg templates from the BR(H->mumu) = 2.6e-4 "
+        "used in Run-3 stage-1 to the LHCHXSWG sigma x BR (stage3/make_templates.py "
+        "SIGNAL_XSEC_BR_RESCALE). Only for stage-1 made before the dataset-YAML fix; writes to "
+        "<save_postfix>_SigXS."
+    ),
+)
 args = parser.parse_args()
 
 years = args.years if args.years else [args.year]
@@ -40,18 +91,18 @@ years = args.years if args.years else [args.year]
 year = years[0]
 
 stage2_model_suffix = args.save_postfix if args.save_postfix else ""
-if args.do_vbf_filter_study:
-    stage2_model_suffix = (
-        f"{stage2_model_suffix}_vbf_filter_study"
-        if stage2_model_suffix
-        else "vbf_filter_study"
-    )
-if args.jj_eta_region != "all":
-    stage2_model_suffix = (
-        f"{stage2_model_suffix}_{args.jj_eta_region}"
-        if stage2_model_suffix
-        else args.jj_eta_region
-    )
+# 'separate'/'merge01' read the same stage-2 histograms but must not overwrite the 'matched' cards
+DY_SCHEME_OUTPUT_TAG = {"separate": "_DYsep", "merge01": "_DY01"}
+stage3_output_suffix = stage2_model_suffix + DY_SCHEME_OUTPUT_TAG.get(args.dy_scheme, "")
+if args.signal_xsec_rescale:
+    if any(is_run2(comp) for y in years for comp in component_years(y)):
+        raise ValueError("--signal_xsec_rescale only applies to Run-3 years (BR 2.6e-4 issue).")
+    stage3_output_suffix = f"{stage3_output_suffix}_SigXS" if stage3_output_suffix else "SigXS"
+for _tag, _on in (("vbf_filter_study", args.do_vbf_filter_study),
+                  (args.jj_eta_region, args.jj_eta_region != "all")):
+    if _on:
+        stage2_model_suffix = f"{stage2_model_suffix}_{_tag}" if stage2_model_suffix else _tag
+        stage3_output_suffix = f"{stage3_output_suffix}_{_tag}" if stage3_output_suffix else _tag
 
 # global parameters
 parameters = {
@@ -60,11 +111,12 @@ parameters = {
     "years": years,
     "global_path": args.input_path,
     "global_path_postfix": stage2_model_suffix,
-    "outpath_postfix": stage2_model_suffix,
+    "outpath_postfix": stage3_output_suffix,
     "label": args.label,
     "channels": ["vbf"],
     "regions": ["h-peak", "h-sidebands"],
     "no_variations": args.no_variations,
+    "signal_xsec_rescale": args.signal_xsec_rescale,
     "syst_variations": ["nominal"],
     # "syst_variations": ['nominal', 'Absolute', 'Absolute2018', 'BBEC1', 'BBEC12018', 'EC2', 'EC22018', 'HF', 'HF2018', 'RelativeBal', 'RelativeSample2018', 'FlavorQCD', 'jer1', 'jer2', 'jer3', 'jer4', 'jer5', 'jer6', ],
     # "syst_variations": ['nominal', 'Absolute', f'Absolute_{year}', 'BBEC1', f'BBEC1_{year}', 'EC2', f'EC2_{year}', 'HF', f'HF_{year}', 'RelativeBal', f'RelativeSample_{year}', 'FlavorQCD', 'jer1', 'jer2', 'jer3', 'jer4', 'jer5', 'jer6', ],
@@ -81,10 +133,17 @@ parameters = {
     "templates_vars": [],  # "dimuon_mass"],
 }
 
-_, _, parameters["grouping"] = get_all_dicts(
-    yaml_path=args.sample_config,
-    year=year,
-)
+# A merged year (e.g. 2025_2026) sums its component years' stage-2 histograms, so it
+# takes the union of their sample groupings; a process must map to one group in all.
+parameters["grouping"] = {}
+for comp_year in component_years(year):
+    _, _, comp_grouping = get_all_dicts(yaml_path=args.sample_config, year=comp_year)
+    for dataset, group in comp_grouping.items():
+        if parameters["grouping"].setdefault(dataset, group) != group:
+            raise ValueError(
+                f"{dataset} is grouped as {parameters['grouping'][dataset]} and {group} "
+                f"in the component years of {year}; stage-3 can't sum it into one template."
+            )
 
 # Whether alpha_s is emitted as its own `alpha_s_unc` nuisance next to `pdf_unc`, or
 # combined with it into `pdf_alpha_s_unc`. Per era, from stage3/VBF/switches.yaml
@@ -99,28 +158,56 @@ parameters["split_pdf_alpha_s"] = {
     y: bool(stage3_switches["split_pdf_alpha_s"][y]) for y in years
 }
 
-stage2_histogram_path = stage2_histogram_directory(
-    args.input_path,
-    f"score_{args.label}",
-    stage2_model_suffix,
-    args.no_variations,
-    year,
+stage2_histogram_paths = [
+    stage2_histogram_directory(
+        args.input_path,
+        f"score_{args.label}",
+        stage2_model_suffix,
+        args.no_variations,
+        comp_year,
+    )
+    for comp_year in component_years(year)
+]
+dy_split_per_path = [detect_dy_split_scheme(p) for p in stage2_histogram_paths]
+if len(set(dy_split_per_path)) != 1:
+    raise ValueError(
+        f"The component years of {year} disagree on the DY matched-jet split "
+        f"({dict(zip(map(str, stage2_histogram_paths), dy_split_per_path))}); rerun stage-2 "
+        f"with the same divide_dy_into_matched_jets / --dy_matched_jets for all of them."
+    )
+dy_split_scheme = dy_split_per_path[0]
+divide_dy_into_matched_jets = dy_split_scheme is not None
+stage2_histogram_path = ", ".join(map(str, stage2_histogram_paths))
+if args.dy_scheme != "matched" and not divide_dy_into_matched_jets:
+    raise ValueError(f"--dy_scheme {args.dy_scheme} needs stage-2 histograms split into matched jets.")
+dy_separate = args.dy_scheme == "separate"
+dy_merge01 = args.dy_scheme == "merge01"
+# rateParams follow the processes: DY_matched01J/2J for 'matched', DY/DYVBF for 'separate'
+parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets and not dy_separate
+parameters["dy_separate_rate_params"] = dy_separate
+# the DY processes that each get a free rateParam in the 'matched' scheme
+parameters["dy_matched_processes"] = (
+    list(dict.fromkeys(dy_process_map(dy_split_scheme, dy_merge01).values()))
+    if parameters["divide_dy_into_matched_jets"] else []
 )
-divide_dy_into_matched_jets = has_matched_jet_histograms(stage2_histogram_path)
-parameters["divide_dy_into_matched_jets"] = divide_dy_into_matched_jets
 if divide_dy_into_matched_jets:
-    parameters["grouping"] = split_dy_grouping(parameters["grouping"])
+    parameters["grouping"] = split_dy_grouping(
+        parameters["grouping"], keep_sample_groups=dy_separate, scheme=dy_split_scheme,
+        merge01=dy_merge01,
+    )
 logger.info(
-    "divide_dy_into_matched_jets=%s (stage2 directory: %s)",
+    "divide_dy_into_matched_jets=%s scheme=%s dy_scheme=%s (stage2 directory: %s)",
     divide_dy_into_matched_jets,
+    dy_split_scheme,
+    args.dy_scheme,
     stage2_histogram_path,
 )
 
 parameters["plot_groups"] = {
     "stack": (
-        ["DY_matched01J", "DY_matched2J", "EWK", "TT+ST", "VV", "VVV"]
-        if divide_dy_into_matched_jets
-        else ["DY", "EWK", "TT+ST", "VV", "VVV"]
+        parameters["dy_matched_processes"] + ["EWK", "TT+ST", "VV", "VVV"]
+        if parameters["divide_dy_into_matched_jets"]
+        else ["DY", "DYVBF", "EWK", "TT+ST", "VV", "VVV"]
     ),
     "step": ["VBF", "ggH"],
     "errorbar": ["Data"],

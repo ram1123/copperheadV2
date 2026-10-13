@@ -181,6 +181,11 @@ JJ_ETA_REGION=jj_both_central WITH_VARIATIONS=1 bash run_analysis_pipeline.sh \
   -l <label> -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m 23 -k -o <postfix>
 ```
 
+`-m 2p` (and `-m 23`) writes the stage-2 DNN-score data/MC plots per year and, when `-y` lists
+more than one Run 3 year, also one summed over all of them (`<year>` = `Run3`), to
+`validation/stage2_dnn_score/<label>/<postfix>[_<JJ_ETA_REGION>][_NoSyst]/<year>/DNN_score_vbf_<h-peak|h-sidebands>[_log].pdf`
+(h-peak data stay blinded). For a single plot: `python plotter/plot_DNN_score.py -y Run3 ...` (see its header).
+
 Things to watch:
 
 - Put the variables in front of the command separated by **spaces**. `JJ_ETA_REGION=jj_both_central; bash ...`
@@ -194,9 +199,53 @@ Things to watch:
 - To get a result for the full phase space from separate `jj_both_central` and `jj_non_central` runs, run
   stage-3 once per region with the same `-o`, then combine the two with `-m 12` (see below).
 
+### VBF DNN-score binning (`configs/MVA/VBF/dnn_binning.yaml`)
+
+Stage-2 fills the DNN score with the binning of its **model label and jj region**:
+`models.<MODEL_LABEL>.<JJ_ETA_REGION>` (the model label is the `dnn/trained_models/<MODEL_LABEL>/`
+folder; jj region `all` included). If that entry is missing, stage-2 stops; pass
+`--allow_default_dnn_binning` (or `ALLOW_DEFAULT_DNN_BINNING=1` with `run_analysis_pipeline.sh`) to use
+the `default` entry on purpose. The entry used is written next to the histograms
+(`<stage2 dir>/<year>/dnn_binning.yaml`), and the stage-2 plots read it from there. To add or update
+an entry, dump per-event scores with a nominal stage-2 run and scan them:
+
+```bash
+JJ_ETA_REGION=<region> DUMP_SCORES=1 MODEL_LABEL=<model> bash run_analysis_pipeline.sh -m 2 -k \
+  -y <years> -l <label> -o <postfix>          # WITH_VARIATIONS unset = nominal only, fast
+python MVA_training/VBF_run3/scan_bins_for_dnn.py \
+  --stage2-scores <save path>/stage2_histograms/score_<label>_<postfix>_<region>_NoSyst --write-config
+```
+
+The scan compares the new binning with the one stage-2 used, on the same events
+(`validation/dnn_binning_scan/<input>/binning_comparison.{txt,pdf}`), and `--write-config` only
+replaces that model/region entry. A new binning needs a full stage-2 (with systematics) rerun.
+
+### Validate the stage-3 templates (mandatory before any fit)
+
+Stage-3 clips negative template bins to zero and gives empty background bins a 1e-5 floor
+(`stage3/make_templates.py`), but every nuisance's Up/Down shapes still need checking before a
+significance or limit is trusted. Run, from the repo root:
+
+```bash
+L=<label>; T=<postfix>[_<JJ_ETA_REGION>]
+D=/work/projects/hmm/$USER/hmm_ntuples/copperheadV1clean/$L/stage3_datacards_$T/stage3_templates_$T/score_$L
+./run_in_pixi.sh combine python scripts/plot_template_systematics.py -i $D \
+    -o validation/stage3_templates/$L/$T/template_systematics
+./run_in_pixi.sh combine python scripts/plot_template_negative_bins.py -i $D \
+    -o validation/stage3_templates/$L/$T/templates_nominal.pdf -t $T
+```
+
+`plot_template_systematics.py` saves one PNG+PDF per nuisance (nominal/Up/Down per process, with
+ratios) and `systematics_summary.csv`, and **exits non-zero** on non-finite or negative template bins.
+Its warnings (`missing Up/Down`, `up==down!=nominal`, `same-sign shift`, large yield shifts) need a
+look by eye. `scripts/run_jj_region_scan.sh` (step `validate`) and the Snakemake rule
+`stage3_validate` run this automatically after stage-3; see
+[docs/workflow_management.md](docs/workflow_management.md).
+
 ### Run the VBF stats pipeline
 
-After `stage3` has produced the datacards, use the stats driver for VBF statistical workflows.
+After `stage3` has produced the datacards **and they passed the template validation above**, use the
+stats driver for VBF statistical workflows.
 
 Typical modes include:
 
