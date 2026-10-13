@@ -5,7 +5,7 @@ title: Run-3 Selection, Corrections and Samples
 # Run3 $H \rightarrow \mu\mu$ synchronization Purdue
 
 
-# Object Selection
+## Object Selection
 
 ### Muon Selection & Corrections
 
@@ -145,7 +145,7 @@ Not on `/cvmfs` (analysis-specific): beam-spot resolution calibration (`data/res
 
 
 
-# Event Categorization
+## Event Categorization
 
 Applied in stage-2 after the object/event selection above. All cuts use the nominal jets (leading two jets after
 the jet selection, including the forward-jet treatment of the chosen variant). Numbers follow AN-19-124 (L827/L830).
@@ -195,7 +195,7 @@ A DNN is trained and binned per region, and should only be applied in the region
 
 
 
-# Integrated Luminosity
+## Integrated Luminosity
 
 
 
@@ -215,7 +215,7 @@ The values actually used by the code are in [configs/parameters/lumi.yaml](../co
 **2024 and 2025/26 (PC guideline, Aug 2026):** 2025 and 2026 are treated as one year, and the Summer24 MC is shared between 2024 and 2025/26, split by luminosity fraction. See [2024 / 2025-26 Year Grouping and MC Split](Run3_2024_2025_2026_MC_split.md).
 
 
-# Lumimask
+## Lumimask
 
 | Year       | Lumimask     | Reference                                                                                       |
 |------------|--------------|-------------------------------------------------------------------------------------------------|
@@ -227,21 +227,21 @@ The values actually used by the code are in [configs/parameters/lumi.yaml](../co
 | 2025       | Golden JSON  | https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_398903_Golden.json |
 | 2026       | Golden JSON  | https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions26/Cert_Collisions2026_401624_403937_golden.json |
 
-# MET/ Noise Filters
+## MET/ Noise Filters
 
 [Official recommendations](https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2#Run_3_2022_and_2023_data_and_MC)
 
 
-# Sample Tables
+## Sample Tables
 
 NOTE: We take the cross section (Xsec) from the MC generator and depending on the order of the calculation we either multiply it with a k-factor or just use the Xsec calculated by a dedicated program. If a k-factor is mentioned, please multiply it with the Xsec to obtain the final Xsec:
 
 $Xsec_{final} = kFactor*Xsec$
 
 
-# 2022preEE
+### 2022preEE
 NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_EGamma_Run2022F-22Sep2023-v1.html), [MC](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html)
-## Data
+#### Data
 | ERA | Dataset Paths | Golden JSON Luminosity [fb⁻¹] | Notes / Source |
 |-----|----------------|-------------------------------|----------------|
 | C   | /Muon/Run2022C-16Dec2023-v1/NANOAOD<br>/SingleMuon/Run2022C-16Dec2023-v1/NANOAOD | 5.0104 | https://twiki.cern.ch/twiki/bin/view/CMS/PdmVRun3Analysis#DATA_AN4 |
@@ -249,7 +249,7 @@ NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/20
 | **Total** | — | **7.9804** | - |
 
 
-## MC
+#### MC
 
 | **Production mode**       | **Cross section [pb]** | **Perturbative Order**    | **k-factor** | **Reference**                   | **Datasets** |
 |---------------------------|------------------------|----------------------------|--------------|----------------------------------|--------------|
@@ -278,9 +278,9 @@ NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/20
 
 
 
-# 2022postEE
+### 2022postEE
 NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_EGamma_Run2022F-22Sep2023-v1.html), [MC](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html)
-## Data
+#### Data
 | ERA | Dataset Paths | Golden JSON Luminosity [fb⁻¹] | Notes / Source |
 |-----|----------------|-------------------------------|----------------|
 | E   | /Muon/Run2022E-16Dec2023-v1/NANOAOD | 5.8070 | https://twiki.cern.ch/twiki/bin/view/CMS/PdmVRun3Analysis#DATA_AN4 |
@@ -289,7 +289,7 @@ NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/20
 | **Total** | — | **26.6717** | - |
 
 
-## MC
+#### MC
 
 | **Production mode**       | **Cross section [pb]** | **Perturbative Order**    | **k-factor** | **Reference**                   | **Datasets** |
 |---------------------------|------------------------|----------------------------|--------------|----------------------------------|--------------|
@@ -318,16 +318,16 @@ NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/20
 
 
 
-# 2023
+### 2023
 NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_EGamma_Run2022F-22Sep2023-v1.html), [MC](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html)
-## Data
+#### Data
 | Key       | Dataset Paths | Golden JSON Luminosity [fb⁻¹] | Notes / Source |
 |-----------|----------------|-------------------------------|----------------|
 | data_C    | /Muon0/Run2023C-22Sep2023_v1-v1/NANOAOD<br>/Muon0/Run2023C-22Sep2023_v2-v1/NANOAOD<br>/Muon0/Run2023C-22Sep2023_v3-v1/NANOAOD<br>/Muon0/Run2023C-22Sep2023_v4-v1/NANOAOD<br>/Muon1/Run2023C-22Sep2023_v1-v1/NANOAOD<br>/Muon1/Run2023C-22Sep2023_v2-v1/NANOAOD<br>/Muon1/Run2023C-22Sep2023_v3-v1/NANOAOD<br>/Muon1/Run2023C-22Sep2023_v4-v2/NANOAOD | 18.063 | https://twiki.cern.ch/twiki/bin/view/CMS/PdmVRun3Analysis#DATA_AN2 |
 | **Total** | —             | **18.063**                    | - |
 
 
-## MC
+#### MC
 
 | **Production mode**       | **Cross section [pb]** | **Perturbative Order**    | **k-factor** | **Reference**                   | **Datasets** |
 |---------------------------|------------------------|----------------------------|--------------|----------------------------------|--------------|
@@ -355,9 +355,9 @@ NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/20
 | TT_inclusive (remove all other TT samples if using this sample) | 923.6 | NNLO + NNLL | 1.0 | https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO | — |
 
 
-# 2023BPix
+### 2023BPix
 NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_EGamma_Run2022F-22Sep2023-v1.html), [MC](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/2022/2023/doc_DYJetsToLL_M-50_TuneCP5_13p6TeV-madgraphMLM-pythia8_Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2.html)
-## Data
+#### Data
 | Key     | Dataset Paths | Golden JSON Luminosity [fb⁻¹] | Notes / Source |
 |---------|----------------|-------------------------------|----------------|
 | data_D  | /Muon0/Run2023D-22Sep2023_v1-v1/NANOAOD<br>/Muon0/Run2023D-22Sep2023_v2-v1/NANOAOD<br>/Muon1/Run2023D-22Sep2023_v1-v1/NANOAOD<br>/Muon1/Run2023D-22Sep2023_v2-v1/NANOAOD | 9.693 | https://twiki.cern.ch/twiki/bin/view/CMS/PdmVRun3Analysis#DATA_AN2 |
@@ -365,7 +365,7 @@ NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/20
 
 
 
-## MC
+#### MC
 | **Production mode**       | **Cross section [pb]** | **Perturbative Order**    | **k-factor** | **Reference**                   | **Datasets** |
 |---------------------------|------------------------|----------------------------|--------------|----------------------------------|--------------|
 | ggH                       | 0.0110834              | N3LO QCD + NLO EW | –            | σ × BR: [LHCHXSWG1 R5 v1.1.3](https://gitlab.cern.ch/LHCHIGGSXS/LHCHXSWG1/crosssections) (13.6 TeV, $m_H$=125.38) × YR4 BR($\mu\mu$)=2.1542e-4 | /GluGluHto2Mu_M-125_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM |
@@ -390,9 +390,9 @@ NanoAOD version: v12: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv12/20
 | TTtoLNu2Q           | 405.69                 | NNLO + NNLL              | –             | Top++v2.0 program (ATLAS-CMS recommended twiki) | /TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM |
 | TT_inclusive (remove all other TT samples if using this sample) | 923.6 | NNLO + NNLL | 1.0 | https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO | — |
 
-# 2024
+### 2024
 NanoAOD version: v15: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv15/2024/doc_EGamma1_Run2024F-MINIv6NANOv15-v1.html), [MC](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv15/2024/doc_TTH-Hto2G_Par-M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8_RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2.html)
-## Data
+#### Data
 
 | Key       | Dataset Paths                                                                                  | Luminosity (fb⁻¹) | Notes / Source                                                                                                                                         |
 | --------- | ---------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -406,7 +406,7 @@ NanoAOD version: v15: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv15/20
 | **Total** | —                                                                                              | **108.96**        | [Source](https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0) |
 
 
-## MC
+#### MC
 
 
 
@@ -428,9 +428,9 @@ NanoAOD version: v15: [data](https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv15/20
 | st_tw_antitop        | 36.05                 | –                        | –             | [XSDB: TbarWplusto2L2Nu](https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8) | /TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM |
 
 
-# 2025
+### 2025
 NanoAOD version: v15 (data: PromptReco)
-## Data
+#### Data
 
 | Key | Dataset Paths | Luminosity (fb⁻¹) | Notes / Source |
 | --- | --- | --- | --- |
@@ -445,14 +445,14 @@ NanoAOD version: v15 (data: PromptReco)
 *Era luminosities sum to 110.85 fb⁻¹, 0.01 fb⁻¹ above the total used for normalization.*
 
 
-## MC
+#### MC
 
 Same MC as 2024 (`RunIII2024Summer24NanoAODv15`; same samples, cross sections and k-factors). Each sample's files are split between 2024 and 2025+2026 by relative integrated luminosity (`scripts/split_prestage_by_year_lumi.py`, prestage tag `LumiSplit`), so every MC event is used once.
 
 
-# 2026
+### 2026
 NanoAOD version: v15 (data: PromptReco)
-## Data
+#### Data
 
 | Key | Dataset Paths | Luminosity (fb⁻¹) | Notes / Source |
 | --- | --- | --- | --- |
@@ -465,6 +465,6 @@ NanoAOD version: v15 (data: PromptReco)
 *2026 luminosity is preliminary.*
 
 
-## MC
+#### MC
 
 Same MC as 2024 (`RunIII2024Summer24NanoAODv15`; same samples, cross sections and k-factors). Each sample's files are split between 2024 and 2025+2026 by relative integrated luminosity (`scripts/split_prestage_by_year_lumi.py`, prestage tag `LumiSplit`), so every MC event is used once.
