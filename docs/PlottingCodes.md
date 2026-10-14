@@ -21,6 +21,19 @@ command to run:
 python validation_plotter_unified.py -y 2018 --save_path "./validation/figs/May28_NanoV12_June04/" --load "/depot/cms/users/shar1172/hmm/copperheadV1clean/May28_NanoV12/stage1_output/2018/f1_0/"   -cat "nocat" -reg "z_peak" --remove_zpt_weights --njets 0
 ```
 
+### Through `run_plotter.py`
+
+`run_plotter.py` runs `validation_plotter_unified.py` for a set of years/categories/regions in one go.
+Before running it, update the input and output paths and the other parameters in
+[run_plotter.py](../run_plotter.py). In
+[validation_plotter_unified.py](../plotter/validation_plotter_unified.py) you may also need to update the
+list of datasets used for each process; see
+[validation_plotter_unified.py#L28-L83](https://github.com/ram1123/copperheadV2/blob/2cdaf09321000a8eb4a5eb8faf06e22f5e9ec560/plotter/validation_plotter_unified.py#L28-L83).
+
+```bash
+python run_plotter.py
+```
+
 ## Compare inclusive DY with VBF filtered DY
 
 - Available code:  [compare_inclusiveDY_DYvbfFilter.py](../plotter/compare_inclusiveDY_DYvbfFilter.py)
