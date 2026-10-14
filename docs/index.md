@@ -79,7 +79,7 @@ VBF statistics chain runs through `run_stats_pipeline_VBF.sh` in the `combine` p
 
     VBF card/workspace building, significance, expected limits and impacts with Combine.
 
-    [:octicons-arrow-right-24: VBF stats pipeline](Introduction.md#run-the-vbf-stats-pipeline)
+    [:octicons-arrow-right-24: VBF stats pipeline](Statistics.md)
 
 -   :material-chart-histogram:{ .lg .middle } **Yields and plots**
 

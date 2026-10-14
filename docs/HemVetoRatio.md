@@ -2,15 +2,15 @@
 title: HemVetoRatio Calculation
 ---
 
-# Setup
+## Setup
 
 Set `do_HemVetoStudy` in `configs/switches/switches_official.yaml` as `true` (it should false by default) and make sure `do_HemVeto` in `configs/switches/switches_official.yaml` is also `true` (it should true by default).
 
-# Skimming
+## Skimming
 
 Run stage1 as normal over only `data_*` samples using label `stage1_example_label`.
 
-# Ratio calculation
+## Ratio calculation
 
 Run
 ```
@@ -19,6 +19,6 @@ python ./validation/hem_veto/hemveto_calculate_ratio4MC.py --label stage1_exampl
 
 It should print the ratio value within the print statement `The proportion of 2018UL data events vetoed....`, suppose that values is `0.x`, then manually set that value over `HemVeto_ratio` config in `configs/parameters/jet.yaml`.
 
-# Cleanup
+## Cleanup
 
 Go back to `configs/switches/switches_official.yaml` and set `do_HemVetoStudy` config back to `false.`

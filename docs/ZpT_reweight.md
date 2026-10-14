@@ -2,7 +2,7 @@
 title: Z pT Reweighting
 ---
 
-# Overview
+## Overview
 
 The Z-pT reweighting flow derives a DY correction in the Z-peak region, stores the fitted function parameters in YAML, and then applies the corresponding event weight in stage-1. In the current code, the derivation uses compacted stage-1 parquet outputs when they exist and falls back to `f1_0` otherwise.
 
@@ -13,7 +13,7 @@ The main scripts are:
 3. [get_polyFit.py](../src/copperhead/zpt_rewgt/derive/get_polyFit.py)
 4. [validation_plotter_unified.py](../plotter/validation_plotter_unified.py)
 
-# Inputs
+## Inputs
 
 Before running the Z-pT derivation, you need:
 
@@ -24,7 +24,7 @@ Before running the Z-pT derivation, you need:
    - Run-3: usually `INCamcatnloFXFX`
    - 2024 special case in the code uses `dyTo2Mu_M-50_aMCatNLO`
 
-# Re-running Only DY For A New Derivation
+## Re-running Only DY For A New Derivation
 
 Deriving new Z-pT weights only needs the DY sample reprocessed, not a full
 stage-1 rerun of every sample. Run stage-1 for DY under its own new
@@ -53,7 +53,7 @@ its place -- so the old DY stays on disk for the old-vs-new comparison, and
 `save_SF_rootFiles.py` (Step 0 below) transparently picks up the new DY
 without any path changes.
 
-# Step 0: Save Data And DY Histograms
+## Step 0: Save Data And DY Histograms
 
 This step reads stage-1 parquet files, removes any already-applied Z-pT weight from DY, makes `Data`, `DY`, and `Data / DY` histograms in each jet bin, and saves them into ROOT workspaces.
 
@@ -78,7 +78,7 @@ Important details:
 2. It always divides out `separate_wgt_zpt` before deriving new weights, so the fit starts from the unweighted DY shape.
 3. It loops over `njet = 0, 1, >=2` internally.
 
-# Step 1: Run The F-test
+## Step 1: Run The F-test
 
 This step rebins the `Data / DY` histogram using [bin_definitions.py](../src/copperhead/zpt_rewgt/derive/bin_definitions.py), scans polynomial orders, and writes the preferred orders for the low- and mid-pT regions into `zpt_fit_config.yaml`.
 
@@ -107,7 +107,7 @@ Important details:
 1. The low-pT (`f0`) and mid-pT (`f1`) fits are stored separately.
 2. If the fit choice looks unstable, adjust the ranges or custom bins in [bin_definitions.py](../src/copperhead/zpt_rewgt/derive/bin_definitions.py) and rerun.
 
-# Step 2: Build The Final Piecewise Function
+## Step 2: Build The Final Piecewise Function
 
 This step reads the `zpt_fit_config.yaml` from step 1, performs the final piecewise fit, produces goodness-of-fit plots, and saves the final function coefficients into the year- and jet-dependent YAML used later by the processor.
 
@@ -134,11 +134,11 @@ The final YAML stores:
 4. function coefficients and errors
 5. high-pT linear tail parameters
 
-# Step 3: Copy Or Register The Final YAML
+## Step 3: Copy Or Register The Final YAML
 
 Once the final YAML looks good, copy or merge it into the repository location used by the analysis code for your production setup. That YAML is what [copperhead_processor.py](../src/copperhead_processor.py) reads when stage-1 computes `separate_wgt_zpt`.
 
-# Step 4: Validate The Weight
+## Step 4: Validate The Weight
 
 The actual validation workflow is done with [validation_plotter_unified.py](../plotter/validation_plotter_unified.py), not the older dedicated Z-pT validation scripts.
 
@@ -190,7 +190,7 @@ Validation output path:
 
 `<save_path>/<year>/mplhep/Reg_<region>/Cat_<category>/njet_<inclusive|0|1|2>/<default_zpt_weights|no_zpt_weights>/`
 
-# Snakemake Mapping
+## Snakemake Mapping
 
 If you use [workflow/Snakefile](../workflow/Snakefile), the relevant rules are:
 
@@ -208,7 +208,7 @@ Those rules call `run_analysis_pipeline.sh` with:
 
 The workflow now passes gateway flags through those rules correctly.
 
-# Common Checks
+## Common Checks
 
 If the validation looks wrong, check these first:
 
