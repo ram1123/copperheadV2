@@ -53,6 +53,15 @@ where
 - `-y`: year of data-taking
 - `-m`: run mode. `0` for pre-processing, `1` for stage-1 processing.
 
+Name the label (`-l`) as
+
+```
+Run3_nanoAODv<version>_<date>_<additional_info>
+```
+
+for example `Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV`. The label becomes the output directory
+name, and every later stage (compact, stage-2/3, plots) finds the ntuples through it.
+
 Legacy note:
 
 ```bash
@@ -74,45 +83,22 @@ bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -
 
 ### Run the VBF stats pipeline
 
-After `stage3` has produced the datacards, use the stats driver for VBF statistical workflows.
-
-Typical modes include:
-
-- `-m 4`: copy datacards
-- `-m 5`: build combined VBF cards and workspaces
-- `-m 6`: run significance
-- `-m 7`: run impacts
-- `-m 8`: run likelihood scan
-- `-m 9`: run the full VBF combine chain
-- `-m 10`: collect significance summaries
-- `-m 11`: run the stage2/stage3/stats limit chain
-
-Example:
-
-```bash
-./enter_pixi.sh combine
-bash run_stats_pipeline_VBF.sh -m 9 -y Run3 -l label_for_ntuple
-```
-
-Legacy note:
-
-```bash
-bash stage1_loop_Improved.sh -m 9 -y Run3 -l label_for_ntuple
-```
+After `stage3` has produced the datacards, run the Combine chain with `run_stats_pipeline_VBF.sh` in
+the `combine` environment. See [Statistics](Statistics.md) for the modes and examples.
 
 ### Get the yields 
 
 
-1. To get the yields from the reduced ntuples, use the script [get_yields.py](../get_yields.py).
+1. To get the yields from the reduced ntuples, use the script [get_yields.py](../scripts/get_yields.py).
 
     ```bash
     python scripts/get_yields.py --years 2018
     ```
-    Note that this file reads ntuples from the YAML file [configs/trials.yml](../configs/trials.yml). Update the path under the key `current` to point the label with with the reduced ntuples are created.
+
 
 ### Sync/Compare with previous results
 
-1. To compare the yields with previous results, use the script [sync_parquet_dimuon.py](../sync_parquet_dimuon.py).
+1. To compare the yields with previous results, use the script [sync_parquet_dimuon.py](../scripts/sync_parquet_dimuon.py).
 
     ```bash
     python scripts/sync_parquet_dimuon.py DIR1 DIR2 -o diff.csv
@@ -124,7 +110,34 @@ bash stage1_loop_Improved.sh -m 9 -y Run3 -l label_for_ntuple
    `separate_wgt_btag`, which is useful when a nominal-weight mismatch comes from the b-tag
    scale factor.
 
-3. To regenerate the sync reference txt files used by GitHub Actions, run:
+3. To run the stage-1 sync check locally (the same steps the CI `sync-stage1` workflow runs, for
+   `2017` or `2022preEE`):
+
+    ```bash
+    YEAR=2022preEE
+    OUT=test/output/label_output/stage1_output
+
+    # STEP-1: stage-1 on the sync sample, with the frozen reference switches CI uses
+    bash run_analysis_pipeline.sh -c configs/datasets/sync_dataset_nanoAODv12.yaml -v 12 \
+        -l label_output -y "${YEAR}" -m 1 -z -Z \
+        -w test/reference/switches_official.yaml -S test/output
+
+    # STEP-2: dump the event kinematics to sync text files
+    python scripts/sync_parquet_dimuon.py ${OUT}/${YEAR}/f1_0/data_*/ -o ${OUT}/${YEAR}_data_eventKinematics.txt
+    python scripts/sync_parquet_dimuon.py ${OUT}/${YEAR}/f1_0/dy*/0/ -o ${OUT}/${YEAR}_dy_eventKinematics.txt
+    python scripts/sync_parquet_dimuon.py ${OUT}/${YEAR}/f1_0/vbf_powheg_dipole/0/ -o ${OUT}/${YEAR}_vbf_eventKinematics.txt
+
+    # STEP-3: compare against the references
+    for s in data dy vbf; do
+        python scripts/sync_parquet_dimuon.py test/reference/${YEAR}_${s}_eventKinematics.txt \
+            ${OUT}/${YEAR}_${s}_eventKinematics.txt -o diff_${s}_${YEAR}.csv
+    done
+    ```
+
+    STEP-4: every `diff_*.csv` must be empty. A non-empty file means the change altered stage-1
+    output: fix it, or, if the change is intentional, regenerate the references (next item).
+
+4. To regenerate the sync reference txt files used by GitHub Actions, run:
 
     ```bash
     bash scripts/update_sync_references.sh "2017,2022preEE" --use-reference-switches

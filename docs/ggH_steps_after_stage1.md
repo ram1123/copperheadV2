@@ -11,7 +11,7 @@ title: ggH after step-1
     cd Run2_MVA_trainer
     ```
 
-2. Update the parameters in file [train.sh](train.sh). For example: `year`, `label` and `input path of stage-1`
+2. Update the parameters in file [train.sh](https://github.com/ram1123/Run2_MVA_trainer/blob/master/train.sh). For example: `year`, `label` and `input path of stage-1`
 
     bash train.sh
 
@@ -38,7 +38,7 @@ title: ggH after step-1
     bash run_script.sh
     ```
 
-    This will print the **target yield** on the terminal. Then manually write the target yield to file [../stage2/ggH/target_yields.yaml](../stage2/ggH/target_yields.yaml), in the ouput path.
+    This will print the **target yield** on the terminal. Then manually write the target yield to file `stage2/ggH/target_yields.yaml`, in the ouput path.
 
     The target yield printed on the terminal should be like:
 
@@ -64,7 +64,7 @@ title: ggH after step-1
     bash stage2_sh.sh
     ```
 
-    This updates the file BDT edges in the file [configs/MVA/ggH/BDT_edges.yaml](../configs/MVA/ggH/BDT_edges.yaml), for the year that we ran.
+    This updates the file BDT edges in the file `configs/MVA/ggH/BDT_edges.yaml`, for the year that we ran.
 
 7. Now, run the script `run_stage2.py` again from `stage2_sh.sh`.
 

@@ -1,8 +1,8 @@
-# Introduction
+## Introduction
 
-# Technical Details
+## Technical Details
 
-## Obtaining new BDT Score edges for BDT cateogories
+### Obtaining new BDT Score edges for BDT cateogories
 
 Run stage2 with full sample list (but dy has to be the M100To200 samples only, otherwise memory overload):
 ```
@@ -24,4 +24,4 @@ sh run_script.sh
 
 Then update the new BDT edges in the `/stage2/ggH/target_yields.yaml`
 
-# References/Important links
+## References/Important links

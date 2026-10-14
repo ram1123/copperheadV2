@@ -6,11 +6,13 @@ edit_uri: edit/main/docs/
 docs_dir: docs
 site_dir: _site
 
-# Keep scratch notes and leftover Jekyll assets out of the built site.
+# Keep scratch notes out of the built site.
 exclude_docs: |
-  _layouts/
-  _data/
   temp/
+
+# Rewrites ../<repo path> links in the docs to GitHub links at build time.
+hooks:
+    - scripts/mkdocs_hooks.py
 
 theme:
     name: material
@@ -85,44 +87,45 @@ extra_javascript:
 
 nav:
     - Home: index.md
-    - Introduction:
+    - Getting Started:
           - Introduction and Setup: Introduction.md
-          - Run-3 Selection, Corrections and Samples: Run3_selection_and_samples.md
-          - 2024 / 2025-26 Year Grouping and MC Split: Run3_2024_2025_2026_MC_split.md
-
-    - Running:
-          - Get Yields: GetYields.md
+          - Snakemake Workflow: workflow_management.md
+          - Known Issues: known_issues.md
+    - Pipeline:
+          - Selection and Samples:
+                - Run-3 Selection, Corrections and Samples: Run3_selection_and_samples.md
+                - 2024 / 2025-26 Year Grouping and MC Split: Run3_2024_2025_2026_MC_split.md
+                - Recommendations and Special Treatments: Official_recommendation.md
+          - Corrections:
+                - Z-pT Reweighting: ZpT_reweight.md
+                - EBE Mass Resolution: eventbyeventMassResolution.md
+                - HEM Veto Ratio: HemVetoRatio.md
+          - Outputs:
+                - Get Yields: GetYields.md
+                - Plotting Codes: PlottingCodes.md
+    - Analysis:
+          - VBF:
+                - DNN: DNN_VBF.md
+                - Statistics Pipeline: Statistics.md
+          - ggH:
+                - Steps After Stage-1: ggH_steps_after_stage1_v2.md
+                - Category Boundary Calculation: ggH_BdtCategoryEdgeCalculation.md
+                - Validation Plots: ggH_validation.md
+                - Datacard Generation: ggH_dataCardGeneration.md
+    - Validation:
+          - Cut Flow Cross Check Before PR: cut-flow_beforePR.md
+          - 2024 Sync Ntuples: sync_2024_ntuples.md
+    - Tools:
           - Failed Jobs Check: FailedJobsCheck.md
           - Merge NanoAOD ROOT Files: MergeNanoAODRootFiles.md
           - Copy /work to /store (EOS): CopyWorkToStore.md
-          - Plotting Codes: PlottingCodes.md
-    - Corrections:
-          - Z-pT Reweighting: ZpT_reweight.md
-          - EBE Mass Resolution: eventbyeventMassResolution.md
-          - Official Recommendations: Official_recommendation.md
-          - Special Treatments Summary: SpecialTreatementsSummary.md
-          - HEM Veto Ratio: HemVetoRatio.md
-    - Analysis Channels:
-        - ggH:
-              - Category Boundary Calculation: ggH_BdtCategoryEdgeCalculation.md
-              - Validation Plots: ggH_validation.md
-              - Datacard Generation: ggH_dataCardGeneration.md
-              - Steps After Stage-1: ggH_steps_after_stage1_v2.md
-              - Steps After Stage-1 (Legacy): ggH_steps_after_stage1.md
-              - Blinded Chi2/NDF: blindedChi2NDF.md
-        - VBF:
-              - DNN: DNN_VBF.md
-    - Workflow Management:
-            - Snakemake: workflow_management.md
-            - Cut Flow Cross Check Before PR: cut-flow_beforePR.md
-    - Sync Studies:
-          - Peking Sync Notes: sync/sync_Peking/WhyEventNotSelected.md
-    - Notes:
-          - Datasets Info: datasets_info.md
-          - Run2 DY Samples List: Run2DY_SamplesList.md
+          - Additional Scripts: Additional_Scripts.md
+          - AF Status Pages: af_status_pages.md
+    - Reference:
+          - Run-2 Datasets: Run2DY_SamplesList.md
           - NanoAOD v12 vs v9: NanoAODv12_v9.md
-          - Hyeon's Notes: personal_notes.md
-          - Known Issues: known_issues.md
-    - Maintenance:
+          - Processor API: copperhead_processor-reference.md
           - TODO Summary: TODO_SUMMARY.md
-    - References: copperhead_processor-reference.md
+          - Archive:
+                - ggH Steps After Stage-1 (Legacy): ggH_steps_after_stage1.md
+                - Hyeon's Notes: personal_notes.md
