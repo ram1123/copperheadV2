@@ -103,7 +103,7 @@ VBF statistics chain runs through `run_stats_pipeline_VBF.sh` in the `combine` p
 ## Quick start
 
 ```bash
-git clone --recurse-submodules https://github.com/green-cabbage/copperheadV2.git
+git clone --recurse-submodules https://github.com/ram1123/copperheadV2.git
 cd copperheadV2
 ./enter_pixi.sh default      # or: ./enter_pixi.sh combine   (statistics)
 
