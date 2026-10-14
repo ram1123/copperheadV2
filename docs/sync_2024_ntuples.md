@@ -29,9 +29,23 @@ Only the listed datasets are used (no `_ext1`). Config: `configs/datasets/sync_d
 - Pair choice: the two leading-raw-$p_T$ muons among the analysis-selected muons (ID+iso, below) if at least two pass,
   otherwise among muons passing only the preselection (`mu_pair_from_selected` tells which). This is identical to the
   analysis pair whenever the event passes the analysis selection.
+- An event is also kept if the *IP pair* (below) passes the same window, even when the default pair does not;
+  `pass_analysis_preselection` / `pass_analysis_preselection_ip` each include their own pair's window.
 
 Everything else is stored as flags. `pass_analysis_preselection` reproduces exactly the event-level selection of our
 standard stage-1 (checked event-by-event and column-by-column against the standard output).
+
+### Lepton/IP-veto variant (`*_ip` branches)
+
+`pass_analysis_preselection_ip` reproduces our stage-1 with switch `do_lepton_ip_veto: true` (checked event-by-event
+on one data_H and one ZH file: identical event sets). Differences from the default selection:
+- muons: $|d_{xy}| < 0.05$ cm, $|d_z| < 0.1$ cm on top of ID+iso; the pair is the two leading-raw-$p_T$ such muons
+  (`mu_pair_ip_is_sync_pair` = same two muons as the default pair; `mu*_` branches always describe the default pair,
+  the IP pair only through `dimuon_mass_raw_ip`, `dimuon_mass_ip`, `dimuon_pt_ip`);
+- extra-muon veto: exactly 2 loose muons (looseId, raw $p_T > 10$ GeV, $|\eta| < 2.4$, iso < 0.25, same IP cuts);
+- electron veto from $p_T > 10$ GeV with `pfRelIso03_all` < 0.25 and IP cuts (barrel $|d_{xy}|<0.05$, $|d_z|<0.1$;
+  endcap $|d_{xy}|<0.1$, $|d_z|<0.2$ cm, split on supercluster $|\eta| = 1.479$).
+Cut values: `configs/parameters/{muon,electron}.yaml`. Jet-level quantities are computed with the default pair.
 
 ## Content (TTree `Events`, one entry per event)
 
@@ -40,6 +54,7 @@ standard stage-1 (checked event-by-event and column-by-column against the standa
 | Event | `run`, `luminosityBlock`, `event`, `sample_id` (0 Muon0, 6 Muon1, 1 VBF, 2 ggH, 3 ttH, 4 ZH, 5 WplusH), `PV_npvs`, `PV_npvsGood` |
 | Trigger | `HLT_IsoMu24`, `pass_HLT`, `pass_trigger_match` (≥1 of the two leading selected muons matched, ΔR<0.4 to a muon TrigObj with filterBit 8, and ScaRe $p_T$ ≥ 26 GeV), `mu{1,2}_trigMatched` |
 | Event flags | `pass_MET_filters`, `pass_PV`, `pass_nmuons` (exactly 2 selected muons), `pass_OS`, `nelectrons`, `pass_electron_veto`, `pass_jet_veto_map`, `pass_analysis_preselection`, `nmuons_selected`, `nmuons_presel` |
+| IP-veto flags | `pass_analysis_preselection_ip`, `pass_muon_ip` (default pair passes IP), `mu{1,2}_passIP`, `nmuons_selected_ip`, `nloose_muons_ip`, `pass_nmuons_ip`, `pass_OS_ip`, `pass_trigger_match_ip`, `nelectrons_ip`, `pass_electron_veto_ip`, `mu_pair_ip_is_sync_pair`, `dimuon_mass_raw_ip`, `dimuon_mass_ip`, `dimuon_pt_ip` |
 | Category | `pass_bveto`, `pass_vbf_cuts`, `cat_vbf`, `cat_ggh`; mass regions `z_peak`, `h_sidebands`, `h_peak` (on corrected mass) |
 | Muons | `mu{1,2}_charge`, `_eta`, `_phi` (after FSR), `_eta_raw`, `_phi_raw`, `_pt_nano`, `_pt_bsc` (raw), `_pt_scare` (after ScaRe), `_pt_corr` (after ScaRe+FSR, = `mu*_pt`), `_mediumId`, `_isGlobal`, `_isTracker`, `_passId`, `_pfRelIso04_all_raw`, `_pfRelIso04_all_fsrCorr`, `_passIso`, `_passSelection`, `_hasFsr`, `_dxy`, `_dz`, ... ; mu1 = leading in corrected $p_T$ |
 | Dimuon | `dimuon_mass_raw`/`dimuon_pt_raw` (before corrections), `dimuon_mass_scare`/`_pt_scare`, `dimuon_mass_corr`/`_pt_corr` (after ScaRe+FSR, = `dimuon_mass`/`dimuon_pt`) |

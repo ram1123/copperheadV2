@@ -81,7 +81,7 @@ def sync_info(unit, outdir, stage1_dir):
         "dataset_yaml": DATASET_YAML,
         "met_collection": "PuppiMET (NanoAOD, no re-correction)",
         "btag": "UParTAK4 (btagUParTAK4B), loose WP 0.0246, medium WP 0.1272 (BTV Summer24)",
-        "preselection": "2 muons raw (beam-spot constrained) pT>20, |eta|<2.4, 50<m_mumu(raw)<200; golden JSON on data",
+        "preselection": "2 muons raw (beam-spot constrained) pT>20, |eta|<2.4, 50<m_mumu(raw)<200 on the default or the IP pair; golden JSON on data",
     })
 
 

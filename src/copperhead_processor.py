@@ -1188,8 +1188,10 @@ class EventProcessor(processor.ProcessorABC):
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
-        if do_muon_ip_cut:
+        if do_muon_ip_cut or do_sync:
+            # sync mode stores the lepton/IP-veto selection as extra *_ip flags even when the switch is off
             muon_ip = (abs(events.Muon.dxy) < self.config["muon_dxy_cut"]) & (abs(events.Muon.dz) < self.config["muon_dz_cut"])
+        if do_muon_ip_cut:
             muon_selection = muon_selection & muon_ip # AN-19-124 baseline IP cuts
 
         # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
@@ -1228,7 +1230,9 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "sync_pass_iso"] = events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]
             events["Muon", "sync_pass_sel"] = muon_selection
             events["Muon", "sync_has_fsr"] = applied_fsr if do_fsr else ak.zeros_like(events.Muon.pt, dtype="bool")
-        if do_lepton_ip_veto:
+            events["Muon", "sync_pass_ip"] = muon_ip
+            events["Muon", "sync_idx"] = ak.local_index(events.Muon.pt, axis=1)
+        if do_lepton_ip_veto or do_sync:
             # Extra loose-muon veto: exactly 2 loose muons (rejects >2); selected muons are a subset of loose,
             # so with nmuons>=2 this leaves exactly the 2 selected muons
             loose_muon = (
@@ -1376,6 +1380,19 @@ class EventProcessor(processor.ProcessorABC):
             sync_flags["nmuons_selected"] = nmuons_selected
             sync_flags["nmuons_presel"] = ak.sum(sync_presel_mu, axis=1)
             sync_flags["mu_pair_from_selected"] = nmuons_selected >= 2
+            # do_lepton_ip_veto emulation: pair = two leading raw-pT muons among selected muons passing IP
+            sel_ip = muon_selection & muon_ip
+            muons_ip = events.Muon[sel_ip]
+            muons_ip = muons_ip[ak.argsort(muons_ip.pt_raw, ascending=False)][:, :2]
+            sync_flags["nmuons_selected_ip"] = ak.sum(sel_ip, axis=1)
+            sync_flags["nloose_muons_ip"] = ak.sum(loose_muon, axis=1)
+            sync_flags["pass_muon_ip"] = ak.fill_none((ak.num(muons, axis=1) == 2) & ak.all(muons.sync_pass_ip, axis=1), False)
+            sync_flags["mu_pair_ip_is_sync_pair"] = ak.fill_none(
+                (ak.num(muons, axis=1) == 2) & (ak.num(muons_ip, axis=1) == 2)
+                & (ak.min(muons.sync_idx, axis=1) == ak.min(muons_ip.sync_idx, axis=1))
+                & (ak.max(muons.sync_idx, axis=1) == ak.max(muons_ip.sync_idx, axis=1)),
+                False,
+            )
         t6c = time.perf_counter()
         logger.info(f"[timing] Muon selection time: {t6c - t6a:.2f} seconds")
 
@@ -1417,26 +1434,26 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         ecal_gap = (1.44 < abs(events.Electron.eta)) & (1.57 > abs(events.Electron.eta)) # Source: line 460 of https://cms.cern.ch/iCMS/analysisadmin/cadilines?id=1973&ancode=EGM-17-001&tp=an&line=EGM-17-001
-        electron_pt_cut = self.config["electron_pt_cut_lepton_ip_veto"] if do_lepton_ip_veto else self.config["electron_pt_cut"]
-        electron_selection = (
-            (events.Electron.pt > electron_pt_cut)
-            & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
-            & events.Electron[electron_id]
-            & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
-        )
-        if do_lepton_ip_veto:
-            # EGM-style IP cuts, split barrel/endcap on supercluster eta
-            ele_is_barrel = abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479
-            electron_ip = ak.where(
-                ele_is_barrel,
-                (abs(events.Electron.dxy) < self.config["electron_dxy_cut_barrel"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_barrel"]),
-                (abs(events.Electron.dxy) < self.config["electron_dxy_cut_endcap"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_endcap"]),
+        def make_electron_selection(lepton_ip_veto):
+            pt_cut = self.config["electron_pt_cut_lepton_ip_veto"] if lepton_ip_veto else self.config["electron_pt_cut"]
+            sel = (
+                (events.Electron.pt > pt_cut)
+                & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+                & events.Electron[electron_id]
+                & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
             )
-            electron_selection = (
-                electron_selection
-                & (events.Electron.pfRelIso03_all < self.config["electron_iso_cut"])
-                & electron_ip
-            )
+            if lepton_ip_veto:
+                # EGM-style IP cuts, split barrel/endcap on supercluster eta
+                ele_is_barrel = abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479
+                electron_ip = ak.where(
+                    ele_is_barrel,
+                    (abs(events.Electron.dxy) < self.config["electron_dxy_cut_barrel"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_barrel"]),
+                    (abs(events.Electron.dxy) < self.config["electron_dxy_cut_endcap"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_endcap"]),
+                )
+                sel = sel & (events.Electron.pfRelIso03_all < self.config["electron_iso_cut"]) & electron_ip
+            return sel
+
+        electron_selection = make_electron_selection(do_lepton_ip_veto)
         # self.selection.add("electron_pT", ak.any(events.Electron.pt > self.config["electron_pt_cut"], axis=1))
         # self.selection.add("electron_eta", ak.any(abs(events.Electron.eta) < self.config["electron_eta_cut"], axis=1))
         # self.selection.add("electron_id", ak.any(events.Electron[electron_id], axis=1))
@@ -1481,6 +1498,14 @@ class EventProcessor(processor.ProcessorABC):
             sync_flags["pass_OS"] = (mm_charge == -1) & (nmuons == 2) # charge of the sync pair
             sync_flags["nelectrons"] = nelectrons
             sync_flags["pass_electron_veto"] = electron_veto
+            nelectrons_ip = ak.sum(make_electron_selection(True), axis=1)
+            sync_flags["nelectrons_ip"] = nelectrons_ip
+            sync_flags["pass_electron_veto_ip"] = nelectrons_ip == 0
+            sync_flags["pass_nmuons_ip"] = (sync_flags["nmuons_selected_ip"] >= 2) & (sync_flags["nloose_muons_ip"] == 2)
+            sync_flags["pass_OS_ip"] = ak.fill_none(
+                (ak.num(muons_ip, axis=1) == 2) & (ak.prod(muons_ip.charge, axis=1) == -1), False)
+            if "sync_trig_matched" in events.Muon.fields:
+                sync_flags["pass_trigger_match_ip"] = ak.any(muons_ip.sync_trig_matched, axis=1)
         else:
             event_filter = (
                     event_filter
@@ -1590,16 +1615,46 @@ class EventProcessor(processor.ProcessorABC):
                 & (dimuon_raw.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw.mass < SYNC_MASS_RAW_MAX),
                 False,
             )
-            event_filter = event_filter & sync_presel
+            # Same window on the IP pair (selected muons already have raw pT > 20); events keep if either pair passes
+            pair_ip = ak.pad_none(muons_ip, 2)
+            raw_p4_ip = [
+                ak.zip({"pt": m.pt_raw, "eta": m.eta_raw, "phi": m.phi_raw, "mass": m.mass, "charge": m.charge},
+                       with_name="PtEtaPhiMCandidate", behavior=candidate.behavior)
+                for m in (pair_ip[:, 0], pair_ip[:, 1])
+            ]
+            dimuon_raw_ip = raw_p4_ip[0] + raw_p4_ip[1]
+            dimuon_ip = pair_ip[:, 0] + pair_ip[:, 1]  # after ScaRe + FSR
+            sync_flags["dimuon_mass_raw_ip"] = dimuon_raw_ip.mass
+            sync_flags["dimuon_mass_ip"] = dimuon_ip.mass
+            sync_flags["dimuon_pt_ip"] = dimuon_ip.pt
+            sync_presel_ip = ak.fill_none(
+                (ak.num(muons_ip, axis=1) == 2)
+                & (dimuon_raw_ip.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw_ip.mass < SYNC_MASS_RAW_MAX),
+                False,
+            )
+            event_filter = event_filter & (sync_presel | sync_presel_ip)
             # Same event-level decision the standard stage-1 applies as a cut
             sync_flags["pass_analysis_preselection"] = (
-                sync_flags["pass_HLT"]
+                sync_presel
+                & sync_flags["pass_HLT"]
                 & sync_flags.get("pass_trigger_match", True)
                 & sync_flags["pass_MET_filters"]
                 & sync_flags["pass_PV"]
                 & sync_flags["pass_nmuons"]
                 & sync_flags["pass_OS"]
                 & sync_flags["pass_electron_veto"]
+                & sync_flags.get("pass_jet_veto_map", True)
+            )
+            # Same decision with do_lepton_ip_veto: true (muon IP, exactly 2 loose muons, iso/IP electron veto)
+            sync_flags["pass_analysis_preselection_ip"] = (
+                sync_presel_ip
+                & sync_flags["pass_HLT"]
+                & sync_flags.get("pass_trigger_match_ip", True)
+                & sync_flags["pass_MET_filters"]
+                & sync_flags["pass_PV"]
+                & sync_flags["pass_nmuons_ip"]
+                & sync_flags["pass_OS_ip"]
+                & sync_flags["pass_electron_veto_ip"]
                 & sync_flags.get("pass_jet_veto_map", True)
             )
 
@@ -2892,6 +2947,7 @@ class EventProcessor(processor.ProcessorABC):
                     f"mu{i}_passIso": mu.sync_pass_iso,
                     f"mu{i}_passSelection": mu.sync_pass_sel,
                     f"mu{i}_hasFsr": mu.sync_has_fsr,
+                    f"mu{i}_passIP": mu.sync_pass_ip,
                 })
                 if hasattr(mu, "sync_trig_matched"):
                     sync_block[f"mu{i}_trigMatched"] = mu.sync_trig_matched
