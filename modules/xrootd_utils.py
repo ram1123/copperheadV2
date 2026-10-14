@@ -6,7 +6,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 AAA_REDIRECTORS = [
     "root://eos.cms.rcac.purdue.edu/",                  # 2
     # "root://xcache.cms.rcac.purdue.edu/",                  # 1
-    "root://cms-xrd-globa l.cern.ch/"
+    "root://cms-xrd-global.cern.ch/"
 ]
 
 # Accept prefixes like:
