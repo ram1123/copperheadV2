@@ -3,15 +3,15 @@ title: NanoAODv12 vs NanoAODv9 Comparison
 ---
 
 
-# Introduction
+## Introduction
 
 To get the beam spot corrected pT of the muons, we generated our custom nanoAODv12.
 
-# Generation Setup
+## Generation Setup
 
-## Generation few tricks
+### Generation few tricks
 
-# Sanity check for the generation
+## Sanity check for the generation
 
 Compare the generated nanoAODv12 with the official nanoAODv9.
 
