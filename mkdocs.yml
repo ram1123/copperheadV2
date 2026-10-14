@@ -8,6 +8,7 @@ site_dir: _site
 
 # Keep scratch notes out of the built site.
 exclude_docs: |
+  api/SUMMARY.md
   temp/
 
 # Rewrites ../<repo path> links in the docs to GitHub links at build time.
@@ -48,11 +49,33 @@ theme:
 
 plugins:
     - search
+    # API Reference: one page per module under src/, modules/, cli/ (scripts/gen_api_docs.py).
+    - gen-files:
+          scripts:
+              - scripts/gen_api_docs.py
+    - literate-nav:
+          nav_file: SUMMARY.md
+    - section-index
     - mkdocstrings:
           handlers:
               python:
+                  # Extra paths load namespace folders (no __init__.py) as top-level packages.
+                  paths: [., src, src/lib, src/copperhead/zpt_rewgt/derive]
                   options:
                       show_source: true
+                      show_if_no_docstring: true
+                      show_signature_annotations: true
+                      separate_signature: true
+                      members_order: source
+                      heading_level: 2
+                      show_symbol_type_heading: true
+                      show_symbol_type_toc: true
+                      docstring_section_style: list
+                      merge_init_into_class: true
+                      # Docstrings here are informal; don't warn about missing types/params.
+                      docstring_options:
+                          warn_unknown_params: false
+                          warn_missing_types: false
 
 markdown_extensions:
     - admonition
@@ -124,8 +147,7 @@ nav:
     - Reference:
           - Run-2 Datasets: Run2DY_SamplesList.md
           - NanoAOD v12 vs v9: NanoAODv12_v9.md
-          - Processor API: copperhead_processor-reference.md
+          - API Reference: api/
           - TODO Summary: TODO_SUMMARY.md
           - Archive:
-                - ggH Steps After Stage-1 (Legacy): ggH_steps_after_stage1.md
                 - Hyeon's Notes: personal_notes.md

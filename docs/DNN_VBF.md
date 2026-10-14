@@ -162,27 +162,7 @@ python MVA_training/VBF_run3/scan_bins_for_dnn.py
 ```
 
 
-## combine step
-first combine the cards:
+## Combine step
 
-
-```bash
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage3_datacards_May04_2026/score_Run2_NanoV12_forVBFChannel_Apr29_2026 2017
-```
-
-then generate the signficance
-```bash
-bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage3_datacards_May04_2026/score_Run2_NanoV12_forVBFChannel_Apr29_2026 2017
-```
-
-Long chain:
-```
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2018
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2017
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016postVFP
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016preVFP
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ Run2
-
-bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ Run2 
-
-```
+Datacards, workspaces, significance, limits and impacts are produced with `run_stats_pipeline_VBF.sh`;
+see [Statistics](Statistics.md).

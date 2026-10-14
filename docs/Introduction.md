@@ -62,11 +62,10 @@ Run3_nanoAODv<version>_<date>_<additional_info>
 for example `Run3_nanoAODv12_10Feb_FilterJetsHorn30GeV`. The label becomes the output directory
 name, and every later stage (compact, stage-2/3, plots) finds the ntuples through it.
 
-Legacy note:
-
-```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 0
-```
+??? note "Legacy: `stage1_loop_Improved.sh`"
+    ```bash
+    bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 0
+    ```
 
 
 Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, and and all other necessary weights for the analysis.
@@ -75,26 +74,20 @@ Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, 
 bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
 ```
 
-Legacy note:
-
-```bash
-bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
-```
+??? note "Legacy: `stage1_loop_Improved.sh`"
+    ```bash
+    bash stage1_loop_Improved.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
+    ```
 
 ### Run the VBF stats pipeline
 
 After `stage3` has produced the datacards, run the Combine chain with `run_stats_pipeline_VBF.sh` in
 the `combine` environment. See [Statistics](Statistics.md) for the modes and examples.
 
-### Get the yields 
+### Get the yields
 
-
-1. To get the yields from the reduced ntuples, use the script [get_yields.py](../scripts/get_yields.py).
-
-    ```bash
-    python scripts/get_yields.py --years 2018
-    ```
-
+Use [get_yields.py](../scripts/get_yields.py) on the `stage1_output` directory of your label; see
+[Get Yields](GetYields.md) for the command, options and how the categories are split.
 
 ### Sync/Compare with previous results
 
@@ -165,10 +158,5 @@ the `combine` environment. See [Statistics](Statistics.md) for the modes and exa
 
 ### Control Plots
 
-Before running the below code make sure to update the input and output paths and several other parameters in the [run_plotter.py](../run_plotter.py) file.
-
-The main code for plotting is in the [plotter/validation_plotter_unified.py](../plotter/validation_plotter_unified.py) file. In this file you may need to update the list of datasets to be considered for different processes. You can see them here [validation_plotter_unified.py#L28-L83](https://github.com/ram1123/copperheadV2/blob/2cdaf09321000a8eb4a5eb8faf06e22f5e9ec560/plotter/validation_plotter_unified.py#L28-L83)
-
-```bash
-python run_plotter.py
-```
+Data/MC control plots are made with [validation_plotter_unified.py](../plotter/validation_plotter_unified.py),
+either directly or through the `run_plotter.py` wrapper; see [Plotting Codes](PlottingCodes.md).
