@@ -1,5 +1,52 @@
+import glob
+from pathlib import Path
+
 import yaml
 from modules.utils import logger
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+# Versioned per-run dataset YAMLs; the sync/old/v9 files are excluded on purpose.
+DATASET_YAML_GLOB = "configs/datasets/dataset_nanoAODv*_run[23].yaml"
+
+
+def _data_block(yaml_file, year):
+    with open(yaml_file, "r") as f:
+        data = yaml.safe_load(f)
+    return ((data.get("years") or {}).get(year) or {}).get("Data") or {}
+
+
+def get_total_lumi(yaml_file, year):
+    """Integrated luminosity (pb^-1) of `year`: Data.total_lumi_pb in the dataset YAML."""
+    lumi = _data_block(yaml_file, year).get("total_lumi_pb")
+    if not isinstance(lumi, (int, float)) or lumi <= 0:
+        raise ValueError(f"No valid Data.total_lumi_pb for year '{year}' in {yaml_file}")
+    return float(lumi)
+
+
+def get_golden_json(yaml_file, year):
+    """Golden JSON lumimask path of `year`: Data.golden_json in the dataset YAML."""
+    golden_json = _data_block(yaml_file, year).get("golden_json")
+    if not golden_json or str(golden_json).upper() == "NONE":
+        raise ValueError(f"No Data.golden_json for year '{year}' in {yaml_file}")
+    return golden_json
+
+
+def find_total_lumi(year, yaml_glob=DATASET_YAML_GLOB):
+    """
+    total_lumi_pb of `year` for callers that don't know which dataset YAML holds it
+    (plotters): searches every versioned dataset YAML and refuses conflicting values.
+    """
+    found = {}
+    for yaml_file in sorted(glob.glob(str(REPO_ROOT / yaml_glob))):
+        try:
+            found[yaml_file] = get_total_lumi(yaml_file, year)
+        except ValueError:
+            continue
+    if not found:
+        raise ValueError(f"No Data.total_lumi_pb for year '{year}' in any of {yaml_glob}")
+    if len(set(found.values())) > 1:
+        raise ValueError(f"Conflicting total_lumi_pb for year '{year}': {found}")
+    return next(iter(found.values()))
 
 def get_sample_info(yaml_file, sample_name, year_key="2022preEE"):
     """

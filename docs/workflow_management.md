@@ -112,7 +112,7 @@ The aggregate convenience targets are:
 
 - `stage2_plot_run3`
   Stage-2 data/MC plot of the VBF DNN score summed over all Run 3 years in `years` (nominal
-  histograms, luminosity summed from `configs/parameters/lumi.yaml`). Runs `-m 2p` over those
+  histograms, luminosity summed from the dataset YAMLs' `Data.total_lumi_pb`). Runs `-m 2p` over those
   years, which also redoes the cheap per-year plots. All stage-2 DNN plots go to
   `validation/stage2_dnn_score/<label>/<save_postfix>[_<jj_eta_region>][_NoSyst]/<year>/DNN_score_vbf_<region>[_log].{pdf,txt}`
   (`<year>` = `Run3` for this rule).

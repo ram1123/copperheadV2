@@ -35,7 +35,7 @@ Usage
 <stage1_dir> is a directory like ``.../stage1_output/2024`` (i.e. the
 ``start_save_path`` passed to ``dataset_loop`` in run_stage1.py) -- it's walked
 recursively for ``processedlumis_*.json`` shard files. --golden-json points at
-the certified lumimask for that year (see configs/parameters/lumi.yaml).
+the certified lumimask for that year (Data.golden_json in configs/datasets/dataset_*.yaml).
 
 Caveat on --golden-json "missing" lumis: a real gap can also mean this
 specific dataset/primary-dataset legitimately has no data for those runs/lumis
@@ -238,7 +238,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("stage1_dirs", nargs="+", help="one or more stage1_output/<year> directories to walk")
     ap.add_argument("--golden-json", help="certified lumimask to compare against "
-                                          "(see configs/parameters/lumi.yaml for the path per year)")
+                                          "(Data.golden_json in configs/datasets/dataset_*.yaml per year)")
     ap.add_argument("--out", help="write outputs here instead of '<stage1_dir>/_status/' "
                                   "(shared across all stage1_dirs if multiple are given)")
     args = ap.parse_args()

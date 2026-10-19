@@ -38,23 +38,20 @@ import multiprocessing
 import os
 import time
 
-import yaml
-
 from run_prestage import (
     _accumulate_pdf_sumw,
     _minnlo_genweight_metadata_for_file,
     _runs_tree_metadata_for_file,
 )
+from modules.get_sample_info import get_total_lumi
 from modules.git_utils import get_git_state
 from modules.utils import logger
 
 UPROOT_OPTIONS = {"timeout": 4 * 2400}
 
 
-def load_lumis(lumi_yaml, years):
-    with open(lumi_yaml) as f:
-        lumis = yaml.safe_load(f)["integrated_lumis"]
-    return {y: float(lumis[y]) for y in years}
+def load_lumis(dataset_yaml, years):
+    return {y: get_total_lumi(dataset_yaml, y) for y in years}
 
 
 def per_file_metadata(fnames, sample_name, n_workers):
@@ -135,7 +132,8 @@ def main():
                         help="Per-year prestage JSON template ({year}); only data samples are taken from it")
     parser.add_argument("--output", default="prestage_output/processor_samples_{year}_NanoAODv15_LumiSplit.json",
                         help="Per-year output template ({year})")
-    parser.add_argument("--lumi-yaml", default="configs/parameters/lumi.yaml")
+    parser.add_argument("--dataset-yaml", default="configs/datasets/dataset_nanoAODv15_run3.yaml",
+                        help="Dataset YAML whose Data.total_lumi_pb per year sets the split fractions")
     parser.add_argument("--n-workers", type=int, default=20)
     parser.add_argument("--dry-run", default=False, action=argparse.BooleanOptionalAction)
     parser.add_argument("--log-level", default="INFO")
@@ -151,7 +149,7 @@ def main():
     if clash:
         raise SystemExit(f"[split] refusing to overwrite input file(s): {clash}")
 
-    lumis = load_lumis(args.lumi_yaml, years)
+    lumis = load_lumis(args.dataset_yaml, years)
     total_lumi = sum(lumis.values())
     fracs = {y: lumis[y] / total_lumi for y in years}
     logger.info(f"[split] lumis: {lumis}")

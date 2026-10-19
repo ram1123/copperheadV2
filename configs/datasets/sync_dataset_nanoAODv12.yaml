@@ -2,6 +2,7 @@ years:
   "2018":
     Data:
       total_lumi_pb: 59830.0
+      golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
       data_A:
         skip_sample: False
         datasets:
@@ -9,13 +10,13 @@ years:
         lumi_pb: null
         das_request: "local customNanoAOD, no DAS"
         parent_das: todo
-        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
         references:
           - null
 
   "2017":
     Data:
       total_lumi_pb: 59830.0
+      golden_json: data/lumimasks/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt
       data_B:
         skip_sample: False
         datasets:
@@ -23,7 +24,6 @@ years:
         lumi_pb: null
         das_request: "local customNanoAOD, no DAS"
         parent_das: todo
-        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
         references:
           - null
 
@@ -58,6 +58,7 @@ years:
   "2022preEE":
     Data:
       total_lumi_pb: 59830.0
+      golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
       data_D:
         skip_sample: False
         datasets:
@@ -65,7 +66,6 @@ years:
         lumi_pb: null
         das_request: "local customNanoAOD, no DAS"
         parent_das: todo
-        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
         references:
           - null
 

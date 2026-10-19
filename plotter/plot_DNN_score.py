@@ -30,6 +30,7 @@ import json
 import yaml
 from collections import OrderedDict
 from modules.selection import filterRegion
+from modules.get_sample_info import find_total_lumi
 import glob
 import pickle
 
@@ -368,17 +369,8 @@ if __name__ == "__main__":
     hist_dict_bySampleGroup = arrangeHist_bySampleGroup(pickled_hist_dict, sample_group_dict)
     logger.info(f"hist_dict_bySampleGroup.keys() : {hist_dict_bySampleGroup.keys()}")
 
-    # read lumi value from configs/parameters/lumi.yaml
-    infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
-    with open(infile_lumi, "r") as f:
-        lumi_config = yaml.safe_load(f)
-    lumi_dict = lumi_config.get("integrated_lumis", {})
-    missing_lumi = [y for y in component_years if not lumi_dict.get(y)]
-    if missing_lumi:
-        logger.error(f"lumi for year(s) {missing_lumi} is not defined!")
-        raise ValueError(f"lumi for year(s) {missing_lumi} is not defined!")
-    # summed over the component years, converted from pb to fb
-    lumi = round(sum(lumi_dict[y] for y in component_years) / 1000.0, 1)
+    # Data.total_lumi_pb of the dataset YAMLs, summed over the component years, pb -> fb
+    lumi = round(sum(find_total_lumi(y) for y in component_years) / 1000.0, 1)
 
     lumi_val = lumi
 

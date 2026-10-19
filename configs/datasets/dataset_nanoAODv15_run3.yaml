@@ -2,6 +2,7 @@ years:
     "2024":
         Data:
             total_lumi_pb: 109820.0
+            golden_json: data/lumimasks/Cert_Collisions2024_378981_386951_Golden.json
             pdmv_twiki: "https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2024"
             data_C:
                 skip_sample: False
@@ -10,7 +11,6 @@ years:
                     - /Muon1/Run2024C-MINIv6NANOv15-v1/NANOAOD
                 lumi_pb: 7260.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
@@ -22,7 +22,6 @@ years:
                     - /Muon1/Run2024D-MINIv6NANOv15-v1/NANOAOD
                 lumi_pb: 7980.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
@@ -34,7 +33,6 @@ years:
                     - /Muon1/Run2024E-MINIv6NANOv15-v1/NANOAOD
                 lumi_pb: 11420.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
@@ -46,7 +44,6 @@ years:
                     - /Muon1/Run2024F-MINIv6NANOv15-v1/NANOAOD
                 lumi_pb: 28040.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
@@ -58,7 +55,6 @@ years:
                     - /Muon1/Run2024G-MINIv6NANOv15-v2/NANOAOD
                 lumi_pb: 38070.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
@@ -70,7 +66,6 @@ years:
                     - /Muon1/Run2024H-MINIv6NANOv15-v2/NANOAOD
                 lumi_pb: 5490.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
@@ -82,7 +77,6 @@ years:
                     - /Muon1/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD
                 lumi_pb: 11560.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json
@@ -814,6 +808,7 @@ years:
     "2025":
         Data:
             total_lumi_pb: 110840.0
+            golden_json: data/lumimasks/Cert_Collisions2025_391658_398903_Golden.json
             pdmv_twiki: "https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2025"
             data_B:
                 skip_sample: False
@@ -822,7 +817,6 @@ years:
                     - /Muon1/Run2025B-PromptReco-v1/NANOAOD
                 lumi_pb: 260.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_398903_Golden.json
@@ -836,7 +830,6 @@ years:
                     - /Muon1/Run2025C-PromptReco-v2/NANOAOD
                 lumi_pb: 21630.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_398903_Golden.json
@@ -848,7 +841,6 @@ years:
                     - /Muon1/Run2025D-PromptReco-v1/NANOAOD
                 lumi_pb: 25520.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_398903_Golden.json
@@ -860,7 +852,6 @@ years:
                     - /Muon1/Run2025E-PromptReco-v1/NANOAOD
                 lumi_pb: 14150.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_398903_Golden.json
@@ -874,7 +865,6 @@ years:
                     - /Muon1/Run2025F-PromptReco-v2/NANOAOD
                 lumi_pb: 26890.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_398903_Golden.json
@@ -886,7 +876,6 @@ years:
                     - /Muon1/Run2025G-PromptReco-v1/NANOAOD
                 lumi_pb: 22400.0
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_398903_Golden.json
@@ -1617,6 +1606,7 @@ years:
     "2026":
         Data:
             total_lumi_pb: 25950.0 # Golden JSON lumi for eras A+B+D (0.64+15.28+10.03 /fb); era C (low-PU) excluded -- Preliminary Offline Results
+            golden_json: data/lumimasks/Cert_Collisions2026_401624_403937_golden.json
             pdmv_twiki: "https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2026"
             data_A:
                 skip_sample: False
@@ -1627,7 +1617,6 @@ years:
                     - /Muon3/Run2026A-PromptReco-v1/NANOAOD
                 lumi_pb: 640.0 # Golden JSON, Preliminary Offline Results
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions26/Cert_Collisions2026_401624_403937_golden.json
@@ -1641,7 +1630,6 @@ years:
                     - /Muon3/Run2026B-PromptReco-v1/NANOAOD
                 lumi_pb: 15280.0 # Golden JSON, Preliminary Offline Results
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions26/Cert_Collisions2026_401624_403937_golden.json
@@ -1655,7 +1643,6 @@ years:
                     - /Muon3/Run2026C-PromptReco-v1/NANOAOD
                 lumi_pb: 2110.0 # Golden JSON, Preliminary Offline Results -- not summed into total_lumi_pb since this era is excluded
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions26/Cert_Collisions2026_401624_403937_golden.json
@@ -1669,7 +1656,6 @@ years:
                     - /Muon3/Run2026D-PromptReco-v1/NANOAOD
                 lumi_pb: 10030.0 # Golden JSON, Preliminary Offline Results
                 das_request: NONE
-                golden_json: NONE
                 references:
                     ppd_summary_table: "https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0"
                     golden_json_official: https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions26/Cert_Collisions2026_401624_403937_golden.json

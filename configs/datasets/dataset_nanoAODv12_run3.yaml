@@ -2,6 +2,7 @@ years:
     "2022preEE":
         Data:
             total_lumi_pb: 7990.0
+            golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
             data_C:
                 skip_sample: False
                 datasets:
@@ -9,7 +10,6 @@ years:
                     - /SingleMuon/Run2022C-16Dec2023-v1/NANOAOD
                 lumi_pb: 5020.0 
                 das_request: "https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod/global&input=dataset%20status=*%20dataset=/Muon/Run2022C-16Dec2023-v1/NANOAOD"
-                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
                     golden_json_official: test
@@ -20,7 +20,6 @@ years:
                     - /Muon/Run2022D-16Dec2023-v1/NANOAOD
                 lumi_pb: 2970.0 
                 das_request: "https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod/global&input=dataset%20status=*%20dataset=/Muon/Run2022D-16Dec2023-v1/NANOAOD"
-                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
                     ppd_summary_table: "Run 3 Data-taking twiki (2022D)"
                     golden_json_official: test
@@ -731,13 +730,13 @@ years:
     "2022postEE":
         Data:
             total_lumi_pb: 26680.0
+            golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
             data_E:
                 skip_sample: False
                 datasets:
                     - /Muon/Run2022E-16Dec2023-v1/NANOAOD
                 lumi_pb: 5810.0
                 das_request:
-                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
                     golden_json_official: test
@@ -748,7 +747,6 @@ years:
                     - /Muon/Run2022F-16Dec2023-v1/NANOAOD
                 lumi_pb: 17780.0
                 das_request:
-                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
                     golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
@@ -758,7 +756,6 @@ years:
                     - /Muon/Run2022G-16Dec2023-v1/NANOAOD
                 lumi_pb: 3090.0
                 das_request:
-                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
                     golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
@@ -1466,6 +1463,7 @@ years:
     "2023":
         Data:
             total_lumi_pb: 17960.0
+            golden_json: data/lumimasks/Cert_Collisions2023_366442_370790_Golden.json
             data_C:
                 skip_sample: False
                 datasets:
@@ -1479,7 +1477,6 @@ years:
                     - /Muon1/Run2023C-22Sep2023_v4-v2/NANOAOD
                 lumi_pb: 17960.0
                 das_request:
-                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
                     golden_json_official: test
@@ -2194,6 +2191,7 @@ years:
     "2023BPix":
         Data:
             total_lumi_pb: 9680.0
+            golden_json: data/lumimasks/Cert_Collisions2023_366442_370790_Golden.json
             data_D:
                 skip_sample: False
                 datasets:
@@ -2203,7 +2201,6 @@ years:
                     - /Muon1/Run2023D-22Sep2023_v2-v1/NANOAOD
                 lumi_pb: 9680.0
                 das_request:
-                golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
                     golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json

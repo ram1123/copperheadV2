@@ -46,7 +46,7 @@ just trusting the input dataset's nominal luminosity.
   shards under `<save_path>/stage1_output/<year>` are merged, deduplicated, and
   range-compressed into golden-JSON format (`{"<run>": [[start,end], ...]}`)
   automatically -- no extra flag needed. This also checks the merged result
-  against that year's certified lumimask (`configs/parameters/lumi.yaml`) and
+  against that year's certified lumimask (`Data.golden_json` in the dataset YAML) and
   logs a `[processed-lumi report]` coverage summary.
 - Written to `<save_path>/stage1_output/<year>/_status/`:
 

@@ -27,6 +27,7 @@ from cli.common_argparser import build_common_parser, resolve_dataset_yaml_file
 from configs.skip_stage1_run import samples_to_run, samples_to_skip
 from src.stage1.runner_adapter import CopperheadRunnerAdapter
 from modules.dask_utils import close_dask_client, get_dask_client
+from modules.get_sample_info import get_golden_json
 from modules.job_status import JobStatus, write_stage1_summary
 from modules.utils import absolutize_config, get_git_info, logger
 from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize_paths
@@ -364,6 +365,9 @@ if __name__ == "__main__":
     # and so the config is cleanly picklable for dask workers.
     if isinstance(config, (DictConfig, ListConfig)):
         config = OmegaConf.to_container(config, resolve=True)
+    # Golden JSON lives in the dataset YAML, next to the total_lumi_pb it certifies.
+    config["lumimask"] = get_golden_json(args.dataset_yaml_file, args.year)
+    logger.info(f"Golden JSON for {args.year}: {config['lumimask']}")
 
     PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
     config = absolutize_config(config, PROJECT_ROOT)

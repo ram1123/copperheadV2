@@ -207,10 +207,10 @@ A DNN is trained and binned per region, and should only be applied in the region
 | 2023BPix   | 9451.0                       | —                                                                                                                                                                                                                                          |
 | 2024       | 108960.0                     | https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0                                                                                                                           |
 | 2025       | 110840.0                     | https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2025 (eras B–G) |
-| 2026       | 25950.0                      | `configs/parameters/lumi.yaml` (eras A, B, D; era C low-pileup run excluded, preliminary) |
+| 2026       | 25950.0                      | dataset YAML `total_lumi_pb` (eras A, B, D; era C low-pileup run excluded, preliminary) |
 
 
-The values actually used by the code are in [configs/parameters/lumi.yaml](../configs/parameters/lumi.yaml) (`integrated_lumis`); the 2022–2024 rows above are older numbers and differ slightly from it (e.g. 2024 = 109820 pb⁻¹ there).
+The values actually used by the code are `Data.total_lumi_pb` in the dataset YAMLs ([configs/datasets/](../configs/datasets/)); the 2022–2024 rows above are older numbers and differ slightly from it (e.g. 2024 = 109820 pb⁻¹ there).
 
 **2024 and 2025/26 (PC guideline, Aug 2026):** 2025 and 2026 are treated as one year, and the Summer24 MC is shared between 2024 and 2025/26, split by luminosity fraction. See [2024 / 2025-26 Year Grouping and MC Split](Run3_2024_2025_2026_MC_split.md).
 
@@ -458,7 +458,7 @@ NanoAOD version: v15 (data: PromptReco)
 | data_E | `/Muon0/Run2025E-PromptReco-v1/NANOAOD`<br>`/Muon1/Run2025E-PromptReco-v1/NANOAOD` | 14.15 | [Source](https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0) |
 | data_F | `/Muon0/Run2025F-PromptReco-v1/NANOAOD`<br>`/Muon1/Run2025F-PromptReco-v1/NANOAOD`<br>`/Muon0/Run2025F-PromptReco-v2/NANOAOD`<br>`/Muon1/Run2025F-PromptReco-v2/NANOAOD` | 26.89 | [Source](https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0) |
 | data_G | `/Muon0/Run2025G-PromptReco-v1/NANOAOD`<br>`/Muon1/Run2025G-PromptReco-v1/NANOAOD` | 22.40 | [Source](https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0) |
-| **Total** | — | **110.84** | `configs/parameters/lumi.yaml` |
+| **Total** | — | **110.84** | dataset YAML `total_lumi_pb` |
 
 *Era luminosities sum to 110.85 fb⁻¹, 0.01 fb⁻¹ above the total used for normalization.*
 
@@ -478,7 +478,7 @@ NanoAOD version: v15 (data: PromptReco)
 | data_B | `/Muon0/Run2026B-PromptReco-v1/NANOAOD`<br>`/Muon1/Run2026B-PromptReco-v1/NANOAOD`<br>`/Muon2/Run2026B-PromptReco-v1/NANOAOD`<br>`/Muon3/Run2026B-PromptReco-v1/NANOAOD` | 15.28 | [Source](https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0) |
 | data_C | `/Muon0/Run2026C-PromptReco-v1/NANOAOD`<br>`/Muon1/Run2026C-PromptReco-v1/NANOAOD`<br>`/Muon2/Run2026C-PromptReco-v1/NANOAOD`<br>`/Muon3/Run2026C-PromptReco-v1/NANOAOD` | 2.11 | [Source](https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0) — **not used** (`skip_sample: True`, low-pileup run) |
 | data_D | `/Muon0/Run2026D-PromptReco-v1/NANOAOD`<br>`/Muon1/Run2026D-PromptReco-v1/NANOAOD`<br>`/Muon2/Run2026D-PromptReco-v1/NANOAOD`<br>`/Muon3/Run2026D-PromptReco-v1/NANOAOD` | 10.03 | [Source](https://docs.google.com/presentation/d/1EHxQcWzw8IxPgCn8hm1prwSP-EktFtiuaEzH8WkQNVY/edit?slide=id.g36971dee1d1_0_0#slide=id.g36971dee1d1_0_0) |
-| **Total** | — | **25.95** | `configs/parameters/lumi.yaml` |
+| **Total** | — | **25.95** | dataset YAML `total_lumi_pb` |
 
 *2026 luminosity is preliminary.*
 

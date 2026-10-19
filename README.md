@@ -92,6 +92,17 @@ Run the stage1 to skim the data. It also saves the weight for Z-pT reweighting, 
 bash run_analysis_pipeline.sh -v 12 -c configs/datasets/dataset_nanoAODv12.yaml -l label_for_ntuple -y 2018 -m 1
 ```
 
+**Prestage tag (`--prestage-tag`).** When this is set, stage-1 reads `prestage_output/processor_samples_<year>_NanoAODv<v>_<tag>.json`
+instead of the plain prestage JSON. You can set it with `run_stage1.py --prestage-tag <tag>`, with
+`PRESTAGE_TAG=<tag>` for `run_analysis_pipeline.sh -m 1`, or with `prestage_tag=<tag>` in Snakemake. For 2024/2025/2026
+use `LumiSplit` (the files come from [scripts/split_prestage_by_year_lumi.py](scripts/split_prestage_by_year_lumi.py)).
+This splits the shared Summer24 MC across the years by luminosity, so each MC event is used only once. Details are in
+[docs/Run3_2024_2025_2026_MC_split.md](docs/Run3_2024_2025_2026_MC_split.md).
+
+```bash
+PRESTAGE_TAG=LumiSplit bash run_analysis_pipeline.sh -v 15 -c configs/datasets/dataset_nanoAODv15_run3.yaml -l label_for_ntuple -y 2024 -m 1
+```
+
 #### Get the validation plots:
 
 Before running the below code make sure to update the input and output paths and several other parameters in the [run_plotter.py](run_plotter.py) file.
