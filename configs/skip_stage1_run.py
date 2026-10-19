@@ -54,16 +54,16 @@ samples_to_skip = [
     # --- EWK Z ---
     # "ewk_mmjj_mll_105_160",
     "ewk_lljj",
-    "ewk_lljj_mll50_mjj120",
+    # "ewk_lljj_mll50_mjj120",
     # "ewk_mmjj_mll_105_160_mjj120",  # Pythia8 counterpart of the Herwig7 nominal: EWK PS variation
     # --- top ---
     # "ttjets_dl",
     "ttjets_fh",
     "tt_inclusive",
-    "st_tw_top",
-    "st_tw_antitop",
+    # "st_tw_top",
+    # "st_tw_antitop",
     # --- diboson ---
-    "zz",
+    # "zz",
     # --- signal ---
     # "vbf_aMCatNLO",
     # "ggh_amcatnlo",  # nominal amc@NLO ggH: baseline for the ggh_amcatnlo_TuneCP5Up/Down variations
