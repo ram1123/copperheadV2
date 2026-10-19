@@ -2,7 +2,7 @@ name: Deploy MkDocs to GitHub Pages
 
 on:
   push:
-    branches: ["main", "Week_Sep28"] # Week_Sep28: temporary, to publish its docs before merging to main
+    branches: ["main"] 
   workflow_dispatch:
 
 permissions:
