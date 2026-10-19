@@ -135,3 +135,28 @@ Extra DNN validation files:
 
 If `puIdDisc` is available, the script also writes matching baseline plots and a
 baseline summary block so the DNN can be compared against the existing PU ID.
+
+## Data-driven (CWoLa) variant
+
+`train_pu_cwola.py` trains the same flat MLP on **data** instead of gen labels:
+Z(mumu) + exactly-1-jet events, labelled by the Z-jet balance (HS-enriched:
+`|dphi(Z,jet)| > 2.8` and `0.5 < pT(jet)/pT(Z) < 1.5`; PU-enriched: `|dphi| < 1.5`).
+Balance/MET/muon-geometry/pT-scale features are forbidden, jets with
+`dR(jet, mu) < 0.8` are dropped, and the two mixtures are reweighted to a common
+(pT, |eta|, nPV) shape. The identical procedure is rerun on DY MC and compared to a
+gen-label supervised model and `puIdDisc` (`roc_<region>_{inclusive,matched}`).
+
+`measure_pu_cwola_sf.py` measures data/MC SFs for that tagger in the same selection,
+via a `dphi(Z,jet)` template fit (MC gen-matched vs unmatched) split by tagger
+pass/fail: per-class tagger SFs and a PU-jet rate SF (`pu_rate_sf_rel`) for
+weighting gen-unmatched MC jets. Output: `sf_*.csv`, `pu_cwola_sf.json`, `fits/`.
+
+```bash
+B=/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_Sep22_tightPassLepVeto_DefaultjetPt25GeV/stage1_output/2024/compacted
+M=validation/pu_cwola/run2024_DefaultjetPt25GeV_baseline_Sep29
+python MVA_training/pileup_dnn/train_pu_cwola.py --data "$B/data_*/*/*.parquet" \
+  --mc "$B/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" -o $M --regions HE HF
+python MVA_training/pileup_dnn/measure_pu_cwola_sf.py --model-dir $M --data "$B/data_*/*/*.parquet" \
+  --mc "$B/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" "$B/ttjets_*/*/*.parquet" \
+       "$B/ww_*/*/*.parquet" "$B/wz_*/*/*.parquet" "$B/zz_*/*/*.parquet" -o $M/sf
+```

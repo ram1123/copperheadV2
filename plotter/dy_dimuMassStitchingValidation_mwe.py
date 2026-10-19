@@ -27,12 +27,12 @@ import dask.dataframe as dd
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
-import yaml
 from matplotlib.colors import ListedColormap
 
 # Allow `python plotter/dy_dimuMassStitchingValidation_mwe.py` from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from modules.get_sample_info import find_total_lumi
 from modules.utils import logger
 from src.lib.histogram.plotting import getHistAndErrs
 
@@ -86,12 +86,7 @@ CM_ENERGY = 13
 # -----------------------------------------------------------------------------
 def get_lumi(year: str) -> float:
     """Integrated luminosity in fb-1, same source as validation_plotter_unified.py."""
-    with open(Path("configs") / "parameters" / "lumi.yaml", "r") as f:
-        lumi_config = yaml.safe_load(f)
-    lumi = lumi_config.get("integrated_lumis", {}).get(year, 0.0)
-    if lumi == 0.0:
-        raise ValueError(f"lumi for year {year} is not defined!")
-    return round(lumi / 1000.0, 1)  # pb-1 -> fb-1
+    return round(find_total_lumi(year) / 1000.0, 1)  # pb-1 -> fb-1
 
 
 def load_sample(sample_dir: Path) -> tuple:

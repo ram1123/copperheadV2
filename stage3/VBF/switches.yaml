@@ -17,3 +17,5 @@ switches:
         "2024": false
         "2025": false
         "2026": false
+        # merged stage-3 year (modules/classify_year.py MERGED_YEARS)
+        "2025_2026": false

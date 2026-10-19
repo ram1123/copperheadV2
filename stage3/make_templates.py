@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import pandas as pd
 
@@ -14,8 +15,14 @@ import pickle
 import itertools
 import ROOT
 import os
+import hist as hist_lib
 
+from modules.classify_year import MERGED_YEARS, component_years
 from modules.utils import logger
+from stage3.edit_datacard4DY_matchedJets import (
+    ALL_MATCHED_DY_PROCESSES,
+    stage2_histogram_directory,
+)
 
 class Variable(object):
     def __init__(self, name_, caption_, nbins_, xmin_, xmax_):
@@ -27,18 +34,26 @@ class Variable(object):
 
 decorrelation_scheme = {
     "LHERen": [
-        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
-        "EWK", "TT+ST",
+        "DY", "DYVBF", *ALL_MATCHED_DY_PROCESSES,
+        "EWK", "TT+ST", "VV",
     ],
     "LHEFac": [
-        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
-        "EWK", "TT+ST",
+        "DY", "DYVBF", *ALL_MATCHED_DY_PROCESSES,
+        "EWK", "TT+ST", "VV",
     ],
     "pdf_unc": [
-        "DY", "DYVBF", "DY_matched01J", "DY_matched2J",
-        "EWK", "VBF", "ggH", "TT+ST",
+        "DY", "DYVBF", *ALL_MATCHED_DY_PROCESSES,
+        "EWK", "VBF", "ggH", "TT+ST", "VV",
     ],
     # "pdf_unc": ["DY", "qqH_hmm", "ggH_hmm"],
+}
+
+# Interim, opt-in (--signal_xsec_rescale): Run-3 signal stage-1 used BR(H->mumu) = 2.6e-4.
+# Ratio of corrected sigma x BR (LHCHXSWG R5 + YR4 BR, mH = 125.38) to the value used; see stats skill signal-xsec-br.md.
+SIGNAL_XSEC_BR_RESCALE = {
+    "ggh_powhegPS": 51.45 * 2.1542e-4 / 0.0135096,
+    "vbf_powheg": 4.099837482 * 2.1542e-4 / 0.00105742,
+    "vbf_powheg_dipole": 4.099837482 * 2.1542e-4 / 0.00105742,  # 2022 VBF sample name
 }
 
 PDF_MEMBER_PREFIX = "wgt_pdfMemberHessEig" # Prefix of the per-eigenvector weight for PDF unc
@@ -51,6 +66,10 @@ PDF_ALPHA_S_PREFIX = "wgt_pdfAlphaS"
 PDF_ALPHA_S_MEMBERS = ("wgt_pdfAlphaS101_up", "wgt_pdfAlphaS102_up")
 ALPHA_S_UNC_SCALE = 1.0
 
+# Groups whose QCD-scale (LHERen/LHEFac) variation keeps its normalization: they have no free
+# rateParam, so it is their only normalization uncertainty. DY floats, so it stays shape-only.
+LHE_SCALE_NORM_GROUPS = ("EWK", "TT+ST", "VV")
+
 shape_only = [
     "wgt_LHERen_up",
     "wgt_LHERen_down",
@@ -61,6 +80,60 @@ shape_only = [
     "wgt_zpt_up",
     "wgt_zpt_down",
 ]
+
+def merge_year_hists(hists_by_year, merged_year):
+    """ For official recommendation to treat 2025 and 2026 as one single year.
+    
+    Sum one stage-2 histogram file across the component years of `merged_year`.
+
+    Year-tagged variations (e.g. `Absolute_2025_up`, `Absolute_2026_up`) are renamed to
+    `<src>_<merged_year>_up`, so each becomes one nuisance correlated across the
+    components. A variation a component year lacks is filled with that year's nominal
+    (that part of the sample is not shifted), never with zero.
+    """
+    renamed = {}
+    for comp_year, h in hists_by_year.items():
+        labels = [
+            v.replace(f"_{comp_year}_", f"_{merged_year}_")
+            for v in h.axes["variation"]
+        ]
+        if len(set(labels)) != len(labels):
+            raise ValueError(
+                f"merge_year_hists: renaming {comp_year} variations to {merged_year} "
+                f"produced duplicate labels: {labels}"
+            )
+        renamed[comp_year] = labels
+
+    union = []
+    for labels in renamed.values():
+        union += [v for v in labels if v not in union]
+
+    merged = None
+    for comp_year, h in hists_by_year.items():
+        labels = renamed[comp_year]
+        if "nominal" not in labels:
+            raise ValueError(f"merge_year_hists: {comp_year} histogram has no 'nominal' variation")
+        missing = [v for v in union if v not in labels]
+        if missing:
+            logger.info(
+                f"merge_year_hists: {comp_year} lacks {len(missing)} variation(s) of "
+                f"{merged_year}, filled with its nominal: {missing}"
+            )
+        var_axis_idx = [ax.name for ax in h.axes].index("variation")
+        src_idx = [
+            labels.index(v) if v in labels else labels.index("nominal") for v in union
+        ]
+        axes = list(h.axes)
+        axes[var_axis_idx] = hist_lib.axis.StrCategory(
+            union, name="variation", label=h.axes["variation"].label, growth=True
+        )
+        rebuilt = hist_lib.Hist(*axes, storage=h.storage_type())
+        # the growth variation axis has no flow bins, so its flow view indexes 1:1 with labels
+        rebuilt.view(flow=True)[...] = np.take(h.view(flow=True), src_idx, axis=var_axis_idx)
+        # hist addition raises on mismatched binning, so the years can't be summed silently
+        merged = rebuilt if merged is None else merged + rebuilt
+    return merged
+
 
 def load_stage2_output_hists(argset, parameters, dataset):
     year = argset["year"]
@@ -74,39 +147,43 @@ def load_stage2_output_hists(argset, parameters, dataset):
         raise ValueError("global_path is not set in parameters!")
         # return
 
-    if global_path_postfix:
-        path = f"{global_path}/stage2_histograms/{var_name}_{global_path_postfix}"
-        if no_variations:
-            path += "_NoSyst"
-        path += f"/{year}"
-    else:
-        path = f"{global_path}/stage2_histograms/{var_name}/{year}"
-    paths = glob.glob(f"{path}/{dataset}*.pkl")
+    # file name -> {component year: hist}; a merged year (e.g. 2025_2026) reads every
+    # component year's directory and sums the same file across them
+    comp_years = component_years(year)
+    hists_by_file = {}
+    for comp_year in comp_years:
+        path = stage2_histogram_directory(
+            global_path, var_name, global_path_postfix, no_variations, comp_year
+        )
+        paths = sorted(glob.glob(f"{path}/{dataset}*.pkl"))
+        logger.debug(f"dataset: {dataset}, var_name: {var_name}, path: {path}, paths: {paths}")
+        for pkl_path in paths:
+            with open(pkl_path, "rb") as handle:
+                hists_by_file.setdefault(os.path.basename(pkl_path), {})[comp_year] = pickle.load(handle)
 
-    logger.debug(f"dataset: {dataset}")
-    logger.debug(f"var_name: {var_name}")
-    logger.debug(f"path: {path}")
-    logger.debug(f"paths: {paths}")
-    hist_df = pd.DataFrame()
-    for path in paths:
-        with open(path, "rb") as handle:
-            hist = pickle.load(handle)
-            new_row = {
-                "year": year,
-                "var_name": var_name,
-                "dataset": dataset,
-                "hist": hist,
-            }
-            hist_df = pd.concat([hist_df, pd.DataFrame([new_row])])
-            hist_df.reset_index(drop=True, inplace=True)
-            logger.debug(f"Loaded histogram for {dataset} in {year} with variable {var_name}: {hist}")
-            # logger.debug(f"Loaded histogram for {dataset} in {year} with variable {var_name}")
-            logger.debug(f"hist_df shape: {hist_df.shape}")
-    if hist_df.shape[0] == 0:
+    rows = []
+    for file_name, by_year in hists_by_file.items():
+        if year in MERGED_YEARS:
+            if len(by_year) != len(comp_years):
+                logger.warning(
+                    f"{file_name} exists only for {sorted(by_year)} of {year} "
+                    f"({list(comp_years)}); its {year} template covers only that part."
+                )
+            hist_obj = merge_year_hists(by_year, year)
+        else:
+            hist_obj = by_year[year]
+        rows.append({
+            "year": year,
+            "var_name": var_name,
+            "dataset": dataset,
+            "hist": hist_obj,
+        })
+        logger.debug(f"Loaded histogram {file_name} for {dataset} in {year} with variable {var_name}")
+    if not rows:
         logger.debug(f"No histograms found for {dataset} in {year} with variable {var_name}")
         return pd.DataFrame()
 
-    return hist_df
+    return pd.DataFrame(rows)
 
 def getTH1D_from_numpy(group_hist, bin_edges, group_sumw2, centers, name):
     logger.debug("=================== getTH1D_from_numpy ============")
@@ -227,6 +304,49 @@ def to_templates(parameters, hist_df=None):
 
     yield_df = pd.concat(yield_dfs).reset_index(drop=True)
     return yield_df
+
+
+SIGNAL_GROUPS = ("qqH_hmm", "ggH_hmm")
+EMPTY_BKG_BIN_FLOOR = 1e-5
+
+
+def floor_empty_background_bins(templates, yield_rows, year, region, channel):
+    """Give bins with no total background a tiny yield on the largest background.
+
+    A bin with signal but zero background predicts a negative yield for r < 0, so a
+    background-only (r=0) Asimov fit has a kink at its minimum and fails to converge.
+    The floor goes on the process's nominal and every variation alike, so it adds no
+    shape effect; that process's yields in yield_rows are updated to match.
+    """
+    by_name = {h.GetName(): h for h in templates}
+    bkg_groups = sorted({
+        row["group"] for row in yield_rows
+        if row["variation"] == "nominal" and row["group"] not in SIGNAL_GROUPS + ("Data",)
+        and row["group"] in by_name
+    })
+    if not bkg_groups:
+        return
+    n_bins = by_name[bkg_groups[0]].GetNbinsX()
+    empty_bins = [
+        b for b in range(1, n_bins + 1)
+        if sum(by_name[g].GetBinContent(b) for g in bkg_groups) <= 0
+    ]
+    if not empty_bins:
+        return
+    target = max(bkg_groups, key=lambda g: by_name[g].Integral())
+    logger.info(
+        f"Flooring {len(empty_bins)} empty background bin(s) {[b - 1 for b in empty_bins]} "
+        f"in {year} {region} {channel} to {EMPTY_BKG_BIN_FLOOR:g} on {target}"
+    )
+    for name, hist in by_name.items():
+        if name == target or name.startswith(f"{target}_"):
+            for b in empty_bins:
+                hist.SetBinContent(b, max(hist.GetBinContent(b), EMPTY_BKG_BIN_FLOOR))
+    for row in yield_rows:
+        if row["group"] == target:
+            name = target if row["variation"] == "nominal" else f"{target}_{row['variation']}"
+            if name in by_name:
+                row["yield"] = by_name[name].Integral()
 
 
 def _split_pdf_alpha_s(parameters, year):
@@ -574,13 +694,20 @@ def make_templates(args, parameters={}):
                 the_hist_nominal = hist[slicer_nominal].project(var.name).values()
                 the_sumw2 = hist[slicer_sumw2].project(var.name).values()
 
-                if variation in shape_only:
+                lhe_norm = variation.startswith(("wgt_LHERen", "wgt_LHEFac")) and group in LHE_SCALE_NORM_GROUPS
+                if variation in shape_only and not lhe_norm:
                     if the_hist.sum() != 0:
                         scale = the_hist_nominal.sum() / the_hist.sum()
                     else:
                         scale = 1.0
                     the_hist = the_hist * scale
                     the_sumw2 = the_sumw2 * scale
+
+                xsec_rescale = SIGNAL_XSEC_BR_RESCALE.get(dataset) if parameters.get("signal_xsec_rescale", False) else None
+                if xsec_rescale is not None:
+                    the_hist = the_hist * xsec_rescale
+                    the_hist_nominal = the_hist_nominal * xsec_rescale
+                    the_sumw2 = the_sumw2 * xsec_rescale**2
 
                 # temporary overwrite for TT+ST group ----------------
                 # if group=="TT+ST":
@@ -644,6 +771,16 @@ def make_templates(args, parameters={}):
                 logger.debug(f"Sum of histogram for group {group} is zero in {year} for {region} and {channel}. Skipping!")
                 continue
 
+            # Negative-weight MC can leave negative bins, which Combine can't fit (e.g. a
+            # background-only Asimov fit); clip to 0, keeping sumw2 so autoMCStats still sees the MC error.
+            if group != "Data" and np.any(np.asarray(group_hist) < 0):
+                neg_bins = np.flatnonzero(np.asarray(group_hist) < 0).tolist()
+                logger.info(
+                    f"Clipping negative bins {neg_bins} of {group} {variation} in {year} "
+                    f"{region} {channel} to 0 (sum of negatives {np.asarray(group_hist)[neg_bins].sum():.4g})"
+                )
+                group_hist = np.clip(np.asarray(group_hist, dtype=np.float64), 0.0, None)
+
             # Copy the nominal reference for Eq. (6.5); reweighted members share
             # its MC statistics and inherit its sumw2.
             if variation == "nominal":
@@ -695,7 +832,7 @@ def make_templates(args, parameters={}):
                     logger.debug(f"group_LHE after: {group_LHE}")
                     if group_LHE in decorrelation_scheme[variation_core]:
                         if variation_core == "pdf_unc" :
-                            suffix = "_"+group_LHE+str(year)
+                            suffix = "_"+group_LHE  # same PDF set in every year: correlated
                             logger.debug(f"pdf_unc suffix: {suffix}")
                         else:
                             suffix = "_"+group_LHE
@@ -705,6 +842,8 @@ def make_templates(args, parameters={}):
                     suffix = str(year)
                 elif variation_core in ["mu_roccor", "mu_scale", "mu_resol"]:
                     suffix = str(year)
+                elif re.fullmatch(r"jer\d", variation_core):
+                    suffix = "_" + str(year)  # JER SFs are derived per era: uncorrelated
                 elif variation_core in ["pu", "l1prefiring"]:
                     suffix = "_wgt"+str(year)
                 elif variation_core in ["qgl"]:
@@ -878,7 +1017,7 @@ def make_templates(args, parameters={}):
                     f"decorrelation scheme; not emitting a template."
                 )
             else:
-                pdf_suffix = "_" + group_LHE + str(year)
+                pdf_suffix = "_" + group_LHE  # correlated across years, like the normal path
                 for nuisance, delta in pdf_deltas.items():
                     # Floor downward bin yields at zero per PDF4LHC21 Sect. 6.3.2.
                     pdf_variations = {
@@ -918,6 +1057,8 @@ def make_templates(args, parameters={}):
                                 "yield": pdf_hist.sum(),
                             }
                         )
+
+    floor_empty_background_bins(templates, yield_rows, year, region, channel)
 
     if parameters["save_templates"]:
         out_dir = parameters["global_path"]

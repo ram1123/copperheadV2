@@ -31,12 +31,20 @@ plugins:
 markdown_extensions:
     - pymdownx.snippets:
           base_path: docs
+    - pymdownx.arithmatex:
+          generic: true
+
+# Render $...$ LaTeX (used in the selection tables) with MathJax.
+extra_javascript:
+    - javascripts/mathjax.js
+    - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
     - Home: index.md
     - Introduction:
           - Introduction and Setup: Introduction.md
-          - Basic Information: Run3_all_basic_Information.md
+          - Run-3 Selection, Corrections and Samples: Run3_selection_and_samples.md
+          - 2024 / 2025-26 Year Grouping and MC Split: Run3_2024_2025_2026_MC_split.md
 
     - Running:
           - Get Yields: GetYields.md

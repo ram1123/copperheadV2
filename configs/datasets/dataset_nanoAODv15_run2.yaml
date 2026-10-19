@@ -2,13 +2,13 @@ years:
     "2017":
         Data:
             total_lumi_pb: 41480.0
+            golden_json: data/lumimasks/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt
             data_B:
                 skip_sample: False
                 datasets:
                     - /SingleMuon/Run2017B-UL2017_NanoAODv15-v1/NANOAOD
                 lumi_pb: 4800
                 das_request: null
-                golden_json: null
                 references:
                     ppd_summary_table: null
                     golden_json_official: null
@@ -19,7 +19,6 @@ years:
                     - /SingleMuon/Run2017C-UL2017_NanoAODv15-v1/NANOAOD
                 lumi_pb: 9570
                 das_request: null
-                golden_json: null
                 references:
                     ppd_summary_table: null
                     golden_json_official: null
@@ -30,7 +29,6 @@ years:
                     - /SingleMuon/Run2017D-UL2017_NanoAODv15-v1/NANOAOD
                 lumi_pb: 4250
                 das_request: null
-                golden_json: null
                 references:
                     ppd_summary_table: null
                     golden_json_official: null
@@ -41,7 +39,6 @@ years:
                     - /SingleMuon/Run2017E-UL2017_NanoAODv15-v1/NANOAOD
                 lumi_pb: 9310
                 das_request: null
-                golden_json: null
                 references:
                     ppd_summary_table: null
                     golden_json_official: null
@@ -52,7 +49,6 @@ years:
                     - /SingleMuon/Run2017F-UL2017_NanoAODv15-v1/NANOAOD
                 lumi_pb: 13540
                 das_request: null
-                golden_json: null
                 references:
                     ppd_summary_table: null
                     golden_json_official: null
@@ -64,7 +60,6 @@ years:
                     - /SingleMuon/Run2017G-UL2017_NanoAODv15-v1/NANOAOD
                 lumi_pb: null
                 das_request: null
-                golden_json: null
                 references:
                     ppd_summary_table: null
                     golden_json_official: null
@@ -76,7 +71,6 @@ years:
                     - /SingleMuon/Run2017H-UL2017_NanoAODv15-v1/NANOAOD
                 lumi_pb: null
                 das_request: null
-                golden_json: null
                 references:
                     ppd_summary_table: null
                     golden_json_official: null
@@ -664,13 +658,13 @@ years:
     "2018":
       Data:
         total_lumi_pb: 59830.0
+        golden_json: data/lumimasks/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt
         data_A:
           skip_sample: False
           datasets:
             - /SingleMuon/Run2018A-UL2018_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -681,7 +675,6 @@ years:
             - /SingleMuon/Run2018B-UL2018_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -692,7 +685,6 @@ years:
             - /SingleMuon/Run2018C-UL2018_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -703,7 +695,6 @@ years:
             - /SingleMuon/Run2018D-UL2018_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1146,13 +1137,13 @@ years:
     "2016postVFP":
       Data:
         total_lumi_pb: 16810.0
+        golden_json: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt
         data_F:
           skip_sample: False
           datasets:
             - /SingleMuon/Run2016F-UL2016_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1163,7 +1154,6 @@ years:
             - /SingleMuon/Run2016G-UL2016_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1174,7 +1164,6 @@ years:
             - /SingleMuon/Run2016H-UL2016_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1526,6 +1515,7 @@ years:
     "2016preVFP":
       Data:
         total_lumi_pb: 19500.0
+        golden_json: data/lumimasks/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt
         data_B:
           skip_sample: False
           datasets:
@@ -1533,7 +1523,6 @@ years:
             - /SingleMuon/Run2016B-HIPM_UL2016_NanoAODv15_v2-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1544,7 +1533,6 @@ years:
             - /SingleMuon/Run2016C-HIPM_UL2016_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1555,7 +1543,6 @@ years:
             - /SingleMuon/Run2016D-HIPM_UL2016_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1566,7 +1553,6 @@ years:
             - /SingleMuon/Run2016E-HIPM_UL2016_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null
@@ -1577,7 +1563,6 @@ years:
             - /SingleMuon/Run2016F-HIPM_UL2016_NanoAODv15-v1/NANOAOD
           lumi_pb: null
           das_request: null
-          golden_json: null
           references:
             ppd_summary_table: null
             golden_json_official: null

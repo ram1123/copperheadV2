@@ -15,14 +15,13 @@ Example:
 import json
 import argparse
 import glob
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import awkward as ak
-import dask_awkward as dak
+import numpy as np
 import pandas as pd
-
-from modules.dask_utils import close_dask_client, get_dask_client
 
 
 # ----------------------------------------------------------------------
@@ -106,11 +105,6 @@ HEADER_KEY_FIELD = "run:lumi:event"
 DEFAULT_REL_TOLERANCE = 1e-3
 
 
-def _exceeds_tolerance(v1: float, v2: float, rel_tolerance: float) -> bool:
-    """True if v1 and v2 differ by more than rel_tolerance of the larger magnitude."""
-    return abs(v2 - v1) > rel_tolerance * max(abs(v1), abs(v2))
-
-
 def _is_data_sync_source(label: str) -> bool:
     label_l = str(label).lower()
     name_l = Path(str(label)).name.lower()
@@ -148,18 +142,31 @@ def find_parquet_pattern(directory: str) -> str:
 # ----------------------------------------------------------------------
 # Load + optional selection
 # ----------------------------------------------------------------------
-def load_dir_to_df(
-    directory: str,
-    category: Optional[str] = None,
-    region: Optional[str] = None,
-    process: str = "data",
-) -> pd.DataFrame:
-    """
-    Load all parquet files from a directory into a pandas DataFrame
-    using dask_awkward, with optional selection.applyRegionCatCuts.
+def _open_virtual(path: str):
+    # Lazy import: coffea takes seconds to import and txt/json modes never need it
+    from coffea.nanoevents import BaseSchema, NanoEventsFactory
 
-    Columns kept: run, luminosityBlock, event, dimuon_pt, dimuon_mass, dimuon_eta
-    (and V1_FIELDS_2COMPUTE, only those that exist).
+    return NanoEventsFactory.from_parquet(
+        path, schemaclass=BaseSchema, mode="virtual"
+    ).events()
+
+
+def _read_columns(path: str, columns: List[str]) -> pd.DataFrame:
+    """Materialize only `columns` of one parquet file; missing values become NaN."""
+    events = _open_virtual(path)
+    data = {}
+    for c in columns:
+        arr = ak.to_numpy(events[c], allow_missing=True)
+        if np.ma.isMaskedArray(arr):
+            arr = np.ma.filled(arr.astype("float64"), np.nan)
+        data[c] = arr
+    return pd.DataFrame(data)
+
+
+def load_dir_to_df(directory: str) -> pd.DataFrame:
+    """
+    Load the SYNCVARLIST columns (those that exist) of all parquet files in a
+    directory into a pandas DataFrame, using coffea virtual arrays.
     """
     pattern = find_parquet_pattern(directory)
     print(f"[INFO] Reading parquet pattern: {pattern}")
@@ -170,45 +177,22 @@ def load_dir_to_df(
         if c not in cols:
             cols.append(c)
 
-    # dask_awkward lazy collection
-    events_lazy = dak.from_parquet(pattern)
+    files = sorted(glob.glob(pattern))
 
     # Restrict to columns that actually exist
-    available = [c for c in cols if c in events_lazy.fields]
-    missing = [c for c in cols if c not in events_lazy.fields]
+    first_fields = set(_open_virtual(files[0]).fields)
+    available = [c for c in cols if c in first_fields]
+    missing = [c for c in cols if c not in first_fields]
 
     if missing:
         print(f"[WARNING] Missing columns in {directory}: {missing}")
 
-    events_lazy = events_lazy[available]
+    # Virtual arrays only read the accessed columns; files are independent, so
+    # read them in parallel (parquet decoding releases the GIL).
+    with ThreadPoolExecutor(max_workers=min(8, len(files))) as pool:
+        per_file = list(pool.map(lambda f: _read_columns(f, available), files))
 
-    # Materialize to awkward Array
-    events = events_lazy.compute()
-
-    # # Optional selection
-    # if category is not None and region is not None:
-    #     print(
-    #         f"[INFO] Applying selection: category={category}, "
-    #         f"region={region}, process={process}"
-    #     )
-    #     events = selection.applyRegionCatCuts(
-    #         events,
-    #         category=category,
-    #         region_name=region,
-    #         process=process,
-    #         variation="nominal",
-    #         do_vbf_filter_study=False,
-    #         do_VH_veto=False,
-    #     )
-    # else:
-    #     print("[INFO] No selection applied (category/region not both provided).")
-
-    # Convert to pandas (awkward v2: no ak.to_pandas)
-    df = pd.DataFrame(ak.to_list(events))
-
-    # Keep only our desired columns (those that exist)
-    keep_cols = [c for c in cols if c in df.columns]
-    df = df[keep_cols]
+    df = pd.concat(per_file, ignore_index=True)
 
     print(f"[INFO] Loaded {len(df)} rows from {directory}\n")
     return df
@@ -244,27 +228,6 @@ def _with_occurrence_index(df: pd.DataFrame, label: str) -> pd.DataFrame:
 # ----------------------------------------------------------------------
 # Single-dir dump
 # ----------------------------------------------------------------------
-def dump_single_dir_sync_to_CSV(df: pd.DataFrame, out_path: Path) -> None:
-    """
-    Save a text file with:
-    event,run,luminosityBlock,dimuon_pt,dimuon_mass,dimuon_eta
-    """
-    cols = KEY_VARS + SYNCVARLIST
-    cols = [c for c in cols if c in df.columns]
-
-    # Reorder so event,run,lumi come in that order
-    ordered = ["event", "run", "luminosityBlock"]
-    for c in SYNCVARLIST:
-        if c in cols:
-            ordered.append(c)
-
-    ordered = [c for c in ordered if c in df.columns]
-
-    df_out = df[ordered].copy()
-    df_out.to_csv(out_path, index=False)
-    print(f"[INFO] Wrote {len(df_out)} rows to {out_path}")
-
-
 def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     """
     Save a text file whose first line names the columns, then one event per line:
@@ -285,29 +248,46 @@ def dump_single_dir_sync(df: pd.DataFrame, out_path: Path) -> None:
     if missing:
         print(f"[WARNING] Columns absent from this sample, not written: {missing}")
 
-    df2 = df.copy()
-
-    for c in required:
-        df2[c] = df2[c].fillna(-100.0)
+    # float() then %.2f, as the per-row loop did, so integer columns also print as N.00
+    df2 = df[required].astype("float64").fillna(-100.0)
+    keys = (
+        df["run"].astype("int64").astype(str)
+        + ":" + df["luminosityBlock"].astype("int64").astype(str)
+        + ":" + df["event"].astype("int64").astype(str)
+    )
+    # Per-column str.format is several times faster than pandas' float_format
+    columns = [keys.tolist()] + [
+        list(map("{:.2f}".format, df2[c].to_numpy().tolist())) for c in required
+    ]
 
     with open(out_path, "w") as f:
         f.write(HEADER_KEY_FIELD + "," + ",".join(required) + "\n")
-        for _, row in df2.iterrows():
-            run = int(row["run"])
-            lumi = int(row["luminosityBlock"])
-            event = int(row["event"])
-
-            values = []
-            for c in required:
-                v = row[c]
-                if pd.isna(v):
-                    v = -100.0
-                values.append(f"{float(v):.2f}")
-
-            line = f"{run}:{lumi}:{event}," + ",".join(values)
-            f.write(line + "\n")
+        f.writelines(",".join(row) + "\n" for row in zip(*columns))
 
     print(f"[INFO] Wrote {len(df2)} lines to {out_path}")
+
+
+def _mismatch_table(
+    c1: pd.DataFrame, c2: pd.DataFrame, variables: List[str], tolerance: float
+) -> pd.DataFrame:
+    """
+    Side-by-side *_1, *_2, delta_* table for rows of two index-aligned frames
+    where any variable differs by more than the relative tolerance.
+    """
+    out = {}
+    mismatch = np.zeros(len(c1), dtype=bool)
+    for var in variables:
+        v1 = c1[var].to_numpy(dtype="float64")
+        v2 = c2[var].to_numpy(dtype="float64")
+        out[f"{var}_1"] = v1
+        out[f"{var}_2"] = v2
+        out[f"delta_{var}"] = v2 - v1
+        # NaN compares False, so NaN never counts as a mismatch
+        mismatch |= np.abs(v2 - v1) > tolerance * np.maximum(np.abs(v1), np.abs(v2))
+
+    table = pd.DataFrame(out, index=c1.index).reset_index()
+    return table[mismatch]
+
 
 # ----------------------------------------------------------------------
 # Two-dir comparison
@@ -317,9 +297,6 @@ def compare_two_dirs(
     dir2: str,
     out_path: Path,
     tolerance: float = DEFAULT_REL_TOLERANCE,
-    category: Optional[str] = None,
-    region: Optional[str] = None,
-    process: str = "data",
 ) -> None:
     """
     Compare two directories of parquet files by (run, luminosityBlock, event).
@@ -333,10 +310,10 @@ def compare_two_dirs(
       dimuon_eta_1, dimuon_eta_2, delta_dimuon_eta
     """
     print(f"[INFO] Loading directory 1: {dir1}")
-    df1 = load_dir_to_df(dir1, category=category, region=region, process=process)
+    df1 = load_dir_to_df(dir1)
 
     print(f"[INFO] Loading directory 2: {dir2}")
-    df2 = load_dir_to_df(dir2, category=category, region=region, process=process)
+    df2 = load_dir_to_df(dir2)
 
     df1 = _with_occurrence_index(df1, f"dir1 ({dir1})")
     df2 = _with_occurrence_index(df2, f"dir2 ({dir2})")
@@ -356,44 +333,13 @@ def compare_two_dirs(
     c1 = df1.loc[common_idx]
     c2 = df2.loc[common_idx]
 
-    rows: List[dict] = []
+    variables = [v for v in SYNCVARLIST if v in c1.columns and v in c2.columns]
+    df_out = _mismatch_table(c1, c2, variables, tolerance)
 
-    for idx in common_idx:
-        row1 = c1.loc[idx]
-        row2 = c2.loc[idx]
-
-        record = {
-            "run": idx[0],
-            "luminosityBlock": idx[1],
-            "event": idx[2],
-            "_sync_instance": idx[3],
-        }
-
-        mismatch = False
-
-        for var in SYNCVARLIST:
-            if var not in row1 or var not in row2:
-                continue
-
-            v1 = row1[var]
-            v2 = row2[var]
-            delta = v2 - v1
-
-            record[f"{var}_1"] = v1
-            record[f"{var}_2"] = v2
-            record[f"delta_{var}"] = delta
-
-            if _exceeds_tolerance(v1, v2, tolerance):
-                mismatch = True
-
-        if mismatch:
-            rows.append(record)
-
-    if not rows:
+    if df_out.empty:
         print("[INFO] No mismatches found (within tolerance).")
         return
 
-    df_out = pd.DataFrame(rows)
     df_out.to_csv(out_path, index=False)
     print(f"[INFO] Wrote {len(df_out)} mismatching events to {out_path}")
 
@@ -428,51 +374,45 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
             f"from position."
         )
     value_cols = header[1:]
-    lines = lines[1:]
+    body = pd.Series(lines[1:], dtype=object)
+    line_no = np.arange(1, len(body) + 1)
 
-    bad = 0
-    records = []
+    n_fields = body.str.count(",").to_numpy() + 1
+    too_few = n_fields < 2
+    for iline in line_no[too_few]:
+        print(f"[WARNING] malformed line {iline} in {path}: too few fields")
+    wrong = ~too_few & (n_fields - 1 != len(value_cols))
+    if wrong.any():
+        iline = int(line_no[wrong][0])
+        raise RuntimeError(
+            f"line {iline} of {path} has {int(n_fields[wrong][0]) - 1} values but the header "
+            f"names {len(value_cols)} columns"
+        )
+    bad = int(too_few.sum())
+    body = body[~too_few]
+    line_no = line_no[~too_few]
 
-    for iline, line in enumerate(lines, start=1):
-        parts = line.split(",")
+    records = {}
+    # Header-only files leave body empty, where split(expand=True) has no column 0
+    if not body.empty:
+        fields = body.str.split(",", expand=True)
+        key = fields[0]
+        key_ok = key.str.fullmatch(r"\s*[+-]?\d+\s*:\s*[+-]?\d+\s*:\s*[+-]?\d+\s*").to_numpy(dtype=bool)
+        for iline, raw_key in zip(line_no[~key_ok], key[~key_ok]):
+            print(f"[WARNING] failed to parse run:lumi:event on line {iline}: {raw_key}")
+        bad += int((~key_ok).sum())
 
-        if len(parts) < 2:
-            bad += 1
-            print(f"[WARNING] malformed line {iline} in {path}: too few fields")
-            continue
-
-        # Parse run:lumi:event
-        try:
-            run_str, lumi_str, evt_str = parts[0].split(":")
-            run = int(run_str)
-            lumi = int(lumi_str)
-            evt = int(evt_str)
-        except Exception:
-            bad += 1
-            print(f"[WARNING] failed to parse run:lumi:event on line {iline}: {parts[0]}")
-            continue
-
-        raw_vals = parts[1:]
-
-        if len(raw_vals) != len(value_cols):
-            raise RuntimeError(
-                f"line {iline} of {path} has {len(raw_vals)} values but the header "
-                f"names {len(value_cols)} columns"
-            )
-
-        row = {
-            "run": run,
-            "luminosityBlock": lumi,
-            "event": evt,
-        }
-
-        for col, raw in zip(value_cols, raw_vals):
-            try:
-                row[col] = float(raw)
-            except Exception:
-                row[col] = -100.0
-
-        records.append(row)
+        fields = fields[key_ok]
+        if len(fields):
+            key_parts = fields[0].str.split(":", expand=True)
+            for i, name in enumerate(KEY_VARS):
+                records[name] = key_parts[i].str.strip().astype("int64").to_numpy()
+            for i, col in enumerate(value_cols, start=1):
+                raw = fields[i].str.strip()
+                vals = pd.to_numeric(raw, errors="coerce")
+                # float() failures became -100.0; a literal "nan" stays NaN
+                unparsable = vals.isna() & (raw.str.lower() != "nan")
+                records[col] = vals.mask(unparsable, -100.0).to_numpy(dtype="float64")
 
     if bad:
         print(f"[WARNING] {bad} malformed lines skipped in {path}")
@@ -480,7 +420,7 @@ def parse_sync_txt(path: str) -> pd.DataFrame:
     if not records:
         raise RuntimeError(f"No valid rows parsed from {path}")
 
-    df = pd.DataFrame.from_records(records)
+    df = pd.DataFrame(records)
     return _with_occurrence_index(df, path)
 
 
@@ -545,38 +485,14 @@ def compare_two_sync_txt(
             f"This is a column set difference, not a value difference."
         )
 
-    rows = []
-    for idx in common_idx:
-        r1 = c1.loc[idx]
-        r2 = c2.loc[idx]
+    df_out = _mismatch_table(c1, c2, vars_to_check, tolerance)
 
-        mismatch = False
-        rec = {
-            "run": idx[0],
-            "luminosityBlock": idx[1],
-            "event": idx[2],
-            "_sync_instance": idx[3],
-        }
-
-        for v in vars_to_check:
-            v1 = float(r1[v])
-            v2 = float(r2[v])
-            d = v2 - v1
-            rec[f"{v}_1"] = v1
-            rec[f"{v}_2"] = v2
-            rec[f"delta_{v}"] = d
-            if _exceeds_tolerance(v1, v2, tolerance):
-                mismatch = True
-
-        if mismatch:
-            rows.append(rec)
-
-    if not rows:
+    if df_out.empty:
         print("[INFO] No mismatches found (within tolerance).")
         return
 
-    pd.DataFrame(rows).to_csv(out_path, index=False)
-    print(f"[INFO] Wrote {len(rows)} mismatching events to {out_path}")
+    df_out.to_csv(out_path, index=False)
+    print(f"[INFO] Wrote {len(df_out)} mismatching events to {out_path}")
     return
 
 
@@ -696,24 +612,6 @@ def parse_args():
             "Cutflow counts are always exact."
         ),
     )
-    parser.add_argument(
-        "--category",
-        type=str,
-        default="nocat",
-        help="Category label for selection.applyRegionCatCuts (default: 'nocat').",
-    )
-    parser.add_argument(
-        "--region",
-        type=str,
-        default="h-sidebands",
-        help="Region name for selection.applyRegionCatCuts (default: 'h-sidebands').",
-    )
-    parser.add_argument(
-        "--process",
-        type=str,
-        default="data",
-        help="Process name passed to selection.applyRegionCatCuts (default: 'data').",
-    )
     args = parser.parse_args()
     args.tolerance = abs(args.tolerance) # A negative tolerance is meaningless here; treat it as its magnitude.
     return args
@@ -737,17 +635,8 @@ def main():
             out_path = Path(args.out)
 
         print(f"[INFO] Output path: {out_path}")
-        get_dask_client()
-        try:
-            df = load_dir_to_df(
-                directory,
-                category=args.category,
-                region=args.region,
-                process=args.process,
-            )
-            dump_single_dir_sync(df, out_path)
-        finally:
-            close_dask_client()
+        df = load_dir_to_df(directory)
+        dump_single_dir_sync(df, out_path)
 
     elif len(dirs) == 2:
         file1, file2 = dirs
@@ -775,19 +664,12 @@ def main():
 
         # Otherwise treat as directories (existing behavior)
         dir1, dir2 = file1, file2
-        get_dask_client()
-        try:
-            compare_two_dirs(
-                dir1=dir1,
-                dir2=dir2,
-                out_path=out_path,
-                tolerance=args.tolerance,
-                category=args.category,
-                region=args.region,
-                process=args.process,
-            )
-        finally:
-            close_dask_client()
+        compare_two_dirs(
+            dir1=dir1,
+            dir2=dir2,
+            out_path=out_path,
+            tolerance=args.tolerance,
+        )
 
     else:
         raise SystemExit("Please provide one or two directories.")

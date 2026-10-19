@@ -27,6 +27,7 @@ import mplhep as hep
 
 from cli.common_argparser import build_common_parser
 from modules.dask_utils import close_dask_client, get_dask_client
+from modules.get_sample_info import find_total_lumi
 from modules.job_status import JobStatus
 from modules import selection
 from modules.utils import logger
@@ -373,17 +374,8 @@ def resolve_year_context(
         raise ValueError(f"Unsupported year: {year}")
 
     if lumi_override == "":
-        infile_lumi = os.path.join("configs", "parameters", "lumi.yaml")
-        import yaml
-        with open(infile_lumi, "r") as f:
-            lumi_config = yaml.safe_load(f)
-        lumi_dict = lumi_config.get("integrated_lumis", {})
-        lumi = lumi_dict.get(year, 0.0)
-        # convert from pb to fb
-        lumi = round(lumi / 1000.0, 1)
-        if lumi == 0.0:
-            logger.error(f"lumi for year {year} is not defined!")
-            raise ValueError(f"lumi for year {year} is not defined!")
+        # Data.total_lumi_pb of the dataset YAML, converted from pb to fb
+        lumi = round(find_total_lumi(year) / 1000.0, 1)
     else:
         lumi = lumi_override
     logger.warning(f"lumi: {lumi}")
