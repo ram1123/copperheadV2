@@ -193,8 +193,14 @@ def main():
             parts = []
             for bname, a, b in BREAKDOWN:
                 ia, ib = ints[a], ints[b] if b else None
-                up = quad_diff(ia and ia["up"], ib and ib["up"])
-                dn = quad_diff(ia and ia["down"], ib and ib["down"])
+                up = (
+                    None if b and (ib is None or ib["up"] is None)
+                    else quad_diff(ia and ia["up"], ib and ib["up"])
+                )
+                dn = (
+                    None if b and (ib is None or ib["down"] is None)
+                    else quad_diff(ia and ia["down"], ib and ib["down"])
+                )
                 parts.append(f"{bname} +{fmt(up)}/-{fmt(dn)}")
             flag = "  (low side crosses below r=0: unreliable)" if tot["lo"] is not None and tot["lo"] < 0 else ""
             report.append(f"   {name:14s}: r = {tot['best']:.2f} +{fmt(tot['up'])}/-{fmt(tot['down'])}  | "
