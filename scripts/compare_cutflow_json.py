@@ -49,7 +49,7 @@ def main():
 
     out_path = Path(args.out)
     if diff_df.empty:
-        out_path.touch()
+        out_path.write_text("")
     else:
         diff_df.to_csv(out_path, index=False)
 
