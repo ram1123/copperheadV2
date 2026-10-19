@@ -262,6 +262,8 @@ def build_datacards(var_name, yield_df, parameters):
                     # one free normalisation per DY sample, like the two matched-jet ones
                     datacard.write("\n")
                     for dy_group in ("DY", "DYVBF"):
+                        if dy_group not in yield_df.group.unique():
+                            continue
                         datacard.write(
                             f"XSecAndNorm{year_savepath}{dy_group} rateParam * "
                             f"{dy_group} 1 [0.2,5]\n"
