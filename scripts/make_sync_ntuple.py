@@ -4,7 +4,8 @@ Convert stage-1 sync-mode parquet (switch do_sync_ntuple, configs/switches/switc
 into flat ROOT TTrees ("Events") for the HMuMu Run-3 synchronisation exercise.
 
 Round-0 2nd iteration (default, --layout files): one file <GROUP>-<DATASETNAME>.root per dataset directly in
---out (data_H split into Muon0/Muon1), written in --max-events chunks. --layout dirs reproduces the 1st-iteration
+--out (data_H split into Muon0/Muon1); written as --max-events parts (uproot cannot write files beyond ~2 GB) that
+are merged with ROOT's hadd (needs hadd on PATH, e.g. the default pixi env). --layout dirs reproduces the 1st-iteration
 layout: one directory <GROUP>-<DATASETNAME>/ per dataset, files split every --max-events events.
 Data are blinded here, not in stage-1 (agreed for the 2nd iteration): an event is dropped if any stored pair
 (default, IP, agreed) has 115 <= m_mumu(raw) <= 135 GeV; --no-blind writes unblinded data (local checks only). Jet_* jagged columns become a ROOT jagged collection with
@@ -13,7 +14,7 @@ stored in the file as TObjString "sync_info" (JSON). See docs/sync_2024_ntuples.
 
 How to run (repo root, default pixi env; input is a finished stage-1 run of the sync switches):
     ./run_in_pixi.sh default python scripts/make_sync_ntuple.py --stage1 <save_path>/stage1_output/2024 \
-        --out <outdir> [--units <unit> ...] [--max-events 2000000] [--layout files|dirs]
+        --out <outdir> [--units <unit> ...] [--max-events 1000000] [--layout files|dirs]
 
 Example:
     ./run_in_pixi.sh default python scripts/make_sync_ntuple.py \
@@ -24,6 +25,8 @@ import argparse
 import glob
 import json
 import os
+import shutil
+import subprocess
 
 import awkward as ak
 import numpy as np
@@ -135,7 +138,8 @@ def main():
     ap.add_argument("--units", nargs="+", default=list(UNITS), choices=list(UNITS), help="output units (default all)")
     ap.add_argument("--prestage", default="prestage_output/processor_samples_2024_NanoAODv15_sync2024.json",
                     help="prestage JSON of the run (to split data_H into Muon0/Muon1)")
-    ap.add_argument("--max-events", type=int, default=2_000_000, help="events per output ROOT file (dirs) / per write chunk (files)")
+    # ~1 kB/event: 2M events reach uproot's ~2 GB per-file limit
+    ap.add_argument("--max-events", type=int, default=1_000_000, help="events per output ROOT file (dirs) / per part before hadd (files)")
     ap.add_argument("--layout", choices=["files", "dirs"], default="files",
                     help="files: one <GROUP>-<unit>.root per dataset (2nd iteration); dirs: 1st-iteration split directories")
     ap.add_argument("--no-blind", action="store_true", help="do not blind data (local checks only, never upload)")
@@ -160,35 +164,26 @@ def main():
             raise RuntimeError(f"[{unit}] blinding columns {BLIND_COLUMNS} missing; stage-1 is not 2nd-iteration code")
         info = sync_info(unit, provenance, os.path.abspath(args.stage1), blind)
         buf, nbuf, ifile, ntot, nblind = [], 0, 0, 0, 0
-        single = None  # open file for --layout files
+        # files layout: uproot cannot write files beyond ~2 GB, so write parts and hadd them into one file
+        partdir = os.path.join(outdir, f".parts_{GROUP}-{unit}") if args.layout == "files" else outdir
+        os.makedirs(partdir, exist_ok=True)
+        parts = []
 
         def flush():
-            nonlocal buf, nbuf, ifile, single
+            nonlocal buf, nbuf, ifile
             if not buf:
                 return
             arr = ak.concatenate(buf)
             arr = ak.with_field(arr, np.full(len(arr), sample_id, dtype=np.int32), "sample_id")
-            tree = to_tree_dict(arr)
-            if args.layout == "files":
-                if single is None:
-                    path = os.path.join(outdir, f"{GROUP}-{unit}.root")
-                    single = uproot.recreate(path)
-                    # mktree with arrays also writes them as the first basket
-                    single.mktree("Events", tree,
-                                  counter_name=lambda counted: "n" + counted,
-                                  field_name=lambda outer, inner: f"{outer}_{inner}")
-                    single["sync_info"] = info
-                else:
-                    single["Events"].extend(tree)
-                print(f"[{unit}] appended {len(arr)} events")
-            else:
-                path = os.path.join(outdir, f"{GROUP}-{unit}_{ifile}.root")
-                with uproot.recreate(path) as fout:
-                    fout.mktree("Events", tree,  # NanoAOD-style nJet + Jet_<var>
-                                counter_name=lambda counted: "n" + counted,
-                                field_name=lambda outer, inner: f"{outer}_{inner}")
+            path = os.path.join(partdir, f"{GROUP}-{unit}_{ifile}.root")
+            with uproot.recreate(path) as fout:
+                fout.mktree("Events", to_tree_dict(arr),  # NanoAOD-style nJet + Jet_<var>
+                            counter_name=lambda counted: "n" + counted,
+                            field_name=lambda outer, inner: f"{outer}_{inner}")
+                if args.layout == "dirs" or ifile == 0:  # one sync_info key after hadd
                     fout["sync_info"] = info
-                print(f"[{unit}] wrote {path} ({len(arr)} events)")
+            parts.append(path)
+            print(f"[{unit}] wrote {path} ({len(arr)} events)")
             buf, nbuf, ifile = [], 0, ifile + 1
 
         for f in files:
@@ -205,8 +200,14 @@ def main():
             if nbuf >= args.max_events:
                 flush()
         flush()
-        if single is not None:
-            single.close()
+        if args.layout == "files" and parts:
+            final = os.path.join(outdir, f"{GROUP}-{unit}.root")
+            subprocess.run(["hadd", "-f", final, *parts], check=True, stdout=subprocess.DEVNULL)
+            nmerged = uproot.open(final)["Events"].num_entries
+            if nmerged != ntot:
+                raise RuntimeError(f"[{unit}] hadd output has {nmerged} entries, expected {ntot}; parts kept in {partdir}")
+            shutil.rmtree(partdir)  # only our own temporary parts
+            print(f"[{unit}] merged {len(parts)} parts -> {final}")
         print(f"[{unit}] {ntot} events from {len(files)} parquet files -> {outdir}"
               + (f" ({nblind} blinded events removed)" if blind else ""))
 

@@ -144,6 +144,7 @@ nav:
           - Copy /work to /store (EOS): CopyWorkToStore.md
           - Additional Scripts: Additional_Scripts.md
           - AF Status Pages: af_status_pages.md
+          - Luminosity from Golden JSON: lumi_from_golden_json.md
     - Reference:
           - Run-2 Datasets: Run2DY_SamplesList.md
           - NanoAOD v12 vs v9: NanoAODv12_v9.md
