@@ -236,6 +236,22 @@ def getJetType(NanoAODv: int, year: str):
 SYNC_MUON_PT_RAW_CUT = 20.0
 SYNC_MASS_RAW_MIN = 50.0
 SYNC_MASS_RAW_MAX = 200.0
+# Round-0 2nd-iteration agreed sync selection (Analysis_History_Docs/NewSel_sync.pdf); feeds only the
+# *_agreed sync flags, so it is kept apart from the analysis cuts in configs/parameters/*.yaml.
+SYNC_AGREED_MUON_ID = "mediumId"
+SYNC_AGREED_ISO_RAW_CUT = 0.25          # pfRelIso04_all before FSR-photon removal
+SYNC_AGREED_MU1_PT_CUT = 26.0           # after ScaRe + FSR, pT-resorted
+SYNC_AGREED_MU2_PT_CUT = 20.0
+SYNC_AGREED_ELECTRON_PT_CUT = 20.0      # no ECAL-gap exclusion
+SYNC_AGREED_ELECTRON_ETA_CUT = 2.5
+SYNC_AGREED_JET_PT_CUT = 30.0           # after JEC + JER
+SYNC_AGREED_JET_ETA_CUT = 4.7
+SYNC_AGREED_JET_ID = "tight"
+SYNC_AGREED_BTAG_ETA_CUT = 2.5
+SYNC_AGREED_VBF_MJJ_CUT = 400.0
+SYNC_AGREED_VBF_DETA_CUT = 2.5
+SYNC_AGREED_VBF_J1_PT_CUT = 35.0
+SYNC_AGREED_VBF_J2_PT_CUT = 30.0
 
 
 def safe_ratio(num, den, default=0.0):
@@ -808,6 +824,58 @@ class EventProcessor(processor.ProcessorABC):
                     f"PU DNN scoring is enabled, but no region models were found under {pu_dnn_base_dir}."
                 )
 
+    def sync_agreed_jet_flags(self, jets, clean, horn_ptcut, year):
+        """Round-0 2nd-iteration agreed jet selection for sync ntuples (jets: JEC+JER, pT-sorted).
+        Muon cleaning (dR>0.4 to the default pair) and the HE horn cut (do_jet_horn_ptcut) are shared
+        with the analysis; jets inside the jet veto map are dropped (map decision only)."""
+        pass_tight = jet_id(jets, {**self.config, "sync_agreed_jet_id": SYNC_AGREED_JET_ID}, year=year,
+                            jet_id_key="sync_agreed_jet_id")
+        sel = ak.fill_none(
+            (jets.pt > SYNC_AGREED_JET_PT_CUT) & (abs(jets.eta) < SYNC_AGREED_JET_ETA_CUT)
+            & pass_tight & clean & ~jets.sync_jvm_inmap & horn_ptcut,
+            False,
+        )
+        jets = ak.with_field(jets, ak.local_index(jets.pt, axis=1), "sync_jet_idx")
+        sel_jets = jets[sel]
+        out = {
+            "Jet_passJetIdTight": pass_tight,
+            "Jet_inJetVetoMapRegion": jets.sync_jvm_inmap,
+            "Jet_isSelectedAgreed": sel,
+            "njets_agreed": ak.num(sel_jets, axis=1),
+        }
+        pairs = pick_vbf_pairs(sel_jets)
+        for tag, (j1, j2) in (("", pairs["lead"]), ("_maxmjj", pairs["max_mjj"])):
+            jj = j1 + j2
+            deta = abs(j1.eta - j2.eta)
+            out.update({
+                f"jj{tag}_idx1_agreed": ak.fill_none(j1.sync_jet_idx, -1),
+                f"jj{tag}_idx2_agreed": ak.fill_none(j2.sync_jet_idx, -1),
+                f"jj{tag}_mass_agreed": jj.mass,
+                f"jj{tag}_pt_agreed": jj.pt,
+                f"jj{tag}_eta_agreed": jj.eta,
+                f"jj{tag}_dEta_agreed": deta,
+                # j1 is the higher-pT jet of the pair (combinations keep the pT order)
+                f"pass_vbf{tag}_agreed": ak.fill_none(
+                    (jj.mass > SYNC_AGREED_VBF_MJJ_CUT) & (deta > SYNC_AGREED_VBF_DETA_CUT)
+                    & (j1.pt > SYNC_AGREED_VBF_J1_PT_CUT) & (j2.pt > SYNC_AGREED_VBF_J2_PT_CUT),
+                    False,
+                ),
+            })
+        if hasattr(jets, "btagUParTAK4B"):
+            bjets = sel_jets[abs(sel_jets.eta) < SYNC_AGREED_BTAG_ETA_CUT]
+            n_loose = ak.sum(bjets.btagUParTAK4B > self.config["btag_loose_wp_UParT"], axis=1)
+            n_medium = ak.sum(bjets.btagUParTAK4B > self.config["btag_medium_wp_UParT"], axis=1)
+            bveto = (n_medium == 0) & (n_loose < 2)
+            out.update({
+                "nBtagLoose_agreed": n_loose,
+                "nBtagMedium_agreed": n_medium,
+                "pass_bveto_agreed": bveto,
+                "cat_vbf_agreed": bveto & out["pass_vbf_agreed"],
+                "cat_ggh_agreed": bveto & ~out["pass_vbf_agreed"],
+                "cat_vbf_maxmjj_agreed": bveto & out["pass_vbf_maxmjj_agreed"],
+            })
+        return out
+
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
@@ -861,15 +929,18 @@ class EventProcessor(processor.ProcessorABC):
 
         return jet_veto_eventFilter
 
-    def compute_jet_veto_jetmask(self, jets):
+    def compute_jet_veto_jetmask(self, jets, apply_min_sel=True):
         """Per-jet jet-veto-map decision (True = jet in vetoed region and passing the JME minimal
-        selection), i.e. the per-jet ingredient of compute_jet_veto_eventfilter; for sync ntuples."""
+        selection), i.e. the per-jet ingredient of compute_jet_veto_eventfilter; for sync ntuples.
+        apply_min_sel=False returns the bare (eta, phi) map decision."""
         year = self.config["year"]
         cset = get_corrset(self.config["jet_veto_maps"])
         jet_veto_map = cset[self.config["jet_veto_maps_tag"]]
         flat_inputs = {"type": "jetvetomap", "eta": ak.flatten(jets.eta), "phi": ak.flatten(jets.phi)}
         mask = jet_veto_map.evaluate(*[flat_inputs[inp.name] for inp in jet_veto_map.inputs])
         mask = ak.unflatten(mask, ak.num(jets, axis=1)) != 0.0
+        if not apply_min_sel:
+            return mask
         min_sel = (
             (jets.pt > 15)
             & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
@@ -1373,6 +1444,17 @@ class EventProcessor(processor.ProcessorABC):
             # muons passing only the sync preselection; identical to the analysis pair whenever it has exactly 2.
             nmuons_selected = ak.sum(muon_selection, axis=1)
             sync_presel_mu = (events.Muon.pt_raw > SYNC_MUON_PT_RAW_CUT) & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            # Agreed good muon: raw pT/eta preselection + mediumId + raw iso; pair = two leading in corrected pT
+            agreed_mu = ak.fill_none(
+                sync_presel_mu & events.Muon[SYNC_AGREED_MUON_ID]
+                & (events.Muon.pfRelIso04_all_raw < SYNC_AGREED_ISO_RAW_CUT),
+                False,
+            )
+            events["Muon", "sync_pass_iso_raw"] = events.Muon.pfRelIso04_all_raw < SYNC_AGREED_ISO_RAW_CUT
+            events["Muon", "sync_pass_agreed"] = agreed_mu
+            muons_ag = events.Muon[agreed_mu]
+            muons_ag = muons_ag[ak.argsort(muons_ag.pt, ascending=False)][:, :2]
+            sync_flags["nmuons_agreed"] = ak.sum(agreed_mu, axis=1)
             # selected muons are a subset of preselected ones, so this is "selected if >=2 else preselected"
             cand_mask = ak.fill_none(sync_presel_mu & (muon_selection | (nmuons_selected < 2)), False)
             muon_cands = events.Muon[cand_mask]
@@ -1506,6 +1588,26 @@ class EventProcessor(processor.ProcessorABC):
                 (ak.num(muons_ip, axis=1) == 2) & (ak.prod(muons_ip.charge, axis=1) == -1), False)
             if "sync_trig_matched" in events.Muon.fields:
                 sync_flags["pass_trigger_match_ip"] = ak.any(muons_ip.sync_trig_matched, axis=1)
+            # Agreed selection: electron veto without ECAL-gap exclusion, exactly 2 good muons
+            nelectrons_agreed = ak.sum(
+                (events.Electron.pt > SYNC_AGREED_ELECTRON_PT_CUT)
+                & (abs(events.Electron.eta) < SYNC_AGREED_ELECTRON_ETA_CUT)
+                & events.Electron[electron_id],
+                axis=1,
+            )
+            sync_flags["nelectrons_agreed"] = nelectrons_agreed
+            sync_flags["pass_electron_veto_agreed"] = nelectrons_agreed == 0
+            sync_flags["pass_nmuons_agreed"] = sync_flags["nmuons_agreed"] == 2
+            sync_flags["pass_OS_agreed"] = ak.fill_none(
+                (ak.num(muons_ag, axis=1) == 2) & (ak.prod(muons_ag.charge, axis=1) == -1), False)
+            if "sync_trig_matched" in events.Muon.fields:
+                sync_flags["pass_trigger_match_agreed"] = ak.any(muons_ag.sync_trig_matched, axis=1)
+            sync_flags["mu_pair_agreed_is_sync_pair"] = ak.fill_none(
+                (ak.num(muons, axis=1) == 2) & (ak.num(muons_ag, axis=1) == 2)
+                & (ak.min(muons.sync_idx, axis=1) == ak.min(muons_ag.sync_idx, axis=1))
+                & (ak.max(muons.sync_idx, axis=1) == ak.max(muons_ag.sync_idx, axis=1)),
+                False,
+            )
         else:
             event_filter = (
                     event_filter
@@ -1598,6 +1700,7 @@ class EventProcessor(processor.ProcessorABC):
             self.selection.add("jet_veto_maps", keep_after_jet_veto)
         if do_sync:
             events["Jet", "sync_jvm_veto"] = self.compute_jet_veto_jetmask(events.Jet)
+            events["Jet", "sync_jvm_inmap"] = self.compute_jet_veto_jetmask(events.Jet, apply_min_sel=False)
 
             # Sync preselection on the raw (beam-spot constrained, pre-ScaRe/FSR) muon pair
             pair = ak.pad_none(muons, 2)
@@ -1632,7 +1735,40 @@ class EventProcessor(processor.ProcessorABC):
                 & (dimuon_raw_ip.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw_ip.mass < SYNC_MASS_RAW_MAX),
                 False,
             )
-            event_filter = event_filter & (sync_presel | sync_presel_ip)
+            # Agreed pair: same raw window; its pT cuts are on corrected (ScaRe+FSR) pT
+            pair_ag = ak.pad_none(muons_ag, 2)
+            raw_p4_ag = [
+                ak.zip({"pt": m.pt_raw, "eta": m.eta_raw, "phi": m.phi_raw, "mass": m.mass, "charge": m.charge},
+                       with_name="PtEtaPhiMCandidate", behavior=candidate.behavior)
+                for m in (pair_ag[:, 0], pair_ag[:, 1])
+            ]
+            dimuon_raw_ag = raw_p4_ag[0] + raw_p4_ag[1]
+            dimuon_ag = pair_ag[:, 0] + pair_ag[:, 1]
+            sync_flags["dimuon_mass_raw_agreed"] = dimuon_raw_ag.mass
+            sync_flags["dimuon_mass_agreed"] = dimuon_ag.mass
+            sync_flags["dimuon_pt_agreed"] = dimuon_ag.pt
+            sync_flags["mu1_pt_agreed"] = pair_ag[:, 0].pt
+            sync_flags["mu2_pt_agreed"] = pair_ag[:, 1].pt
+            sync_flags["pass_mu_pt_agreed"] = ak.fill_none(
+                (pair_ag[:, 0].pt > SYNC_AGREED_MU1_PT_CUT) & (pair_ag[:, 1].pt > SYNC_AGREED_MU2_PT_CUT), False)
+            sync_presel_ag = ak.fill_none(
+                (ak.num(muons_ag, axis=1) == 2)
+                & (dimuon_raw_ag.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw_ag.mass < SYNC_MASS_RAW_MAX),
+                False,
+            )
+            event_filter = event_filter & (sync_presel | sync_presel_ip | sync_presel_ag)
+            # Agreed event selection (jet-level parts are separate flags from jet_loop); HLT, OS, MET
+            # filters and PV are not on the slide but are standard, trigger matching stays a separate flag
+            sync_flags["pass_agreed_selection"] = (
+                sync_presel_ag
+                & sync_flags["pass_HLT"]
+                & sync_flags["pass_MET_filters"]
+                & sync_flags["pass_PV"]
+                & sync_flags["pass_nmuons_agreed"]
+                & sync_flags["pass_OS_agreed"]
+                & sync_flags["pass_mu_pt_agreed"]
+                & sync_flags["pass_electron_veto_agreed"]
+            )
             # Same event-level decision the standard stage-1 applies as a cut
             sync_flags["pass_analysis_preselection"] = (
                 sync_presel
@@ -2948,6 +3084,8 @@ class EventProcessor(processor.ProcessorABC):
                     f"mu{i}_passSelection": mu.sync_pass_sel,
                     f"mu{i}_hasFsr": mu.sync_has_fsr,
                     f"mu{i}_passIP": mu.sync_pass_ip,
+                    f"mu{i}_passIsoRaw": mu.sync_pass_iso_raw,
+                    f"mu{i}_passSelectionAgreed": mu.sync_pass_agreed,
                 })
                 if hasattr(mu, "sync_trig_matched"):
                     sync_block[f"mu{i}_trigMatched"] = mu.sync_trig_matched
@@ -3411,6 +3549,7 @@ class EventProcessor(processor.ProcessorABC):
             sel_idx = ak.pad_none(ak.local_index(jets.pt)[jet_selection], 2)
             sync_jet_dict["jj_idx1"] = ak.fill_none(sel_idx[:, 0], -1)
             sync_jet_dict["jj_idx2"] = ak.fill_none(sel_idx[:, 1], -1)
+            sync_jet_dict.update(self.sync_agreed_jet_flags(jets, clean, jetHorn_ptcut, year))
 
         jets = jets[jet_selection] # INFO: this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         # print(f"ak.any(jets.pt < 50): {ak.sum((jets.pt < 50)[:200]).compute()}")

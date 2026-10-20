@@ -90,6 +90,42 @@ For 2024 (`configs/switches/switches_official.yaml`, `configs/parameters/*.yaml`
   ($N_b^{M} \ge 1$ and $N_{jets} \ge 2$).
 - VBF: $m_{jj} > 400$ GeV, $|\Delta\eta_{jj}| > 2.5$, leading-jet $p_T > 35$ GeV (+ b-veto); ggH: rest (+ b-veto).
 
+## Round 0, 2nd iteration (`update_after_Hmm_15Oct`): agreed selection (`*_agreed` branches)
+
+Common selection agreed between the groups (slides "New sync tuple selection", V. D'Amante,
+`Analysis_History_Docs/NewSel_sync.pdf`). It is a comparison convention, not our analysis selection; all
+1st-iteration branches are kept unchanged (`pass_analysis_preselection`, `*_ip`), and the agreed selection is
+added as separate flags. Cut values: `SYNC_AGREED_*` constants in `src/copperhead_processor.py`.
+
+- **Muons** (`mu{1,2}_passSelectionAgreed`, `mu{1,2}_passIsoRaw`, `nmuons_agreed`): raw $p_T > 20$ GeV, $|\eta| < 2.4$,
+  `mediumId`, **raw** `pfRelIso04_all` < 0.25 (before FSR-photon removal). Agreed pair = the two leading good muons
+  in corrected (ScaRe+FSR) $p_T$: `mu{1,2}_pt_agreed`, `pass_mu_pt_agreed` ($p_T$ > 26 / 20 GeV), `pass_OS_agreed`,
+  `pass_nmuons_agreed` (exactly 2 good muons), `pass_trigger_match_agreed`, `dimuon_{mass_raw,mass,pt}_agreed`,
+  `mu_pair_agreed_is_sync_pair` (same two muons as the default pair). Events are kept if the default, IP or agreed pair
+  passes the raw window.
+- **Electron veto** (`nelectrons_agreed`, `pass_electron_veto_agreed`): `mvaIso_WP90`, $p_T > 20$ GeV, $|\eta| < 2.5$,
+  no ECAL-gap exclusion.
+- `pass_agreed_selection` = agreed pair in $50 < m_{\mu\mu}^{raw} < 200$ & `pass_nmuons_agreed` & `pass_OS_agreed` &
+  `pass_mu_pt_agreed` & `pass_electron_veto_agreed` & `pass_HLT` & `pass_MET_filters` & `pass_PV`. Trigger matching
+  is **not** included (separate flag). Jet-level flags below are not included either.
+- **Jets** (`Jet_isSelectedAgreed`, `Jet_passJetIdTight`, `Jet_inJetVetoMapRegion`, `njets_agreed`): $p_T > 30$ GeV
+  after JEC+JER, $|\eta| < 4.7$, **tight** jet ID, jet outside the jet veto map (bare map decision; the jet is dropped,
+  not the event), HE ($2.5<|\eta|\le3$) $p_T > 50$ GeV (2024, `do_jet_horn_ptcut`; JER for gen-matched jets only via
+  `jer_strat: 4`), $\Delta R(j,\mu) > 0.4$ to the default muon pair. The 2.0 < |η| < 2.5 L2L3Residual treatment of the
+  agreement is **not applied** (prescription to be verified with JME).
+- **VBF**, two pair definitions on the agreed jets, indices into `Jet_*`: leading-$p_T$ pair `jj_idx{1,2}_agreed`,
+  `jj_{mass,pt,eta,dEta}_agreed`, `pass_vbf_agreed`; maximum-$m_{jj}$ pair `jj_maxmjj_idx{1,2}_agreed`,
+  `jj_maxmjj_{mass,pt,eta,dEta}_agreed`, `pass_vbf_maxmjj_agreed`. Cuts: $m_{jj} > 400$ GeV, $|\Delta\eta_{jj}| > 2.5$,
+  $p_T$ > 35 / 30 GeV (leading / subleading jet of the pair); no rounding of $\Delta\eta$.
+- **b-veto** (`nBtagLoose_agreed`, `nBtagMedium_agreed`, `pass_bveto_agreed`): UParTAK4 on agreed jets with
+  $|\eta| < 2.5$, $N_M = 0$ and $N_L < 2$. Categories `cat_vbf_agreed`, `cat_ggh_agreed`, `cat_vbf_maxmjj_agreed`.
+- **Blinding**: data events with $115 \le m_{\mu\mu}^{raw} \le 135$ GeV for any stored pair (default, IP, agreed) are
+  removed in `scripts/make_sync_ntuple.py`, not in stage-1 (the stage-1 parquet stays unblinded). MC is not blinded.
+- **Output**: one file per sample, `Purdue-<DATASETNAME>.root`, for
+  `/eos/cms/store/group/phys_higgs/cmshmm/run3_sync/Purdue/update_after_Hmm_15Oct/`.
+- Checks: `validation/sync_2024_ntuples/r0v2_checks/check_agreed_flags.py` recomputes every `*_agreed` flag from
+  the stored branches and checks the blinding.
+
 ## Differences from the standard analysis configuration
 
 - Selection stored as flags instead of cuts (switch `do_sync_ntuple`, `configs/switches/switches_official_sync.yaml`;
@@ -107,12 +143,16 @@ For 2024 (`configs/switches/switches_official.yaml`, `configs/parameters/*.yaml`
 cp prestage_output_sync2024/processor_samples_2024_NanoAODv15.json prestage_output/processor_samples_2024_NanoAODv15_sync2024.json
 ./run_in_pixi.sh default python -W ignore run_stage1.py -y 2024 --NanoAODv 15 --max_file_len 900 \
     --yaml configs/datasets/sync_dataset_nanoAODv15_2024.yaml --switches-yaml configs/switches/switches_official_sync.yaml \
-    --prestage-tag sync2024 --save_path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_sync2024 --use_gateway
+    --prestage-tag sync2024 --save_path /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_sync2024_r0v2 --use_gateway
 ./run_in_pixi.sh default python scripts/make_sync_ntuple.py \
-    --stage1 /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_sync2024/stage1_output/2024 \
-    --out /depot/cms/hmm/shar1172/hmm_sync/run3_sync_2024/Purdue
+    --stage1 /depot/cms/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_sync2024_r0v2/stage1_output/2024 \
+    --out /depot/cms/hmm/shar1172/hmm_sync/run3_sync_2024_r0v2/Purdue/update_after_Hmm_15Oct
+./run_in_pixi.sh default python validation/sync_2024_ntuples/r0v2_checks/check_agreed_flags.py \
+    /depot/cms/hmm/shar1172/hmm_sync/run3_sync_2024_r0v2/Purdue/update_after_Hmm_15Oct/*.root
 ```
 
-Output directories follow the requested `<GROUP>-<DATASETNAME>` mapping, e.g.
-`Purdue-VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/`, `Purdue-Muon0_Run2024H-MINIv6NANOv15-v1/`, and are
-copied with `xrdcp` to `/eos/cms/store/group/phys_higgs/cmshmm/run3_sync/Purdue/` (same layout as the other groups).
+2nd iteration: one file per dataset, `Purdue-<DATASETNAME>.root`, e.g.
+`Purdue-VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8.root`, `Purdue-Muon0_Run2024H-MINIv6NANOv15-v1.root`,
+copied with `xrdcp` to `/eos/cms/store/group/phys_higgs/cmshmm/run3_sync/Purdue/update_after_Hmm_15Oct/`.
+1st iteration (`--layout dirs`, Oct 13): directories `Purdue-<DATASETNAME>/` with split files directly under
+`/eos/cms/store/group/phys_higgs/cmshmm/run3_sync/Purdue/`.

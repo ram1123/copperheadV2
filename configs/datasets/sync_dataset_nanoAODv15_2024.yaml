@@ -6,6 +6,7 @@ years:
   '2024':
     Data:
       total_lumi_pb: 109820.0
+      golden_json: data/lumimasks/Cert_Collisions2024_378981_386951_Golden.json
       pdmv_twiki: https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#Year_2024
       data_H:
         skip_sample: false
