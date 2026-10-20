@@ -33,6 +33,9 @@ USAGE EXAMPLES
 4. Shutdown all active clusters without spinning up a new one:
     python scripts/manage_dask.py --shutdown-all
 
+5. Create with a different worker size/count (defaults: 2 cores, 20 GiB, 59 workers):
+    ./run_in_pixi.sh default python scripts/manage_dask.py --create --worker-memory 12 --workers 200
+
 ===============================================================================
 """
 import argparse
@@ -93,7 +96,7 @@ def shutdown_all_clusters(gateway):
         shutdown_cluster(gateway, cluster_info.name)
 
 
-def create_cluster(gateway, scale_workers=59):
+def create_cluster(gateway, scale_workers=59, worker_cores=2, worker_memory=20):
     print("Creating new cluster...")
     worker_env = {
         "PATH": os.environ["PATH"],
@@ -106,8 +109,8 @@ def create_cluster(gateway, scale_workers=59):
         try:
             result["cluster"] = gateway.new_cluster(
                 pixi_project="/cvmfs/cms-af.opensciencegrid.org/paf/pixi/copperheadV2",
-                worker_cores=2,
-                worker_memory=20,
+                worker_cores=worker_cores,
+                worker_memory=worker_memory,
                 env=worker_env,
                 shutdown_on_close=False,
             )
@@ -133,7 +136,7 @@ def create_cluster(gateway, scale_workers=59):
 
     cluster = result["cluster"]
     cluster.scale(scale_workers)
-    print(f"Cluster provisioned: {cluster.name}")
+    print(f"Cluster provisioned: {cluster.name} ({scale_workers} workers x {worker_cores} cores, {worker_memory} GiB)")
     print(f"Dashboard Link: {cluster.dashboard_link}")
     return cluster
 
@@ -176,11 +179,16 @@ def main():
         help="Shutdown all existing clusters",
     )
 
+    parser.add_argument("--worker-cores", type=float, default=2, help="cores per worker (default 2)")
+    parser.add_argument("--worker-memory", type=float, default=20, help="GiB per worker (default 20)")
+    parser.add_argument("--workers", type=int, default=59, help="number of workers to scale to (default 59)")
+
     args = parser.parse_args()
 
     if args.recreate or args.create:
         shutdown_all_clusters(gateway)
-        create_cluster(gateway)
+        create_cluster(gateway, scale_workers=args.workers, worker_cores=args.worker_cores,
+                       worker_memory=args.worker_memory)
     elif args.dashboard:
         print_dashboard_links(gateway)
     elif args.shutdown_all:

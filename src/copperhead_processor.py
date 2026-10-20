@@ -1,3 +1,4 @@
+import logging
 import json
 import os
 import time
@@ -9,12 +10,14 @@ import numpy as np
 from coffea.analysis_tools import PackedSelection, Weights
 from coffea.btag_tools import BTagScaleFactor
 from coffea.lumi_tools import LumiMask
+from coffea.nanoevents.methods import candidate
 from omegaconf import OmegaConf
 
 from modules.awkward_utils import ensure_event_axis
 from modules.classify_year import is_run2, is_run3
 from modules.correctionlib_file_cache import get_corrset
 from modules.get_sample_info import get_sample_info
+from modules.selection import ETA_CUT_DECIMALS
 from modules.utils import logger
 
 # from src.corrections.zpt_dnn import ZptDNNConfig, eval_zpt_torchscript_by_njet
@@ -228,6 +231,28 @@ def getJetType(NanoAODv: int, year: str):
     else: # run3 all jets are PUPPI
         jet_type = "AK4PFPuppi"
     return jet_type
+
+
+# HMuMu Run-3 sync exercise preselection (organizers' definition, on raw muons before ScaRe/FSR)
+SYNC_MUON_PT_RAW_CUT = 20.0
+SYNC_MASS_RAW_MIN = 50.0
+SYNC_MASS_RAW_MAX = 200.0
+# Round-0 2nd-iteration agreed sync selection (Analysis_History_Docs/NewSel_sync.pdf); feeds only the
+# *_agreed sync flags, so it is kept apart from the analysis cuts in configs/parameters/*.yaml.
+SYNC_AGREED_MUON_ID = "mediumId"
+SYNC_AGREED_ISO_RAW_CUT = 0.25          # pfRelIso04_all before FSR-photon removal
+SYNC_AGREED_MU1_PT_CUT = 26.0           # after ScaRe + FSR, pT-resorted
+SYNC_AGREED_MU2_PT_CUT = 20.0
+SYNC_AGREED_ELECTRON_PT_CUT = 20.0      # no ECAL-gap exclusion
+SYNC_AGREED_ELECTRON_ETA_CUT = 2.5
+SYNC_AGREED_JET_PT_CUT = 30.0           # after JEC + JER
+SYNC_AGREED_JET_ETA_CUT = 4.7
+SYNC_AGREED_JET_ID = "tight"
+SYNC_AGREED_BTAG_ETA_CUT = 2.5
+SYNC_AGREED_VBF_MJJ_CUT = 400.0
+SYNC_AGREED_VBF_DETA_CUT = 2.5
+SYNC_AGREED_VBF_J1_PT_CUT = 35.0
+SYNC_AGREED_VBF_J2_PT_CUT = 30.0
 
 
 def safe_ratio(num, den, default=0.0):
@@ -800,6 +825,58 @@ class EventProcessor(processor.ProcessorABC):
                     f"PU DNN scoring is enabled, but no region models were found under {pu_dnn_base_dir}."
                 )
 
+    def sync_agreed_jet_flags(self, jets, clean, horn_ptcut, year):
+        """Round-0 2nd-iteration agreed jet selection for sync ntuples (jets: JEC+JER, pT-sorted).
+        Muon cleaning (dR>0.4 to the default pair) and the HE horn cut (do_jet_horn_ptcut) are shared
+        with the analysis; jets inside the jet veto map are dropped (map decision only)."""
+        pass_tight = jet_id(jets, {**self.config, "sync_agreed_jet_id": SYNC_AGREED_JET_ID}, year=year,
+                            jet_id_key="sync_agreed_jet_id")
+        sel = ak.fill_none(
+            (jets.pt > SYNC_AGREED_JET_PT_CUT) & (abs(jets.eta) < SYNC_AGREED_JET_ETA_CUT)
+            & pass_tight & clean & ~jets.sync_jvm_inmap & horn_ptcut,
+            False,
+        )
+        jets = ak.with_field(jets, ak.local_index(jets.pt, axis=1), "sync_jet_idx")
+        sel_jets = jets[sel]
+        out = {
+            "Jet_passJetIdTight": pass_tight,
+            "Jet_inJetVetoMapRegion": jets.sync_jvm_inmap,
+            "Jet_isSelectedAgreed": sel,
+            "njets_agreed": ak.num(sel_jets, axis=1),
+        }
+        pairs = pick_vbf_pairs(sel_jets)
+        for tag, (j1, j2) in (("", pairs["lead"]), ("_maxmjj", pairs["max_mjj"])):
+            jj = j1 + j2
+            deta = abs(j1.eta - j2.eta)
+            out.update({
+                f"jj{tag}_idx1_agreed": ak.fill_none(j1.sync_jet_idx, -1),
+                f"jj{tag}_idx2_agreed": ak.fill_none(j2.sync_jet_idx, -1),
+                f"jj{tag}_mass_agreed": jj.mass,
+                f"jj{tag}_pt_agreed": jj.pt,
+                f"jj{tag}_eta_agreed": jj.eta,
+                f"jj{tag}_dEta_agreed": deta,
+                # j1 is the higher-pT jet of the pair (combinations keep the pT order)
+                f"pass_vbf{tag}_agreed": ak.fill_none(
+                    (jj.mass > SYNC_AGREED_VBF_MJJ_CUT) & (deta > SYNC_AGREED_VBF_DETA_CUT)
+                    & (j1.pt > SYNC_AGREED_VBF_J1_PT_CUT) & (j2.pt > SYNC_AGREED_VBF_J2_PT_CUT),
+                    False,
+                ),
+            })
+        if hasattr(jets, "btagUParTAK4B"):
+            bjets = sel_jets[abs(sel_jets.eta) < SYNC_AGREED_BTAG_ETA_CUT]
+            n_loose = ak.sum(bjets.btagUParTAK4B > self.config["btag_loose_wp_UParT"], axis=1)
+            n_medium = ak.sum(bjets.btagUParTAK4B > self.config["btag_medium_wp_UParT"], axis=1)
+            bveto = (n_medium == 0) & (n_loose < 2)
+            out.update({
+                "nBtagLoose_agreed": n_loose,
+                "nBtagMedium_agreed": n_medium,
+                "pass_bveto_agreed": bveto,
+                "cat_vbf_agreed": bveto & out["pass_vbf_agreed"],
+                "cat_ggh_agreed": bveto & ~out["pass_vbf_agreed"],
+                "cat_vbf_maxmjj_agreed": bveto & out["pass_vbf_maxmjj_agreed"],
+            })
+        return out
+
     def compute_jet_veto_eventfilter(self, events, jets):
         """ apply the jet veto maps. the .gz file should be read using correctionlib and the file
         # is saved in "jet_veto_maps" field in config. Also switch to turn on/off the jet veto map
@@ -852,6 +929,25 @@ class EventProcessor(processor.ProcessorABC):
         # logger.debug(f"jet_veto_eventFilter: {ak.to_list(jet_veto_eventFilter[50:56].compute())}")
 
         return jet_veto_eventFilter
+
+    def compute_jet_veto_jetmask(self, jets, apply_min_sel=True):
+        """Per-jet jet-veto-map decision (True = jet in vetoed region and passing the JME minimal
+        selection), i.e. the per-jet ingredient of compute_jet_veto_eventfilter; for sync ntuples.
+        apply_min_sel=False returns the bare (eta, phi) map decision."""
+        year = self.config["year"]
+        cset = get_corrset(self.config["jet_veto_maps"])
+        jet_veto_map = cset[self.config["jet_veto_maps_tag"]]
+        flat_inputs = {"type": "jetvetomap", "eta": ak.flatten(jets.eta), "phi": ak.flatten(jets.phi)}
+        mask = jet_veto_map.evaluate(*[flat_inputs[inp.name] for inp in jet_veto_map.inputs])
+        mask = ak.unflatten(mask, ak.num(jets, axis=1)) != 0.0
+        if not apply_min_sel:
+            return mask
+        min_sel = (
+            (jets.pt > 15)
+            & jet_id(jets, self.config, year=year, jet_id_key="jet_veto_map_jet_id")
+            & ((jets.chEmEF + jets.neEmEF) < 0.9)
+        )
+        return mask & min_sel
 
     def compute_jet_veto_jetfilter(self, events, jets, PuppiMET):
         """apply the jet veto maps. the .gz file should be read using correctionlib and the file
@@ -984,8 +1080,13 @@ class EventProcessor(processor.ProcessorABC):
         is_mc = events.metadata['is_mc']
         logger.debug(f"NanoAODv: {NanoAODv}")
 
+        # Sync-ntuple mode (HMuMu Run-3 sync exercise): selections become stored flags instead of
+        # cuts; only golden JSON + raw-muon preselection are applied. See docs/sync_2024_ntuples.md.
+        do_sync = self.config["switches"].get("do_sync_ntuple", False)
+        sync_flags = {}
+
         t1 = time.perf_counter()
-        logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
+        logger.debug(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
 
         # ------------------------------------------------------------#
         # Step-1: Apply the lumi mask for data only
@@ -1007,7 +1108,7 @@ class EventProcessor(processor.ProcessorABC):
             #            dilepton mass between 100 and 200 GeV, to avoid double counting with DY_M-100to200 sample.
             # FIXME: currently, `dy_M-50` is hardcoded
 
-            logger.info("doing dy_M-50 LHE cut!")
+            logger.debug("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
             LHE_leptons = LHE_particles[bool_filter]
@@ -1037,7 +1138,7 @@ class EventProcessor(processor.ProcessorABC):
         # LHE cut original end -----------------------------------------------------------------------------
 
         t3 = time.perf_counter()
-        logger.info(f"[timing] LHE cut time: {t3 - t1:.2f} seconds")
+        logger.debug(f"[timing] LHE cut time: {t3 - t1:.2f} seconds")
         # ------------------------------------------------------------#
 
         # ------------------------------------------------------------#
@@ -1051,10 +1152,15 @@ class EventProcessor(processor.ProcessorABC):
             # HLT_filter = HLT_filter | events.HLT[HLT_str]
             HLT_filter = HLT_filter | ak.fill_none(events.HLT[HLT_str], value=False)
         self.selection.add("HLT_filter", HLT_filter)
-        event_filter = event_filter & HLT_filter
+        if do_sync:
+            sync_flags["pass_HLT"] = HLT_filter
+            for HLT_str in self.config["hlt"]:
+                sync_flags[f"HLT_{HLT_str}"] = ak.fill_none(events.HLT[HLT_str], value=False)
+        else:
+            event_filter = event_filter & HLT_filter
 
         t4 = time.perf_counter()
-        logger.info(f"[timing] HLT and lumi mask time: {t4 - t3:.2f} seconds")
+        logger.debug(f"[timing] HLT and lumi mask time: {t4 - t3:.2f} seconds")
         # ------------------------------------------------------------#
 
         # --------------------------------------------------------#
@@ -1105,6 +1211,8 @@ class EventProcessor(processor.ProcessorABC):
         #              If BS constrained muon variables are present.
         # --------------------------------------------------------
         doing_BS_correction = self.config["switches"]["do_beamConstraint"]
+        if do_sync:
+            events["Muon", "pt_nano"] = events.Muon.pt # NanoAOD pT, before beam-spot constraint
         if self.config["switches"]["do_beamConstraint"] and ("bsConstrainedChi2" in events.Muon.fields): # beamConstraint overrides geofit
             logger.debug("doing beam constraint!")
             BSConstraint_mask = (
@@ -1152,8 +1260,10 @@ class EventProcessor(processor.ProcessorABC):
             & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
-        if do_muon_ip_cut:
+        if do_muon_ip_cut or do_sync:
+            # sync mode stores the lepton/IP-veto selection as extra *_ip flags even when the switch is off
             muon_ip = (abs(events.Muon.dxy) < self.config["muon_dxy_cut"]) & (abs(events.Muon.dz) < self.config["muon_dz_cut"])
+        if do_muon_ip_cut:
             muon_selection = muon_selection & muon_ip # AN-19-124 baseline IP cuts
 
         # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
@@ -1186,7 +1296,15 @@ class EventProcessor(processor.ProcessorABC):
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
         self.selection.add("muon_iso", ak.any(events.Muon.pfRelIso04_all < self.config["muon_iso_cut"], axis=1))
-        if do_lepton_ip_veto:
+        if do_sync:
+            events["Muon", "sync_pass_id"] = events.Muon[self.config["muon_id"]] & (events.Muon.isGlobal | events.Muon.isTracker)
+            events["Muon", "sync_iso"] = events.Muon.pfRelIso04_all # FSR photons removed if do_fsr
+            events["Muon", "sync_pass_iso"] = events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]
+            events["Muon", "sync_pass_sel"] = muon_selection
+            events["Muon", "sync_has_fsr"] = applied_fsr if do_fsr else ak.zeros_like(events.Muon.pt, dtype="bool")
+            events["Muon", "sync_pass_ip"] = muon_ip
+            events["Muon", "sync_idx"] = ak.local_index(events.Muon.pt, axis=1)
+        if do_lepton_ip_veto or do_sync:
             # Extra loose-muon veto: exactly 2 loose muons (rejects >2); selected muons are a subset of loose,
             # so with nmuons>=2 this leaves exactly the 2 selected muons
             loose_muon = (
@@ -1210,7 +1328,7 @@ class EventProcessor(processor.ProcessorABC):
         # logger.info(f"Debug event muon isTracker after roccor: {events.Muon.isTracker[debug_mask_2].compute()}")
 
         t5 = time.perf_counter()
-        logger.info(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
+        logger.debug(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
         # --------------------------------------------------------
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
         if self.config["switches"]["do_trigger_match"]:
@@ -1276,7 +1394,13 @@ class EventProcessor(processor.ProcessorABC):
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
 
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
-            event_filter = event_filter & trigger_match
+            if do_sync:
+                # per-muon match, same dR / leading-pT definition, so it can be read off the sync muon pair
+                mu_trig_dr = ak.fill_none(ak.any(events.Muon.metric_table(trigger_cands) <= dr_threshold, axis=2), False)
+                events["Muon", "sync_trig_matched"] = mu_trig_dr & (events.Muon.pt_roch >= self.config["muon_leading_pt"])
+                sync_flags["pass_trigger_match"] = trigger_match
+            else:
+                event_filter = event_filter & trigger_match
 
             self.selection.add("trigger_match", trigger_match)
         else:
@@ -1284,7 +1408,7 @@ class EventProcessor(processor.ProcessorABC):
             logger.warning("NO trigger match! Doing leading mu pass instead!")
 
         t6 = time.perf_counter()
-        logger.info(f"[timing] Trigger match time: {t6 - t5:.2f} seconds")
+        logger.debug(f"[timing] Trigger match time: {t6 - t5:.2f} seconds")
         # --------------------------------------------------------
 
         # # print the mask debug_mask_2 and trigger_match for the debug event
@@ -1312,12 +1436,48 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pt_fsr"] = events.Muon.pt
 
         t6a = time.perf_counter()
-        logger.info(f"[timing] FSR correction time: {t6a - t6:.2f} seconds")
+        logger.debug(f"[timing] FSR correction time: {t6a - t6:.2f} seconds")
         # -----------------------------------------------------------------
 
         muons = events.Muon[muon_selection]
+        if do_sync:
+            # Pair = two leading-raw-pT muons among the analysis-selected muons if >=2 pass, otherwise among
+            # muons passing only the sync preselection; identical to the analysis pair whenever it has exactly 2.
+            nmuons_selected = ak.sum(muon_selection, axis=1)
+            sync_presel_mu = (events.Muon.pt_raw > SYNC_MUON_PT_RAW_CUT) & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            # Agreed good muon: raw pT/eta preselection + mediumId + raw iso; pair = two leading in corrected pT
+            agreed_mu = ak.fill_none(
+                sync_presel_mu & events.Muon[SYNC_AGREED_MUON_ID]
+                & (events.Muon.pfRelIso04_all_raw < SYNC_AGREED_ISO_RAW_CUT),
+                False,
+            )
+            events["Muon", "sync_pass_iso_raw"] = events.Muon.pfRelIso04_all_raw < SYNC_AGREED_ISO_RAW_CUT
+            events["Muon", "sync_pass_agreed"] = agreed_mu
+            muons_ag = events.Muon[agreed_mu]
+            muons_ag = muons_ag[ak.argsort(muons_ag.pt, ascending=False)][:, :2]
+            sync_flags["nmuons_agreed"] = ak.sum(agreed_mu, axis=1)
+            # selected muons are a subset of preselected ones, so this is "selected if >=2 else preselected"
+            cand_mask = ak.fill_none(sync_presel_mu & (muon_selection | (nmuons_selected < 2)), False)
+            muon_cands = events.Muon[cand_mask]
+            muons = muon_cands[ak.argsort(muon_cands.pt_raw, ascending=False)][:, :2]
+            sync_flags["nmuons_selected"] = nmuons_selected
+            sync_flags["nmuons_presel"] = ak.sum(sync_presel_mu, axis=1)
+            sync_flags["mu_pair_from_selected"] = nmuons_selected >= 2
+            # do_lepton_ip_veto emulation: pair = two leading raw-pT muons among selected muons passing IP
+            sel_ip = muon_selection & muon_ip
+            muons_ip = events.Muon[sel_ip]
+            muons_ip = muons_ip[ak.argsort(muons_ip.pt_raw, ascending=False)][:, :2]
+            sync_flags["nmuons_selected_ip"] = ak.sum(sel_ip, axis=1)
+            sync_flags["nloose_muons_ip"] = ak.sum(loose_muon, axis=1)
+            sync_flags["pass_muon_ip"] = ak.fill_none((ak.num(muons, axis=1) == 2) & ak.all(muons.sync_pass_ip, axis=1), False)
+            sync_flags["mu_pair_ip_is_sync_pair"] = ak.fill_none(
+                (ak.num(muons, axis=1) == 2) & (ak.num(muons_ip, axis=1) == 2)
+                & (ak.min(muons.sync_idx, axis=1) == ak.min(muons_ip.sync_idx, axis=1))
+                & (ak.max(muons.sync_idx, axis=1) == ak.max(muons_ip.sync_idx, axis=1)),
+                False,
+            )
         t6c = time.perf_counter()
-        logger.info(f"[timing] Muon selection time: {t6c - t6a:.2f} seconds")
+        logger.debug(f"[timing] Muon selection time: {t6c - t6a:.2f} seconds")
 
         # muons = ak.to_packed(events.Muon[muon_selection])
 
@@ -1333,18 +1493,18 @@ class EventProcessor(processor.ProcessorABC):
             self.selection.add("leading_muon_pt", pass_leading_pt)
 
         t6d = time.perf_counter()
-        logger.info(f"[timing] Separate leading muon pT cut time: {t6d - t6c:.2f} seconds")
+        logger.debug(f"[timing] Separate leading muon pT cut time: {t6d - t6c:.2f} seconds")
         # count muons that pass the muon selection
         nmuons = ak.num(muons, axis=1)
         # logger.debug(f"nmuons: {nmuons.compute()}")
         t6e = time.perf_counter()
-        logger.info(f"[timing] Count muons time: {t6e - t6d:.2f} seconds")
+        logger.debug(f"[timing] Count muons time: {t6e - t6d:.2f} seconds")
 
         # Find opposite-sign muons
         mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
 
         t7 = time.perf_counter()
-        logger.info(f"[timing] diMuon selection time: {t7 - t6:.2f} seconds")
+        logger.debug(f"[timing] diMuon selection time: {t7 - t6:.2f} seconds")
         # --------------------------------------------------------#
         if NanoAODv == 9:
             electron_id = self.config["electron_id_v9"]
@@ -1357,26 +1517,26 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"electron_id: {electron_id}")
         # Veto events with good quality electrons; VBF and ggH categories need zero electrons
         ecal_gap = (1.44 < abs(events.Electron.eta)) & (1.57 > abs(events.Electron.eta)) # Source: line 460 of https://cms.cern.ch/iCMS/analysisadmin/cadilines?id=1973&ancode=EGM-17-001&tp=an&line=EGM-17-001
-        electron_pt_cut = self.config["electron_pt_cut_lepton_ip_veto"] if do_lepton_ip_veto else self.config["electron_pt_cut"]
-        electron_selection = (
-            (events.Electron.pt > electron_pt_cut)
-            & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
-            & events.Electron[electron_id]
-            & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
-        )
-        if do_lepton_ip_veto:
-            # EGM-style IP cuts, split barrel/endcap on supercluster eta
-            ele_is_barrel = abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479
-            electron_ip = ak.where(
-                ele_is_barrel,
-                (abs(events.Electron.dxy) < self.config["electron_dxy_cut_barrel"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_barrel"]),
-                (abs(events.Electron.dxy) < self.config["electron_dxy_cut_endcap"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_endcap"]),
+        def make_electron_selection(lepton_ip_veto):
+            pt_cut = self.config["electron_pt_cut_lepton_ip_veto"] if lepton_ip_veto else self.config["electron_pt_cut"]
+            sel = (
+                (events.Electron.pt > pt_cut)
+                & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+                & events.Electron[electron_id]
+                & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
             )
-            electron_selection = (
-                electron_selection
-                & (events.Electron.pfRelIso03_all < self.config["electron_iso_cut"])
-                & electron_ip
-            )
+            if lepton_ip_veto:
+                # EGM-style IP cuts, split barrel/endcap on supercluster eta
+                ele_is_barrel = abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479
+                electron_ip = ak.where(
+                    ele_is_barrel,
+                    (abs(events.Electron.dxy) < self.config["electron_dxy_cut_barrel"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_barrel"]),
+                    (abs(events.Electron.dxy) < self.config["electron_dxy_cut_endcap"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_endcap"]),
+                )
+                sel = sel & (events.Electron.pfRelIso03_all < self.config["electron_iso_cut"]) & electron_ip
+            return sel
+
+        electron_selection = make_electron_selection(do_lepton_ip_veto)
         # self.selection.add("electron_pT", ak.any(events.Electron.pt > self.config["electron_pt_cut"], axis=1))
         # self.selection.add("electron_eta", ak.any(abs(events.Electron.eta) < self.config["electron_eta_cut"], axis=1))
         # self.selection.add("electron_id", ak.any(events.Electron[electron_id], axis=1))
@@ -1401,38 +1561,77 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["switches"]["do_HemVeto"]:
             HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc, NanoAODv)
             if (not self.config["switches"]["do_HemVetoStudy"]): # when we are calculating HemVeto fraction for MC, we shouldn't filter out hem veto events
-                logger.info("adding HemVeto!")
+                logger.debug("adding HemVeto!")
                 event_filter = event_filter & HemVeto_filter
         else:
             HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
             is_HemRegion = ak.ones_like(event_filter, dtype="bool")
 
         self.selection.add("HemVeto", HemVeto_filter == True)
-        event_filter = (
-                event_filter
-                & lumi_mask
-                & (evnt_qual_flg_selection > 0)
-                & (events.PV.npvsGood > 0) # number of good primary vertex cut
-        )
-
         pv_good = (events.PV.npvsGood > 0)
         self.selection.add("PV_npvsGood", pv_good)
-        if do_lepton_ip_veto:
-            # >=2 only: the loose-muon veto below is the single multiplicity cut (selected muons are a subset of loose)
-            event_filter = event_filter & (nmuons >= 2)
-            self.selection.add("nMuons_ge2", nmuons >= 2)
-            event_filter = event_filter & loose_muon_veto
-            self.selection.add("nLooseMuons_eq2", loose_muon_veto)
+        if do_sync:
+            event_filter = event_filter & lumi_mask # golden JSON stays a cut in the sync ntuples
+            sync_flags["pass_MET_filters"] = (evnt_qual_flg_selection > 0)
+            sync_flags["pass_PV"] = pv_good
+            if do_lepton_ip_veto:
+                sync_flags["pass_nmuons"] = (nmuons_selected >= 2) & loose_muon_veto
+            else:
+                sync_flags["pass_nmuons"] = (nmuons_selected == 2)
+            sync_flags["pass_OS"] = (mm_charge == -1) & (nmuons == 2) # charge of the sync pair
+            sync_flags["nelectrons"] = nelectrons
+            sync_flags["pass_electron_veto"] = electron_veto
+            nelectrons_ip = ak.sum(make_electron_selection(True), axis=1)
+            sync_flags["nelectrons_ip"] = nelectrons_ip
+            sync_flags["pass_electron_veto_ip"] = nelectrons_ip == 0
+            sync_flags["pass_nmuons_ip"] = (sync_flags["nmuons_selected_ip"] >= 2) & (sync_flags["nloose_muons_ip"] == 2)
+            sync_flags["pass_OS_ip"] = ak.fill_none(
+                (ak.num(muons_ip, axis=1) == 2) & (ak.prod(muons_ip.charge, axis=1) == -1), False)
+            if "sync_trig_matched" in events.Muon.fields:
+                sync_flags["pass_trigger_match_ip"] = ak.any(muons_ip.sync_trig_matched, axis=1)
+            # Agreed selection: electron veto without ECAL-gap exclusion, exactly 2 good muons
+            nelectrons_agreed = ak.sum(
+                (events.Electron.pt > SYNC_AGREED_ELECTRON_PT_CUT)
+                & (abs(events.Electron.eta) < SYNC_AGREED_ELECTRON_ETA_CUT)
+                & events.Electron[electron_id],
+                axis=1,
+            )
+            sync_flags["nelectrons_agreed"] = nelectrons_agreed
+            sync_flags["pass_electron_veto_agreed"] = nelectrons_agreed == 0
+            sync_flags["pass_nmuons_agreed"] = sync_flags["nmuons_agreed"] == 2
+            sync_flags["pass_OS_agreed"] = ak.fill_none(
+                (ak.num(muons_ag, axis=1) == 2) & (ak.prod(muons_ag.charge, axis=1) == -1), False)
+            if "sync_trig_matched" in events.Muon.fields:
+                sync_flags["pass_trigger_match_agreed"] = ak.any(muons_ag.sync_trig_matched, axis=1)
+            sync_flags["mu_pair_agreed_is_sync_pair"] = ak.fill_none(
+                (ak.num(muons, axis=1) == 2) & (ak.num(muons_ag, axis=1) == 2)
+                & (ak.min(muons.sync_idx, axis=1) == ak.min(muons_ag.sync_idx, axis=1))
+                & (ak.max(muons.sync_idx, axis=1) == ak.max(muons_ag.sync_idx, axis=1)),
+                False,
+            )
         else:
-            event_filter = event_filter & (nmuons == 2)
-            self.selection.add("nmuons", nmuons==2)
+            event_filter = (
+                    event_filter
+                    & lumi_mask
+                    & (evnt_qual_flg_selection > 0)
+                    & (events.PV.npvsGood > 0) # number of good primary vertex cut
+            )
+            if do_lepton_ip_veto:
+                # >=2 only: the loose-muon veto below is the single multiplicity cut (selected muons are a subset of loose)
+                event_filter = event_filter & (nmuons >= 2)
+                self.selection.add("nMuons_ge2", nmuons >= 2)
+                event_filter = event_filter & loose_muon_veto
+                self.selection.add("nLooseMuons_eq2", loose_muon_veto)
+            else:
+                event_filter = event_filter & (nmuons == 2)
+                self.selection.add("nmuons", nmuons==2)
 
-        event_filter = event_filter & (mm_charge == -1)
-        self.selection.add("mm_charge", mm_charge==-1)
-        event_filter = event_filter & electron_veto
+            event_filter = event_filter & (mm_charge == -1)
+            self.selection.add("mm_charge", mm_charge==-1)
+            event_filter = event_filter & electron_veto
 
         t8 = time.perf_counter()
-        logger.info(f"[timing] Electron selection filtering time: {t8 - t7:.2f} seconds")
+        logger.debug(f"[timing] Electron selection filtering time: {t8 - t7:.2f} seconds")
 
         # --------------------------------------------------------#
         # Select events with muons passing leading pT cut
@@ -1491,13 +1690,110 @@ class EventProcessor(processor.ProcessorABC):
                 sumWeights = events.metadata['sumGenWgts']
                 logger.debug(f"sumWeights: {(sumWeights)}")
         if self.config["switches"].get("do_jet_veto_maps_filterEvents", False):
-            logger.info("Applying jet veto maps!")
+            logger.debug("Applying jet veto maps!")
             jets_for_veto = events.Jet
             jet_veto_eventFilter = self.compute_jet_veto_eventfilter(events, jets_for_veto)
-            event_filter = event_filter & ~jet_veto_eventFilter
-
             keep_after_jet_veto = ~jet_veto_eventFilter
+            if do_sync:
+                sync_flags["pass_jet_veto_map"] = keep_after_jet_veto
+            else:
+                event_filter = event_filter & ~jet_veto_eventFilter
             self.selection.add("jet_veto_maps", keep_after_jet_veto)
+        if do_sync:
+            events["Jet", "sync_jvm_veto"] = self.compute_jet_veto_jetmask(events.Jet)
+            events["Jet", "sync_jvm_inmap"] = self.compute_jet_veto_jetmask(events.Jet, apply_min_sel=False)
+
+            # Sync preselection on the raw (beam-spot constrained, pre-ScaRe/FSR) muon pair
+            pair = ak.pad_none(muons, 2)
+            raw_p4 = [
+                ak.zip({"pt": m.pt_raw, "eta": m.eta_raw, "phi": m.phi_raw, "mass": m.mass, "charge": m.charge},
+                       with_name="PtEtaPhiMCandidate", behavior=candidate.behavior)
+                for m in (pair[:, 0], pair[:, 1])
+            ]
+            dimuon_raw = raw_p4[0] + raw_p4[1]
+            sync_flags["dimuon_mass_raw"] = dimuon_raw.mass
+            sync_flags["dimuon_pt_raw"] = dimuon_raw.pt
+            sync_presel = ak.fill_none(
+                (ak.num(muons, axis=1) == 2)
+                & (pair[:, 0].pt_raw > SYNC_MUON_PT_RAW_CUT) & (pair[:, 1].pt_raw > SYNC_MUON_PT_RAW_CUT)
+                & (dimuon_raw.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw.mass < SYNC_MASS_RAW_MAX),
+                False,
+            )
+            # Same window on the IP pair (selected muons already have raw pT > 20); events keep if either pair passes
+            pair_ip = ak.pad_none(muons_ip, 2)
+            raw_p4_ip = [
+                ak.zip({"pt": m.pt_raw, "eta": m.eta_raw, "phi": m.phi_raw, "mass": m.mass, "charge": m.charge},
+                       with_name="PtEtaPhiMCandidate", behavior=candidate.behavior)
+                for m in (pair_ip[:, 0], pair_ip[:, 1])
+            ]
+            dimuon_raw_ip = raw_p4_ip[0] + raw_p4_ip[1]
+            dimuon_ip = pair_ip[:, 0] + pair_ip[:, 1]  # after ScaRe + FSR
+            sync_flags["dimuon_mass_raw_ip"] = dimuon_raw_ip.mass
+            sync_flags["dimuon_mass_ip"] = dimuon_ip.mass
+            sync_flags["dimuon_pt_ip"] = dimuon_ip.pt
+            sync_presel_ip = ak.fill_none(
+                (ak.num(muons_ip, axis=1) == 2)
+                & (dimuon_raw_ip.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw_ip.mass < SYNC_MASS_RAW_MAX),
+                False,
+            )
+            # Agreed pair: same raw window; its pT cuts are on corrected (ScaRe+FSR) pT
+            pair_ag = ak.pad_none(muons_ag, 2)
+            raw_p4_ag = [
+                ak.zip({"pt": m.pt_raw, "eta": m.eta_raw, "phi": m.phi_raw, "mass": m.mass, "charge": m.charge},
+                       with_name="PtEtaPhiMCandidate", behavior=candidate.behavior)
+                for m in (pair_ag[:, 0], pair_ag[:, 1])
+            ]
+            dimuon_raw_ag = raw_p4_ag[0] + raw_p4_ag[1]
+            dimuon_ag = pair_ag[:, 0] + pair_ag[:, 1]
+            sync_flags["dimuon_mass_raw_agreed"] = dimuon_raw_ag.mass
+            sync_flags["dimuon_mass_agreed"] = dimuon_ag.mass
+            sync_flags["dimuon_pt_agreed"] = dimuon_ag.pt
+            sync_flags["mu1_pt_agreed"] = pair_ag[:, 0].pt
+            sync_flags["mu2_pt_agreed"] = pair_ag[:, 1].pt
+            sync_flags["pass_mu_pt_agreed"] = ak.fill_none(
+                (pair_ag[:, 0].pt > SYNC_AGREED_MU1_PT_CUT) & (pair_ag[:, 1].pt > SYNC_AGREED_MU2_PT_CUT), False)
+            sync_presel_ag = ak.fill_none(
+                (ak.num(muons_ag, axis=1) == 2)
+                & (dimuon_raw_ag.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw_ag.mass < SYNC_MASS_RAW_MAX),
+                False,
+            )
+            event_filter = event_filter & (sync_presel | sync_presel_ip | sync_presel_ag)
+            # Agreed event selection (jet-level parts are separate flags from jet_loop); HLT, OS, MET
+            # filters and PV are not on the slide but are standard, trigger matching stays a separate flag
+            sync_flags["pass_agreed_selection"] = (
+                sync_presel_ag
+                & sync_flags["pass_HLT"]
+                & sync_flags["pass_MET_filters"]
+                & sync_flags["pass_PV"]
+                & sync_flags["pass_nmuons_agreed"]
+                & sync_flags["pass_OS_agreed"]
+                & sync_flags["pass_mu_pt_agreed"]
+                & sync_flags["pass_electron_veto_agreed"]
+            )
+            # Same event-level decision the standard stage-1 applies as a cut
+            sync_flags["pass_analysis_preselection"] = (
+                sync_presel
+                & sync_flags["pass_HLT"]
+                & sync_flags.get("pass_trigger_match", True)
+                & sync_flags["pass_MET_filters"]
+                & sync_flags["pass_PV"]
+                & sync_flags["pass_nmuons"]
+                & sync_flags["pass_OS"]
+                & sync_flags["pass_electron_veto"]
+                & sync_flags.get("pass_jet_veto_map", True)
+            )
+            # Same decision with do_lepton_ip_veto: true (muon IP, exactly 2 loose muons, iso/IP electron veto)
+            sync_flags["pass_analysis_preselection_ip"] = (
+                sync_presel_ip
+                & sync_flags["pass_HLT"]
+                & sync_flags.get("pass_trigger_match_ip", True)
+                & sync_flags["pass_MET_filters"]
+                & sync_flags["pass_PV"]
+                & sync_flags["pass_nmuons_ip"]
+                & sync_flags["pass_OS_ip"]
+                & sync_flags["pass_electron_veto_ip"]
+                & sync_flags.get("pass_jet_veto_map", True)
+            )
 
         # Below patch is to define dimuon mass for the cutflow before we filter out bad events
         # ------------------- Cutflow dimuon mass window: START -----------------------
@@ -1523,13 +1819,15 @@ class EventProcessor(processor.ProcessorABC):
         events = events[event_filter == True]
         muons = muons[event_filter == True]
         nmuons = ak.to_packed(nmuons[event_filter == True])
+        if do_sync:
+            sync_flags = {k: ak.to_packed(v[event_filter]) for k, v in sync_flags.items()}
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter == True])
 
         t9 = time.perf_counter()
-        logger.info(f"[timing] GEN weight and PU time: {t9 - t8:.2f} seconds")
+        logger.debug(f"[timing] GEN weight and PU time: {t9 - t8:.2f} seconds")
 
         # --------------------------------------------------------#
         # Fill dimuon and muon variables
@@ -1560,7 +1858,7 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
 
         t10 = time.perf_counter()
-        logger.info(f"[timing] Dimuon variables time: {t10 - t9:.2f} seconds")
+        logger.debug(f"[timing] Dimuon variables time: {t10 - t9:.2f} seconds")
 
         # fill genjets
         if is_mc:
@@ -1636,7 +1934,7 @@ class EventProcessor(processor.ProcessorABC):
             n_genjets_pt30_eta47 = ak.sum((gjets.pt > 30) & (abs(gjets.eta) < 4.7), axis=1)
 
         t11 = time.perf_counter()
-        logger.info(f"[timing] GenJet variables time: {t11 - t10:.2f} seconds")
+        logger.debug(f"[timing] GenJet variables time: {t11 - t10:.2f} seconds")
 
         self.prepare_jets(events, NanoAODv=NanoAODv)
 
@@ -1653,7 +1951,7 @@ class EventProcessor(processor.ProcessorABC):
 
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_met_xy_correction", False):
-            logger.info("Applying PuppiMET xy-shift correction!")
+            logger.debug("Applying PuppiMET xy-shift correction!")
             xy_met_pt, xy_met_phi, xy_n_unmatched = apply_puppi_met_xy_correction(
                 PuppiMET.pt,
                 PuppiMET.phi,
@@ -1665,14 +1963,14 @@ class EventProcessor(processor.ProcessorABC):
             PuppiMET["pt_xyCorr"] = xy_met_pt
             PuppiMET["phi_xyCorr"] = xy_met_phi
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
-            logger.info("Applying jet veto maps!")
+            logger.debug("Applying jet veto maps!")
             jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
             jets = ensure_event_axis(jets, len(events), "jet-post-veto")
         t12 = time.perf_counter()
-        logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
+        logger.debug(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
         logger.debug(f"jets type before pad_none: {jets.type}")
-        logger.info(f"jets ndim: {jets.ndim}")
+        logger.debug(f"jets ndim: {jets.ndim}")
 
         jet_default = ak.pad_none(jets, target=4, axis=1)
         jet1_default = jet_default[:, 0]
@@ -1738,15 +2036,15 @@ class EventProcessor(processor.ProcessorABC):
         if not is_mc:
             do_jec_unc = False
             self.config["switches"]["do_jec_unc"] = False
-        logger.info(f"do_jec_unc: {do_jec_unc}")
+        logger.debug(f"do_jec_unc: {do_jec_unc}")
         do_jer_unc = self.config["switches"]["do_jer_unc"]
-        logger.info(f"do_jer_unc: {do_jer_unc}")
+        logger.debug(f"do_jer_unc: {do_jer_unc}")
         jec_unc_sources = []
         jet_type = getJetType(NanoAODv, year)
         self.config["jec_parameters"]["jet_algorithm"] = jet_type # define jet type / jet algorithm into the jec.yaml
         logger.debug(f'jec params: {self.config["jec_parameters"]}')
         if do_jec:
-            logger.info("doing JEC  (+ JER for MC)!")
+            logger.debug("doing JEC  (+ JER for MC)!")
 
             # 1) JES/JER variation labels you want to carry
             if do_jec_unc:
@@ -1814,7 +2112,7 @@ class EventProcessor(processor.ProcessorABC):
             jets["pt_jec"] = jets.pt
 
         t13 = time.perf_counter()
-        logger.info(f"[timing] JEC and JER time: {t13 - t12:.2f} seconds")
+        logger.debug(f"[timing] JEC and JER time: {t13 - t12:.2f} seconds")
         # # ------------------------------------------------------------#
 
         # # ------------------------------------------------------------#
@@ -1822,7 +2120,7 @@ class EventProcessor(processor.ProcessorABC):
         # # and L1 prefiring weights
         # # ------------------------------------------------------------#
         save_all_weight_variations = self.config["switches"].get("save_all_weight_variations", False)
-        do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False)
+        do_save_partial_weights = self.config["switches"].get("do_save_partial_weights", False) or do_sync
         weights = Weights(len(events), storeIndividual=do_save_partial_weights) # none for dask awkward
         # Set by the do_pdf block below, consumed where weight_dict is built.
         pdf_member_ratios = None
@@ -1839,7 +2137,7 @@ class EventProcessor(processor.ProcessorABC):
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=gen_weight_ones/sumWeights) # temporary commenting out
 
-            logger.info(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
+            logger.debug(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
             # FIXME: Remove this if condition later when we update the yaml file for run2 too.
             sample_info = get_sample_info(dataset_yaml_file, dataset, year) # FIXME: hardcoded filename
             logger.debug(f"sample_info: {sample_info}")
@@ -1854,7 +2152,7 @@ class EventProcessor(processor.ProcessorABC):
             cross_section = cross_section * kfactor
 
             logger.debug(f"kfactor: {kfactor}")
-            logger.info(f"cross_section (after k-factor): {cross_section}")
+            logger.debug(f"cross_section (after k-factor): {cross_section}")
 
             weights.add("xsec", weight=gen_weight_ones*cross_section)
             weights.add("lumi", weight=gen_weight_ones*integrated_lumi)
@@ -1880,7 +2178,7 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("ones", weight=ak.values_astype(ak.ones_like(events.HLT.IsoMu24), "float32"))
 
         t14 = time.perf_counter()
-        logger.info(f"[timing] Weights time: {t14 - t13:.2f} seconds")
+        logger.debug(f"[timing] Weights time: {t14 - t13:.2f} seconds")
 
         # ------------------------------------------------------------#
         # Calculate other event weights
@@ -1963,7 +2261,7 @@ class EventProcessor(processor.ProcessorABC):
                 and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
             )
             if do_thu:
-                logger.info("doing THU weights!")
+                logger.debug("doing THU weights!")
                 add_stxs_variations(
                     events,
                     weights,
@@ -2011,7 +2309,7 @@ class EventProcessor(processor.ProcessorABC):
                     logger.debug("skip pdf! member ratios set to unity")
                     write_pdf_members = True
         t15 = time.perf_counter()
-        logger.info(f"[timing] some GEN event weights for syst time: {t15 - t14:.2f} seconds")
+        logger.debug(f"[timing] some GEN event weights for syst time: {t15 - t14:.2f} seconds")
 
         # ------------------------------------------------------------#
         # Fill Muon variables and gjet variables
@@ -2511,12 +2809,12 @@ class EventProcessor(processor.ProcessorABC):
             })
 
         t16 = time.perf_counter()
-        logger.info(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
+        logger.debug(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
         # ------------------------------------------------------------#
         # HEMVeto study
         # ------------------------------------------------------------#
         if (self.config["switches"]["do_HemVeto"] and self.config["switches"]["do_HemVetoStudy"]):
-            logger.info("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
+            logger.debug("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
             HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True])   # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
             is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
 
@@ -2543,7 +2841,8 @@ class EventProcessor(processor.ProcessorABC):
                 do_jerunc = do_jer_unc,
                 # event_match=event_match # debugging
                 dnn_year=dnn_year,
-                do_jet_horn_puid = self.config["switches"]["do_jet_horn_puid"]
+                do_jet_horn_puid = self.config["switches"]["do_jet_horn_puid"],
+                do_sync = do_sync,
             )
 
             _add_block(out_dict, jet_loop_dict)
@@ -2551,7 +2850,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
         t17 = time.perf_counter()
-        logger.info(f"[timing] Jet pT variations time: {t17 - t16:.2f} seconds")
+        logger.debug(f"[timing] Jet pT variations time: {t17 - t16:.2f} seconds")
 
         # fill in the regions
         mass = dimuon.mass
@@ -2564,7 +2863,7 @@ class EventProcessor(processor.ProcessorABC):
             "h_peak" : ak.fill_none(h_peak, value=False),
         })
         t18 = time.perf_counter()
-        logger.info(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
+        logger.debug(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
 
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
@@ -2574,7 +2873,7 @@ class EventProcessor(processor.ProcessorABC):
             njets_gen = n_genjets_pt30_eta47
             save_zpt_variations = self.config["switches"].get("save_zpt_variations", False)
 
-            logger.info("=======================  apply zpt weights =======================")
+            logger.debug("=======================  apply zpt weights =======================")
             whichMethod = "function" # DNN or function or both
             if whichMethod == "function" or whichMethod == "both":
                 # choose the config file
@@ -2685,7 +2984,7 @@ class EventProcessor(processor.ProcessorABC):
                 weights.add("zpt", weight=zpt_wgt_reco)
 
         t19 = time.perf_counter()
-        logger.info(f"[timing] Zpt weights time: {t19 - t18:.2f} seconds")
+        logger.debug(f"[timing] Zpt weights time: {t19 - t18:.2f} seconds")
 
         # apply vbf filter phase cut if DY test start ---------------------------------
         # if dataset == 'dy_M-100To200':
@@ -2744,7 +3043,7 @@ class EventProcessor(processor.ProcessorABC):
                 })
 
         t20 = time.perf_counter()
-        logger.info(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
+        logger.debug(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
 
         # Save partial weights start -----------------------------------------
         if do_save_partial_weights:
@@ -2759,18 +3058,59 @@ class EventProcessor(processor.ProcessorABC):
                 })
 
         t21 = time.perf_counter()
-        logger.info(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
+        logger.debug(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
 
         # logger.info(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
         _add_block(out_dict, weight_dict)
+
+        if do_sync:
+            sync_block = dict(sync_flags)
+            for i, mu in ((1, mu1), (2, mu2)):
+                sync_block.update({
+                    f"mu{i}_charge": mu.charge,
+                    f"mu{i}_pt_nano": mu.pt_nano,     # NanoAOD Muon_pt
+                    f"mu{i}_pt_bsc": mu.pt_raw,       # beam-spot constrained = "raw" pT before ScaRe/FSR
+                    f"mu{i}_pt_scare": mu.pt_roch,    # after ScaRe
+                    f"mu{i}_pt_corr": mu.pt,          # after ScaRe + FSR (final)
+                    f"mu{i}_eta_raw": mu.eta_raw,
+                    f"mu{i}_phi_raw": mu.phi_raw,
+                    f"mu{i}_mediumId": mu.mediumId,
+                    f"mu{i}_isGlobal": mu.isGlobal,
+                    f"mu{i}_isTracker": mu.isTracker,
+                    f"mu{i}_passId": mu.sync_pass_id,
+                    f"mu{i}_pfRelIso04_all_raw": mu.pfRelIso04_all_raw,
+                    f"mu{i}_pfRelIso04_all_fsrCorr": mu.sync_iso,
+                    f"mu{i}_passIso": mu.sync_pass_iso,
+                    f"mu{i}_passSelection": mu.sync_pass_sel,
+                    f"mu{i}_hasFsr": mu.sync_has_fsr,
+                    f"mu{i}_passIP": mu.sync_pass_ip,
+                    f"mu{i}_passIsoRaw": mu.sync_pass_iso_raw,
+                    f"mu{i}_passSelectionAgreed": mu.sync_pass_agreed,
+                })
+                if hasattr(mu, "sync_trig_matched"):
+                    sync_block[f"mu{i}_trigMatched"] = mu.sync_trig_matched
+            # dimuon after ScaRe only (pre-FSR), with raw eta/phi
+            mu_scare = [
+                ak.zip({"pt": mu.pt_roch, "eta": mu.eta_raw, "phi": mu.phi_raw, "mass": mu.mass, "charge": mu.charge},
+                       with_name="PtEtaPhiMCandidate", behavior=candidate.behavior)
+                for mu in (mu1, mu2)
+            ]
+            dimuon_scare = mu_scare[0] + mu_scare[1]
+            sync_block.update({
+                "dimuon_mass_scare": dimuon_scare.mass,
+                "dimuon_pt_scare": dimuon_scare.pt,
+                "dimuon_mass_corr": dimuon.mass,
+                "dimuon_pt_corr": dimuon.pt,
+            })
+            _add_block(out_dict, sync_block)
 
         # ------------------------------------------------------------#
         # Cutflow
         if self.isCutflow:
             # Ensure all selections exist before calling cutflow
             # Add protection for the cutflow if the selection is not in the cutflow
-            logger.info(f"selection: {self.selection}")
+            logger.debug(f"selection: {self.selection}")
             # NOTE: order matters -- PackedSelection.cutflow(*names) ANDs cuts
             # cumulatively in the order given here, not in .add() registration
             # order, so this list must match the actual .add() call sequence
@@ -2855,10 +3195,12 @@ class EventProcessor(processor.ProcessorABC):
             # right before it. The table itself is left as coffea's own
             # print() rather than reimplemented, since re-deriving its
             # dask-delayed materialization here would risk quietly breaking it.
-            logger.info(f"[{dataset}] Cutflow selection stats (stdout table follows):")
-            self.cutflow.print()
+            # Per-chunk table is DEBUG-only so warnings stay visible; cutflow is still saved to JSON/NPZ.
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"[{dataset}] Cutflow selection stats (stdout table follows):")
+                self.cutflow.print()
         t22 = time.perf_counter()
-        logger.info(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
+        logger.debug(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
 
         return out_dict, self.processed_event_count  # For METADATA of event count
 
@@ -2866,7 +3208,7 @@ class EventProcessor(processor.ProcessorABC):
         """
         Arbitrary postprocess function that's required to run the processor
         """
-        logger.info(f"postprocess: {accumulator}")
+        logger.debug(f"postprocess: {accumulator}")
         return accumulator
 
     def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, doing_BS_correction=False, test_mode=False):
@@ -2933,6 +3275,7 @@ class EventProcessor(processor.ProcessorABC):
         event_match = None,
         dnn_year = None,
         do_jet_horn_puid = False,
+        do_sync = False,
     ):
         is_mc = events.metadata["is_mc"]
         dataset = events.metadata["dataset"]
@@ -3176,6 +3519,40 @@ class EventProcessor(processor.ProcessorABC):
             & rawFactor_cut
             & (abs(jets.eta) < self.config["jet_eta_cut"])
         )
+
+        sync_jet_dict = {}
+        if do_sync and variation == "nominal":
+            # All NanoAOD jets (JEC/JER applied, pT-sorted) with each selection decision as a flag
+            sync_jet_dict = {
+                "Jet_pt": jets.pt,
+                "Jet_eta": jets.eta,
+                "Jet_phi": jets.phi,
+                "Jet_mass": jets.mass,
+                "Jet_pt_raw": jets.pt_raw,   # before JEC (and JER)
+                "Jet_pt_jec": jets.pt_jec,   # after JEC, before JER
+                "Jet_rawFactor": jets.rawFactor,
+                "Jet_passJetId": pass_jet_id,
+                "Jet_isCleanFromMuons": clean,
+                "Jet_passHornPtCut": jetHorn_ptcut,
+                "Jet_inJetVetoMap": jets.sync_jvm_veto,
+                "Jet_isSelected": jet_selection,
+                "Jet_isBtagCandidate": btag_selection,
+            }
+            if hasattr(jets, "btagUParTAK4B"):
+                sync_jet_dict.update({
+                    "Jet_btagUParTAK4B": jets.btagUParTAK4B,
+                    "Jet_passBtagLoose": jets.btagUParTAK4B > self.config["btag_loose_wp_UParT"],
+                    "Jet_passBtagMedium": jets.btagUParTAK4B > self.config["btag_medium_wp_UParT"],
+                })
+            if is_mc:
+                sync_jet_dict.update({
+                    "Jet_hadronFlavour": jets.hadronFlavour,
+                    "Jet_genJetIdx": jets.genJetIdx,
+                })
+            sel_idx = ak.pad_none(ak.local_index(jets.pt)[jet_selection], 2)
+            sync_jet_dict["jj_idx1"] = ak.fill_none(sel_idx[:, 0], -1)
+            sync_jet_dict["jj_idx2"] = ak.fill_none(sel_idx[:, 1], -1)
+            sync_jet_dict.update(self.sync_agreed_jet_flags(jets, clean, jetHorn_ptcut, year))
 
         jets = jets[jet_selection] # INFO: this causes huuuuge memory overflow close to 100 GB. Without it, it goes to around 20 GB
         # print(f"ak.any(jets.pt < 50): {ak.sum((jets.pt < 50)[:200]).compute()}")
@@ -3642,5 +4019,21 @@ class EventProcessor(processor.ProcessorABC):
         }
 
         jet_loop_out_dict.update(temp_out_dict)
+
+        if sync_jet_dict:
+            # Stage-2 category definitions (configs/categories/category_cuts.py, modules/selection.py)
+            btag_cut = (nBtagLoose >= 2) | ((nBtagMedium >= 1) & (njets >= 2))
+            pass_bveto = ~ak.fill_none(btag_cut, False)
+            vbf_cut = ak.fill_none(
+                (dijet.mass > 400) & (np.rint(jj_dEta * 10.0**ETA_CUT_DECIMALS) / 10.0**ETA_CUT_DECIMALS > 2.5) & (jet1.pt > 35),
+                False,
+            )
+            sync_jet_dict.update({
+                "pass_bveto": pass_bveto,
+                "pass_vbf_cuts": vbf_cut,
+                "cat_vbf": pass_bveto & vbf_cut,
+                "cat_ggh": pass_bveto & ~vbf_cut,
+            })
+            jet_loop_out_dict.update(sync_jet_dict)
 
         return jet_loop_out_dict

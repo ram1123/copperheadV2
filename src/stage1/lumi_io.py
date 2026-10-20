@@ -35,6 +35,6 @@ def write_processed_lumis(run_arr, lumi_arr, save_path, dataset_name, file_idx):
     try:
         with open(json_path, "w") as handle:
             json.dump(per_run, handle)
-        logger.info(f"Processed-lumi shard saved to {json_path}")
+        logger.debug(f"Processed-lumi shard saved to {json_path}")
     except Exception as err:
         logger.error(f"Processed-lumi shard save failed: {err}")
