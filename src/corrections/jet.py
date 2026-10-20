@@ -272,7 +272,7 @@ def jet_id(jets, config, year=None, jet_id_key="jet_id"):
     pass_jet_id = ak.ones_like(jets.pt, dtype=bool)
     jet_id2use = config.get(jet_id_key, config["jet_id"])
     if hasattr(jets, "jetId") and is_run2(year):
-        logger.info("Using Run2 official jet-id for the custom nanoAODv12")
+        logger.debug("Using Run2 official jet-id for the custom nanoAODv12")
         jet_id_wps = {
             "tight": jets.jetId >= 2,
             "tightFailLepVeto": jets.jetId == 2,
@@ -281,7 +281,7 @@ def jet_id(jets, config, year=None, jet_id_key="jet_id"):
         pass_jet_id = jet_id_wps[jet_id2use]
     elif hasattr(jets, "jetId") and is_run3(year):
         # Reference: https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#nanoAOD_Flags
-        logger.info("Using Run3 official jet-id for the nanoAODv12")
+        logger.debug("Using Run3 official jet-id for the nanoAODv12")
 
         abs_eta = abs(jets.eta)
 
@@ -314,7 +314,7 @@ def jet_id(jets, config, year=None, jet_id_key="jet_id"):
         pass_jet_id = jet_id_wps[jet_id2use]
     elif is_run2(year):
         """For Run 2, use the custom jet ID based on the official tight WP definition."""
-        logger.info("Using custom jet ID for Run 2!")
+        logger.debug("Using custom jet ID for Run 2!")
         pass_jetid_tight, pass_jetid_tight_lepveto = custom_jet_id(
             jets, year, jet_type="AK4PUPPI"
         )
@@ -326,7 +326,7 @@ def jet_id(jets, config, year=None, jet_id_key="jet_id"):
         pass_jet_id = jet_id_wps[jet_id2use]
     elif is_run3(year):
         """For Run 3, use the correctionlib based jetID."""
-        logger.info("Using correctionlib-based jet ID for Run 3!")
+        logger.debug("Using correctionlib-based jet ID for Run 3!")
         jet_id_json_files = config["jet_id_json_files"]
         cset = get_corrset(jet_id_json_files)
         eval_dict = {
@@ -415,15 +415,15 @@ def get_puId(jets):
       3) puIdDisc (fallback)
     """
     if hasattr(jets, "puId17"):
-        logger.info("Using puId17 for PUID")
+        logger.debug("Using puId17 for PUID")
         return jets.puId17
 
     if hasattr(jets, "puId"):
-        logger.info("Using puId for PUID")
+        logger.debug("Using puId for PUID")
         return jets.puId
 
     if hasattr(jets, "puIdDisc"):
-        logger.info("Using puIdDisc for PUID")
+        logger.debug("Using puIdDisc for PUID")
         return jets.puIdDisc
 
     logger.warning(
@@ -814,7 +814,7 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
         else:
             lvl_compound = f"Regrouped_{unc}"
 
-        logger.info(f"[MC: {is_mc}]: Applying JEC: {unc} with level: {lvl_compound}")
+        logger.debug(f"[MC: {is_mc}]: Applying JEC: {unc} with level: {lvl_compound}")
 
         key = f"{jec_tag}_{lvl_compound}_{algo}"
         logger.debug(f"jec key: {key}")
@@ -988,7 +988,7 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
 
     #  JER scale factor key
     key = "{}_{}_{}".format(jer_tag, "ScaleFactor", algo)
-    logger.info(f"key: {key}")
+    logger.debug(f"key: {key}")
     sf = cset[key]
     logger.debug(f"JER SF name: {sf}")
     logger.debug(f"JER SF name: {sf.name}")
@@ -1012,7 +1012,7 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
         jer_sf_unc_input_names = []
     else:
         unc_key = "{}_{}_{}".format(jer_tag, "SFUncertainty", algo)
-        logger.info(
+        logger.debug(
             f"JER ScaleFactor has no 'systematic' axis; taking up/down from key: {unc_key}"
         )
         sf_unc = cset[unc_key]
@@ -1102,7 +1102,7 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
         # logger.debug(f"jets.pt b4 JER smear: {jets.pt[:20].compute()}")
 
         jer_strat = config["switches"]["jer_strat"]
-        logger.info(f"jer_strat: {jer_strat}")
+        logger.debug(f"jer_strat: {jer_strat}")
         if jer_strat == 0: # default Hybrid
             jer_smearing = jer_smearing # no change
         elif jer_strat == 1:
