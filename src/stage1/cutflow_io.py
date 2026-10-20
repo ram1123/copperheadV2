@@ -21,7 +21,7 @@ def write_cutflow_outputs(cutflow, selection_names, save_path, dataset_name, fil
     npz_result = cutflow.to_npz(npz_path)
     if hasattr(npz_result, "compute"):
         npz_result.compute()
-    logger.info(f"NPZ saved: {npz_path}")
+    logger.debug(f"NPZ saved: {npz_path}")
 
     def _scalar(x):
         return x.item() if hasattr(x, "item") else x
@@ -51,6 +51,6 @@ def write_cutflow_outputs(cutflow, selection_names, save_path, dataset_name, fil
         with open(json_path, "w") as handle:
             json.dump(combined_data, handle, indent=4)
 
-        logger.info(f"JSON saved to {json_path}")
+        logger.debug(f"JSON saved to {json_path}")
     except Exception as err:
         logger.error(f"JSON save failed: {err}")
