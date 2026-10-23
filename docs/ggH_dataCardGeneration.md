@@ -1,8 +1,8 @@
-# Introduction
+## Introduction
 
-# Technical Details
+## Technical Details
 
-## Obtaining new BDT Score edges for BDT cateogories
+### Obtaining new BDT Score edges for BDT cateogories
 
 We assume you have run stage2 with all the JEC uncertainties (for signal samples only for ggH channel). This is done by adding `--do_jecUnc` flag when runing `run_stage2.py` i.e.
 
@@ -39,4 +39,4 @@ sh run_script.sh
 ```
 
 
-# References/Important links
+## References/Important links

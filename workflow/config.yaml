@@ -9,7 +9,6 @@ hmm_base: /work/projects/hmm
 
 # what to run
 years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
-years: ["2024"]
 
 # run_tag: "FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_MuonID-tightId"
 # run_tag: "FilterJets_Aug30_tightPassLepVeto_DefaultjetPt25GeV"

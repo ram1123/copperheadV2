@@ -1,3 +1,4 @@
+import logging
 import json
 import os
 import time
@@ -985,7 +986,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"NanoAODv: {NanoAODv}")
 
         t1 = time.perf_counter()
-        logger.info(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
+        logger.debug(f"[timing] Metadata read time: {t1 - t0:.2f} seconds")
 
         # ------------------------------------------------------------#
         # Step-1: Apply the lumi mask for data only
@@ -1007,7 +1008,7 @@ class EventProcessor(processor.ProcessorABC):
             #            dilepton mass between 100 and 200 GeV, to avoid double counting with DY_M-100to200 sample.
             # FIXME: currently, `dy_M-50` is hardcoded
 
-            logger.info("doing dy_M-50 LHE cut!")
+            logger.debug("doing dy_M-50 LHE cut!")
             LHE_particles = events.LHEPart #has unique pdgIDs of [ 1,  2,  3,  4,  5, 11, 13, 15, 21]
             bool_filter = (abs(LHE_particles.pdgId) == 11) | (abs(LHE_particles.pdgId) == 13) | (abs(LHE_particles.pdgId) == 15)
             LHE_leptons = LHE_particles[bool_filter]
@@ -1037,7 +1038,7 @@ class EventProcessor(processor.ProcessorABC):
         # LHE cut original end -----------------------------------------------------------------------------
 
         t3 = time.perf_counter()
-        logger.info(f"[timing] LHE cut time: {t3 - t1:.2f} seconds")
+        logger.debug(f"[timing] LHE cut time: {t3 - t1:.2f} seconds")
         # ------------------------------------------------------------#
 
         # ------------------------------------------------------------#
@@ -1054,7 +1055,7 @@ class EventProcessor(processor.ProcessorABC):
         event_filter = event_filter & HLT_filter
 
         t4 = time.perf_counter()
-        logger.info(f"[timing] HLT and lumi mask time: {t4 - t3:.2f} seconds")
+        logger.debug(f"[timing] HLT and lumi mask time: {t4 - t3:.2f} seconds")
         # ------------------------------------------------------------#
 
         # --------------------------------------------------------#
@@ -1210,7 +1211,7 @@ class EventProcessor(processor.ProcessorABC):
         # logger.info(f"Debug event muon isTracker after roccor: {events.Muon.isTracker[debug_mask_2].compute()}")
 
         t5 = time.perf_counter()
-        logger.info(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
+        logger.debug(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
         # --------------------------------------------------------
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
         if self.config["switches"]["do_trigger_match"]:
@@ -1284,7 +1285,7 @@ class EventProcessor(processor.ProcessorABC):
             logger.warning("NO trigger match! Doing leading mu pass instead!")
 
         t6 = time.perf_counter()
-        logger.info(f"[timing] Trigger match time: {t6 - t5:.2f} seconds")
+        logger.debug(f"[timing] Trigger match time: {t6 - t5:.2f} seconds")
         # --------------------------------------------------------
 
         # # print the mask debug_mask_2 and trigger_match for the debug event
@@ -1312,12 +1313,12 @@ class EventProcessor(processor.ProcessorABC):
             events["Muon", "pt_fsr"] = events.Muon.pt
 
         t6a = time.perf_counter()
-        logger.info(f"[timing] FSR correction time: {t6a - t6:.2f} seconds")
+        logger.debug(f"[timing] FSR correction time: {t6a - t6:.2f} seconds")
         # -----------------------------------------------------------------
 
         muons = events.Muon[muon_selection]
         t6c = time.perf_counter()
-        logger.info(f"[timing] Muon selection time: {t6c - t6a:.2f} seconds")
+        logger.debug(f"[timing] Muon selection time: {t6c - t6a:.2f} seconds")
 
         # muons = ak.to_packed(events.Muon[muon_selection])
 
@@ -1333,18 +1334,18 @@ class EventProcessor(processor.ProcessorABC):
             self.selection.add("leading_muon_pt", pass_leading_pt)
 
         t6d = time.perf_counter()
-        logger.info(f"[timing] Separate leading muon pT cut time: {t6d - t6c:.2f} seconds")
+        logger.debug(f"[timing] Separate leading muon pT cut time: {t6d - t6c:.2f} seconds")
         # count muons that pass the muon selection
         nmuons = ak.num(muons, axis=1)
         # logger.debug(f"nmuons: {nmuons.compute()}")
         t6e = time.perf_counter()
-        logger.info(f"[timing] Count muons time: {t6e - t6d:.2f} seconds")
+        logger.debug(f"[timing] Count muons time: {t6e - t6d:.2f} seconds")
 
         # Find opposite-sign muons
         mm_charge = ak.prod(muons.charge, axis=1) # techinally not a product of two leading pT muon charge, but (nmuons==2) cut ensures that there's only two muons
 
         t7 = time.perf_counter()
-        logger.info(f"[timing] diMuon selection time: {t7 - t6:.2f} seconds")
+        logger.debug(f"[timing] diMuon selection time: {t7 - t6:.2f} seconds")
         # --------------------------------------------------------#
         if NanoAODv == 9:
             electron_id = self.config["electron_id_v9"]
@@ -1401,7 +1402,7 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["switches"]["do_HemVeto"]:
             HemVeto_filter, is_HemRegion = applyHemVeto(events.Jet, events.run, events.event, self.config, is_mc, NanoAODv)
             if (not self.config["switches"]["do_HemVetoStudy"]): # when we are calculating HemVeto fraction for MC, we shouldn't filter out hem veto events
-                logger.info("adding HemVeto!")
+                logger.debug("adding HemVeto!")
                 event_filter = event_filter & HemVeto_filter
         else:
             HemVeto_filter = ak.ones_like(event_filter, dtype="bool")
@@ -1432,7 +1433,7 @@ class EventProcessor(processor.ProcessorABC):
         event_filter = event_filter & electron_veto
 
         t8 = time.perf_counter()
-        logger.info(f"[timing] Electron selection filtering time: {t8 - t7:.2f} seconds")
+        logger.debug(f"[timing] Electron selection filtering time: {t8 - t7:.2f} seconds")
 
         # --------------------------------------------------------#
         # Select events with muons passing leading pT cut
@@ -1491,7 +1492,7 @@ class EventProcessor(processor.ProcessorABC):
                 sumWeights = events.metadata['sumGenWgts']
                 logger.debug(f"sumWeights: {(sumWeights)}")
         if self.config["switches"].get("do_jet_veto_maps_filterEvents", False):
-            logger.info("Applying jet veto maps!")
+            logger.debug("Applying jet veto maps!")
             jets_for_veto = events.Jet
             jet_veto_eventFilter = self.compute_jet_veto_eventfilter(events, jets_for_veto)
             event_filter = event_filter & ~jet_veto_eventFilter
@@ -1529,7 +1530,7 @@ class EventProcessor(processor.ProcessorABC):
                 pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter == True])
 
         t9 = time.perf_counter()
-        logger.info(f"[timing] GEN weight and PU time: {t9 - t8:.2f} seconds")
+        logger.debug(f"[timing] GEN weight and PU time: {t9 - t8:.2f} seconds")
 
         # --------------------------------------------------------#
         # Fill dimuon and muon variables
@@ -1560,7 +1561,7 @@ class EventProcessor(processor.ProcessorABC):
         dimuon_cos_theta_eta, dimuon_phi_eta = etaFrame_variables(mu1,mu2)
 
         t10 = time.perf_counter()
-        logger.info(f"[timing] Dimuon variables time: {t10 - t9:.2f} seconds")
+        logger.debug(f"[timing] Dimuon variables time: {t10 - t9:.2f} seconds")
 
         # fill genjets
         if is_mc:
@@ -1636,7 +1637,7 @@ class EventProcessor(processor.ProcessorABC):
             n_genjets_pt30_eta47 = ak.sum((gjets.pt > 30) & (abs(gjets.eta) < 4.7), axis=1)
 
         t11 = time.perf_counter()
-        logger.info(f"[timing] GenJet variables time: {t11 - t10:.2f} seconds")
+        logger.debug(f"[timing] GenJet variables time: {t11 - t10:.2f} seconds")
 
         self.prepare_jets(events, NanoAODv=NanoAODv)
 
@@ -1653,7 +1654,7 @@ class EventProcessor(processor.ProcessorABC):
 
         PuppiMET = events.PuppiMET
         if self.config["switches"].get("do_met_xy_correction", False):
-            logger.info("Applying PuppiMET xy-shift correction!")
+            logger.debug("Applying PuppiMET xy-shift correction!")
             xy_met_pt, xy_met_phi, xy_n_unmatched = apply_puppi_met_xy_correction(
                 PuppiMET.pt,
                 PuppiMET.phi,
@@ -1665,14 +1666,14 @@ class EventProcessor(processor.ProcessorABC):
             PuppiMET["pt_xyCorr"] = xy_met_pt
             PuppiMET["phi_xyCorr"] = xy_met_phi
         if self.config["switches"].get("do_jet_veto_maps_filterJets", False):
-            logger.info("Applying jet veto maps!")
+            logger.debug("Applying jet veto maps!")
             jets, PuppiMET = self.compute_jet_veto_jetfilter(events, jets, PuppiMET)
             jets = ensure_event_axis(jets, len(events), "jet-post-veto")
         t12 = time.perf_counter()
-        logger.info(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
+        logger.debug(f"[timing] prepare jets time: {t12 - t11:.2f} seconds")
 
         logger.debug(f"jets type before pad_none: {jets.type}")
-        logger.info(f"jets ndim: {jets.ndim}")
+        logger.debug(f"jets ndim: {jets.ndim}")
 
         jet_default = ak.pad_none(jets, target=4, axis=1)
         jet1_default = jet_default[:, 0]
@@ -1738,15 +1739,15 @@ class EventProcessor(processor.ProcessorABC):
         if not is_mc:
             do_jec_unc = False
             self.config["switches"]["do_jec_unc"] = False
-        logger.info(f"do_jec_unc: {do_jec_unc}")
+        logger.debug(f"do_jec_unc: {do_jec_unc}")
         do_jer_unc = self.config["switches"]["do_jer_unc"]
-        logger.info(f"do_jer_unc: {do_jer_unc}")
+        logger.debug(f"do_jer_unc: {do_jer_unc}")
         jec_unc_sources = []
         jet_type = getJetType(NanoAODv, year)
         self.config["jec_parameters"]["jet_algorithm"] = jet_type # define jet type / jet algorithm into the jec.yaml
         logger.debug(f'jec params: {self.config["jec_parameters"]}')
         if do_jec:
-            logger.info("doing JEC  (+ JER for MC)!")
+            logger.debug("doing JEC  (+ JER for MC)!")
 
             # 1) JES/JER variation labels you want to carry
             if do_jec_unc:
@@ -1814,7 +1815,7 @@ class EventProcessor(processor.ProcessorABC):
             jets["pt_jec"] = jets.pt
 
         t13 = time.perf_counter()
-        logger.info(f"[timing] JEC and JER time: {t13 - t12:.2f} seconds")
+        logger.debug(f"[timing] JEC and JER time: {t13 - t12:.2f} seconds")
         # # ------------------------------------------------------------#
 
         # # ------------------------------------------------------------#
@@ -1839,7 +1840,7 @@ class EventProcessor(processor.ProcessorABC):
             # original initial weight start ----------------
             weights.add("genWeight_normalization", weight=gen_weight_ones/sumWeights) # temporary commenting out
 
-            logger.info(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
+            logger.debug(f"year: {year}, dataset_yaml_file: {dataset_yaml_file}")
             # FIXME: Remove this if condition later when we update the yaml file for run2 too.
             sample_info = get_sample_info(dataset_yaml_file, dataset, year) # FIXME: hardcoded filename
             logger.debug(f"sample_info: {sample_info}")
@@ -1854,7 +1855,7 @@ class EventProcessor(processor.ProcessorABC):
             cross_section = cross_section * kfactor
 
             logger.debug(f"kfactor: {kfactor}")
-            logger.info(f"cross_section (after k-factor): {cross_section}")
+            logger.debug(f"cross_section (after k-factor): {cross_section}")
 
             weights.add("xsec", weight=gen_weight_ones*cross_section)
             weights.add("lumi", weight=gen_weight_ones*integrated_lumi)
@@ -1880,7 +1881,7 @@ class EventProcessor(processor.ProcessorABC):
             weights.add("ones", weight=ak.values_astype(ak.ones_like(events.HLT.IsoMu24), "float32"))
 
         t14 = time.perf_counter()
-        logger.info(f"[timing] Weights time: {t14 - t13:.2f} seconds")
+        logger.debug(f"[timing] Weights time: {t14 - t13:.2f} seconds")
 
         # ------------------------------------------------------------#
         # Calculate other event weights
@@ -1963,7 +1964,7 @@ class EventProcessor(processor.ProcessorABC):
                 and ("stage1_1_fine_cat_pTjet30GeV" in events.HTXS.fields)
             )
             if do_thu:
-                logger.info("doing THU weights!")
+                logger.debug("doing THU weights!")
                 add_stxs_variations(
                     events,
                     weights,
@@ -2011,7 +2012,7 @@ class EventProcessor(processor.ProcessorABC):
                     logger.debug("skip pdf! member ratios set to unity")
                     write_pdf_members = True
         t15 = time.perf_counter()
-        logger.info(f"[timing] some GEN event weights for syst time: {t15 - t14:.2f} seconds")
+        logger.debug(f"[timing] some GEN event weights for syst time: {t15 - t14:.2f} seconds")
 
         # ------------------------------------------------------------#
         # Fill Muon variables and gjet variables
@@ -2511,12 +2512,12 @@ class EventProcessor(processor.ProcessorABC):
             })
 
         t16 = time.perf_counter()
-        logger.info(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
+        logger.debug(f"[timing] Fill muon and gjet variables time: {t16 - t15:.2f} seconds")
         # ------------------------------------------------------------#
         # HEMVeto study
         # ------------------------------------------------------------#
         if (self.config["switches"]["do_HemVeto"] and self.config["switches"]["do_HemVetoStudy"]):
-            logger.info("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
+            logger.debug("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
             HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True])   # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
             is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
 
@@ -2551,7 +2552,7 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"out_dict.keys() after jet loop: {out_dict.keys()}")
 
         t17 = time.perf_counter()
-        logger.info(f"[timing] Jet pT variations time: {t17 - t16:.2f} seconds")
+        logger.debug(f"[timing] Jet pT variations time: {t17 - t16:.2f} seconds")
 
         # fill in the regions
         mass = dimuon.mass
@@ -2564,7 +2565,7 @@ class EventProcessor(processor.ProcessorABC):
             "h_peak" : ak.fill_none(h_peak, value=False),
         })
         t18 = time.perf_counter()
-        logger.info(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
+        logger.debug(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
 
         # do zpt weight at the very end
         dataset = events.metadata["dataset"]
@@ -2574,7 +2575,7 @@ class EventProcessor(processor.ProcessorABC):
             njets_gen = n_genjets_pt30_eta47
             save_zpt_variations = self.config["switches"].get("save_zpt_variations", False)
 
-            logger.info("=======================  apply zpt weights =======================")
+            logger.debug("=======================  apply zpt weights =======================")
             whichMethod = "function" # DNN or function or both
             if whichMethod == "function" or whichMethod == "both":
                 # choose the config file
@@ -2685,7 +2686,7 @@ class EventProcessor(processor.ProcessorABC):
                 weights.add("zpt", weight=zpt_wgt_reco)
 
         t19 = time.perf_counter()
-        logger.info(f"[timing] Zpt weights time: {t19 - t18:.2f} seconds")
+        logger.debug(f"[timing] Zpt weights time: {t19 - t18:.2f} seconds")
 
         # apply vbf filter phase cut if DY test start ---------------------------------
         # if dataset == 'dy_M-100To200':
@@ -2744,7 +2745,7 @@ class EventProcessor(processor.ProcessorABC):
                 })
 
         t20 = time.perf_counter()
-        logger.info(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
+        logger.debug(f"[timing] Weights variations time: {t20 - t19:.2f} seconds")
 
         # Save partial weights start -----------------------------------------
         if do_save_partial_weights:
@@ -2759,7 +2760,7 @@ class EventProcessor(processor.ProcessorABC):
                 })
 
         t21 = time.perf_counter()
-        logger.info(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
+        logger.debug(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
 
         # logger.info(f"out_dict.persist 5: {ak.zip(out_dict).persist().to_parquet(save_path)}")
         # logger.info(f"out_dict.compute 5: {ak.zip(out_dict).to_parquet(save_path)}")
@@ -2770,7 +2771,7 @@ class EventProcessor(processor.ProcessorABC):
         if self.isCutflow:
             # Ensure all selections exist before calling cutflow
             # Add protection for the cutflow if the selection is not in the cutflow
-            logger.info(f"selection: {self.selection}")
+            logger.debug(f"selection: {self.selection}")
             # NOTE: order matters -- PackedSelection.cutflow(*names) ANDs cuts
             # cumulatively in the order given here, not in .add() registration
             # order, so this list must match the actual .add() call sequence
@@ -2855,10 +2856,12 @@ class EventProcessor(processor.ProcessorABC):
             # right before it. The table itself is left as coffea's own
             # print() rather than reimplemented, since re-deriving its
             # dask-delayed materialization here would risk quietly breaking it.
-            logger.info(f"[{dataset}] Cutflow selection stats (stdout table follows):")
-            self.cutflow.print()
+            # Per-chunk table is DEBUG-only so warnings stay visible; cutflow is still saved to JSON/NPZ.
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f"[{dataset}] Cutflow selection stats (stdout table follows):")
+                self.cutflow.print()
         t22 = time.perf_counter()
-        logger.info(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
+        logger.debug(f"[timing] Cutflow time: {t22 - t21:.2f} seconds")
 
         return out_dict, self.processed_event_count  # For METADATA of event count
 
@@ -2866,7 +2869,7 @@ class EventProcessor(processor.ProcessorABC):
         """
         Arbitrary postprocess function that's required to run the processor
         """
-        logger.info(f"postprocess: {accumulator}")
+        logger.debug(f"postprocess: {accumulator}")
         return accumulator
 
     def get_mass_resolution(self, dimuon, mu1,mu2, is_mc:bool, doing_BS_correction=False, test_mode=False):

@@ -3,7 +3,7 @@ title: DNN for VBF
 
 
 
-# Input Features for DNN in VBF Analysis
+## Input Features for DNN in VBF Analysis
 
 The following features are used as input to the Deep Neural Network (DNN) for the Vector Boson Fusion (VBF) analysis:
 
@@ -42,11 +42,11 @@ The following features are used as input to the Deep Neural Network (DNN) for th
   - `year`
 
 
-# DNN Training
+## DNN Training
 
-## Preprocessing Steps
+### Preprocessing Steps
 
-### Preprocessing validations
+#### Preprocessing validations
 
 1. Feature distributions before and after preprocessing
 1. Correlation matrices before and after preprocessing
@@ -58,9 +58,9 @@ For this, there are two scripts available in the `plotter/` directory:
 1. [plot_vbfdnn_input_features_compare.py](../plotter/plot_vbfdnn_input_features_compare.py): to compare feature distributions between signal and background samples before preprocessing.
 1. [`dnn_preprocessing_validation.py`](../plotter/dnn_preprocessing_validation.py): to validate the preprocessing steps by plotting the feature distributions from the preprocessed parquet files. For these plots, the mean should be around 0 and the standard deviation around 1. **Note:** the variable `year`  and `nsoftjets5` are not standardized.
 
-## DNN Training
+### DNN Training
 
-### DNN preprocessing
+#### DNN preprocessing
 
 NOTE: this step uses dask gateway for parallization. Example:
 ```bash
@@ -71,7 +71,7 @@ python MVA_training/VBF_run3/preprocess_dnn.py --config configs/dnn_run2_vbf.yam
 --use-dask-gateway --cluster-index 0
 ```
 
-### DNN Hyperparameter Optimization
+#### DNN Hyperparameter Optimization
 Once preprocessing is done, do hyperparameter optimization (NOTE: using GPU session will greatly accelerate this).
 example:
 ```bash
@@ -80,7 +80,7 @@ VA_training/VBF_run3/hpo_optuna.py --config configs/dnn_run2_vbf.yaml \
 --out-dir dnn/trained_models/Run2_NanoV12_forVBFChannel_Apr29_2026/2017_h-peak_vbf/hpo_optuna/v2_108Trials \
 --n-trials 5 --folds 0
 ```
-### DNN Training Command
+#### DNN Training Command
 
 Example:
 ```bash
@@ -91,9 +91,9 @@ time python MVA_training/VBF_run3/train_dnn.py --config configs/dnn_run2_vbf.yam
 ```
 
 
-## VBF stage2 and stage3
+### VBF stage2 and stage3
 
-### Selecting the DNN model + jj_eta_region phase space
+#### Selecting the DNN model + jj_eta_region phase space
 
 Current entry point is `run_analysis_pipeline.sh` (see `CLAUDE.md`), driving
 `run_stage2_vbf.py`/`run_stage3_vbf.py` via `common_workflow.sh` -- the Run 2-era
@@ -132,7 +132,7 @@ time JJ_ETA_REGION=jj_both_central bash run_analysis_pipeline.sh \
 ```
 Leave `JJ_ETA_REGION` unset to keep the previous, unrestricted-selection behavior.
 
-### Historical (Run 2, `stage1_loop_Improved.sh`) examples
+#### Historical (Run 2, `stage1_loop_Improved.sh`) examples
 
 ```bash
 time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.yaml -v 12 -l  Run2_NanoV12_forVBFChannel_Apr29_2026_jetUnc -y "2017" -m 2 -k)
@@ -141,7 +141,7 @@ time(bash stage1_loop_Improved.sh -c configs/datasets/dataset_nanoAODv12_run2.ya
 ```
 
 
-## DNN bin edge optimization
+### DNN bin edge optimization
 
 Change the `command_compact` in `stage1_loop_Improved.sh`, ie
 ```bash
@@ -162,27 +162,7 @@ python MVA_training/VBF_run3/scan_bins_for_dnn.py
 ```
 
 
-# combine step
-first combine the cards:
+## Combine step
 
-
-```bash
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage3_datacards_May04_2026/score_Run2_NanoV12_forVBFChannel_Apr29_2026 2017
-```
-
-then generate the signficance
-```bash
-bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV12_forVBFChannel_Apr29_2026/stage3_datacards_May04_2026/score_Run2_NanoV12_forVBFChannel_Apr29_2026 2017
-```
-
-Long chain:
-```
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2018
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2017
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016postVFP
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ 2016preVFP
-sh produce_combine_cards.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ Run2
-
-bash produce_significance.sh /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/stage3_datacards_May12_2026/score_Run2_NanoV15_forVBFChannel_Apr29_2026_jetUnc/ Run2 
-
-```
+Datacards, workspaces, significance, limits and impacts are produced with `run_stats_pipeline_VBF.sh`;
+see [Statistics](Statistics.md).

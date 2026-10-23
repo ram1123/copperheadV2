@@ -2,7 +2,7 @@
 title: Additional Scripts
 ---
 
-# Investigate Pickle File
+## Investigate Pickle File
 
 This script is used to load and inspect Python pickle (*.pkl) files.
 
@@ -13,7 +13,7 @@ python load_pkl.py path/to/file.pkl
 ```
 
 
-# Check for missing branches
+## Check for missing branches
 
 This script checks for the missing branches in the root files, present in the
 directory, and prints the missing branches.
@@ -24,7 +24,7 @@ directory, and prints the missing branches.
 python scripts/check_missing_branch.py
 ```
 
-# Processed-lumi tracking (`processedLumis.json`)
+## Processed-lumi tracking (`processedLumis.json`)
 
 Stage-1 keeps a record of exactly which lumi sections were actually run over,
 so you can confirm completeness against the golden JSON afterwards instead of
@@ -81,7 +81,7 @@ Feed the combined file to `brilcalc` for the actual processed luminosity:
 brilcalc lumi -i <stage1_output_dir>/_status/processedLumis_certified.json -u /pb --normtag <normtag.json>
 ```
 
-# Splice a re-run sample into an existing label (`splice_sample_across_years.py`)
+## Splice a re-run sample into an existing label (`splice_sample_across_years.py`)
 
 When one sample (e.g. DY, after deriving new Z-pT weights) is reprocessed
 under its own separate `run_tag`, this script merges it back into an
@@ -126,7 +126,7 @@ python scripts/splice_sample_across_years.py \
 A single-`(old_base, new_base)`-pair bash equivalent, `scripts/splice_sample_dir.sh`,
 also still exists for a one-year/one-path-pair splice without the
 run_tag/`YEAR_META` templating.
-# Compare muon / jet kinematics between two NanoAOD samples
+## Compare muon / jet kinematics between two NanoAOD samples
 
 `scripts/compare_nanoaod_muon_jet_kinematics.py` reads the first `--nevents` events
 from two NanoAOD samples (a directory, a glob, a file or a `root://` URL) and makes

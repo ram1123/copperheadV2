@@ -10,7 +10,7 @@ The purpose of this calibration is to ensure that the **predicted per-event dimu
 The calibration is derived in the **Z control region (ZCR)** and then applied consistently to the higgs signal region and higgs sideband regions.
 
 
-# Physics Inputs To the Calibration
+## Physics Inputs To the Calibration
 
 The following physics constants are used for initializing the functions modeling:
 
@@ -21,7 +21,7 @@ The following physics constants are used for initializing the functions modeling
 
 
 
-# What Is the Event-by-Event Mass Resolution?
+## What Is the Event-by-Event Mass Resolution?
 
 For each event, the dimuon mass resolution is **predicted** using the transverse momentum uncertainties of the two muons:
 
@@ -45,7 +45,7 @@ This quantity is computed **event-by-event** and is referred to as the **predict
 
 ---
 
-# Why Is Calibration Needed?
+## Why Is Calibration Needed?
 
 Although the predicted resolution captures the main detector effects, it is not perfectly modeled in data due to:
 
@@ -71,7 +71,7 @@ $$
 \frac{\sigma_{\text{fit}}}{\text{median}(\sigma_{m_{\mu\mu}}^{\text{pred}})}
 $$
 
-# Calibration Strategy
+## Calibration Strategy
 
 The calibration proceeds as follows:
 
@@ -91,7 +91,7 @@ The calibration proceeds as follows:
 8. Validate the procedure using **closure tests**
 
 
-## Script and Location
+### Script and Location
 
 The calibration is implemented in the script:
 
@@ -106,7 +106,7 @@ This script:
 - Produces diagnostic plots and summary CSV/JSON outputs
 
 
-## How to Run
+### How to Run
 
 Before running the calibration, **verify and update the input parquet paths** inside:
 
@@ -117,7 +117,7 @@ src/lib/ebeMassResCalibration/getCalibrationFactor.py
 These paths must point to the correct **Stage-1 compacted outputs**.
 
 
-## Standard Calibration Run
+### Standard Calibration Run
 
 ```bash
 bash run_analysis_pipeline.sh \
@@ -176,7 +176,7 @@ This command:
     python src/lib/ebeMassResCalibration/getCalibrationFactor.py --nanoAODv $NanoAODv --years $year --extraString V1 --ifbinned --closure_test  --fixCat ${category} --no-dask-client
     ```
 
-## Using the Calibration Output
+### Using the Calibration Output
 
 After the calibration completes:
 
@@ -196,9 +196,9 @@ After the calibration completes:
 Ensure that the **BSC / EBE resolution calibration option is switched ON** during Stage-1.
 
 
-## Closure Test
+### Closure Test
 
-### Purpose
+#### Purpose
 
 The closure test verifies that:
 - The calibrated predicted resolution
@@ -208,7 +208,7 @@ The closure test verifies that:
 To avoid bias from the nominal analysis categories, the closure test uses an **independent binning in predicted resolution**.
 
 
-### Closure Bin Definition
+#### Closure Bin Definition
 
 ```python
 CLOSURE_BINS = [
@@ -230,7 +230,7 @@ CLOSURE_BINS = [
 Each bin corresponds to a range in **predicted dimuon mass resolution (GeV)**.
 
 
-### Running the Closure Test
+#### Running the Closure Test
 
 ```bash
 python src/lib/ebeMassResCalibration/getCalibrationFactor.py \
@@ -247,9 +247,9 @@ This will:
 - Produce validation plots and CSV summaries
 
 
-## RooFit Technical Notes
+### RooFit Technical Notes
 
-### Optional GPU Support
+#### Optional GPU Support
 
 If running RooFit with GPU support:
 
@@ -258,7 +258,7 @@ source /cvmfs/sft.cern.ch/lcg/views/LCG_106b_cuda/x86_64-el8-gcc11-opt/setup.sh
 ```
 
 
-### Computing χ² / NDF
+#### Computing χ² / NDF
 
 To compute χ² per degree of freedom consistently:
 
@@ -272,7 +272,7 @@ This method ensures:
 - Comparable fit-quality metrics across categories
 
 
-## Modeling Guidelines and Caveats
+### Modeling Guidelines and Caveats
 
 1. **Convolution order matters**
    - `DCB ⊗ BW ≠ BW ⊗ DCB`
