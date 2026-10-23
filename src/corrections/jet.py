@@ -764,6 +764,27 @@ def get_jec_sources(cset, jec_tag, jet_type="AK4PFPuppi"):
 
     return sorted(sources)
 
+def data_jec_with_residual_freeze(cset, jec_tag, algo, input_map, abseta_min=2.0, abseta_max=2.5, pt_freeze=30.0):
+    """
+    Data L1FastJet x L2Relative x L3Absolute x L2L3Residual factor with the JME 2024 mitigation:
+    in abseta_min < |eta| < abseta_max, a jet whose MC-truth-corrected pT (before the residual) is
+    below pt_freeze gets the L2L3Residual evaluated at pt_freeze. Outside that region this equals
+    the <jec_tag>_L1L2L3Res compound correction (same level stack, JetPt updated after each level).
+    """
+    pt = input_map["JetPt"]
+    factor = 1.0
+    for level in ("L1FastJet", "L2Relative", "L3Absolute"):
+        corr = cset[f"{jec_tag}_{level}_{algo}"]
+        scale = corr.evaluate(*[{**input_map, "JetPt": pt}[inp.name] for inp in corr.inputs])
+        factor = factor * scale
+        pt = pt * scale
+    abseta = abs(input_map["JetEta"])
+    freeze = (abseta > abseta_min) & (abseta < abseta_max) & (pt < pt_freeze)
+    corr = cset[f"{jec_tag}_L2L3Residual_{algo}"]
+    pt_res = ak.where(freeze, pt_freeze, pt)
+    return factor * corr.evaluate(*[{**input_map, "JetPt": pt_res}[inp.name] for inp in corr.inputs])
+
+
 def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jec_parameters = config["jec_parameters"]
 
@@ -823,11 +844,13 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
         else:
             sf = cset[key]
 
+        # JES uncertainties are evaluated at the JEC-corrected pT (nominal is processed first)
+        arg_map = input_map if unc == "nominal" else {**input_map, "JetPt": jets.pt_jec}
         inputs = []
         for inp in sf.inputs:
-            if inp.name not in input_map:
+            if inp.name not in arg_map:
                 raise ValueError(f"JEC input {inp.name} not found in input_map!")
-            arr = input_map.get(inp.name, None)
+            arr = arg_map.get(inp.name, None)
             if arr is None:
                 raise ValueError(f"Missing required JEC input: {inp.name} for key: {key}")
             inputs.append(arr)
@@ -837,7 +860,10 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
 
         # inputs = get_corr_inputs(example_value_dict, sf)
         printCorrObjInputs(sf) # for debugging
-        new_jec_scale = sf.evaluate(*inputs)
+        if unc == "nominal" and (not is_mc) and config["switches"].get("do_jec_residual_freeze", False):
+            new_jec_scale = data_jec_with_residual_freeze(cset, jec_tag, algo, input_map)
+        else:
+            new_jec_scale = sf.evaluate(*inputs)
         # logger.debug(f"new_jec_scale: {new_jec_scale}")
         # logger.debug(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
 
@@ -930,12 +956,11 @@ def applyStrat4(apply_scaling, jer_smearing):
 def apply_jer_unc(jets):
     """
     we assume do_jer_smear has been applied
+    JME JER uncertainty "Case I: split treatment": 6 NPs per year; jets inside a bin get the up/down
+    JER (pT and mass), all other jets stay nominal; no gen-match restriction in the recipe.
     Taken from Dmitry's commented out code, with eta bins updates from https://cms-jerc.web.cern.ch/Recommendations/#run-2_1
     source:  https://github.com/green-cabbage/copperhead_fork2/blob/97a0fcd7668927b46931e6334de4bbf25d3d2031/stage1/corrections/jec.py#L212C14-L242C69
     """
-    has_matchedGenJet = jets.genJetIdx != -1
-    # logger.debug(f"has_matchedGenJet: {has_matchedGenJet.compute()}")
-    # logger.debug(f"jets.genJetIdx: {jets.genJetIdx[:100].compute()}")
     jer_categories = {
        'jer1': (abs(jets.eta) < 1.93),
        'jer2': (abs(jets.eta) > 1.93) & (abs(jets.eta) < 2.5),
@@ -949,14 +974,10 @@ def apply_jer_unc(jets):
        'jer6': (abs(jets.eta) > 3.0) & (abs(jets.eta) < 5.0) & (jets.pt > 50),
     }
     for jer_unc_name, jer_cut in jer_categories.items():
-        jer_cut = jer_cut & (has_matchedGenJet)
-        pt_name_up = f"pt_{jer_unc_name}_up"
-        pt_name_down = f"pt_{jer_unc_name}_down"
-        jer_pt_nom = jets["pt_jer_nom"] # NOTE: if I name this "pt_jer_nominal", sorting jets by jet.pt breaks
-        jer_pt_up = ak.where(jer_cut, jets["pt_jer_up"], jer_pt_nom)
-        jer_pt_down = ak.where(jer_cut, jets["pt_jer_down"], jer_pt_nom)
-        jets[pt_name_up] = jer_pt_up
-        jets[pt_name_down] = jer_pt_down
+        for kin in ("pt", "mass"):
+            jer_nom = jets[f"{kin}_jer_nom"] # NOTE: if I name this "pt_jer_nominal", sorting jets by jet.pt breaks
+            for direction in ("up", "down"):
+                jets[f"{kin}_{jer_unc_name}_{direction}"] = ak.where(jer_cut, jets[f"{kin}_jer_{direction}"], jer_nom)
 
     return jets
 
@@ -1026,12 +1047,25 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
     sf_input_names = [inp.name for inp in sf_ptres.inputs]
     logger.debug(f"JER resolution input: {sf_input_names}")
 
+    # JER resolution, SF and SF uncertainty are evaluated at the JEC-corrected pT (JME prescription)
+    pt_jec = jets.pt_jec
+    res_arg_by_name = {"JetEta": jets.eta, "JetPt": pt_jec, "Rho": jets.PU_rho}
+    printCorrObjInputs(sf_ptres)
+    jer_res = sf_ptres.evaluate(*(res_arg_by_name[n] for n in sf_input_names))
+
+    # Gen match (hybrid method): dR(reco, gen) < R/2 = 0.2 and |pT_jec - pT_gen| < 3 sigma_JER pT_jec
+    pt_gen = ak.fill_none(jets.matched_gen.pt, value=-1.0) # if no match, fill with -1.0. Source https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/jercExample.py?ref_type=heads#L45
+    dr_gen = ak.fill_none(jets.delta_r(jets.matched_gen), value=99.0)
+    pt_gen_filter = (dr_gen < 0.2) & (abs(pt_jec - pt_gen) < (3*pt_jec*jer_res)) # Source https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L108C1-L108C66
+    pt_gen = ak.where(pt_gen_filter, pt_gen, -1*ak.ones_like(pt_jec))
+    apply_scaling = pt_gen != -1.0
+
     for syst in syst_l:
         # Build ScaleFactor inputs from the payload's declared axes (see schema note
         # above), instead of hardcoding per run era.
         sf_arg_by_name = {
             "JetEta": jets.eta,
-            "JetPt": jets.pt_raw,
+            "JetPt": pt_jec,
             "systematic": syst,
         }
         printCorrObjInputs(sf)
@@ -1052,27 +1086,10 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
                 )
         # logger.debug("JER SF : {}".format(jer_sf.compute()))
 
-        inputs = ( # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L107C73-L107C75
-            jets.eta, # == JetEta
-            jets.pt_raw,
-            jets.PU_rho, # == Rho
-        )
-        printCorrObjInputs(sf_ptres)
-        # inputs = get_corr_inputs(example_value_dict, sf)
-        jer_res = sf_ptres.evaluate(*inputs)
-        # logger.debug("JER Res : {}".format(jer_res.compute()))
-
         key_jersmear = "JERSmear"
         sf_jersmear = cset_jersmear[key_jersmear]
-        sf_input_names = [inp.name for inp in sf_jersmear.inputs]
-        logger.debug(f"JER smear input: {sf_input_names}")
+        logger.debug(f"JER smear input: {[inp.name for inp in sf_jersmear.inputs]}")
 
-        pt_gen = ak.fill_none(jets.matched_gen.pt, value=-1.0) # if no match, fill with -1.0. Source https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/examples/jercExample.py?ref_type=heads#L45
-        pt_jec = jets.pt_jec
-        pt_gen_filter  = abs(pt_jec - pt_gen) < (3*pt_jec*jer_res) # Source https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L108C1-L108C66
-        false_cond_val = -1*ak.ones_like(jets.pt_jec)
-        pt_gen = ak.where(pt_gen_filter, pt_gen, false_cond_val)
-        apply_scaling = pt_gen != -1.0
         # event_id is per-event (events.event), but every other input here is
         # per-jet. correctionlib's evaluate() only broadcasts a per-event scalar
         # against per-jet arrays via its jagged-awkward fallback path, which is
@@ -1117,15 +1134,14 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
             raise ValueError(f"jer strategy {jer_strat} is not yet supported!")
         # jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
         jets[f"pt_jer_{syst}"] = jer_smearing * pt_jec  # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
+        jets[f"mass_jer_{syst}"] = jer_smearing * jets.mass_jec # JER scales the full four-momentum
     jets["pt"] = jets[f"pt_jer_nom"]
+    jets["mass"] = jets["mass_jer_nom"]
     # logger.debug(f"jet pt: {jets.pt[:100].compute()}")
     # logger.debug(f"jet pt_jer_up: {jets.pt_jer_up[:100].compute()}")
     # logger.debug(f"jet pt_jer_down: {jets.pt_jer_down[:100].compute()}")
-    # The per-eta-bin JER-uncertainty columns (pt_jer1_up ... pt_jer6_down) are
-    # only consumed when do_jer_unc drives the pt_variations loop. For a
-    # nominal-only run the caller passes syst_l == ["nom"], so pt_jer_up/down
-    # were never built -- skip apply_jer_unc (nothing downstream reads those
-    # columns and they are not written to the skim).
+    # Up/down columns are only built (and consumed) when do_jer_unc is on. apply_jer_unc builds the
+    # JME Case I split (jer1..jer6) from pt/mass_jer_up/down above.
     if "up" in syst_l and "down" in syst_l:
         jets = apply_jer_unc(jets)
     # for i in range(1,7):
@@ -1162,8 +1178,8 @@ def get_jet_variation(jets_orig, variation, fields2add):
 
     Notes:
     -----
-    - For 'jer' variations, mass is not modified and taken from original jets
-    - For non-JER variations (e.g., JEC), mass is modified according to the variation
+    - Mass is taken from mass_<variation> when present (JEC sources, jer_up/down); the
+      jer1..jer6 split bins also carry mass columns (apply_jer_unc)
     - Uses PtEtaPhiMCandidate behavior for proper physics vector handling
     - Fields like 'puId' are handled with special fallback logic if missing
     """
@@ -1171,10 +1187,10 @@ def get_jet_variation(jets_orig, variation, fields2add):
     logger.debug(f"get_jet_variation variation: {variation}")
     new_jets_pt = jets_orig[f"pt_{variation}"]
     logger.debug(f"{variation} jets_orig.fields: {jets_orig.fields}")
-    if "jer" in variation:
-        new_jets_mass = jets_orig.mass
-    else: # jec unc impacts mass, but jer uncs do not
+    if f"mass_{variation}" in jets_orig.fields:
         new_jets_mass = jets_orig[f"mass_{variation}"]
+    else: # variations without a mass column keep the nominal mass
+        new_jets_mass = jets_orig.mass
 
     new_jets = ak.zip( # bahviour setup source: https://mattermost.web.cern.ch/cms-exp/pl/fu9kemtazi8rznucdf57ug1xac
         {

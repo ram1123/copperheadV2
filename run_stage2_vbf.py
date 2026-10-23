@@ -639,15 +639,15 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         if "data" in sample_type:
             wgt_variations = ["wgt_nominal"]
         else:
-            # TODO: add the b-tag weight systematics back once they are
-            # validated; they are skipped here on purpose for now.
+            # TODO: add the Run2 shape b-tag systematics (wgt_btag_*) back once validated;
+            # the Run3 fixedWP ones (wgt_btagWP_*) are kept.
             wgt_variations = ["wgt_nominal"] + sorted(
                 w
                 for w in fields
                 if w.startswith("wgt_")
                 and (w.endswith("_up") or w.endswith("_down"))
                 and ("separate" not in w)
-                and ("btag" not in w.lower())
+                and not w.startswith("wgt_btag_")
             )
             if self.no_variations:
                 wgt_variations = ["wgt_nominal"]
