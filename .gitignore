@@ -17,9 +17,9 @@ bin/
 *.log
 *.npy
 *.pkl
-*.gz
-*.json
-*.yaml
+*.lhe
+.vscode/
+validation/
 trained_models/
 fitting_mu1mu2pt/
 .ipynb_checkpoints/

@@ -135,6 +135,22 @@ def stage2_shape_variations(fields, prefixes=None) -> List[str]:
     return [s for s in discover_shape_systs(fields, prefixes=prefixes) if not s.startswith("log_")]
 
 
+def stage2_weight_variations(fields) -> List[str]:
+    """Exactly the MC weight-variation list Stage-2 histograms (``wgt_nominal`` first).
+
+    The Run-2 shape b-tag weights (``wgt_btag_*``) are dropped until validated; the
+    Run-3 fixedWP ones (``wgt_btagWP_*``) are kept.
+    """
+    return ["wgt_nominal"] + sorted(
+        w
+        for w in fields
+        if w.startswith("wgt_")
+        and (w.endswith("_up") or w.endswith("_down"))
+        and ("separate" not in w)
+        and not w.startswith("wgt_btag_")
+    )
+
+
 # --------------------------------------------------------------------------
 # Year decorrelation
 # --------------------------------------------------------------------------
