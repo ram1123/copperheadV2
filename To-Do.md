@@ -168,3 +168,17 @@ Details: `.claude/reports/investigations/2026-10-08_final-datacard-missing-syste
      Delete it, or refresh it before re-enabling.
    - `btag_sf_csv` is `DeepCSV_106XUL18SF.csv` for every Run-3 year (`SF_filelist.yaml`). Replace it before turning on
      `do_btag_wgt` (also needed for the missing b-veto SF systematic).
+
+## 8. Missing systematics from the 2026-10-24 review (user: keep as To-Do)
+
+Details: `.claude/reports/investigations/2026-10-24_systematics-completeness-review.md`.
+
+1. **Parton shower ISR/FSR (`PSWeight`).** Not used anywhere in the repo, so signal, EWK and TT+ST have no PS uncertainty.
+   The HERWIG skip does not cover this. The 2024 ggH v15 NanoAOD has `PSWeight[4]`
+   (isr x2, fsr x2, isr x0.5, fsr x0.5).
+   - **To do:** check that the v12 (2022-23) files and the EWK/TT/VV samples carry it. Then save the
+     ISR and FSR up/down weights in stage-1 and decide on the correlation (proposal: per process group, correlated across years).
+2. **EBE mass-resolution calibration uncertainty.** The calibration factor is applied as a fixed number, and
+   `dimuon_ebe_mass_res(_rel)` is a VBF DNN input.
+   - **To do:** decide the size of the variation (from the calibration fit or the closure test), then add an up/down
+     variation of the factor at stage-1.

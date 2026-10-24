@@ -77,7 +77,8 @@ RAW_REGION_RE = re.compile(r"_(jj_\w+)\.done$")
 # stage-1 chunk detail: run_stage1.py logs its output dir + command; modules/job_status.py writes the ledger
 SAVE_PATH_RE = re.compile(r"start_save_path:\s*(\S+)")
 S1_CMD_RE = re.compile(r"^Command: (.*run_stage1\.py.*)$")
-S1_ORDER = {"running": 0, "failed": 1, "killed": 2, "pending": 3, "done": 4}
+S1_ORDER = {"running": 0, "failed": 1, "killed": 2, "pending": 3, "done": 4, "skipped": 5}
+S1_SKIP_RE = re.compile(r"Skipping year=\S+, dataset=(\S+)")
 
 
 def utc(ts):
@@ -330,11 +331,16 @@ def stage1_details(job, alive):
             for _, ln in zip(range(300), f):
                 ln = ANSI_RE.sub("", ln)
                 cmd = cmd or (m.group(1) if (m := S1_CMD_RE.match(ln.strip())) else "")
-                if (m := SAVE_PATH_RE.search(ln)):
+                # the rich logger wraps the long path onto the next lines, leaving "run_stage1.py:NNN" here
+                if (m := SAVE_PATH_RE.search(ln)) and m.group(1).startswith("/"):
                     save = m.group(1)
+                if cmd:
                     break
     except OSError:
         return None
+    # run_stage1.py: start_save_path = <--save_path>/stage1_output/<year>
+    if cmd and flag(cmd, "--save_path") and flag(cmd, "-y"):
+        save = f"{flag(cmd, '--save_path')}/stage1_output/{flag(cmd, '-y')}"
     if not save:
         return None
     sdir, t0 = Path(save) / "_status", job["start"].timestamp()
@@ -360,6 +366,14 @@ def stage1_details(job, alive):
             samples = list(json.load(open(REPO / "prestage_output" / f"processor_samples_{year}_NanoAODv{nano}{'_' + tag if tag else ''}.json")))
         except (OSError, ValueError):
             pass
+    skipped = set()  # samples run_stage1.py skips (configs/skip_stage1_run.py), never "pending"
+    try:
+        with open(REPO / job["log"], errors="replace") as f:
+            for ln in f:
+                if "Skipping year=" in ln and (m := S1_SKIP_RE.search(ANSI_RE.sub("", ln))):
+                    skipped.add(m.group(1).rstrip(","))
+    except OSError:
+        pass
     now, rows = time.time(), []
     for (ds, idx), c in chunks.items():
         rec, meta = c["rec"], c["rec"].get("meta") or {}
@@ -378,7 +392,7 @@ def stage1_details(job, alive):
             "redirector": meta.get("redirector") or "", "error": (rec.get("error") or "")[:1500],
         })
     seen = {r["sample"] for r in rows}
-    rows += [{"sample": s, "idx": "", "status": "pending", "tries": 0, "earlier": False, "start": "", "end": "", "wall": "",
+    rows += [{"sample": s, "idx": "", "status": "skipped" if s in skipped else "pending", "tries": 0, "earlier": False, "start": "", "end": "", "wall": "",
               "expected": None, "processed": None, "redirector": "", "error": ""} for s in samples if s not in seen]
     rows.sort(key=lambda r: (S1_ORDER.get(r["status"], 9), r["sample"], str(r["idx"])))
     counts = {k: sum(r["status"] == k for r in rows) for k in S1_ORDER}

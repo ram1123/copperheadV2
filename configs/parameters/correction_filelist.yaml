@@ -10,13 +10,11 @@ roccor_file:
   2022postEE: data/roch_corr/2022_Summer22EE.json
   "2023": data/roch_corr/2023_Summer23.json
   2023BPix: data/roch_corr/2023_Summer23BPix.json
-  # "2024":  /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_scalesmearing.json.gz
-  "2024": data/roch_corr/2024_Summer24.json # From Hyeon (Copied from GitLab)
-  # "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing_VXBS.json.gz
-  "2025": data/roch_corr/2025_muon_scalesmearing_VXBS.json
-  # PLACEHOLDER: MUO/Run3-26Prompt-Summer24-NanoAODv15/ exists on cvmfs but is empty (no Rochester payload yet);
-  # reusing the 2025 muon_scalesmearing_VXBS corrections pending a real 2026 payload.
-  "2026": data/roch_corr/2025_muon_scalesmearing_VXBS.json
+  # 2024-2026: official MUO VXBS payloads (scale/smearing for beam-spot-constrained pT, which do_beamConstraint uses)
+  "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-06-18/muon_scalesmearing_VXBS.json.gz
+  "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing_VXBS.json.gz
+  # PLACEHOLDER: MUO/Run3-26Prompt-Summer24-NanoAODv15/ is empty on cvmfs; reusing 2025 pending a 2026 payload.
+  "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing_VXBS.json.gz
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json
