@@ -716,6 +716,34 @@ run_dnn_workflow_once() {
     log "  DNN HPO dir: ${dnn_hpo_dir}"
     log "  DNN best json: ${dnn_best_json}"
 
+    # HPO_BACKEND=ray: HPO trials and the per-fold final trainings run in parallel on the AF Ray
+    # GPU cluster (hpo_ray.py, same outputs); the submit blocks until the Ray job ends.
+    if [[ "${HPO_BACKEND:-local}" == "ray" && ( "${run_hpo}" == "1" || "${run_train}" == "1" ) ]]; then
+        [[ -z "${HPO_TIMEOUT_MIN:-}" ]] || die "HPO_TIMEOUT_MIN is not supported with HPO_BACKEND=ray"
+        [[ "${dnn_best_json}" == "${dnn_hpo_dir}/optuna_best.json" ]] \
+            || die "OPTUNA_BEST_JSON is not supported with HPO_BACKEND=ray (uses ${dnn_hpo_dir}/optuna_best.json)"
+        local stages=""
+        [[ "${run_hpo}" == "1" ]] && stages="hpo"
+        [[ "${run_train}" == "1" ]] && stages="${stages:+${stages},}train"
+        # Ray isn't in the repo's pixi envs: submit with the AF global env; the GPU workers run
+        # the trainings with this env's python, as the local path does.
+        local -a ray_cmd=(
+            "${RAY_PYTHON:-/work/pixi/global/.pixi/envs/default/bin/python}" MVA_training/VBF_run3/hpo_ray.py submit
+            --config "${dnn_config}"
+            --data-dir "${dnn_base_dir}/"
+            --out-dir "${dnn_hpo_dir}"
+            --n-trials "${dnn_hpo_trials}"
+            --folds "${dnn_hpo_folds}"
+            --stages "${stages}"
+            --train-out-dir "${dnn_base_dir}/${dnn_train_label}"
+            --train-python "$(command -v python)"
+            --max-workers "${RAY_MAX_WORKERS:-15}"
+        )
+        [[ "${run_preprocess}" == "1" ]] && run_cmd "${pre_cmd[@]}"
+        run_cmd_timed "${ray_cmd[@]}"
+        return
+    fi
+
     [[ "${run_preprocess}" == "1" ]] && run_cmd "${pre_cmd[@]}"
     [[ "${run_hpo}" == "1" ]] && run_cmd_timed "${hpo_cmd[@]}"
     if [[ "${run_train}" == "1" ]]; then
