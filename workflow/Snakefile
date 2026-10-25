@@ -682,6 +682,9 @@ rule stage2:
         postfix=SAVE_POSTFIX,
         jj_env=lambda wc: jj_env(wc.jjtag),
         dy_env=DY_MATCHED_JETS_ENV,
+    # Gateway-bound and the longest step: start the next stage-2 as soon as a slot frees, before
+    # the local stage2_plot/stage3/stats jobs that can run alongside it.
+    priority: 100
     resources:
         gateway=1,
     shell:
@@ -981,6 +984,9 @@ rule impacts:
         **STATS_PARAMS,
         label=lambda wc: stats_label(),
         jj_env=lambda wc: jj_env(wc.jjtag),
+    # Each runs combineTool.py --parallel 60: never two at once on the session's cores.
+    resources:
+        combine_parallel=1,
     shell:
         r"""
         set -euo pipefail
@@ -1031,6 +1037,9 @@ rule impacts_jj_combined:
         **STATS_PARAMS,
         label=lambda wc: stats_label(),
         combine_env=JJ_COMBINE_ENV,
+    # Each runs combineTool.py --parallel 60: never two at once on the session's cores.
+    resources:
+        combine_parallel=1,
     shell:
         r"""
         set -euo pipefail
