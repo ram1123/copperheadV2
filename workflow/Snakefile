@@ -67,12 +67,13 @@ SIGXS_ENV = "SIGNAL_XSEC_RESCALE=1 " if config.get("signal_xsec_rescale", False)
 STAGE3_POSTFIX = SAVE_POSTFIX + DY_SCHEME_TAGS[DY_SCHEME] + ("_SigXS" if SIGXS_ENV else "")
 
 # Prestage JSON variant for stage-1 (PRESTAGE_TAG), e.g. "LumiSplit" -> processor_samples_<year>_NanoAODv<v>_LumiSplit.json.
+# A {year: tag} mapping sets it per year (e.g. LumiSplit for 2024-2026 only; missing years get none).
 PRESTAGE_TAG = config.get("prestage_tag") or ""
-PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
 
-# Prestage JSON variant for stage-1 (PRESTAGE_TAG), e.g. "LumiSplit" -> processor_samples_<year>_NanoAODv<v>_LumiSplit.json.
-PRESTAGE_TAG = config.get("prestage_tag") or ""
-PRESTAGE_ENV = f"PRESTAGE_TAG={PRESTAGE_TAG} " if PRESTAGE_TAG else ""
+
+def prestage_env(year):
+    tag = PRESTAGE_TAG.get(year, "") if isinstance(PRESTAGE_TAG, dict) else PRESTAGE_TAG
+    return f"PRESTAGE_TAG={tag} " if tag else ""
 
 YEARS = config["years"]
 # Stage-3-only merged years (modules/classify_year.py MERGED_YEARS) whose components are
@@ -221,7 +222,14 @@ def yaml_for_year(year: str) -> str:
         ) from e
 
 
+# One stage-1 output label for every year (v12 and v15 years in one dir, so stage-2/DNN need no
+# symlinks); "" = the per-year Run3_nanoAODv<12|15>_<run_tag>.
+STAGE1_LABEL = config.get("stage1_label") or ""
+
+
 def label_for_year(year: str) -> str:
+    if STAGE1_LABEL:
+        return STAGE1_LABEL
     era, nano = YEAR_META[year]
     # nano = "12"
     era_tag = "Run2" if era == "run2" else "Run3"
@@ -380,7 +388,7 @@ rule stage1:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}/"
             "_status/stage1_summary.log"
         ),
-        prestage_env=PRESTAGE_ENV,
+        prestage_env=lambda wc: prestage_env(wc.year),
     resources:
         gateway=1,
     shell:
@@ -652,6 +660,140 @@ rule vbf_dnn:
 
 
 # ---------------------------------------
+# 2c) Per-region VBF DNN chain (dnn_chain: true), the Snakemake form of scripts/run_dnn_trainings.sh +
+# run_jj_region_scan.sh -s scoredump,binscan: train each jj region's DNN on dnn_years under one label,
+# dump its nominal scores, scan its binning into configs/MVA/VBF/dnn_binning.yaml; stage2 of that
+# region then waits for the binning instead of dnn_train.done and loads these models.
+# ---------------------------------------
+DNN_CHAIN = bool(config.get("dnn_chain", False))
+DNN_TRIALS = int(config.get("dnn_hpo_trials", 50))
+DNN_HPO_LABEL = f"v1_multifold_{DNN_TRIALS:03d}Trials"  # = run_dnn_trainings.sh's -H default
+# "ray": HPO + final folds on the AF Ray GPU cluster (needs a session without a GPU); "" = local.
+DNN_HPO_BACKEND_ENV = (
+    f"HPO_BACKEND={config['dnn_hpo_backend']} RAY_MAX_WORKERS={int(config.get('dnn_ray_max_workers', 15))} "
+    if config.get("dnn_hpo_backend") else ""
+)
+# Model dirs go to /work/projects (dnn/trained_models/<label> is a symlink; /work/users is too small).
+DNN_MODEL_STORE = f"{HMM_BASE}/{HMM_USER}/dnn_trained_models"
+
+
+def dnn_chain_label():
+    labels = {stage23_label(y) for y in DNN_YEARS}
+    if len(labels) != 1:
+        raise ValueError(f"dnn_chain needs one label for all dnn_years, got {sorted(labels)}; set stage1_label")
+    return labels.pop()
+
+
+if DNN_CHAIN and DNN_MODEL_LABEL not in ("", dnn_chain_label()):
+    raise ValueError(f"dnn_chain trains under {dnn_chain_label()} but dnn_model_label={DNN_MODEL_LABEL}; set it to \"\"")
+# stage2 loads the chain's models: same HPO label and the dnn_years model dir.
+STAGE2_DNN_CHAIN_ENV = (
+    f"HPO_LABEL={DNN_HPO_LABEL} " + ("" if DNN_MODEL_YEARS else f"MODEL_YEARS={DNN_YEARS_CSV} ")
+    if DNN_CHAIN else ""
+)
+
+DNN_CHAIN_PARAMS = dict(
+    logdir=LOGDIR,
+    statedir=STATEDIR,
+    years=DNN_YEARS_CSV,
+    hpo=DNN_HPO_LABEL,
+    label=lambda wc: dnn_chain_label(),
+    region=lambda wc: wc.jjtag[1:] or "all",
+)
+
+
+rule dnn_region:
+    input:
+        [] if USE_EXISTING_STAGE1 else expand(STATEDIR + "/stage1_compact_{year}.done", year=DNN_YEARS),
+    output:
+        done=STATEDIR + "/dnn_region{jjtag}.done",
+    log:
+        LOGDIR + "/dnn_region{jjtag}.log",
+    params:
+        **DNN_CHAIN_PARAMS,
+        status=LOGDIR + "/dnn_status.log",
+        trials=DNN_TRIALS,
+        store=DNN_MODEL_STORE,
+        backend_env=DNN_HPO_BACKEND_ENV,
+        # run_analysis_pipeline.sh log names have 1 s resolution: don't start the regions together
+        stagger=lambda wc: 10 * STAGE23_JJ_TAGS.index(wc.jjtag) if wc.jjtag in STAGE23_JJ_TAGS else 0,
+    # A rerun would resume the stored optuna study and add trials: move hpo_optuna/<hpo> aside by hand first.
+    retries: 0
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        if [[ ! -e dnn/trained_models/{params.label} ]]; then
+            mkdir -p {params.store}/{params.label}
+            ln -sfn {params.store}/{params.label} dnn/trained_models/{params.label}
+        fi
+        sleep {params.stagger}
+        {params.backend_env}bash scripts/run_dnn_trainings.sh -l {params.label} -y {params.years} \
+            -S {params.status} -r {params.region} -t {params.trials} -H {params.hpo} \
+            > {log} 2>&1 < /dev/null
+        # run_dnn_trainings.sh exits 0 on a failed model; its OK line means every stage-2 file exists
+        grep -qF "] OK {params.label} {params.region} y={params.years} h={params.hpo} " {params.status}
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# Nominal-only stage-2 score dump for the bin scan; refuses an existing dump dir (move a partial one aside).
+rule dnn_scoredump:
+    input:
+        STATEDIR + "/dnn_region{jjtag}.done",
+    output:
+        done=STATEDIR + "/dnn_scoredump{jjtag}.done",
+    log:
+        LOGDIR + "/dnn_scoredump{jjtag}.log",
+    params:
+        **DNN_CHAIN_PARAMS,
+        postfix=SAVE_POSTFIX,
+    resources:
+        gateway=1,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        MODEL_LABEL=self HPO_LABEL={params.hpo} bash scripts/run_jj_region_scan.sh -l {params.label} \
+            -r {params.region} -y {params.years} -o {params.postfix} -s scoredump \
+            > {log} 2>&1 < /dev/null
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+rule dnn_binscan:
+    input:
+        STATEDIR + "/dnn_scoredump{jjtag}.done",
+    output:
+        done=STATEDIR + "/dnn_binscan{jjtag}.done",
+    log:
+        LOGDIR + "/dnn_binscan{jjtag}.log",
+    params:
+        **DNN_CHAIN_PARAMS,
+        postfix=SAVE_POSTFIX,
+    shell:
+        r"""
+        set -euo pipefail
+        set -x
+        mkdir -p {params.logdir} {params.statedir}
+        # every region rewrites configs/MVA/VBF/dnn_binning.yaml: one scan at a time
+        MODEL_LABEL=self HPO_LABEL={params.hpo} flock configs/MVA/VBF/.dnn_binning.lock \
+            bash scripts/run_jj_region_scan.sh -l {params.label} \
+            -r {params.region} -y {params.years} -o {params.postfix} -s binscan \
+            > {log} 2>&1 < /dev/null
+
+        echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
+        touch {output.done}
+        """
+
+
+# ---------------------------------------
 # 2d) Stage-2 / Stage-3 (per year, after stage1Compact). stage2 always loads
 # the VBF DNN model (see build_stage2_cmd's --model_tag/--model_path in
 # common_workflow.sh), so it depends on dnn_train having produced one -- not
@@ -663,7 +805,7 @@ rule stage2:
     input:
         lambda wc: [] if STAGE23_STANDALONE else [
             STATEDIR + f"/stage1_compact_{wc.year}.done",
-            STATEDIR + "/dnn_train.done",
+            STATEDIR + (f"/dnn_binscan{wc.jjtag}.done" if DNN_CHAIN else "/dnn_train.done"),
         ],
     output:
         done=STATEDIR + "/stage2_{year}{jjtag}.done",
@@ -677,7 +819,8 @@ rule stage2:
         label=lambda wc: stage23_label(wc.year),
         gw=lambda wc: gw_flags(),
         model_env=(f"MODEL_LABEL={DNN_MODEL_LABEL} " if DNN_MODEL_LABEL else "")
-        + (f"MODEL_YEARS={DNN_MODEL_YEARS} " if DNN_MODEL_YEARS else ""),
+        + (f"MODEL_YEARS={DNN_MODEL_YEARS} " if DNN_MODEL_YEARS else "")
+        + STAGE2_DNN_CHAIN_ENV,
         var_env=VARIATIONS_ENV,
         postfix=SAVE_POSTFIX,
         jj_env=lambda wc: jj_env(wc.jjtag),
