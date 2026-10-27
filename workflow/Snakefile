@@ -60,6 +60,11 @@ DY_SCHEME_TAGS = {"matched": "", "separate": "_DYsep", "merge01": "_DY01"}
 if DY_SCHEME not in DY_SCHEME_TAGS:
     raise ValueError(f"dy_scheme must be one of {sorted(DY_SCHEME_TAGS)}, got {DY_SCHEME!r}")
 DY_SCHEME_ENV = f"DY_SCHEME={DY_SCHEME} " if DY_SCHEME != "matched" else ""
+# Sample-group YAML (e.g. configs/samples/samples_DY105.yaml) for every job, via the environment rather than
+# rule shells/params so existing runs' jobs aren't marked changed; use a new run_tag and save_postfix with it.
+SAMPLE_CONFIG = config.get("sample_config") or ""
+if SAMPLE_CONFIG:
+    os.environ["SAMPLE_CONFIG"] = SAMPLE_CONFIG
 # Interim signal BR fix for stage-1 made with BR(H->mumu) = 2.6e-4 (run_stage3_vbf.py --signal_xsec_rescale):
 # stage3 writes to <save_postfix>_SigXS, so validate/stats read from there too.
 SIGXS_ENV = "SIGNAL_XSEC_RESCALE=1 " if config.get("signal_xsec_rescale", False) else ""

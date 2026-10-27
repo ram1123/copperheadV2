@@ -29,6 +29,8 @@
 #   HPO_BACKEND=ray: HPO trials + the 4 final-training folds run in parallel on the AF Ray GPU cluster
 #   (MVA_training/VBF_run3/hpo_ray.py; RAY_MAX_WORKERS GPUs, default 15) instead of the local GPU;
 #   needs a session without a GPU. Same output files, so the OK check and stage-2 are unchanged.
+#   DNN_SYST_AWARE=1 DNN_ADV_LAMBDA=<lambda>: systematic-aware DNN (docs/vbf_dnn_systematic_aware.md);
+#   models go to dnn/trained_models/<label>_SystAware/, which is also the label in the status log.
 #
 # Example (full Run 3, one region, preprocessing on Dask Gateway, HPO+training on 15 Ray GPUs, detached):
 #   HPO_BACKEND=ray EXPECTED_H=6 bash .claude/skills/run-copperheadV2-develop/detach_job.sh dnn_ray_all \
@@ -72,6 +74,7 @@ hpo_label="${hpo_label:-v1_multifold_$(printf '%03d' "${trials}")Trials}"
 mkdir -p "$(dirname "${status}")"
 log_dir="$(dirname "${status}")"
 years_slug="${years//,/-}"
+dnn_sfx=""; [[ "${DNN_SYST_AWARE:-0}" == "1" ]] && dnn_sfx="_SystAware"  # = common_workflow.sh's dnn_tag
 
 unset MODEL_YEARS MODEL_LABEL DNN_MODEL_REGION TRAIN_LABEL JJ_COMBINE_REGIONS DUMP_SCORES ALLOW_DEFAULT_DNN_BINNING
 export HPO_TRIALS="${trials}" HPO_LABEL="${hpo_label}"
@@ -80,24 +83,24 @@ export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${per}}"
 export MKL_NUM_THREADS="${OMP_NUM_THREADS}"
 
 stream() {  # $1 label: train its regions one after another
-    local label="$1" r t0 s d f
+    local label="$1" r t0 s d f tag="$1${dnn_sfx}"
     for r in "${region_list[@]}"; do
-        grep -qF "] OK ${label} ${r} y=${years} h=${hpo_label} " "${status}" 2>/dev/null && continue
-        if [[ "${dry}" == "1" ]]; then echo "would train ${label} ${r} (${years}, ${trials} trials, ${hpo_label})"; continue; fi
+        grep -qF "] OK ${tag} ${r} y=${years} h=${hpo_label} " "${status}" 2>/dev/null && continue
+        if [[ "${dry}" == "1" ]]; then echo "would train ${tag} ${r} (${years}, ${trials} trials, ${hpo_label})"; continue; fi
         t0=$(date +%s)
-        echo "[$(date -u '+%F %T')] START ${label} ${r} y=${years} h=${hpo_label}" >> "${status}"
-        echo "===== $(date -u '+%F %T') START y=${years} h=${hpo_label}" >> "${log_dir}/dnn_${label}__${r}.log"
+        echo "[$(date -u '+%F %T')] START ${tag} ${r} y=${years} h=${hpo_label}" >> "${status}"
+        echo "===== $(date -u '+%F %T') START y=${years} h=${hpo_label}" >> "${log_dir}/dnn_${tag}__${r}.log"
         s=FAIL
         if JJ_ETA_REGION="${r}" ./run_in_pixi.sh default bash run_analysis_pipeline.sh -m dnn -y "${years}" -l "${label}" "${gateway_args[@]}" \
-                >> "${log_dir}/dnn_${label}__${r}.log" 2>&1 < /dev/null; then
-            d="dnn/trained_models/${label}/${years_slug}_h-peak_vbf_${r}"
+                >> "${log_dir}/dnn_${tag}__${r}.log" 2>&1 < /dev/null; then
+            d="dnn/trained_models/${tag}/${years_slug}_h-peak_vbf_${r}"
             s=OK
             [[ -f "${d}/training_features.pkl" ]] || s=FAIL
             for f in 0 1 2 3; do
                 [[ -f "${d}/trained_best_optuna_${hpo_label}/fold${f}/best_torchscript.pt" && -f "${d}/scalers_${f}.npz" ]] || s=FAIL
             done
         fi
-        echo "[$(date -u '+%F %T')] ${s} ${label} ${r} y=${years} h=${hpo_label} wall=$(( $(date +%s) - t0 ))s" >> "${status}"
+        echo "[$(date -u '+%F %T')] ${s} ${tag} ${r} y=${years} h=${hpo_label} wall=$(( $(date +%s) - t0 ))s" >> "${status}"
     done
 }
 

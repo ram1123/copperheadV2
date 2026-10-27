@@ -3,6 +3,9 @@
 Serial Optuna HPO for the Run-3 VBF DNN (train_dnn.py): runs --n-trials MORE trials of a
 (resumable) study, then writes optuna_best.json / optuna_best_override.yaml / plots to --out-dir.
 For trials in parallel on the AF Ray GPU cluster use hpo_ray.py (same objective and outputs).
+Systematic-aware DNN: add the adversarial_cli.py flags (--use_adversarial --adversarial-lambda ...);
+every trial then trains with that loss term, while the objective stays the nominal val AUC
+(see docs/vbf_dnn_systematic_aware.md).
 
 How to run (repo root, needs the preprocess_dnn.py fold parquets in --data-dir):
     ./run_in_pixi.sh default python MVA_training/VBF_run3/hpo_optuna.py --config ... --data-dir ... --out-dir ...
@@ -14,6 +17,8 @@ Example:
       --out-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf_all/hpo_optuna \
       --folds 0,1,2 \
       --n-trials 50
+    # systematic-aware: --data-dir from preprocess_dnn.py --include-systematic-variations, plus
+    #   --use_adversarial --adversarial-lambda 0.1
 """
 import argparse
 import json
@@ -37,9 +42,12 @@ from optuna.visualization.matplotlib import (
     plot_slice,
 )
 
+from adversarial_cli import add_adversarial_args
+
 # Import your functions/classes from train_dnn.py
 from train_dnn import (
     TrainConfig,
+    adversarial_from_args,
     load_config,
     set_seed,
     train_one_fold,
@@ -257,6 +265,8 @@ def objective_factory(
     out_dir: str,
     folds: List[int],
     seed: int,
+    adv=None,
+    variation_spec=None,
 ):
     out_dir = str(Path(out_dir))
 
@@ -293,6 +303,8 @@ def objective_factory(
                 trial_step_offset=f * cfg.epochs,  # unique step across folds
                 evaluate_train_each_epoch=False,
                 run_final_evaluation=False,
+                adv=adv,
+                variation_spec=variation_spec,
             )
             scores.append(float(score))
 
@@ -390,6 +402,7 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--study-name", default="vbf_dnn_hpo")
     p.add_argument("--storage", default=None, help="e.g. sqlite:////path/to/study.db")
     p.add_argument("--seed", type=int, default=12345)
+    add_adversarial_args(p)
     return p
 
 
@@ -421,12 +434,15 @@ def main() -> None:
         load_if_exists=True,
     )
 
+    adv, variation_spec = adversarial_from_args(args, args.data_dir)
     objective = objective_factory(
         base_cfg=base_cfg,
         data_dir=args.data_dir,
         out_dir=str(out_dir),
         folds=folds,
         seed=args.seed,
+        adv=adv,
+        variation_spec=variation_spec,
     )
 
     timeout = None if args.timeout_min is None else int(args.timeout_min) * 60

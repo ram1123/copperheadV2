@@ -129,6 +129,7 @@ nav:
     - Analysis:
           - VBF:
                 - DNN: DNN_VBF.md
+                - Systematic-aware DNN: vbf_dnn_systematic_aware.md
                 - Statistics Pipeline: Statistics.md
           - ggH:
                 - Steps After Stage-1: ggH_steps_after_stage1_v2.md

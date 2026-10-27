@@ -25,6 +25,10 @@ python train_dnn.py \
   --data-dir dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>_<JJ_ETA_REGION> \
   --out-dir   dnn/trained_models/<TAG>/<YEAR>_<REGION>_<CAT>_<JJ_ETA_REGION>/trained \
   --log-level INFO
+
+Systematic-aware (adversarial) training, docs/vbf_dnn_systematic_aware.md: --data-dir from
+preprocess_dnn.py --include-systematic-variations, plus e.g.
+  --use_adversarial --adversarial-lambda 0.05
 """
 
 import argparse
@@ -46,6 +50,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import yaml
+from adversarial_cli import add_adversarial_args
 from modules.git_utils import get_git_commit, get_git_state
 from modules.systematics import VARIATION_COL_SEP
 from modules.utils import logger
@@ -1985,86 +1990,45 @@ def build_argparser() -> argparse.ArgumentParser:
         ),
     )
 
-    adv = p.add_argument_group("systematics-adversarial loss")
-    adv.add_argument(
-        "--use_adversarial",
-        action="store_true",
-        help=(
-            "Add the systematics-consistency term to the loss. Requires --data-dir to "
-            "point at fold parquets produced with "
-            "preprocess_dnn.py --include-systematic-variations. When this flag is "
-            "absent the training path is unchanged."
-        ),
-    )
-    adv.add_argument(
-        "--adversarial-lambda",
-        type=float,
-        default=0.0,
-        help="Weight of the adversarial sum (default 0.0).",
-    )
-    adv.add_argument(
-        "--adversarial-detach-nominal",
-        action="store_true",
-        help=(
-            "Stop-gradient on the nominal prediction used as the consistency target, "
-            "so only the variation branch is penalised. Default: not detached "
-            "(both branches are penalised)."
-        ),
-    )
-    adv.add_argument(
-        "--adversarial-consistency-smoothing",
-        choices=["inherit", "none"],
-        default="inherit",
-        help=(
-            "Label smoothing inside original_loss(pred_i, pred_nominal). 'inherit' "
-            "(default) reuses cfg.label_smoothing, i.e. original_loss literally; "
-            "'none' disables it, since the target is already a soft probability and "
-            "smoothing it biases variation scores toward 0.5."
-        ),
-    )
-    adv.add_argument(
-        "--adversarial-label-only",
-        action="store_true",
-        help=(
-            "STEP 2 of the three-step schedule: use "
-            "lambda * sum_i original_loss(pred_i, label) only -- the variations are "
-            "trained against the truth label and the consistency term is absent."
-        ),
-    )
-    adv.add_argument(
-        "--adversarial-mask-label-term",
-        action="store_true",
-        help=(
-            "Apply --adversarial-high-score-cut to the original_loss(pred_i, label) "
-            "term as well, not just to the consistency term. The three-step schedule "
-            "puts [score_cut] on every term inside the lambda sum; the earlier "
-            "variant-B formula masked the consistency term alone. No effect without "
-            "a cut."
-        ),
-    )
-    adv.add_argument(
-        "--adversarial-high-score-cut",
-        type=float,
-        default=None,
-        help=(
-            "VARIANT B: restrict the consistency term to events with "
-            "arctanh(p_nominal) > CUT (e.g. 2.0, i.e. p_nominal > 0.9640). The "
-            "significance comes from the top score bins, so decorrelating across the "
-            "bulk spends discrimination where it cannot pay. Changes the effective "
-            "lambda scale, so re-scan lambda when enabling it."
-        ),
-    )
-    adv.add_argument(
-        "--adversarial-variation-chunk",
-        type=int,
-        default=0,
-        help=(
-            "Variations per forward/backward chunk (gradient accumulation). "
-            "<=0 (default) processes all variations in one chunk; lower it if the "
-            "full-variation run runs out of device memory."
-        ),
-    )
+    add_adversarial_args(p)
     return p
+
+
+def adversarial_from_args(
+    args: argparse.Namespace, data_dir: str
+) -> Tuple[Optional[AdversarialConfig], Optional[List[Tuple[str, Dict[str, str]]]]]:
+    """(AdversarialConfig, variation_spec) from the adversarial_cli flags; (None, None) when off."""
+    if not args.use_adversarial:
+        return None, None
+    variation_spec = load_variation_spec(data_dir)
+    adv = AdversarialConfig(
+        lam=float(args.adversarial_lambda),
+        detach_nominal=bool(args.adversarial_detach_nominal),
+        consistency_label_smoothing=str(args.adversarial_consistency_smoothing),
+        variation_chunk=int(args.adversarial_variation_chunk),
+        high_score_cut=(
+            float(args.adversarial_high_score_cut)
+            if args.adversarial_high_score_cut is not None
+            else None
+        ),
+        label_only=bool(args.adversarial_label_only),
+        mask_label_term=bool(args.adversarial_mask_label_term),
+    )
+    logger.info(
+        "[adversarial] lambda=%.6g N_variations=%d detach_nominal=%s "
+        "consistency_smoothing=%s chunk=%d "
+        "label_only=%s high_score_cut=%s mask_label_term=%s",
+        adv.lam,
+        len(variation_spec),
+        adv.detach_nominal,
+        adv.consistency_label_smoothing,
+        adv.variation_chunk,
+        adv.label_only,
+        adv.high_score_cut,
+        adv.mask_label_term,
+    )
+    logger.info("[adversarial] variations: %s", [v for v, _ in variation_spec])
+    return adv, variation_spec
 
 
 def main() -> None:
@@ -2115,37 +2079,7 @@ def main() -> None:
         cfg = replace(cfg, epochs=int(args.epochs))
         logger.info("[epochs] Overriding training epochs from --epochs: %d", cfg.epochs)
 
-    adv = None
-    variation_spec = None
-    if args.use_adversarial:
-        variation_spec = load_variation_spec(args.data_dir)
-        adv = AdversarialConfig(
-            lam=float(args.adversarial_lambda),
-            detach_nominal=bool(args.adversarial_detach_nominal),
-            consistency_label_smoothing=str(args.adversarial_consistency_smoothing),
-            variation_chunk=int(args.adversarial_variation_chunk),
-            high_score_cut=(
-                float(args.adversarial_high_score_cut)
-                if args.adversarial_high_score_cut is not None
-                else None
-            ),
-            label_only=bool(args.adversarial_label_only),
-            mask_label_term=bool(args.adversarial_mask_label_term),
-        )
-        logger.info(
-            "[adversarial] lambda=%.6g N_variations=%d detach_nominal=%s "
-            "consistency_smoothing=%s chunk=%d "
-            "label_only=%s high_score_cut=%s mask_label_term=%s",
-            adv.lam,
-            len(variation_spec),
-            adv.detach_nominal,
-            adv.consistency_label_smoothing,
-            adv.variation_chunk,
-            adv.label_only,
-            adv.high_score_cut,
-            adv.mask_label_term,
-        )
-        logger.info("[adversarial] variations: %s", [v for v, _ in variation_spec])
+    adv, variation_spec = adversarial_from_args(args, args.data_dir)
 
     folds = None
     if args.folds is not None:

@@ -591,6 +591,13 @@ def preprocess_output_is_complete(out_dir: str, n_folds: int) -> bool:
     return True
 
 
+def _has_variation_set(out_dir: str, variation_set: str) -> bool:
+    """True if out_dir's manifest says it already holds `variation_set`'s variation columns."""
+    with open(Path(out_dir) / "preprocess_manifest.json") as f:
+        block = json.load(f).get("systematic_variations") or {}
+    return bool(block.get("enabled")) and block.get("variation_set") == variation_set
+
+
 def save_feature_list(save_dir: str, features: List[str]) -> None:
     with open(os.path.join(save_dir, "training_features.pkl"), "wb") as f:
         pickle.dump(features, f)
@@ -1318,15 +1325,15 @@ def main() -> None:
         cfg.category, cfg.region, cfg.jj_eta_region, args.years,
     )
 
-    # If the exact preprocess output already exists and is complete -- unless
-    # --include-systematic-variations is requested, whose own (pre-existing) guard
-    # right below handles that combination by refusing rather than skipping (mixing
-    # nominal-only and variation-augmented output under one tag is a different,
-    # more consequential failure mode than "nothing to do").
+    # Skip when the output is already complete. With --include-systematic-variations only if it
+    # already holds that variation set; nominal-only parquets there hit the refusal below instead.
     if (
         not args.force
-        and not args.include_systematic_variations
         and preprocess_output_is_complete(out_dir, cfg.n_folds)
+        and (
+            not args.include_systematic_variations
+            or _has_variation_set(out_dir, args.variation_set)
+        )
     ):
         logger.info(
             "[main] Complete output already found in %s (preprocess_manifest.json + "

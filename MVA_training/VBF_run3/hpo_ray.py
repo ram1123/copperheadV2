@@ -13,6 +13,8 @@ train_dnn.py --optuna-best-json, so stage-2 finds the models exactly as after ru
          trials once finished + running reaches that; two racing workers may add one extra).
          TPE runs with constant_liar=True so concurrent workers spread out.
   train  one GPU task per fold: train_dnn.py --folds <f> --optuna-best-json <out-dir>/optuna_best.json.
+Systematic-aware DNN: the adversarial_cli.py flags (--use_adversarial --adversarial-lambda ...) are
+forwarded to every HPO trial and final training (docs/vbf_dnn_systematic_aware.md).
 Ray (global env) only schedules GPUs: every GPU task runs the training in a subprocess with
 --train-python, by default the repo's CVMFS pixi env (torch 2.5) that run_dnn.sh uses, so the
 saved torchscript loads in stage-2.
@@ -38,6 +40,8 @@ Example (25 trials on up to 15 GPUs, then the 4 folds; dirs as run_analysis_pipe
       --config configs/dnn_run3_vbf.yaml --data-dir $D \
       --out-dir $D/hpo_optuna/v1_multifold_025Trials --folds 0,1,2,3 --n-trials 25 \
       --stages hpo,train --train-out-dir $D/trained_best_optuna_v1_multifold_025Trials --max-workers 15
+    # systematic-aware: D from preprocess_dnn.py --include-systematic-variations, and add
+    #   --use_adversarial --adversarial-lambda 0.1 --ram-per-worker-gb 64
 """
 import argparse
 import asyncio
@@ -49,6 +53,8 @@ import sys
 import threading
 import time
 from pathlib import Path
+
+from adversarial_cli import add_adversarial_args, adversarial_argv
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -96,6 +102,7 @@ def add_hpo_args(p: argparse.ArgumentParser) -> None:
         default=DEFAULT_TRAIN_PYTHON,
         help="Interpreter that runs the trainings on the GPU workers.",
     )
+    add_adversarial_args(p)
 
 
 def build_argparser() -> argparse.ArgumentParser:
@@ -148,7 +155,7 @@ def _pass_through_args(args: argparse.Namespace) -> list:
         out += ["--folds", args.folds]
     if args.train_out_dir:
         out += ["--train-out-dir", args.train_out_dir]
-    return out
+    return out + adversarial_argv(args)
 
 
 # --------------------------------------------------------------------------------------
@@ -175,6 +182,10 @@ def submit(args: argparse.Namespace) -> None:
     args.train_python = _abs_on_cluster_storage(args.train_python, "--train-python")
     if not (Path(args.data_dir) / "data_df_train_0.parquet").exists():
         raise SystemExit(f"No fold parquets in {args.data_dir}; run preprocess_dnn.py first.")
+    if args.use_adversarial:
+        manifest = Path(args.data_dir) / "preprocess_manifest.json"
+        if not (json.loads(manifest.read_text()).get("systematic_variations") or {}).get("enabled"):
+            raise SystemExit(f"--use_adversarial needs {args.data_dir} from preprocess_dnn.py --include-systematic-variations.")
     if stages == {"train"} and not (Path(args.out_dir) / "optuna_best.json").exists():
         raise SystemExit(f"--stages train without hpo needs {args.out_dir}/optuna_best.json")
 
@@ -260,7 +271,7 @@ def worker(args: argparse.Namespace) -> None:
     """One long-lived Optuna worker: run trials until the study has --target-finished of them."""
     import optuna
     from hpo_optuna import make_pruner, objective_factory
-    from train_dnn import load_config, set_seed
+    from train_dnn import adversarial_from_args, load_config, set_seed
 
     out_dir = Path(args.out_dir)
     base_cfg = load_config(args.config)
@@ -279,12 +290,15 @@ def worker(args: argparse.Namespace) -> None:
         ),
         pruner=make_pruner(),
     )
+    adv, variation_spec = adversarial_from_args(args, args.data_dir)
     objective = objective_factory(
         base_cfg=base_cfg,
         data_dir=args.data_dir,
         out_dir=str(out_dir),
         folds=folds,
         seed=args.seed,
+        adv=adv,
+        variation_spec=variation_spec,
     )
 
     # Heartbeat so the driver can tell a trial whose pod was reclaimed from a slow one.
@@ -466,7 +480,7 @@ def run_train(args: argparse.Namespace, ray, gpu_task) -> None:
     for f in range(n_folds):
         cmd = [args.train_python, str(HERE / "train_dnn.py"), "--config", args.config, "--data-dir",
                args.data_dir + "/", "--out-dir", str(train_out), "--folds", str(f),
-               "--optuna-best-json", str(best_json)]
+               "--optuna-best-json", str(best_json), *adversarial_argv(args)]
         refs.append(task.remote(cmd))
     errors = _wait_all(ray, refs, "train fold",
                        lambda n: print(f"[driver] train: {n_folds - n}/{n_folds} folds done", flush=True))

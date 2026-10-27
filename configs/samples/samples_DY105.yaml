@@ -1,0 +1,229 @@
+# samples.yaml with the Run-3 DY group = dyTo2Mu_M-105To160 instead of inclusive M-50 DY
+# (~7.6x more MC events in the 110-150 GeV window; Run-2 entries unchanged). Select with
+# SAMPLE_CONFIG=configs/samples/samples_DY105.yaml (pipeline) or sample_config: (Snakemake).
+# Z-peak plots have no DY with it (generator mll 105-160).
+data:
+    "2016preVFP": [data_B, data_C, data_D, data_E, data_F]
+    "2016postVFP": [data_F, data_G, data_H]
+    "2016": [data_B, data_C, data_D, data_E, data_F, data_G, data_H]
+    "2017": [data_B, data_C, data_D, data_E, data_F]
+    "2018": [data_A, data_B, data_C, data_D]
+    run2: [data_A, data_B, data_C, data_D, data_E, data_F, data_G, data_H]
+
+    "2022preEE": [data_C, data_D]
+    "2022postEE": [data_E, data_F, data_G]
+    "2023": [data_C]
+    "2023BPix": [data_D]
+    "2024": [data_C, data_D, data_E, data_F, data_G, data_H, data_I]
+    "2025": [data_B, data_C, data_D, data_E, data_F, data_G]
+    "2026": [data_A, data_B, data_D] # data_C excluded: low-PU era
+    run3: [data_A, data_B, data_C, data_D, data_E, data_F, data_G, data_H, data_I]
+
+# --------------------------------------------------
+
+background:
+    label: 0
+
+    groups:
+        DY:
+            processes:
+                - dyTo2Mu_M-105To160
+            processes_per_year:
+                2018:
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
+                2017:
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
+                2016postVFP:
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
+                2016preVFP:
+                    # - dyTo2L_M-50_aMCatNLO
+                    - dyTo2Mu_M-50_MiNNLO
+                    - dyTo2Mu_M-100to200_MiNNLO
+        DYVBF:
+            processes:
+                - dy_VBF_filter
+            processes_per_year: {}
+
+        TT:
+            processes:
+                - ttjets_dl
+                - ttjets_sl
+            processes_per_year: {}
+
+        ST:
+            processes:
+                - st_tw_top
+                - st_tw_antitop
+                - st_t_top
+                - st_t_antitop
+            processes_per_year:
+                2022preEE: {}
+                2022postEE: {}
+                2023: {}
+                2023BPix: {}
+                2024: {}
+                2025: {}
+                2026: {}
+                # Run-3 t/s-channel entries exist in the dataset YAMLs but are not validated yet; keep them
+                # out of the fit (2025/2026 otherwise fall back to the default list above). To enable, add:
+                #   - st_t_top
+                #   - st_t_antitop
+                #   - st_s_top
+                #   - st_s_antitop
+                # 2025:
+                #     - st_tw_top
+                #     - st_tw_antitop
+                # 2026:
+                #     - st_tw_top
+                #     - st_tw_antitop
+
+        EWK:
+            processes:
+                # - ewk_lljj_mll105_160_ptj0
+                # - ewk_lljj_mll105_160_py_dipole
+                # - ewk_lljj_mll50_mjj120
+                # - ewk_lljj
+                - ewk_mmjj_mll_105_160
+                # ewk_mmjj_mll_105_160_mjj120: Pythia8 PS variation of the Herwig7 nominal (same MG gridpack cuts); alternate template only, never add to this group.
+            processes_per_year:
+                2022preEE:
+                    - ewk_mmjj_mll_105_160
+                2022postEE:
+                    - ewk_mmjj_mll_105_160
+                2023:
+                    - ewk_mmjj_mll_105_160
+                2023BPix:
+                    - ewk_mmjj_mll_105_160
+                2018:
+                    - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
+                2017:
+                    - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
+                2016postVFP:
+                    - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
+                2016preVFP:
+                    - ewk_zlljj
+                    - ewk_lljj_mll50_mjj120
+        VV:
+            processes:
+                - ww_2l2nu
+                - wz_3lnu
+                - wz_2l2q
+                - wz_1l1nu2q
+                - zz_2l2nu
+                - zz_2l2q
+                - zz_4l
+            processes_per_year:
+                2018:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+                2017:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+                2016postVFP:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+                2016preVFP:
+                    - ww_2l2nu
+                    - wz_1l1nu2q
+                    - wz_2l2q
+                    - wz_3lnu
+                    - zz
+        VVV:
+            processes:
+                - www
+                - wwz
+                - wzz
+                - zzz
+            processes_per_year:
+                2022preEE: {}
+                2022postEE: {}
+                2023: {}
+                2023BPix: {}
+                # Run-3 www/wwz/wzz/zzz entries exist in the dataset YAMLs but are not validated yet; to
+                # enable a year, delete its {} line below (and the ones above) so it uses the default list.
+                2024: {}
+                2025: {}
+                2026: {}
+
+# --------------------------------------------------
+
+signal:
+    label: 1
+
+    groups:
+        VBF:
+            processes:
+                - vbf_powheg_dipole # pythia dipole
+                # - vbf_powheg_herwig # herwig
+                # - vbf_powhegPS # pythia 8
+            processes_per_year:
+                2026:
+                    - vbf_powheg
+                2025:
+                    - vbf_powheg
+                2023:
+                    - vbf_powheg
+                2023BPix:
+                    - vbf_powheg
+                2024:
+                    - vbf_powheg
+        GGH:
+            processes:
+                - ggh_powhegPS
+            processes_per_year: {}
+
+        # Other production modes; group name is used as the process label. Enabling them also needs
+        # stage3/make_datacards.py signal_groups (currently only qqH_hmm, ggH_hmm) and their theory nuisances.
+        # WH_hmm:
+        #     processes:
+        #         - wph_powheg
+        #         - wmh_powheg
+        #     processes_per_year: {}
+        # ZH_hmm:
+        #     processes:
+        #         - zh_powheg
+        #     processes_per_year: {}
+        # ttH_hmm:
+        #     processes:
+        #         - tth_powheg
+        #     processes_per_year: {}
+
+        # Systematic-variation samples (alternate templates only; never add them to a group above,
+        # that would double-count the signal):
+        #   vbf_powheg_herwig                                  - VBF parton shower (vs vbf_powheg / vbf_powheg_dipole)
+        #   vbf_aMCatNLO_TuneCP5Up / vbf_aMCatNLO_TuneCP5Down  - VBF UE tune (vs vbf_aMCatNLO; 2022-2023 only)
+        #   ggh_amcatnlo_TuneCP5Up / ggh_amcatnlo_TuneCP5Down  - ggH UE tune (vs ggh_amcatnlo)
+
+        # HIGGS:
+        #     # Combined signal category (useful for inclusive plots / training)
+        #     processes:
+        #         - vbf_powheg_dipole
+        #         - ggh_powhegPS
+        #     processes_per_year:
+        #         2023:
+        #             - vbf_powheg
+        #             - ggh_powhegPS
+        #         2023BPix:
+        #             - vbf_powheg
+        #             - ggh_powhegPS
+        #         2024:
+        #             - vbf_powheg
+        #             - ggh_powhegPS

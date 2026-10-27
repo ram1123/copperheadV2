@@ -71,6 +71,10 @@ python MVA_training/VBF_run3/preprocess_dnn.py --config configs/dnn_run2_vbf.yam
 --use-dask-gateway --cluster-index 0
 ```
 
+> **Systematic-aware training:** `DNN_SYST_AWARE=1 DNN_ADV_LAMBDA=<λ>` on the commands below adds
+> an adversarial loss term on the JES/JER/muon shape variations; see
+> [vbf_dnn_systematic_aware.md](vbf_dnn_systematic_aware.md).
+
 #### DNN Hyperparameter Optimization
 Once preprocessing is done, do hyperparameter optimization (NOTE: using GPU session will greatly accelerate this).
 example:
