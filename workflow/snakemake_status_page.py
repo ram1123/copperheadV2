@@ -55,6 +55,7 @@ GLOBAL_PY = "/work/pixi/global/.pixi/envs/default/bin/python"
 PORT = 8765
 ET = ZoneInfo("America/New_York")
 TAIL_LINES = 40
+PROGRESS_RE = re.compile(r"^\s*\d+%\|")
 
 TS_RE = re.compile(r"^\[(\w{3} \w{3} +\d+ \d\d:\d\d:\d\d \d{4})\]$")
 START_RE = re.compile(r"^(?:local)?(?:rule|checkpoint) (\S+):$")
@@ -77,7 +78,8 @@ RAW_REGION_RE = re.compile(r"_(jj_\w+)\.done$")
 # stage-1 chunk detail: run_stage1.py logs its output dir + command; modules/job_status.py writes the ledger
 SAVE_PATH_RE = re.compile(r"start_save_path:\s*(\S+)")
 S1_CMD_RE = re.compile(r"^Command: (.*run_stage1\.py.*)$")
-S1_ORDER = {"running": 0, "failed": 1, "killed": 2, "pending": 3, "done": 4}
+S1_ORDER = {"running": 0, "failed": 1, "killed": 2, "pending": 3, "done": 4, "skipped": 5}
+S1_SKIP_RE = re.compile(r"Skipping year=\S+, dataset=(\S+)")
 
 
 def utc(ts):
@@ -91,6 +93,168 @@ def et(dt):
 def dur(sec):
     sec = int(sec)
     return f"{sec // 3600}h{sec % 3600 // 60:02d}m" if sec >= 3600 else f"{sec // 60}m{sec % 60:02d}s"
+
+
+try:
+    import yaml  # global env has it; without it the page just skips the run-config card
+except ImportError:
+    yaml = None
+
+
+def run_config(cmd):
+    """The run's effective Snakemake config: workflow/config.yaml < each --configfile < --config k=v."""
+    if yaml is None or not cmd:
+        return {}
+    args, cfg = cmd.split(), {}
+    files = [REPO / "workflow" / "config.yaml"]
+    overrides, mode = [], None
+    for a in args:
+        if a.startswith("--configfile"):
+            mode = "file"
+            if "=" in a:
+                files.append(REPO / a.split("=", 1)[1])
+        elif a == "--config":
+            mode = "kv"
+        elif a.startswith("-"):
+            mode = None
+        elif mode == "file":
+            files.append(REPO / a)
+        elif mode == "kv" and "=" in a:
+            overrides.append(a)
+    for f in files:
+        try:
+            cfg.update(yaml.safe_load(open(f)) or {})
+        except (OSError, yaml.YAMLError):
+            pass
+    for kv in overrides:
+        k, v = kv.split("=", 1)
+        try:
+            cfg[k] = yaml.safe_load(v)
+        except yaml.YAMLError:
+            cfg[k] = v
+    return cfg
+
+
+def find_key(obj, key):
+    if isinstance(obj, dict):
+        if key in obj:
+            return obj[key]
+        for v in obj.values():
+            if (hit := find_key(v, key)) is not None:
+                return hit
+    return None
+
+
+def config_summary(cfg):
+    """The settings that tell runs apart, for the run header (selection, inputs, DNN, outputs)."""
+    if not cfg:
+        return None
+    years = cfg.get("years") or []
+    veto = None
+    if cfg.get("switches_yaml"):
+        try:
+            per_year = find_key(yaml.safe_load(open(REPO / cfg["switches_yaml"])), "do_lepton_ip_veto") or {}
+            vals = {bool(per_year.get(y, False)) for y in years}
+            veto = "ON" if vals == {True} else "off" if vals == {False} else "mixed: " + ", ".join(y for y in years if per_year.get(y))
+        except (OSError, yaml.YAMLError, AttributeError):
+            pass
+    pt = cfg.get("prestage_tag") or ""
+    regions = cfg.get("jj_eta_regions") or [cfg.get("jj_eta_region") or "all"]
+    return {
+        "run_tag": cfg.get("run_tag", ""), "label": cfg.get("stage23_label") or cfg.get("stage1_label") or "",
+        "years": years, "switches": cfg.get("switches_yaml") or "", "lepton_ip_veto": veto,
+        "prestage_tag": ", ".join(f"{y}: {t}" for y, t in pt.items()) if isinstance(pt, dict) else pt,
+        "regions": regions, "combine": cfg.get("jj_combine_regions") or [], "postfix": cfg.get("save_postfix") or "(date of start)",
+        "with_variations": bool(cfg.get("with_variations")),
+        "dnn": (f"chain, {cfg.get('dnn_hpo_trials', 50)} trials, {cfg.get('dnn_hpo_backend') or 'local'}" if cfg.get("dnn_chain")
+                else f"model {cfg.get('dnn_model_label') or '(own label)'}"),
+        "reference": cfg.get("status_reference") or None,
+    }
+
+
+PROXY_FILE = REPO / "voms_proxy.txt"
+_proxy_cache = {"t": 0, "v": None}
+
+
+def proxy_status():
+    """Seconds left on voms_proxy.txt (the proxy run_in_pixi.sh exports), checked every 5 min."""
+    if time.time() - _proxy_cache["t"] < 300:
+        return _proxy_cache["v"]
+    v = None
+    try:
+        out = subprocess.run(["voms-proxy-info", "-file", str(PROXY_FILE), "-timeleft"], capture_output=True, text=True, timeout=30)
+        left = int(out.stdout.strip().splitlines()[-1])
+        v = {"left_s": left, "left": dur(max(left, 0)), "expires": et(datetime.fromtimestamp(time.time() + left, timezone.utc)), "file": str(PROXY_FILE)}
+    except (OSError, ValueError, IndexError, subprocess.SubprocessError):
+        pass
+    _proxy_cache.update(t=time.time(), v=v)
+    return v
+
+
+OPTUNA_CREATE, OPTUNA_SET_STATE = 4, 6  # optuna JournalStorage op codes
+OPTUNA_STATES = {1: "complete", 2: "pruned", 3: "fail"}
+DNN_STATUS_RE = re.compile(r"^\[([^\]]+)\] (START|OK|FAIL) (\S+) (\S+) y=(\S+) h=(\S+)(?: wall=(\d+)s)?")
+
+
+def dnn_progress(cfg):
+    """Per jj region of a dnn_chain run: HPO trials from the optuna journal, trained folds, and the
+    START/OK/FAIL lines of run_dnn_trainings.sh's status log."""
+    if not cfg.get("dnn_chain"):
+        return []
+    label = cfg.get("stage23_label") or cfg.get("stage1_label")
+    if not label:
+        return []
+    years = cfg.get("dnn_years") or cfg.get("years") or []
+    trials = int(cfg.get("dnn_hpo_trials", 50))
+    hpo = f"v1_multifold_{trials:03d}Trials"
+    regions = cfg.get("jj_eta_regions") or [cfg.get("jj_eta_region") or "all"]
+    status = {}
+    try:
+        for ln in open(REPO / "logs" / cfg.get("run_tag", "default") / "dnn_status.log", errors="replace"):
+            m = DNN_STATUS_RE.match(ln)
+            if m and m.group(3) == label and m.group(6) == hpo:
+                status[m.group(4)] = {"state": m.group(2), "time": m.group(1), "wall": dur(int(m.group(7))) if m.group(7) else ""}
+    except OSError:
+        pass
+    out = []
+    for r in regions:
+        d = REPO / "dnn" / "trained_models" / label / f"{'-'.join(years)}_h-peak_vbf_{r}"
+        created, ended = 0, {}
+        try:
+            for ln in open(d / "hpo_optuna" / hpo / "optuna_journal.log", errors="replace"):
+                try:
+                    rec = json.loads(ln)
+                except ValueError:
+                    continue
+                if rec.get("op_code") == OPTUNA_CREATE:
+                    created += 1
+                elif rec.get("op_code") == OPTUNA_SET_STATE and rec.get("state") in OPTUNA_STATES:
+                    k = OPTUNA_STATES[rec["state"]]
+                    ended[k] = ended.get(k, 0) + 1
+        except OSError:
+            pass
+        folds = sum((d / f"trained_best_optuna_{hpo}" / f"fold{f}" / "best_torchscript.pt").exists() for f in range(4))
+        out.append({"region": r, "target": trials, "created": created, "finished": sum(ended.values()), **ended,
+                    "folds": folds, "preprocessed": (d / "training_features.pkl").exists(), "status": status.get(r)})
+    return out
+
+
+# stage-1 errors: the cause is at the END of a long WorkItem repr (usermeta holds thousands of PDF sums)
+ERROR_TYPES = [
+    ("worker killed (OOM / segfault)", re.compile(r"KilledWorker|MemoryError|out-of-memory|OOMKilled", re.I)),
+    ("XRootD / file access", re.compile(r"XRootD|\[ERROR\] Server|Operation expired|FileNotFoundError|No such file|"
+                                        r"Auth(entication)? failed|OSError|KeyInFileError|DeserializationError", re.I)),
+    ("timeout", re.compile(r"TimeoutError|timed out", re.I)),
+]
+USERMETA_RE = re.compile(r"usermeta=\{.*\}, preload=", re.S)
+
+
+def error_type(err):
+    return next((name for name, rx in ERROR_TYPES if rx.search(err)), "other") if err else ""
+
+
+def short_error(err):
+    return USERMETA_RE.sub("usermeta={…}, preload=", err) if err else ""
 
 
 def running_snakemakes():
@@ -124,6 +288,11 @@ def tail(path, n=TAIL_LINES):
     # progress bars redraw with \r: keep only the last state of each line
     lines = [ANSI_RE.sub("", ln.split("\r")[-1]).rstrip() for ln in text.split("\n")]
     return [ln for ln in lines if ln.strip()][-n:]
+
+
+# YEAR_STEPS key -> Snakefile rule, where they differ (plots_<cat> are handled from plot_categories)
+YEAR_STEP_RULES = {"compact": "stage1Compact", "pu_dnn": "pu_dnn_train", "massData": "MassCalibrationData",
+                   "massDataCl": "MassCalibrationDataClosure", "massMC": "MassCalibrationMC", "massMCCl": "MassCalibrationMCClosure"}
 
 
 def classify(name):
@@ -170,9 +339,12 @@ def parse_log(path):
             if key == "jobid":
                 jid = int(val)
                 prev = jobs.get(jid)
+                # a restart (--restart-times) reuses the jobid: keep the earlier attempts so run time sums them all
+                attempts = prev["attempts"] + [{"start": prev["start"], "end": prev["end"] or cur["start"],
+                                                 "status": "failed" if prev["status"] == "restarting" else prev["status"]}] if prev else []
                 job = {"jobid": jid, "rule": cur["rule"], "output": cur.get("output", ""), "log": cur.get("log", ""),
                        "wildcards": "", "status": "running", "start": cur["start"], "end": None,
-                       "attempt": prev["attempt"] + 1 if prev else 1}
+                       "attempt": prev["attempt"] + 1 if prev else 1, "attempts": attempts}
                 jobs[jid] = job
                 cur["job"] = job
                 events.append((cur["start"], "start", job))
@@ -226,11 +398,14 @@ def build_run(path, proc, now, served):
         for j in jobs:
             if j["status"] in ("running", "restarting"):
                 j["status"] = "killed" if state != "finished" else "done"
+                # it died with snakemake: count it until the log's last write, not until now
+                j["end"] = j["end"] or datetime.fromtimestamp(p["mtime"], timezone.utc)
 
     run_tag = next((m.group(1) for j in jobs if (m := re.match(r"state/([^/]+)/", j["output"]))), "")
     cmd = proc["cmd"] if proc else ""
     if not run_tag:
         run_tag = (re.search(r"run_tag=(\S+)", cmd) or [None, ""])[1]
+    cfg = run_config(cmd)
 
     rules = {}
     for rule, total in p["rule_total"].items():
@@ -256,12 +431,24 @@ def build_run(path, proc, now, served):
         name = os.path.basename(j["output"].split(",")[0].strip())
         key, year, region = classify(name)
         end = j["end"] or now
+        # summed over every attempt of this job (earlier ones end where Snakemake restarted it)
+        wall_s = sum((a["end"] - a["start"]).total_seconds() for a in j["attempts"]) + (end - j["start"]).total_seconds()
         lines = tail(REPO / j["log"]) if j["log"] and j["status"] != "done" else []
+        info = [ln for ln in lines if not PROGRESS_RE.match(ln)]  # skip bare progress-bar redraws ("0%|")
+        try:
+            log_age = (now.timestamp() - os.path.getmtime(REPO / j["log"])) if j["log"] and j["status"] in ("running", "restarting") else None
+        except OSError:
+            log_age = None
         job_rows.append({
             "jobid": j["jobid"], "rule": j["rule"], "name": name, "wildcards": j["wildcards"], "log": j["log"],
             "status": j["status"], "attempt": j["attempt"], "start": et(j["start"]), "end": et(j["end"]),
-            "wall": dur((end - j["start"]).total_seconds()), "start_ts": j["start"].timestamp(),
-            "last": lines[-1][:200] if lines else "", "tail": lines,
+            "wall": dur(wall_s), "start_ts": j["start"].timestamp(),
+            "first_start_ts": (j["attempts"][0]["start"] if j["attempts"] else j["start"]).timestamp(),
+            "end_ts": j["end"].timestamp() if j["end"] else None, "wall_s": wall_s,
+            "attempt_wall": dur((end - j["start"]).total_seconds()),
+            "attempt_list": [{"start": et(a["start"]), "end": et(a["end"]), "wall": dur((a["end"] - a["start"]).total_seconds()), "status": a["status"]}
+                             for a in j["attempts"]] + [{"start": et(j["start"]), "end": et(j["end"]), "wall": dur((end - j["start"]).total_seconds()), "status": j["status"]}],
+            "last": (info or lines or [""])[-1][:200], "tail": lines, "log_age_s": log_age,
         })
         if key is None:
             continue
@@ -278,9 +465,24 @@ def build_run(path, proc, now, served):
         if old is None or rank.get(j["status"], 0) < rank.get(old, 0):
             table[cell] = j["status"]
 
-    def axis(cells, idx, order=None):
-        vals = list(dict.fromkeys(c.split("|")[idx] for c in cells))
+    # rows/columns of the grids: what the run config plans, plus whatever already ran (so the grids
+    # are complete from the start instead of growing as jobs start)
+    cfg_years = [str(y) for y in cfg.get("years") or []]
+    if {"2025", "2026"} <= set(cfg_years):
+        cfg_years.append("2025_2026")  # merged stage-3 year
+    cfg_regions = [short_region(None if r == "all" else r) for r in cfg.get("jj_eta_regions") or ([cfg["jj_eta_region"]] if cfg.get("jj_eta_region") else [])]
+    if cfg.get("jj_combine_regions"):
+        cfg_regions.append("combined")
+    plot_cats = cfg.get("plot_categories") or []
+
+    def axis(cells, idx, order=None, planned=()):
+        vals = list(dict.fromkeys(list(planned) + [c.split("|")[idx] for c in cells]))
         return sorted(vals, key=order) if order else ordered_regions(vals)
+
+    def year_step_planned(k):
+        if k.startswith("plots_"):
+            return "plots" in rules and k.removeprefix("plots_") in plot_cats
+        return YEAR_STEP_RULES.get(k, k) in rules
 
     events = [{"time": et(t), "ts": t.timestamp(), "kind": k, "rule": j["rule"], "jobid": j["jobid"],
                "name": os.path.basename(j["output"].split(",")[0].strip())} for t, k, j in p["events"]][-60:][::-1]
@@ -288,6 +490,18 @@ def build_run(path, proc, now, served):
     if not total:
         total = sum(r["total"] for r in rules.values())
     started = utc_from_logname(path)
+    stage1 = [s for s in (stage1_details(j, j["status"] in ("running", "restarting"))
+                          for j in {j["log"]: j for j in jobs if j["rule"] == "stage1" and j["log"]}.values()) if s]
+    # a stage-1 job's log only shows progress bars: say which chunks it is on, from its ledger
+    by_log = {s["log"]: s for s in stage1}
+    for row in job_rows:
+        s = by_log.get(row["log"])
+        if s and row["status"] in ("running", "restarting"):
+            run = [f"{c['sample']}#{c['idx']}" for c in s["chunks"] if c["status"] == "running"]
+            row["last"] = (f"running {', '.join(run[:3])}{' …' if len(run) > 3 else ''}" if run else "between chunks") + \
+                f" · {s['counts']['done']}/{len(s['chunks']) - s['counts'].get('skipped', 0)} chunks done"
+            row["log_age_s"] = min(x for x in (row["log_age_s"], s.get("ledger_age_s")) if x is not None) if row["log_age_s"] is not None else s.get("ledger_age_s")
+    stage2_years = [y for y in cfg_years if y != "2025_2026"]
     return {
         "id": Path(path).name, "log": os.path.relpath(path, REPO), "state": state, "pid": proc["pid"] if proc else None,
         "cmd": cmd, "run_tag": run_tag, "started": et(started), "started_ts": started.timestamp() if started else 0,
@@ -295,17 +509,20 @@ def build_run(path, proc, now, served):
         "elapsed": dur(((now if proc else datetime.fromtimestamp(p["mtime"], timezone.utc)) - started).total_seconds()) if started else "",
         "steps_done": done, "steps_total": total, "pct": pct if total else 0,
         "rules": list(rules.values()), "jobs": job_rows[::-1], "events": events,
-        "chain": {"years": axis(chain, 0, year_key), "regions": axis(chain, 1),
+        "chain": {"years": axis(chain, 0, year_key, cfg_years if "stage2" in rules else ()),
+                  "regions": axis(chain, 1, planned=[r for r in cfg_regions if r != "combined"] if "stage2" in rules else ()),
                   "steps": [[k, d] for k, d, _ in CHAIN_STEPS], "cells": chain},
-        "year_steps": {"years": axis(year_cells, 0, year_key),
-                       "steps": [[k, d] for k, d, _ in YEAR_STEPS if any(c.endswith("|" + k) for c in year_cells)],
+        "year_steps": {"years": axis(year_cells, 0, year_key, stage2_years),
+                       "steps": [[k, d] for k, d, _ in YEAR_STEPS if year_step_planned(k) or any(c.endswith("|" + k) for c in year_cells)],
                        "cells": year_cells},
-        "global": {"regions": axis(global_cells, 0),
-                   "steps": [[k, d] for k, d, _ in GLOBAL_STEPS if any(c.endswith("|" + k) for c in global_cells)],
+        # a step planned in this run (rule in the job stats) gets its column before its first job starts
+        "global": {"regions": axis(global_cells, 0, planned=cfg_regions if any(k in rules for k, _, _ in GLOBAL_STEPS) else ()),
+                   "steps": [[k, d] for k, d, _ in GLOBAL_STEPS if k in rules or any(c.endswith("|" + k) for c in global_cells)],
                    "cells": global_cells},
-        "stats": stats_results(stat_jobs, global_cells, served) if stat_jobs else [],
-        "stage1": [s for s in (stage1_details(j, j["status"] in ("running", "restarting"))
-                               for j in {j["log"]: j for j in jobs if j["rule"] == "stage1" and j["log"]}.values()) if s],
+        "stats": stats_results(stat_jobs, global_cells, served, cfg.get("status_reference")) if stat_jobs else [],
+        "config": config_summary(cfg),
+        "dnn": dnn_progress(cfg),
+        "stage1": stage1,
     }
 
 
@@ -330,11 +547,16 @@ def stage1_details(job, alive):
             for _, ln in zip(range(300), f):
                 ln = ANSI_RE.sub("", ln)
                 cmd = cmd or (m.group(1) if (m := S1_CMD_RE.match(ln.strip())) else "")
-                if (m := SAVE_PATH_RE.search(ln)):
+                # the rich logger wraps the long path onto the next lines, leaving "run_stage1.py:NNN" here
+                if (m := SAVE_PATH_RE.search(ln)) and m.group(1).startswith("/"):
                     save = m.group(1)
+                if cmd:
                     break
     except OSError:
         return None
+    # run_stage1.py: start_save_path = <--save_path>/stage1_output/<year>
+    if cmd and flag(cmd, "--save_path") and flag(cmd, "-y"):
+        save = f"{flag(cmd, '--save_path')}/stage1_output/{flag(cmd, '-y')}"
     if not save:
         return None
     sdir, t0 = Path(save) / "_status", job["start"].timestamp()
@@ -354,13 +576,29 @@ def stage1_details(job, alive):
     except OSError:
         pass
     year, nano, tag = flag(cmd, "-y"), flag(cmd, "--NanoAODv"), flag(cmd, "--prestage-tag")
-    samples = []
+    samples, sample_events = [], {}
     if year and nano:
         try:
-            samples = list(json.load(open(REPO / "prestage_output" / f"processor_samples_{year}_NanoAODv{nano}{'_' + tag if tag else ''}.json")))
-        except (OSError, ValueError):
+            prestage = json.load(open(REPO / "prestage_output" / f"processor_samples_{year}_NanoAODv{nano}{'_' + tag if tag else ''}.json"))
+            samples = list(prestage)
+            for s, v in prestage.items():  # events per sample, for the ETA of samples not processed yet
+                md = v.get("metadata") or {}
+                sample_events[s] = num(md.get("nGenEvts")) or num(md.get("data_entries"))
+        except (OSError, ValueError, AttributeError):
             pass
+    skipped = set()  # samples run_stage1.py skips (configs/skip_stage1_run.py), never "pending"
+    try:
+        with open(REPO / job["log"], errors="replace") as f:
+            for ln in f:
+                if "Skipping year=" in ln and (m := S1_SKIP_RE.search(ANSI_RE.sub("", ln))):
+                    skipped.add(m.group(1).rstrip(","))
+    except OSError:
+        pass
     now, rows = time.time(), []
+    try:
+        ledger_age = now - os.path.getmtime(sdir / "job_status.jsonl")
+    except OSError:
+        ledger_age = None
     for (ds, idx), c in chunks.items():
         rec, meta = c["rec"], c["rec"].get("meta") or {}
         status = rec["status"]
@@ -375,14 +613,29 @@ def stage1_details(job, alive):
             "wall": (dur(rec["duration_seconds"]) if rec.get("duration_seconds") else
                      "" if status == "killed" else dur((end or now) - start) if start else ""),
             "expected": num(meta.get("Expected events from pre-stage")), "processed": num(meta.get("Processed events from stage-1")),
-            "redirector": meta.get("redirector") or "", "error": (rec.get("error") or "")[:1500],
+            "redirector": meta.get("redirector") or "", "error": short_error(rec.get("error") or "")[-1500:],
+            "error_type": error_type(rec.get("error") or "") if status in ("failed", "killed") else "",
         })
     seen = {r["sample"] for r in rows}
-    rows += [{"sample": s, "idx": "", "status": "pending", "tries": 0, "earlier": False, "start": "", "end": "", "wall": "",
-              "expected": None, "processed": None, "redirector": "", "error": ""} for s in samples if s not in seen]
-    rows.sort(key=lambda r: (S1_ORDER.get(r["status"], 9), r["sample"], str(r["idx"])))
+    rows += [{"sample": s, "idx": "", "status": "skipped" if s in skipped else "pending", "tries": 0, "earlier": False, "start": "", "end": "", "wall": "",
+              "expected": None if s in skipped else sample_events.get(s), "processed": None, "redirector": "", "error": "", "error_type": ""}
+             for s in samples if s not in seen]
+    # alphabetical by sample, chunks in numeric order (status is its own column)
+    rows.sort(key=lambda r: (r["sample"].lower(), r["idx"] if isinstance(r["idx"], int) else -1, str(r["idx"])))
     counts = {k: sum(r["status"] == k for r in rows) for k in S1_ORDER}
+    # ETA from this job's event throughput (done chunks since it started) over the events still to do
+    left = [r for r in rows if r["status"] not in ("done", "skipped")]
+    ev_left = sum((r["expected"] if r["expected"] is not None else sample_events.get(r["sample"])) or 0 for r in left)
+    fresh = [r for r in rows if r["status"] == "done" and not r["earlier"]]
+    ev_done = sum(r["processed"] or r["expected"] or 0 for r in fresh)
+    eta = None
+    if alive and left and len(fresh) >= 3 and ev_done and now > t0:
+        secs = ev_left / (ev_done / (now - t0))
+        eta = {"left": dur(secs), "at": et(datetime.fromtimestamp(now + secs, timezone.utc)), "ts": now + secs}
+    events = {"processed": sum(r["processed"] or 0 for r in rows if r["status"] == "done"),
+              "total": sum(r["processed"] or 0 for r in rows if r["status"] == "done") + ev_left}
     return {"year": year or "", "dir": str(sdir), "n_samples": len(samples), "counts": counts, "chunks": rows,
+            "eta": eta, "events": events, "alive": alive, "log": job["log"], "ledger_age_s": ledger_age,
             "summary": (sdir / "stage1_summary.log").exists() and et(datetime.fromtimestamp((sdir / "stage1_summary.log").stat().st_mtime, timezone.utc))}
 
 
@@ -430,11 +683,12 @@ def mirror(src, served):
     return f"{dst.relative_to(OUT_DIR)}?v={int(st.st_mtime)}"
 
 
-def stats_results(stat_jobs, cells, served):
+def stats_results(stat_jobs, cells, served, reference=None):
     """Per jj region: significance / limit per year and the impact + scan plots of the run's stats jobs.
 
     stat_jobs: {raw region: {step key: job}}; a result older than its job's start is flagged stale
-    (left over from an earlier run into the same card dir)."""
+    (left over from an earlier run into the same card dir). reference ({label, postfix}, the run config's
+    status_reference) adds that run's values for the same region/year as ref_* columns."""
     out = []
     for region, by_key in stat_jobs.items():
         hdrs = {k: log_header(j["log"]) for k, j in by_key.items()}
@@ -444,6 +698,11 @@ def stats_results(stat_jobs, cells, served):
             continue
         cdir, save_postfix = card_dir(hdr, region), hdr["Output append"]
         short = short_region(region)
+        ref_dir = None
+        if isinstance(reference, dict) and reference.get("label") and reference.get("postfix"):
+            ref_hdr = dict(hdr, **{"Save path": str(Path(hdr["Save path"]).parent / reference["label"]),
+                                   "Label": reference["label"], "Output append": reference["postfix"]})
+            ref_dir = card_dir(ref_hdr, region)
 
         def stale(path, key):
             return path.stat().st_mtime < by_key[key]["start"].timestamp()
@@ -468,6 +727,10 @@ def stats_results(stat_jobs, cells, served):
                     row[col] = first_value(path, regex)
                     newest = max(newest or 0, path.stat().st_mtime)
                 row["updated"] = et(datetime.fromtimestamp(newest, timezone.utc)) if newest else ""
+                if ref_dir:
+                    for col, (path, regex) in files.items():
+                        p = ref_dir / Path(path).name
+                        row["ref_" + col] = first_value(p, regex) if p.exists() else None
                 entry["significance"].append(row)
         if "impacts" in by_key:
             for year in hdrs["impacts"].get("Years", "Run3").split():
@@ -517,7 +780,8 @@ def collect(max_runs, days):
         for f in FILES_DIR.rglob("*"):
             if f.is_file() and f not in served:
                 f.unlink(missing_ok=True)
-    return {"generated": et(now), "generated_ts": now.timestamp(), "n_running": len(procs), "runs": runs}
+    return {"generated": et(now), "generated_ts": now.timestamp(), "n_running": len(procs), "runs": runs,
+            "proxy": proxy_status()}
 
 
 def write_atomic(path, text):

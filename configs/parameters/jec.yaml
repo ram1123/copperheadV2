@@ -23,10 +23,10 @@ jec_parameters:
                 data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/2018_UL/jet_jerc.json.gz
             nanoAODv15:
                 data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/Run2-2018-UL-NanoAODv15/2026-04-13/jet_jerc.json.gz
-        2022preEE: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2025-09-23/jet_jerc.json.gz
-        2022postEE: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jet_jerc.json.gz
-        "2023": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jet_jerc.json.gz
-        2023BPix: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jet_jerc.json.gz
+        2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2026-06-05/jet_jerc.json.gz # V4 / JRV2
+        2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2026-06-05/jet_jerc.json.gz # V4 / JRV2
+        "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2026-07-15/jet_jerc.json.gz # V4 / JRV3
+        2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2026-07-15/jet_jerc.json.gz # V4 / JRV3
         "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-07-16/jet_jerc.json.gz
         "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-25Prompt-Summer24-NanoAODv15/2026-07-16/jet_jerc.json.gz
         "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-26Prompt-Summer24-NanoAODv15/2026-07-15/jet_jerc.json.gz
@@ -38,13 +38,13 @@ jec_parameters:
         2016postVFP: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
         "2017": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
         "2018": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
-        2022preEE: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
-        2022postEE: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
-        "2023": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
-        2023BPix: data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
-        "2024": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
-        "2025": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
-        "2026": data/POG/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/jsonpog-integration/POG/JME/jer_smear.json.gz
+        2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/2026-09-18/jer_smear.json.gz
+        2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/2026-09-18/jer_smear.json.gz
+        "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/2026-09-18/jer_smear.json.gz
+        2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/2026-09-18/jer_smear.json.gz
+        "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/2026-09-18/jer_smear.json.gz
+        "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/2026-09-18/jer_smear.json.gz
+        "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/2026-09-18/jer_smear.json.gz
     jec_unc_to_consider:
         2016preVFP:
             - Absolute
@@ -762,10 +762,10 @@ jec_parameters:
         2016_RERECO: Summer19UL16_V7_MC
         "2017_RERECO": Summer19UL17_V5_MC
         "2018_RERECO": Summer19UL18_V5_MC
-        2022preEE: Summer22_22Sep2023_V3_MC
-        2022postEE: Summer22EE_22Sep2023_V3_MC
-        "2023": Summer23Prompt23_V2_MC
-        2023BPix: Summer23BPixPrompt23_V3_MC
+        2022preEE: Summer22_22Sep2023_V4_MC
+        2022postEE: Summer22EE_22Sep2023_V4_MC
+        "2023": Summer23Prompt23_V4_MC
+        2023BPix: Summer23BPixPrompt23_V4_MC
         "2024": Summer24Prompt24_V5_MC
         "2025": Summer24Prompt25_V3_MC
         "2026": Summer24Prompt26_V1_MC
@@ -777,10 +777,10 @@ jec_parameters:
         2016_RERECO: Summer20UL16_JRV3_MC
         "2017_RERECO": Summer19UL17_JRV2_MC
         "2018_RERECO": Summer19UL18_JRV2_MC
-        2022preEE: Summer22_22Sep2023_JRV1_MC
-        2022postEE: Summer22EE_22Sep2023_JRV1_MC
-        "2023": Summer23Prompt23_RunCv1234_JRV1_MC
-        2023BPix: Summer23BPixPrompt23_RunD_JRV1_MC
+        2022preEE: Summer22_22Sep2023_JRV2_MC
+        2022postEE: Summer22EE_22Sep2023_JRV2_MC
+        "2023": Summer23Prompt23_RunCv1234_JRV3_MC
+        2023BPix: Summer23BPixPrompt23_RunD_JRV3_MC
         "2024": Summer24Prompt24_JRV2_MC
         "2025": Summer24Prompt25_JRV2_MC
         # 2026 JER is genuinely split by run: era C is a dedicated low-PU run and has its own
@@ -883,24 +883,23 @@ jec_parameters:
                 - C
             Summer19UL18_RunD_V5_DATA:
                 - D
+        # V4: one run-based DATA tag per year (the payload takes `run`), no per-era tags
         2022preEE:
-            Summer22_22Sep2023_RunCD_V3_DATA:
+            Summer22_22Sep2023_V4_DATA:
                 - C
                 - D
         2022postEE:
-            Summer22EE_22Sep2023_RunE_V3_DATA:
+            Summer22EE_22Sep2023_V4_DATA:
                 - E
-            Summer22EE_22Sep2023_RunF_V3_DATA:
                 - F
-            Summer22EE_22Sep2023_RunG_V3_DATA:
                 - G
         # For 2023, the correct era is chosen based on the run the event is in.
         # Details: https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/merge_requests/118
         "2023":
-            Summer23Prompt23_V2_DATA:
+            Summer23Prompt23_V4_DATA:
                 - C
         2023BPix:
-            Summer23BPixPrompt23_V3_DATA:
+            Summer23BPixPrompt23_V4_DATA:
                 - D
         "2024":
             Summer24Prompt24_V5_DATA: 

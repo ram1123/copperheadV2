@@ -1,0 +1,501 @@
+<!doctype html>
+<!-- Page for workflow/snakemake_status_page.py: copied to validation/job_status/snakemake/index.html,
+     renders status.json (rewritten by the generator) and re-fetches it every 15 s. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snakemake Runs</title>
+<style>
+:root {
+  --bg: #f6f8fa; --card: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d0d7de;
+  --ok: #1a7f37; --run: #0969da; --fail: #cf222e; --warn: #bf8700; --pend: #afb8c1; --none: #eaeef2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --card: #161b22; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d;
+    --ok: #3fb950; --run: #58a6ff; --fail: #f85149; --warn: #d29922; --pend: #6e7681; --none: #21262d;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1400px; margin: 0 auto; padding: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 12px; }
+h1 { font-size: 20px; margin: 0; }
+h2 { font-size: 15px; margin: 0 0 8px; }
+.muted { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; overflow-x: auto; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tab { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 6px; padding: 6px 10px; cursor: pointer; text-align: left; font: inherit; }
+.tab.sel { outline: 2px solid var(--run); }
+.tab small { display: block; color: var(--muted); }
+.tab { padding: 4px 10px; font-size: 13px; } .tab .short { font-weight: 600; }
+details.older > summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 4px 0; }
+.phases { display: flex; gap: 4px; margin: 8px 0 4px; flex-wrap: wrap; }
+.phase { flex: 1 1 110px; min-width: 110px; font-size: 12px; }
+.phase .pbar { height: 8px; border-radius: 4px; background: var(--none); overflow: hidden; margin-top: 3px; }
+.phase .pbar span { display: block; height: 100%; }
+.phase.active .pname { color: var(--run); font-weight: 700; }
+.phase.done .pname { color: var(--ok); }
+.phase .ptime { margin-top: 2px; font-variant-numeric: tabular-nums; }
+.attn { border-left: 4px solid var(--fail); }
+.attn.ok { border-left-color: var(--ok); }
+.attn ul { margin: 4px 0 0; padding-left: 18px; }
+.attn li { margin: 2px 0; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; color: #fff; font-weight: 600; }
+.b-running, .b-restarting { background: var(--run); } .b-finished, .b-done { background: var(--ok); }
+.b-failed, .b-killed { background: var(--fail); } .b-stopped { background: var(--warn); } .b-pending { background: var(--pend); }
+.bar { height: 10px; border-radius: 5px; background: var(--none); overflow: hidden; display: flex; min-width: 120px; }
+.bar span { display: block; height: 100%; }
+.big .bar { height: 16px; }
+table { border-collapse: collapse; width: auto; }
+table.wide { width: 100%; }
+td.barcell { width: 260px; min-width: 160px; }
+th, td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.grid td { text-align: center; }
+.grid td:first-child, .grid th:first-child { text-align: left; }
+.cell { display: inline-flex; gap: 3px; }
+.sq { width: 14px; height: 14px; border-radius: 3px; display: inline-block; background: var(--none); }
+.s-done { background: var(--ok); } .s-running { background: var(--run); } .s-restarting { background: var(--warn); }
+.s-failed, .s-killed { background: var(--fail); } .s-none { background: var(--none); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.filters button { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 14px; padding: 2px 10px; cursor: pointer; font: inherit; font-size: 12px; }
+.filters button.sel { background: var(--run); color: #fff; border-color: var(--run); }
+.filters input { border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; padding: 3px 8px; font: inherit; min-width: 200px; }
+tr.job { cursor: pointer; } tr.job:hover { background: var(--bg); }
+td.last { max-width: 520px; overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+pre { margin: 0; padding: 8px; background: var(--bg); border-radius: 6px; font-size: 12px; white-space: pre-wrap; word-break: break-all; max-height: 420px; overflow: auto; }
+code { font-size: 12px; word-break: break-all; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grids { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 0 12px; align-items: start; }
+@media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+.stale { color: var(--fail); font-weight: 600; }
+.warnt { color: var(--warn); font-weight: 600; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 8px 0 4px; font-size: 13px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.etype { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 11px; border: 1px solid var(--fail); color: var(--fail); white-space: nowrap; }
+.delta-up { color: var(--ok); } .delta-down { color: var(--fail); }
+.plots { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px; margin: 6px 0 14px; }
+.plot { border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--bg); }
+.plot img { width: 100%; height: auto; display: block; background: #fff; border-radius: 4px; }
+.plot iframe { width: 100%; height: 560px; border: 0; background: #fff; border-radius: 4px; }
+.plot .ph { height: 120px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.back { border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 6px; padding: 4px 10px; text-decoration: none; font-size: 13px; }
+.back:hover { outline: 2px solid var(--run); }
+h3 { font-size: 14px; margin: 10px 0 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="back" href="../" title="all status pages">&larr; Status pages</a>
+    <h1>Snakemake runs</h1>
+    <span class="muted" id="gen">loading…</span>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <div id="run"></div>
+  <div id="stats"></div>
+  <div id="run2"></div>
+</main>
+<script>
+const POLL_MS = 15000;
+let data = null, selected = null, filter = "active", search = "", openJobs = new Set(), openS1 = new Set(), statsSig = null;
+const COLORS = { done: "var(--ok)", running: "var(--run)", failed: "var(--fail)", pending: "var(--pend)" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function bar(parts, total) {
+  if (!total) return '<div class="bar"></div>';
+  return '<div class="bar">' + parts.filter(([n]) => n > 0)
+    .map(([n, c]) => `<span style="width:${100 * n / total}%;background:${c}"></span>`).join("") + "</div>";
+}
+
+// Run tags share most tokens (FilterEvents_..._OfficialRecomendation_...): show only the ones that differ.
+function shortTags(runs) {
+  const toks = runs.map(r => (r.run_tag || r.id).split("_"));
+  const common = toks.length > 1 ? toks[0].filter(t => toks.every(ts => ts.includes(t))) : [];
+  return Object.fromEntries(runs.map((r, i) => [r.id, toks[i].filter(t => !common.includes(t)).join(" · ") || (r.run_tag || r.id)]));
+}
+
+let showOlder = false;
+function renderTabs() {
+  const short = shortTags(data.runs);
+  const tab = r => `<button class="tab ${r.id === selected ? "sel" : ""}" data-id="${esc(r.id)}" title="${esc(r.run_tag || r.id)}">
+      <span class="badge b-${r.state}">${r.state}</span> <span class="short">${esc(short[r.id])}</span>
+      <small>${esc(r.started)} · ${r.steps_done}/${r.steps_total} steps</small></button>`;
+  // running + the 2 newest others up front; empty stopped attempts and the rest folded away
+  const empty = r => r.state === "stopped" && !r.steps_done;
+  const front = data.runs.filter((r, i) => r.state === "running" || r.id === selected || (i < 3 && !empty(r)));
+  const older = data.runs.filter(r => !front.includes(r));
+  document.getElementById("tabs").innerHTML = (front.map(tab).join("") || '<span class="muted">No snakemake runs in the last days.</span>') +
+    (older.length ? `<details class="older" ${showOlder ? "open" : ""}><summary>${older.length} earlier run(s)</summary><div class="tabs">${older.map(tab).join("")}</div></details>` : "");
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => { selected = b.dataset.id; render(); });
+  const d = document.querySelector("details.older");
+  if (d) d.ontoggle = () => { showOlder = d.open; };
+}
+
+const attemptTip = j => (j.attempt_list || []).map((a, i) => `try ${i + 1}: ${a.start} → ${a.end || "now"} (${a.wall}, ${a.status})`).join("\n") || "";
+const fmtDur = sec => sec == null ? "" : sec >= 86400 ? `${Math.floor(sec / 86400)}d${Math.floor(sec % 86400 / 3600)}h` :
+  sec >= 3600 ? `${Math.floor(sec / 3600)}h${String(Math.floor(sec % 3600 / 60)).padStart(2, "0")}m` : `${Math.floor(sec / 60)}m${String(Math.floor(sec % 60)).padStart(2, "0")}s`;
+// Run time of a set of jobs: span = first start -> last end (now while one still runs or more are to come),
+// busy = summed job wall times over all attempts (> span when jobs ran in parallel).
+function timing(jobs, open, now) {
+  if (!jobs.length) return null;
+  const start = Math.min(...jobs.map(j => j.first_start_ts ?? j.start_ts));
+  const live = open || jobs.some(j => j.end_ts == null && (j.status === "running" || j.status === "restarting"));
+  const end = live ? now : Math.max(...jobs.map(j => j.end_ts || j.start_ts + j.wall_s));
+  return { span: end - start, busy: jobs.reduce((a, j) => a + (j.wall_s || 0), 0), live };
+}
+const timeTxt = t => !t ? "" : `${t.live ? "running " : ""}${fmtDur(t.span)}`;
+const timeTip = t => !t ? "not started" : `wall clock ${fmtDur(t.span)}${t.live ? " so far" : ""} · summed job time ${fmtDur(t.busy)}`;
+
+// Pipeline phases, each filled by its own progress; stage-1 counts finished events of running years.
+const PHASES = [["stage-1", ["stage1"]], ["compact + plots", ["stage1Compact", "plots", "plot_all"]],
+  ["DNN", ["dnn_region", "dnn_pre", "dnn_hpo", "dnn_train"]], ["score dump + bin scan", ["dnn_scoredump", "dnn_binscan"]],
+  ["stage-2", ["stage2", "stage2_plot", "stage2_plot_run3"]], ["stage-3 + validate", ["stage3", "stage3_validate"]],
+  ["stats", ["stats", "stats_jj_combined", "impacts", "lhscan", "impacts_jj_combined", "lhscan_jj_combined"]]];
+function phaseBar(r) {
+  const byRule = Object.fromEntries(r.rules.map(x => [x.rule, x]));
+  const ph = PHASES.map(([name, rules]) => {
+    const xs = rules.map(k => byRule[k]).filter(Boolean);
+    const t = xs.reduce((a, x) => a + x.total, 0), d = xs.reduce((a, x) => a + x.done, 0);
+    const run = xs.reduce((a, x) => a + x.running, 0), f = xs.reduce((a, x) => a + x.failed, 0);
+    let frac = t ? d / t : 0;
+    if (name === "stage-1" && t) {  // partial credit for running years by events processed
+      const part = (r.stage1 || []).filter(s => s.alive && s.events.total).reduce((a, s) => a + s.events.processed / s.events.total, 0);
+      frac = (d + part) / t;
+    }
+    const jobs = r.jobs.filter(j => rules.includes(j.rule));
+    return { name, t, d, run, f, frac, time: timing(jobs, d < t && jobs.length > 0 && r.state === "running", data.generated_ts) };
+  }).filter(p => p.t);
+  if (!ph.length) return "";
+  return `<div class="phases">${ph.map(p => {
+    const cls = p.d === p.t ? "done" : p.run || (p.frac > 0 && p.d < p.t) ? "active" : "";
+    const col = p.f ? COLORS.failed : p.d === p.t ? COLORS.done : COLORS.running;
+    return `<div class="phase ${cls}" title="${p.d}/${p.t} jobs done, ${p.run} running, ${p.f} failed · ${timeTip(p.time)}">
+      <span class="pname">${esc(p.name)}</span> <span class="muted">${p.d}/${p.t}${p.f ? ` · <span class="stale">${p.f} failed</span>` : ""}</span>
+      <div class="pbar"><span style="width:${(100 * p.frac).toFixed(1)}%;background:${col}"></span></div>
+      <div class="muted ptime">${p.time ? "⏱ " + timeTxt(p.time) : "–"}</div></div>`;
+  }).join("")}</div>`;
+}
+
+// Everything that needs a look, in one place; one green line when there is nothing.
+const STALL_S = 45 * 60;
+function attention(r, px, age) {
+  const items = [];
+  if (age > 120) items.push(`page generator stopped ${Math.round(age / 60)} min ago: rerun <code>workflow/snakemake_status_page.py --ensure</code>`);
+  if (!px) items.push("VOMS proxy: voms-proxy-info failed");
+  else if (px.left_s < 48 * 3600) items.push(`VOMS proxy expires in <b>${esc(px.left)}</b> (${esc(px.expires)}); score dump needs ≥ 12 h`);
+  for (const j of r.jobs) {
+    if (j.status === "failed" || j.status === "killed") items.push(`job <b>${esc(j.name)}</b> ${j.status} (try ${j.attempt}): <code>${esc(j.last)}</code>`);
+    else if ((j.status === "running" || j.status === "restarting") && j.log_age_s > STALL_S)
+      items.push(`job <b>${esc(j.name)}</b> running but its log has not changed for ${Math.round(j.log_age_s / 60)} min`);
+  }
+  const badChunks = (r.stage1 || []).reduce((a, s) => a + s.counts.failed + s.counts.killed, 0);
+  if (badChunks) items.push(`${badChunks} stage-1 chunk(s) failed or interrupted — see "Failed / interrupted chunks by error type" below`);
+  for (const d of r.dnn || []) {
+    if (d.status && d.status.state === "FAIL") items.push(`DNN <b>${esc(d.region)}</b> FAILED — move hpo_optuna/&lt;HPO label&gt; aside before rerunning`);
+    if (d.fail) items.push(`DNN <b>${esc(d.region)}</b>: ${d.fail} HPO trial(s) failed`);
+  }
+  if (!items.length) return `<div class="card attn ok"><b>Nothing needs attention.</b> <span class="muted">No failed jobs or chunks, no stalled logs, proxy ${px ? esc(px.left) : "?"} left.</span></div>`;
+  return `<div class="card attn"><h2>Needs attention (${items.length})</h2><ul>${items.map(x => `<li>${x}</li>`).join("")}</ul></div>`;
+}
+
+function grid(title, rowsLabel, rows, cols, cellHtml, cells, nJobs, waits) {
+  if (!rows.length || !cols.length) return "";
+  if (cells && !Object.keys(cells).length)  // nothing started yet: one line instead of a grid of grey squares
+    return `<div class="card"><h2 style="display:inline">${title}</h2> <span class="muted">${nJobs ? nJobs + " jobs across " : ""}${rows.length} ${esc(rowsLabel.toLowerCase())}s × ${cols.length} columns — ${esc(waits)}</span></div>`;
+  return `<div class="card"><h2>${title}</h2><table class="grid"><tr><th>${rowsLabel}</th>${cols.map(c => `<th>${esc(c[1])}</th>`).join("")}</tr>` +
+    rows.map(r => `<tr><td>${esc(r)}</td>${cols.map(c => `<td>${cellHtml(r, c[0])}</td>`).join("")}</tr>`).join("") + "</table>" + legend() + "</div>";
+}
+
+function sq(st, tip) { return `<span class="sq s-${st || "none"}" title="${esc(tip)}: ${st || "not started / not in run"}"></span>`; }
+
+function legend() {
+  return `<div class="legend">${[["done", "done"], ["running", "running"], ["restarting", "restarting"], ["failed", "failed / killed"], ["none", "not started yet / not in this run"]]
+    .map(([s, t]) => `<span>${sq(s, t)} ${t}</span>`).join("")}</div>`;
+}
+
+function render() {
+  if (!data) return;
+  const age = Date.now() / 1000 - data.generated_ts;
+  const px = data.proxy;  // XRootD reads + run_jj_region_scan.sh (needs >= 12 h) fail once it expires
+  const pxCls = !px ? "stale" : px.left_s < 12 * 3600 ? "stale" : px.left_s < 48 * 3600 ? "warnt" : "muted";
+  document.getElementById("gen").innerHTML = `updated ${esc(data.generated)} · ${data.n_running} running` +
+    ` · <span class="${pxCls}" title="${px ? esc(px.file) : "voms-proxy-info failed"}">VOMS proxy: ${px ? `${esc(px.left)} left (expires ${esc(px.expires)})` : "unknown"}</span>` +
+    (age > 120 ? ` · <span class="stale">page generator stopped ${Math.round(age / 60)} min ago</span>` : "");
+  if (!data.runs.find(r => r.id === selected)) selected = data.runs.length ? data.runs[0].id : null;
+  renderTabs();
+  const r = data.runs.find(x => x.id === selected);
+  const el = document.getElementById("run"), el2 = document.getElementById("run2");
+  if (!r) { el.innerHTML = el2.innerHTML = ""; renderStats(null); return; }
+
+  const totals = r.rules.reduce((a, x) => { for (const k of ["done", "running", "failed", "pending"]) a[k] += x[k]; return a; }, { done: 0, running: 0, failed: 0, pending: 0 });
+  const nTot = totals.done + totals.running + totals.failed + totals.pending;
+  let h = attention(r, px, age) + `<div class="card big">
+    <h2><span class="badge b-${r.state}">${r.state}</span> ${esc(r.run_tag || r.id)}</h2>
+    ${phaseBar(r)}
+    <div class="muted" style="margin-bottom:4px"><b>⏱ ${esc(r.elapsed)}</b> total · ${r.steps_done}/${r.steps_total} jobs (${r.pct}%) · ${totals.running} running · ${totals.failed} failed · ${totals.pending} not started</div>
+    <div class="muted">started ${esc(r.started)} · elapsed ${esc(r.elapsed)} · log updated ${esc(r.updated)}${r.pid ? " · pid " + r.pid : ""}</div>
+    <div class="muted">log: <code>${esc(r.log)}</code></div>
+    ${configBlock(r.config)}
+    ${r.cmd ? `<details><summary class="muted">command</summary><pre>${esc(r.cmd)}</pre></details>` : ""}
+  </div>`;
+
+  // pipeline order: stage-1 -> per-year steps -> DNN -> stage-2/3 grid -> combined-year steps; stats + jobs below
+  const s1list = [...(r.stage1 || [])].sort((a, b) => ((YEAR_ORDER.indexOf(a.year) + 99) % 99) - ((YEAR_ORDER.indexOf(b.year) + 99) % 99));
+  h += stage1Overview(s1list, r.rules, (r.config || {}).years || [], r.jobs) + s1list.map(stage1Card).join("");
+  h += dnnCard(r.dnn || []);
+  const nRule = (...ks) => r.rules.filter(x => ks.includes(x.rule)).reduce((a, x) => a + x.total, 0);
+  const ys = r.year_steps, ch = r.chain, gl = r.global;
+  const grids = [
+    grid("Per-year steps", "Year", ys.years, ys.steps, (y, k) => sq(ys.cells[`${y}|${k}`], k), ys.cells, 0, "waits for stage-1"),
+    grid("Year × jj region — " + ch.steps.map(s => s[1]).join(" → "), "Year", ch.years, ch.regions.map(x => [x, x]),
+      (y, reg) => `<span class="cell">${ch.steps.map(([k, d]) => sq(ch.cells[`${y}|${reg}|${k}`], d)).join("")}</span>`,
+      ch.cells, nRule("stage2", "stage2_plot", "stage3", "stage3_validate"), "waits for the DNN bin scan"),
+    grid("Combined-year steps per jj region", "Region", gl.regions, gl.steps, (reg, k) => sq(gl.cells[`${reg}|${k}`], k), gl.cells, 0, "waits for stage-1 + compact"),
+  ].filter(Boolean);
+  // started grids side by side (they are narrow); one-line waiting cards below them at full width
+  const open = grids.filter(g => g.includes("<table")), waiting = grids.filter(g => !g.includes("<table"));
+  h += (open.length ? `<div class="grids">${open.join("")}</div>` : "") + waiting.join("");
+  h += `<details class="card"><summary><h2 style="display:inline">All rules</h2> <span class="muted">${r.rules.length} rules · job counts per rule</span></summary>
+    <table style="margin-top:8px"><tr><th>rule</th><th>progress</th><th>done</th><th>running</th><th>failed</th><th>not started</th><th>total</th>
+    <th title="first job start → last job end (or now)">wall clock</th><th title="sum of the jobs' wall times">summed job time</th></tr>` +
+    r.rules.map(x => { const t = timing(r.jobs.filter(j => j.rule === x.rule), x.done < x.total && r.state === "running" && x.done + x.running + x.failed > 0, data.generated_ts);
+      return `<tr><td>${esc(x.rule)}</td><td class="barcell">${bar([[x.done, COLORS.done], [x.running, COLORS.running], [x.failed, COLORS.failed]], x.total)}</td>
+      <td class="num">${x.done}</td><td class="num">${x.running}</td><td class="num">${x.failed}</td><td class="num">${x.pending}</td><td class="num">${x.total}</td>
+      <td class="num">${t ? timeTxt(t) : "–"}</td><td class="num">${t ? fmtDur(t.busy) : "–"}</td></tr>`; }).join("") +
+    "</table></details>";
+
+  // keep the caret in a stage-1 search box across re-renders
+  const act = document.activeElement, actId = act && act.classList && act.classList.contains("s1search") ? act.id : null;
+  const actCaret = actId ? act.selectionStart : null;
+  el.innerHTML = h;
+  el.querySelectorAll("details.s1card").forEach(d => d.ontoggle = () => { d.open ? openS1.add(d.dataset.d) : openS1.delete(d.dataset.d); });
+  el.querySelectorAll(".s1jump").forEach(a => a.onclick = () => { openS1.add(a.dataset.d); render(); });
+  el.querySelectorAll(".s1card .filters button").forEach(b => b.onclick = () => { s1Filter[b.dataset.d] = b.dataset.f; render(); });
+  el.querySelectorAll(".s1search").forEach(i => i.oninput = () => { s1Search[i.dataset.d] = i.value; render(); });
+  if (actId) { const i = document.getElementById(actId); if (i) { i.focus(); i.setSelectionRange(actCaret, actCaret); } }
+  renderStats(r);
+
+  h = "";
+  const counts = r.jobs.reduce((a, j) => (a[j.status] = (a[j.status] || 0) + 1, a), {});
+  const active = j => ["running", "restarting", "failed", "killed"].includes(j.status);
+  const shown = r.jobs.filter(j => (filter === "all" || (filter === "active" ? active(j) : j.status === filter)) &&
+    (!search || (j.name + " " + j.rule + " " + j.wildcards).toLowerCase().includes(search.toLowerCase())));
+  const fb = (f, label) => `<button class="${filter === f ? "sel" : ""}" data-f="${f}">${label}</button>`;
+  h += `<div class="card"><h2>Jobs started by this run</h2><div class="filters">
+    ${fb("active", `running + failed (${(counts.running || 0) + (counts.restarting || 0) + (counts.failed || 0) + (counts.killed || 0)})`)}
+    ${fb("running", `running (${counts.running || 0})`)} ${fb("failed", `failed (${counts.failed || 0})`)}
+    ${fb("done", `done (${counts.done || 0})`)} ${fb("all", `all (${r.jobs.length})`)}
+    <input id="search" placeholder="filter by name / rule / wildcards" value="${esc(search)}">
+    <span class="muted">click a row for the log tail</span></div>
+    <table class="wide"><tr><th>status</th><th>rule</th><th>output</th><th>try</th><th>started (this try)</th><th title="summed over all tries; hover for each">wall (all tries)</th><th>last log line / progress</th></tr>` +
+    shown.map(j => `<tr class="job" data-j="${j.jobid}"><td><span class="badge b-${j.status}">${j.status}</span></td><td>${esc(j.rule)}</td>
+      <td>${esc(j.name)}</td><td class="num">${j.attempt}</td><td>${esc(j.start)}</td><td class="num" title="${esc(attemptTip(j))}">${esc(j.wall)}${j.attempt > 1 ? ` <span class="muted">(${j.attempt} tries)</span>` : ""}</td><td class="last">${esc(j.last)}</td></tr>` +
+      (openJobs.has(j.jobid) ? `<tr><td colspan="7"><div class="muted">log: <code>${esc(j.log)}</code>${j.wildcards ? " · " + esc(j.wildcards) : ""}</div>
+        <pre>${j.tail.length ? esc(j.tail.join("\n")) : "(log tail is kept only for jobs that are not done)"}</pre></td></tr>` : "")).join("") +
+    (shown.length ? "" : '<tr><td colspan="7" class="muted">no jobs match</td></tr>') + "</table></div>";
+
+  h += `<div class="card"><h2>Recent events</h2><table class="wide"><tr><th>time</th><th>event</th><th>rule</th><th>output</th></tr>` +
+    r.events.slice(0, 30).map(e => `<tr><td>${esc(e.time)}</td><td><span class="badge b-${e.kind === "start" ? "running" : e.kind}">${e.kind}</span></td>
+      <td>${esc(e.rule)}</td><td>${esc(e.name)}</td></tr>`).join("") + "</table></div>";
+
+  const focused = document.activeElement && document.activeElement.id === "search";
+  const caret = focused ? document.activeElement.selectionStart : null;
+  el2.innerHTML = h;
+  el2.querySelectorAll(".filters button").forEach(b => b.onclick = () => { filter = b.dataset.f; render(); });
+  const s = document.getElementById("search");
+  s.oninput = () => { search = s.value; render(); };
+  if (focused) { s.focus(); s.setSelectionRange(caret, caret); }
+  el2.querySelectorAll("tr.job").forEach(tr => tr.onclick = () => {
+    const id = +tr.dataset.j; openJobs.has(id) ? openJobs.delete(id) : openJobs.add(id); render();
+  });
+}
+
+// Stage-1 chunks of one stage1 rule job (run_stage1.py's _status/job_status.jsonl ledger).
+const S1_LABEL = { pending: "not started", killed: "interrupted" };
+const YEAR_ORDER = ["2016preVFP", "2016postVFP", "2017", "2018", "2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"];
+const fmtN = n => n == null ? "" : n.toLocaleString("en-US");
+const fmtEv = n => n == null ? "" : n >= 1e9 ? (n / 1e9).toFixed(2) + " G" : n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : fmtN(n);
+const s1Filter = {}, s1Search = {};  // per status dir; openS1 = year tables the user expanded
+
+function stage1Overview(list, rules, cfgYears, jobs = []) {
+  if (!list.length) return "";
+  const yk = y => (YEAR_ORDER.indexOf(y) + 99) % 99;
+  const rows = [...list].sort((a, b) => yk(a.year) - yk(b.year));
+  const s1 = rules.find(x => x.rule === "stage1");
+  const notStarted = s1 ? s1.pending : 0;
+  const seen = new Set(list.map(s => s.year)), waiting = cfgYears.filter(y => !seen.has(y));
+  const etas = rows.filter(s => s.eta).map(s => s.eta.ts);
+  return `<div class="card"><h2>Stage-1 overview</h2><table><tr><th>year</th><th>chunks</th><th>done</th><th>running</th><th>failed</th>
+    <th>interrupted</th><th>not started</th><th>skipped</th><th>events processed / total</th><th title="this year's stage1 job: start → end (or now)">run time</th><th title="from this job's event throughput so far; rough">ETA (ET)</th></tr>` +
+    rows.map(s => {
+      const c = s.counts, tot = s.chunks.length - (c.skipped || 0), done = c.done === tot && tot > 0;
+      const eta = done ? `<span class="muted">done${s.summary ? " " + esc(s.summary) : ""}</span>` : s.eta ? `<b>${esc(s.eta.at)}</b> <span class="muted">(${esc(s.eta.left)} left)</span>`
+        : `<span class="muted">${s.alive ? "after a few chunks finish" : "job not running"}</span>`;
+      return `<tr><td><a href="#s1-${esc(s.year)}" class="s1jump" data-d="${esc(s.dir)}">${esc(s.year)}</a></td>
+        <td class="barcell">${bar([[c.done, COLORS.done], [c.running, COLORS.running], [c.failed + c.killed, COLORS.failed]], tot)}</td>
+        <td class="num">${c.done}/${tot}</td><td class="num">${c.running}</td>
+        <td class="num">${c.failed ? `<span class="stale">${c.failed}</span>` : 0}</td><td class="num">${c.killed}</td>
+        <td class="num">${c.pending}</td><td class="num">${c.skipped || 0}</td>
+        <td class="num">${fmtEv(s.events.processed)} / ${fmtEv(s.events.total)}</td>
+        <td class="num">${(j => j ? `<span title="${esc(attemptTip(j))}">${j.end_ts == null ? "running " : ""}${fmtDur(j.wall_s)}${j.attempt > 1 ? ` (${j.attempt} tries)` : ""}</span>` : "–")(jobs.find(j => j.log === s.log))}</td><td>${eta}</td></tr>`;
+    }).join("") + "</table>" +
+    `<div class="legend"><span>${notStarted ? `not started yet: <b>${esc(waiting.join(", ") || notStarted + " job(s)")}</b> (no ETA until they start)` : "all stage-1 jobs started"}</span>` +
+    (etas.length && !notStarted ? `<span>last running year done ≈ <b>${new Date(Math.max(...etas) * 1000).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short" })}</b></span>` : "") +
+    `<span>click a year for its chunk table</span></div>${failureSummary(rows)}</div>`;
+}
+
+// Failed / interrupted chunks of all years, grouped by error type (the generator classifies the full error).
+function failureSummary(list) {
+  const bad = list.flatMap(s => s.chunks.filter(x => x.status === "failed" || x.status === "killed").map(x => ({ ...x, year: s.year })));
+  if (!bad.length) return "";
+  const groups = {};
+  for (const x of bad) (groups[x.error_type || (x.status === "killed" ? "interrupted (no error)" : "other")] ||= []).push(x);
+  return `<h3>Failed / interrupted chunks by error type</h3><table class="wide"><tr><th>type</th><th>count</th><th>year · sample · chunk</th><th>last error</th></tr>` +
+    Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([t, xs]) => `<tr><td><span class="etype">${esc(t)}</span></td>
+      <td class="num">${xs.length}</td><td>${xs.slice(0, 8).map(x => `${esc(x.year)} · ${esc(x.sample)} · ${esc(x.idx)}`).join("<br>")}${xs.length > 8 ? `<br><span class="muted">+${xs.length - 8} more</span>` : ""}</td>
+      <td class="last" title="${esc(xs[0].error)}">${esc(xs[0].error.slice(-300))}</td></tr>`).join("") + "</table>";
+}
+
+// The run's effective config (generator merges workflow/config.yaml, --configfile, --config).
+function configBlock(c) {
+  if (!c) return "";
+  const veto = c.lepton_ip_veto == null ? "?" : c.lepton_ip_veto === "ON" ? '<b class="warnt">ON</b>' : c.lepton_ip_veto === "off" ? "<b>off</b> (official)" : esc(c.lepton_ip_veto);
+  const kv = [["label", `<code>${esc(c.label || "(per-year Run3_nanoAODv<12|15>_" + c.run_tag + ")")}</code>`],
+    ["years", esc(c.years.join(", "))], ["lepton/IP veto", veto], ["switches", `<code>${esc(c.switches)}</code>`],
+    ["prestage tag", esc(c.prestage_tag || "none")], ["jj regions", esc(c.regions.join(", ")) + (c.combine.length ? ` · combined: ${esc(c.combine.join(" + "))}` : "")],
+    ["DNN", esc(c.dnn)], ["output postfix", `<code>${esc(c.postfix)}</code>${c.with_variations ? " · with systematics" : " · nominal only (_NoSyst)"}`]];
+  if (c.reference) kv.push(["compared to", `${esc(c.reference.name || "")} <code>${esc(c.reference.label)}</code> / <code>${esc(c.reference.postfix)}</code>`]);
+  return `<dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`;
+}
+
+// VBF DNN per region (dnn_chain): optuna trials from the journal, final-training folds, status-log line.
+function dnnCard(list) {
+  if (!list.length) return "";
+  if (list.every(d => !d.created && !d.status && !d.preprocessed))
+    return `<div class="card"><h2 style="display:inline">VBF DNN training</h2> <span class="muted">${list.length} region(s) (${esc(list.map(d => d.region).join(", "))}),
+      ${list[0].target} trials each — waits for stage-1 + compact of every year</span></div>`;
+  return `<div class="card"><h2>VBF DNN training</h2><table><tr><th>region</th><th>status</th><th>preprocessed</th><th>HPO trials</th>
+    <th>finished / target</th><th>running</th><th>complete · pruned · failed</th><th>final folds</th><th>wall</th></tr>` +
+    list.map(d => {
+      const st = d.status ? d.status.state : d.created ? "START" : "";
+      const badge = st === "OK" ? "done" : st === "FAIL" ? "failed" : st === "START" ? "running" : "pending";
+      const running = Math.max(d.created - d.finished, 0);
+      return `<tr><td>${esc(d.region)}</td><td><span class="badge b-${badge}">${st === "OK" ? "done" : st === "FAIL" ? "failed" : st ? "training" : "not started"}</span></td>
+        <td>${d.preprocessed ? "yes" : "–"}</td>
+        <td class="barcell">${bar([[d.complete || 0, COLORS.done], [d.pruned || 0, "var(--warn)"], [d.fail || 0, COLORS.failed], [running, COLORS.running]], Math.max(d.target, d.created))}</td>
+        <td class="num">${d.finished} / ${d.target}</td><td class="num">${running}</td>
+        <td class="num">${d.complete || 0} · ${d.pruned || 0} · ${d.fail ? `<span class="stale">${d.fail}</span>` : 0}</td>
+        <td class="num">${d.folds} / 4</td><td class="num">${esc(d.status && d.status.wall || "")}</td></tr>`;
+    }).join("") + `</table><div class="legend"><span>bar: complete (green) · pruned (amber) · failed (red) · running (blue)</span>
+      <span>a rerun after a failure adds trials to the stored study: move hpo_optuna/&lt;HPO label&gt; aside first</span></div></div>`;
+}
+
+function stage1Card(s) {
+  const c = s.counts, tot = s.chunks.length;
+  const f = s1Filter[s.dir] || "active", q = (s1Search[s.dir] || "").toLowerCase();  // default: everything but skipped samples
+  const shown = s.chunks.filter(x => (f === "all" || (f === "active" && x.status !== "skipped") || x.status === f || (f === "failed" && x.status === "killed"))
+    && (!q || x.sample.toLowerCase().includes(q)));
+  const fb = (k, label, n) => `<button class="${f === k ? "sel" : ""}" data-d="${esc(s.dir)}" data-f="${k}">${label} (${n})</button>`;
+  return `<details class="card s1card" id="s1-${esc(s.year)}" data-d="${esc(s.dir)}" ${openS1.has(s.dir) ? "open" : ""}>
+    <summary><h2 style="display:inline">Stage-1 chunks — ${esc(s.year)}</h2> <span class="muted">${c.done}/${tot - (c.skipped || 0)} done · ${c.running} running ·
+      ${c.failed + c.killed ? `<span class="stale">${c.failed + c.killed} failed/interrupted</span>` : "0 failed"}${s.eta ? " · ETA " + esc(s.eta.at) : ""}</span></summary>
+    <div class="muted" style="margin:6px 0">status dir: <code>${esc(s.dir)}</code>${s.summary ? " · stage1_summary.log written " + esc(s.summary) : ""} · ${s.n_samples} samples in prestage JSON</div>
+    <div class="filters">${fb("active", "all but skipped", tot - (c.skipped || 0))} ${fb("all", "all", tot)} ${fb("running", "running", c.running)} ${fb("failed", "failed/interrupted", c.failed + c.killed)}
+      ${fb("pending", "not started", c.pending)} ${fb("done", "done", c.done)} ${fb("skipped", "skipped", c.skipped || 0)}
+      <input class="s1search" id="s1q-${esc(s.year)}" data-d="${esc(s.dir)}" placeholder="filter by sample" value="${esc(s1Search[s.dir] || "")}">
+      <span class="muted">hover an error for the full text</span></div>
+    <table class="wide"><tr><th>status</th><th>sample</th><th>chunk</th><th title="starts of this chunk since this snakemake job began">tries</th><th>started</th><th>ended</th><th>wall</th>
+      <th>events processed / expected</th><th>error</th></tr>` +
+    shown.map(x => `<tr>
+      <td><span class="badge b-${x.status === "pending" || x.status === "skipped" ? "pending" : x.status}">${esc(S1_LABEL[x.status] || x.status)}</span></td>
+      <td>${esc(x.sample)}</td><td class="num">${esc(x.idx)}</td><td class="num">${x.tries || ""}</td>
+      <td>${esc(x.start)}</td><td>${esc(x.end)}${x.earlier ? ' <span class="muted" title="before this snakemake job started">(earlier run)</span>' : ""}</td>
+      <td class="num">${esc(x.wall)}</td>
+      <td class="num">${x.expected == null ? "" : x.status === "pending" ? `<span class="muted" title="from the prestage JSON">– / ${fmtN(x.expected)}</span>` : `${fmtN(x.processed)} / ${fmtN(x.expected)}`}</td>
+      <td class="last" title="${esc(x.error)}">${x.error_type ? `<span class="etype">${esc(x.error_type)}</span> ` : ""}${esc(x.error.slice(-300))}</td></tr>`).join("") +
+    (shown.length ? "" : '<tr><td colspan="9" class="muted">no chunks match</td></tr>') + "</table></details>";
+}
+
+// Stats results live in their own container, rebuilt only when they change, so the embedded
+// plots are not reloaded (and PDF scroll positions not lost) on every poll.
+function renderStats(r) {
+  const st = r ? r.stats || [] : [];
+  const sig = JSON.stringify([r && r.id, st]);
+  if (sig === statsSig) return;
+  statsSig = sig;
+  const el = document.getElementById("stats");
+  if (!st.length) { el.innerHTML = ""; return; }
+  const ORDER = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026", "2025_2026", "Run3"];
+  const steps = reg => `<span class="cell">${Object.entries(reg.steps).map(([k, s]) => sq(s, k)).join("")}</span> ` +
+    Object.entries(reg.steps).map(([k, s]) => `${k}: ${s || "–"}`).join(" · ");
+  let h = "";
+
+  const refName = r && r.config && r.config.reference ? (r.config.reference.name || r.config.reference.label) : "";
+  const withSig = st.filter(x => x.significance.length);
+  if (withSig.length) {
+    const years = [...new Set(withSig.flatMap(x => x.significance.map(s => s.year)))]
+      .sort((a, b) => ((ORDER.indexOf(a) + 99) % 99) - ((ORDER.indexOf(b) + 99) % 99));
+    const table = (title, col, colStat) => `<div><h3>${title}</h3><table class="grid"><tr><th>Year</th>${withSig.map(x => `<th>${esc(x.region)}</th>`).join("")}</tr>` +
+      years.map(y => `<tr><td>${y === "Run3" ? "<b>Run3</b>" : esc(y)}</td>` + withSig.map(x => {
+        const row = x.significance.find(s => s.year === y);
+        if (!row || row[col] == null) {
+          const why = row && row.stale ? "only an older result (before this job started)" : x.steps.stats === "running" ? "not computed yet" : "no result";
+          return `<td class="muted" title="${why}">${x.steps.stats === "running" ? "…" : "–"}</td>`;
+        }
+        const v = row[col], vs = row[colStat], rv = row["ref_" + col];
+        // significance: higher is better; limit: lower is better
+        let ref = "";
+        if (rv != null && +rv) {
+          const d = 100 * (v - rv) / rv, good = col === "sig" ? d > 0 : d < 0;
+          ref = `<br><span class="muted" title="${esc(refName)}">ref ${esc(rv)}</span> <span class="${Math.abs(d) < 0.5 ? "muted" : good ? "delta-up" : "delta-down"}">(${d >= 0 ? "+" : ""}${d.toFixed(1)}%)</span>`;
+        }
+        return `<td title="updated ${esc(row.updated)}">${y === "Run3" ? `<b>${esc(v)}</b>` : esc(v)} <span class="muted">(${esc(vs ?? "–")})</span>${ref}</td>`;
+      }).join("") + "</tr>").join("") + "</table></div>";
+    h += `<div class="card"><h2>Expected significance &amp; limit (blinded, Asimov)</h2>
+      <div class="two">${table("Significance Z, r=1 injected — with syst (stat-only)", "sig", "sig_stat")}
+      ${table("Median expected 95% CL limit r &lt; — with syst (stat-only)", "lim", "lim_stat")}</div>
+      <div class="legend"><span>… running, not computed yet</span><span>– no result in this run</span><span>hover a value for its time</span>
+        ${refName ? `<span>ref = ${esc(refName)} (same region/year, with syst); green = better, red = worse</span>` : ""}</div>
+      <details><summary class="muted">card dirs</summary><pre>${withSig.map(x => `${x.region}: ${x.card_dir}`).map(esc).join("\n")}</pre></details></div>`;
+  }
+
+  const withPlots = st.filter(x => x.impacts.length || x.lhscan.length);
+  if (withPlots.length) {
+    const tile = (title, p, body) => `<div class="plot"><div><b>${esc(title)}</b> <span class="muted">${p.url ? esc(p.updated) : ""}</span>
+      ${p.stale ? ' <span class="stale" title="file is older than this job: from an earlier run">old</span>' : ""}
+      ${p.url ? ` · <a href="${esc(p.pdf || p.url)}" target="_blank">open</a>` : ""}</div>${body}</div>`;
+    const ph = (reg, step) => `<div class="ph">${reg.steps[step] === "running" || reg.steps[step] === "restarting" ? "running…" : reg.steps[step] ? reg.steps[step] : "not started"}</div>`;
+    h += `<div class="card"><h2>Likelihood scans &amp; impacts</h2>` + withPlots.map(reg => `
+      <h3>${esc(reg.region)} <span class="muted" style="font-weight:normal">${steps(reg)}</span></h3><div class="plots">` +
+      reg.lhscan.map(p => tile(`LH scan ${p.year} (Asimov r=1)`, p,
+        p.url ? `<a href="${esc(p.pdf || p.url)}" target="_blank"><img loading="lazy" src="${esc(p.url)}" alt="likelihood scan"></a>` : ph(reg, "lhscan"))).join("") +
+      reg.impacts.map(p => tile(`Impacts ${p.year} (${p.tag})`, p,
+        p.url ? `<iframe loading="lazy" src="${esc(p.url)}#view=FitH"></iframe>` : ph(reg, "impacts"))).join("") +
+      "</div>").join("") + "</div>";
+  }
+  el.innerHTML = h;
+}
+
+async function poll() {
+  try {
+    const res = await fetch("status.json?t=" + Date.now(), { cache: "no-store" });
+    if (res.ok) {
+      data = await res.json();
+      const sel = window.getSelection && String(window.getSelection());
+      if (!sel) render();  // re-rendering would drop a selection (copying a path / error); next poll catches up
+    }
+  } catch (e) {
+    document.getElementById("gen").textContent = "could not load status.json: " + e;
+  }
+}
+poll();
+setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>

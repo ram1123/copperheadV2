@@ -840,9 +840,15 @@ def make_templates(args, parameters={}):
                         continue
                 elif variation_core in ["muID", "muIso", "muTrig"]:
                     suffix = str(year)
+                elif variation_core in ["muID_stat", "muIso_stat", "muTrig_stat"]:
+                    suffix = str(year)  # MUO stat component: uncorrelated across years
+                elif variation_core in ["muID_syst", "muIso_syst", "muTrig_syst"]:
+                    suffix = ""  # MUO syst component: correlated across years
+                elif re.fullmatch(r"btagWP_(hf|lf)_uncorr", variation_core):
+                    suffix = "_" + str(year)  # BTV statistical component: uncorrelated across years
                 elif variation_core in ["mu_roccor", "mu_scale", "mu_resol"]:
                     suffix = str(year)
-                elif re.fullmatch(r"jer\d", variation_core):
+                elif re.fullmatch(r"jer\d?", variation_core):
                     suffix = "_" + str(year)  # JER SFs are derived per era: uncorrelated
                 elif variation_core in ["pu", "l1prefiring"]:
                     suffix = "_wgt"+str(year)

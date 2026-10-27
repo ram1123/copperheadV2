@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """
-python MVA_training/VBF_new/hpo_optuna.py \
-  --config configs/dnn_run3_vbf.yaml \
-  --data-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf_all \
-  --out-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf_all/hpo_optuna \
-  --folds 0,1,2 \
-  --n-trials 50
+Serial Optuna HPO for the Run-3 VBF DNN (train_dnn.py): runs --n-trials MORE trials of a
+(resumable) study, then writes optuna_best.json / optuna_best_override.yaml / plots to --out-dir.
+For trials in parallel on the AF Ray GPU cluster use hpo_ray.py (same objective and outputs).
+
+How to run (repo root, needs the preprocess_dnn.py fold parquets in --data-dir):
+    ./run_in_pixi.sh default python MVA_training/VBF_run3/hpo_optuna.py --config ... --data-dir ... --out-dir ...
+
+Example:
+    ./run_in_pixi.sh default python MVA_training/VBF_run3/hpo_optuna.py \
+      --config configs/dnn_run3_vbf.yaml \
+      --data-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf_all \
+      --out-dir dnn/trained_models/test_removeClip/2022postEE_h-peak_vbf_all/hpo_optuna \
+      --folds 0,1,2 \
+      --n-trials 50
 """
 import argparse
 import json
@@ -403,13 +411,12 @@ def main() -> None:
         storage = f"sqlite:///{(out_dir / 'optuna_study.db').resolve()}"
 
     sampler = optuna.samplers.TPESampler(seed=args.seed, multivariate=False)
-    pruner = optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=3)
 
     study = optuna.create_study(
         study_name=args.study_name,
         direction="maximize",
         sampler=sampler,
-        pruner=pruner,
+        pruner=make_pruner(),
         storage=storage,
         load_if_exists=True,
     )
@@ -435,6 +442,15 @@ def main() -> None:
         objective, n_trials=args.n_trials, timeout=timeout, gc_after_trial=True
     )
 
+    summarize_study(study, out_dir, args.seed)
+
+
+def make_pruner() -> optuna.pruners.BasePruner:
+    return optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=3)
+
+
+def summarize_study(study: optuna.Study, out_dir: Path, seed: int) -> None:
+    """Write plots, optuna_trials.csv, optuna_best.json and optuna_best_override.yaml."""
     save_study_plots(study, out_dir)
 
     df_trials = study.trials_dataframe(attrs=("number", "value", "params", "state"))
@@ -444,7 +460,7 @@ def main() -> None:
         "best_value": study.best_value,
         "best_params": study.best_params,
         "n_trials": len(study.trials),
-        "trial_seed": int(args.seed + study.best_trial.number),
+        "trial_seed": int(seed + study.best_trial.number),
     }
 
     with open(out_dir / "optuna_best.json", "w") as f:
