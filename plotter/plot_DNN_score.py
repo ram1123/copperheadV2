@@ -236,10 +236,12 @@ def arrangeHist_bySampleGroup(pickled_hist_dict, sample_group_dict):
     for hist_name, hist_instance in pickled_hist_dict.items():
         # loop over hist_name and add them to the appropriate sample group
         for sample_group, name_indicators in sample_group_dict.items():
-            for name_indicator in name_indicators:
-                if name_indicator in hist_name:
-                    hist_bySampleGroup[sample_group].append(hist_instance)
-                    continue
+            # A process name can be a substring of another configured process
+            # (for example ``vbf_powheg`` and ``vbf_powheg_dipole``).  Preserve
+            # the historical substring grouping, but add a histogram at most
+            # once to a given group so such aliases cannot double-count it.
+            if any(name_indicator in hist_name for name_indicator in name_indicators):
+                hist_bySampleGroup[sample_group].append(hist_instance)
 
     for sample_group, hist_l in hist_bySampleGroup.items():
         logger.info(f"{sample_group}, len:{len(hist_l)}")

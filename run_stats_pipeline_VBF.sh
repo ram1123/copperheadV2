@@ -47,6 +47,9 @@ Modes:
   14|combine_vbf_jjregions_lhscan
                               Same jj-region combination as mode 12, then the 1D likelihood
                               scan (Asimov, r=1 injected) on the combined card.
+  15|vbf_full                 Same card/workspace + expected significance/limit workflow as
+                              mode 11, then blinded Asimov impacts for r=1 and r=0. Existing
+                              modes remain unchanged.
 
 Common options:
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 commands built by this wrapper.
@@ -56,6 +59,10 @@ Env vars:
                  "all"). This wrapper's own datacard/workspace paths are derived from -o's
                  save_postfix plus this var (same mechanism as -o itself), so a mismatch here
                  looks exactly like a wrong -o: "Missing VBF SR/SB datacards for <year>".
+  VBF_RUN2_CARD_PATH, VBF_RUN3_CARD_PATH
+                 Optional, and must be set together. For -y Run2Run3, combine these two
+                 already-built cards even when they belong to different model/output
+                 directories. Relative shapes paths are resolved against each source card.
 EOF
     exit 1
 }
@@ -120,6 +127,15 @@ for year in "${years[@]}"; do
             ;;
         14|combine_vbf_jjregions_lhscan)
             run_vbf_jjcombined_lhscan "${year}"
+            ;;
+        15|vbf_full)
+            ensure_vbf_card "${year}"
+            ensure_vbf_workspace "${year}"
+            run_vbf_significance "${year}"
+            collect_vbf_significance_summary
+            run_vbf_limit "${year}"
+            collect_vbf_limit_summary
+            run_vbf_impacts "${year}"
             ;;
         *)
             die "Invalid stats mode '${mode}'."

@@ -27,6 +27,12 @@ common_defaults() {
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
     do_vbf_filter_study="${DO_VBF_FILTER_STUDY:-0}"
+    # Opt-in Stage-2 channel driven by a binary-Transformer preprocessing
+    # manifest.  Leaving BINARY_TRANSFORMER_MANIFEST unset preserves the
+    # historical Stage-2 command byte-for-byte; the sideband policy is only
+    # forwarded when the new channel is enabled.
+    binary_transformer_manifest="${BINARY_TRANSFORMER_MANIFEST:-}"
+    binary_transformer_sideband_mass="${BINARY_TRANSFORMER_SIDEBAND_MASS:-pin125}"
     prestage_tag="${PRESTAGE_TAG:-}"  # stage-1 reads processor_samples_<year>_NanoAODv<v>_<tag>.json when set
     chunksize="600000"
     max_file_len="900"
@@ -73,6 +79,13 @@ parse_common_args() {
     dnn_years_csv="$(join_by "," "${years[@]}")"
     dnn_years_slug="${dnn_years_csv//,/-}"
     dnn_config="${DNN_CONFIG:-configs/dnn_run3_vbf.yaml}"
+    # Opt-in inputs for Transformer-defined VBF-DNN training. Unset defaults
+    # preserve the historical cut-based preprocessing and local training path.
+    dnn_input_base="${DNN_INPUT_BASE:-${save_path}/stage1_output/}"
+    dnn_category_selection="${DNN_CATEGORY_SELECTION:-}"
+    dnn_transformer_score_threshold="${TRANSFORMER_SCORE_THRESHOLD:-}"
+    dnn_transformer_score_column="${TRANSFORMER_SCORE_COLUMN:-}"
+    dnn_train_backend="${DNN_TRAIN_BACKEND:-local}"
     # Effective jet-eta topology the VBF DNN's dijet pair is restricted to
     # ("all" = none, or one of modules/selection.py's PAIR_JJ_ETA_REGIONS, e.g.
     # jj_both_central, jj_non_central, jj_both_he, ...). Source of truth is
@@ -513,6 +526,16 @@ build_stage2_cmd() {
     if [[ "${jj_eta_region}" != "all" ]]; then
         cmd+=(--jj_eta_region "${jj_eta_region}")
     fi
+    if [[ -n "${binary_transformer_manifest}" ]]; then
+        case "${binary_transformer_sideband_mass}" in
+            pin125|raw) ;;
+            *) die "BINARY_TRANSFORMER_SIDEBAND_MASS must be 'pin125' or 'raw', got '${binary_transformer_sideband_mass}'." ;;
+        esac
+        cmd+=(
+            --binary-transformer-manifest "${binary_transformer_manifest}"
+            --binary-transformer-sideband-mass "${binary_transformer_sideband_mass}"
+        )
+    fi
     # DY_MATCHED_JETS: unset = run_stage2_vbf.py default (reco_012, 0/1/2 gen-matched VBF jets); stage-3 detects it
     if [[ -n "${DY_MATCHED_JETS:-}" ]]; then
         cmd+=(--dy_matched_jets "${DY_MATCHED_JETS}")
@@ -678,11 +701,24 @@ run_dnn_workflow_once() {
     local -a pre_cmd=(
         python MVA_training/VBF_run3/preprocess_dnn.py
         --config "${dnn_config}"
-        --base-path "${save_path}/stage1_output/"
+        --base-path "${dnn_input_base}"
         --tag "${label}"
         --years "${dnn_years_csv}"
         --jj-eta-region "${dnn_jj_eta_region}"
     )
+    if [[ -n "${dnn_category_selection}" ]]; then
+        pre_cmd+=(--category-selection "${dnn_category_selection}")
+    fi
+    if [[ "${dnn_category_selection}" == "transformer" ]]; then
+        [[ -n "${dnn_transformer_score_threshold}" ]] || \
+            die "TRANSFORMER_SCORE_THRESHOLD is required when DNN_CATEGORY_SELECTION=transformer."
+        pre_cmd+=(--transformer-score-threshold "${dnn_transformer_score_threshold}")
+        if [[ -n "${dnn_transformer_score_column}" ]]; then
+            pre_cmd+=(--transformer-score-column "${dnn_transformer_score_column}")
+        fi
+    elif [[ -n "${dnn_transformer_score_threshold}" ]]; then
+        die "Set DNN_CATEGORY_SELECTION=transformer when TRANSFORMER_SCORE_THRESHOLD is provided."
+    fi
     if [[ "${dask_gateway}" == "1" ]]; then
         pre_cmd+=(--use-dask-gateway)
         if [[ "${cluster_index}" != "0" ]]; then
@@ -711,7 +747,10 @@ run_dnn_workflow_once() {
 
     log "Running DNN workflow for years=${dnn_years_csv}"
     log "  DNN config: ${dnn_config}"
+    log "  DNN input base: ${dnn_input_base}"
+    log "  DNN category selection: ${dnn_category_selection:-config/default cut}"
     log "  DNN jj_eta_region: ${dnn_jj_eta_region}"
+    log "  DNN train backend: ${dnn_train_backend}"
     log "  DNN base dir: ${dnn_base_dir}"
     log "  DNN HPO dir: ${dnn_hpo_dir}"
     log "  DNN best json: ${dnn_best_json}"
@@ -719,12 +758,33 @@ run_dnn_workflow_once() {
     [[ "${run_preprocess}" == "1" ]] && run_cmd "${pre_cmd[@]}"
     [[ "${run_hpo}" == "1" ]] && run_cmd_timed "${hpo_cmd[@]}"
     if [[ "${run_train}" == "1" ]]; then
-        if [[ -f "${dnn_best_json}" ]]; then
-            train_cmd+=(--optuna-best-json "${dnn_best_json}")
-        else
-            log "WARNING: ${dnn_best_json} not found; training will use config hyperparameters."
-        fi
-        run_cmd_timed "${train_cmd[@]}"
+        case "${dnn_train_backend}" in
+            local)
+                if [[ -f "${dnn_best_json}" ]]; then
+                    train_cmd+=(--optuna-best-json "${dnn_best_json}")
+                else
+                    log "WARNING: ${dnn_best_json} not found; training will use config hyperparameters."
+                fi
+                run_cmd_timed "${train_cmd[@]}"
+                ;;
+            ray)
+                local -a ray_train_cmd=(
+                    /work/pixi/global/.pixi/envs/default/bin/python
+                    MVA_training/VBF_run3/submit_ray_dnn.py submit
+                    --config "${dnn_config}"
+                    --data-dir "${dnn_base_dir}/"
+                    --out-dir "${dnn_base_dir}/${dnn_train_label}"
+                    --wait
+                )
+                if [[ -f "${dnn_best_json}" ]]; then
+                    ray_train_cmd+=(--optuna-best-json "${dnn_best_json}")
+                else
+                    log "WARNING: ${dnn_best_json} not found; Ray training will use config hyperparameters."
+                fi
+                run_cmd_timed "${ray_train_cmd[@]}"
+                ;;
+            *) die "DNN_TRAIN_BACKEND must be 'local' or 'ray', got '${dnn_train_backend}'." ;;
+        esac
     fi
 }
 
@@ -760,6 +820,90 @@ combine_vbf_cards() {
     (
         cd "${card_dir}" || exit 1
         combineCards.py "$@" > "${out_txt}"
+    )
+}
+
+# Copy a datacard while making each relative shapes-file path absolute with
+# respect to the source card.  This is needed when Run-2 and Run-3 cards from
+# different model/output directories are combined into a third directory:
+# combineCards.py otherwise preserves their relative paths, which
+# text2workspace.py would later resolve against the wrong directory.
+rewrite_vbf_card_with_absolute_shapes() {
+    local source_card="$1"
+    local output_card="$2"
+    local source_dir
+    source_dir="$(cd "$(dirname "${source_card}")" && pwd -P)"
+    awk -v source_dir="${source_dir}" '
+        function external_or_absolute(path) {
+            return path ~ /^\// || path ~ /^[[:alpha:]][[:alnum:]+.-]*:\/\// || path == "FAKE" || path == "-"
+        }
+        $1 == "shapes" && NF >= 4 && !external_or_absolute($4) {
+            $4 = source_dir "/" $4
+        }
+        { print }
+    ' "${source_card}" > "${output_card}"
+}
+
+resolve_existing_vbf_card() {
+    local card_path="$1"
+    if [[ ! -s "${card_path}" ]]; then
+        echo "ERROR: Missing or empty external VBF card: ${card_path}" >&2
+        return 1
+    fi
+    local card_dir
+    card_dir="$(cd "$(dirname "${card_path}")" && pwd -P)"
+    printf '%s/%s' "${card_dir}" "$(basename "${card_path}")"
+}
+
+combine_external_run2_run3_cards() {
+    local card_dir="$1"
+    local card_path="$2"
+    local run2_source="$3"
+    local run3_source="$4"
+    mkdir -p "${card_dir}"
+
+    (
+        set -e
+        local run2_tmp run3_tmp output_tmp
+        run2_tmp="$(mktemp "${card_dir}/.Run2_external_XXXXXX.txt")"
+        run3_tmp="$(mktemp "${card_dir}/.Run3_external_XXXXXX.txt")"
+        output_tmp="$(mktemp "${card_dir}/.Run2Run3_combined_XXXXXX.txt")"
+        trap 'rm -f "${run2_tmp}" "${run3_tmp}" "${output_tmp}"' EXIT
+
+        rewrite_vbf_card_with_absolute_shapes "${run2_source}" "${run2_tmp}"
+        rewrite_vbf_card_with_absolute_shapes "${run3_source}" "${run3_tmp}"
+        (
+            cd "${card_dir}"
+            combineCards.py \
+                "Run2=$(basename "${run2_tmp}")" \
+                "Run3=$(basename "${run3_tmp}")" > "${output_tmp}"
+        )
+        [[ -s "${output_tmp}" ]] || die "Failed to build non-empty external Run2Run3 VBF card ${card_path}"
+        mv -f "${output_tmp}" "${card_path}"
+    )
+}
+
+vbf_external_sources_match() {
+    local source_record="$1"
+    local run2_source="$2"
+    local run3_source="$3"
+    [[ -s "${source_record}" ]] || return 1
+    [[ "$(sed -n '1p' "${source_record}")" == "Run2=${run2_source}" ]] || return 1
+    [[ "$(sed -n '2p' "${source_record}")" == "Run3=${run3_source}" ]] || return 1
+    [[ -z "$(sed -n '3p' "${source_record}")" ]] || return 1
+}
+
+write_vbf_external_sources() {
+    local source_record="$1"
+    local run2_source="$2"
+    local run3_source="$3"
+    (
+        set -e
+        local source_tmp
+        source_tmp="$(mktemp "$(dirname "${source_record}")/.Run2Run3_sources_XXXXXX.txt")"
+        trap 'rm -f "${source_tmp}"' EXIT
+        printf 'Run2=%s\nRun3=%s\n' "${run2_source}" "${run3_source}" > "${source_tmp}"
+        mv -f "${source_tmp}" "${source_record}"
     )
 }
 
@@ -840,13 +984,32 @@ ensure_vbf_card() {
                 "y2025_2026=HMuMu_13TeV_2025_2026.txt"
             ;;
         Run2Run3|run2run3|Run2+Run3|run2+run3)
-            ensure_vbf_card Run2
-            ensure_vbf_card Run3
-            vbf_card_is_current "${card_path}" "${card_dir}/$(vbf_card_stem Run2).txt" "${card_dir}/$(vbf_card_stem Run3).txt" && return 0
-            rm -f "${card_path}"
-            combine_vbf_cards "${card_dir}" "${stem}.txt" \
-                "Run2=HMuMu_13TeV_Run2.txt" \
-                "Run3=HMuMu_13TeV_Run3.txt"
+            local external_source_record="${card_path}.external_sources"
+            if [[ -n "${VBF_RUN2_CARD_PATH:-}" || -n "${VBF_RUN3_CARD_PATH:-}" ]]; then
+                [[ -n "${VBF_RUN2_CARD_PATH:-}" && -n "${VBF_RUN3_CARD_PATH:-}" ]] \
+                    || die "VBF_RUN2_CARD_PATH and VBF_RUN3_CARD_PATH must be set together."
+                local run2_source run3_source
+                run2_source="$(resolve_existing_vbf_card "${VBF_RUN2_CARD_PATH}")"
+                run3_source="$(resolve_existing_vbf_card "${VBF_RUN3_CARD_PATH}")"
+                if vbf_external_sources_match "${external_source_record}" "${run2_source}" "${run3_source}" \
+                    && vbf_card_is_current "${card_path}" "${run2_source}" "${run3_source}"; then
+                    return 0
+                fi
+                combine_external_run2_run3_cards "${card_dir}" "${card_path}" "${run2_source}" "${run3_source}"
+                write_vbf_external_sources "${external_source_record}" "${run2_source}" "${run3_source}"
+            else
+                ensure_vbf_card Run2
+                ensure_vbf_card Run3
+                if [[ ! -e "${external_source_record}" ]] \
+                    && vbf_card_is_current "${card_path}" "${card_dir}/$(vbf_card_stem Run2).txt" "${card_dir}/$(vbf_card_stem Run3).txt"; then
+                    return 0
+                fi
+                rm -f "${card_path}"
+                combine_vbf_cards "${card_dir}" "${stem}.txt" \
+                    "Run2=HMuMu_13TeV_Run2.txt" \
+                    "Run3=HMuMu_13TeV_Run3.txt"
+                rm -f "${external_source_record}"
+            fi
             ;;
         *)
             die "Unsupported VBF combine year: ${year}"
@@ -1014,7 +1177,7 @@ collect_vbf_significance_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_significance_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
+    local ordered_years=(2016preVFP 2016postVFP 2016 2017 2018 Run2 2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3 Run2Run3)
     local year stem sig_log stat_log sig_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"
@@ -1023,8 +1186,14 @@ collect_vbf_significance_summary() {
         if [[ -f "${sig_log}" || -f "${stat_log}" ]]; then
             sig_val="NA"
             stat_val="NA"
-            [[ -f "${sig_log}" ]] && sig_val="$(extract_significance_value "${sig_log}" 2>/dev/null || printf 'NA')"
-            [[ -f "${stat_log}" ]] && stat_val="$(extract_significance_value "${stat_log}" 2>/dev/null || printf 'NA')"
+            if [[ -f "${sig_log}" ]]; then
+                sig_val="$(extract_significance_value "${sig_log}" 2>/dev/null || true)"
+                sig_val="${sig_val:-NA}"
+            fi
+            if [[ -f "${stat_log}" ]]; then
+                stat_val="$(extract_significance_value "${stat_log}" 2>/dev/null || true)"
+                stat_val="${stat_val:-NA}"
+            fi
             printf '%s,%s,%s,%s\n' "${year}" "${stem}.txt" "${sig_val}" "${stat_val}" >> "${tmp_rows}"
         fi
     done
@@ -1048,7 +1217,7 @@ collect_vbf_limit_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_limit_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
+    local ordered_years=(2016preVFP 2016postVFP 2016 2017 2018 Run2 2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3 Run2Run3)
     local year stem lim_log stat_log lim_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"
@@ -1057,8 +1226,14 @@ collect_vbf_limit_summary() {
         if [[ -f "${lim_log}" || -f "${stat_log}" ]]; then
             lim_val="NA"
             stat_val="NA"
-            [[ -f "${lim_log}" ]] && lim_val="$(extract_expected_limit "${lim_log}" 2>/dev/null || printf 'NA')"
-            [[ -f "${stat_log}" ]] && stat_val="$(extract_expected_limit "${stat_log}" 2>/dev/null || printf 'NA')"
+            if [[ -f "${lim_log}" ]]; then
+                lim_val="$(extract_expected_limit "${lim_log}" 2>/dev/null || true)"
+                lim_val="${lim_val:-NA}"
+            fi
+            if [[ -f "${stat_log}" ]]; then
+                stat_val="$(extract_expected_limit "${stat_log}" 2>/dev/null || true)"
+                stat_val="${stat_val:-NA}"
+            fi
             printf '%s,%s,%s,%s\n' "${year}" "${stem}.txt" "${lim_val}" "${stat_val}" >> "${tmp_rows}"
         fi
     done

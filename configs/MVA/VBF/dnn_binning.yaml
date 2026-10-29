@@ -919,3 +919,109 @@ models:
         region: h-peak
         signal: vbf,ggh
         report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct08_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_Systematics_LumiSplit_Oct12_2026_ScoreDump_NoSyst/binning_comparison.txt
+  Run2_VBFDNN_Transformer_lt0p022:
+    all:
+      n_bins: 25
+      edges: [0.000636, 0.052365, 0.104095, 0.155824, 0.259283, 0.311013, 0.362742, 0.517931, 0.673119, 0.776578, 1.035225,
+        1.190414, 1.293872, 1.397331, 1.449061, 1.50079, 1.655979, 1.759438, 1.862897, 2.018085, 2.069814, 2.173273, 2.225003,
+        2.276732, 2.328462, 2.999215]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-29T13:54:20'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.949215
+        best_nbins_from_scan: 57
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.5567
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.000636
+        score_max: 2.949215
+        stage2_scores: /work/projects/hmm/hu1027/hmm_ntuples/copperheadV1clean/Run2_VBFDNN_Transformer_lt0p022/stage2_histograms/score_Run2_VBFDNN_Transformer_lt0p022_TransformerScoreDump_vbf_filter_study_NoSyst
+        years: [2016preVFP, 2016postVFP, '2017', '2018']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/Run2_VBFDNN_Transformer_lt0p022_TransformerScoreDump_all/binning_comparison.txt
+  Run3_VBFDNN_Transformer_lt0p019:
+    all:
+      n_bins: 21
+      edges: [0.0, 0.050922, 0.20369, 0.305535, 0.458302, 0.560147, 0.611069, 0.763836, 0.814759, 1.018449, 1.273061, 1.425828,
+        1.578595, 1.68044, 1.782285, 1.935052, 2.08782, 2.138742, 2.189665, 2.240587, 2.291509, 2.697967]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-29T14:02:38'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.647967
+        best_nbins_from_scan: 52
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.7606
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 2.647967
+        stage2_scores: /work/projects/hmm/hu1027/hmm_ntuples/copperheadV1clean/Run3_VBFDNN_Transformer_lt0p019/stage2_histograms/score_Run3_VBFDNN_Transformer_lt0p019_TransformerScoreDump_vbf_filter_study_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/Run3_VBFDNN_Transformer_lt0p019_TransformerScoreDump_all/binning_comparison.txt
+  Run2_VBFDNN_Transformer_lt0p200:
+    all:
+      n_bins: 26
+      edges: [7.1e-05, 0.045839, 0.091607, 0.137375, 0.183143, 0.228911, 0.274679, 0.411983, 0.549287, 0.640823, 0.732358,
+        0.823894, 1.190038, 1.418878, 1.693485, 1.785021, 1.830789, 2.059629, 2.105397, 2.196933, 2.242701, 2.288469, 2.334237,
+        2.425773, 2.471541, 2.517309, 3.116524]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-29T16:15:02'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 3.066524
+        best_nbins_from_scan: 67
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.2271
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 7.1e-05
+        score_max: 3.066524
+        stage2_scores: /work/projects/hmm/hu1027/hmm_ntuples/copperheadV1clean/Run2_VBFDNN_Transformer_lt0p200/stage2_histograms/score_Run2_VBFDNN_Transformer_lt0p200_TransformerScoreDump_vbf_filter_study_NoSyst
+        years: [2016preVFP, 2016postVFP, '2017', '2018']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/Run2_VBFDNN_Transformer_lt0p200_TransformerScoreDump_all/binning_comparison.txt
+  Run3_VBFDNN_Transformer_lt0p200:
+    all:
+      n_bins: 23
+      edges: [0.0, 0.077315, 0.15463, 0.231945, 0.309261, 0.386576, 0.463891, 0.541206, 0.695836, 0.850467, 0.927782, 1.082412,
+        1.237042, 1.468988, 1.623618, 1.778248, 1.855563, 1.932878, 2.010194, 2.087509, 2.164824, 2.242139, 2.319454, 4.843539]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-10-29T16:25:47'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 4.793539
+        best_nbins_from_scan: 62
+        max_nbins_scanned: 70
+        total_asimov_Z: 2.174
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 4.793539
+        stage2_scores: /work/projects/hmm/hu1027/hmm_ntuples/copperheadV1clean/Run3_VBFDNN_Transformer_lt0p200/stage2_histograms/score_Run3_VBFDNN_Transformer_lt0p200_TransformerScoreDump_vbf_filter_study_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/Run3_VBFDNN_Transformer_lt0p200_TransformerScoreDump_all/binning_comparison.txt

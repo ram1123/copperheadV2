@@ -1,0 +1,85 @@
+# Sample contract for the external Run-2 NanoV15 Stage-1 production used by
+# run_vbfdnn_cutbased_run2_stage23.sh:
+#
+#   /work/projects/hmm/yun79/hmm_ntuples/copperheadV1clean/
+#   Run2_NanoV15_BtagZptFix_sept29_2026/stage1_output/<year>/compacted
+#
+# Keep this production-specific mapping separate from samples.yaml: other
+# Stage-1 productions still use names such as st_tw_top/st_t_top and zz.
+
+data:
+    "2016preVFP": [data_B, data_C, data_D, data_E, data_F]
+    "2016postVFP": [data_F, data_G, data_H]
+    "2016": [data_B, data_C, data_D, data_E, data_F, data_G, data_H]
+    "2017": [data_B, data_C, data_D, data_E, data_F]
+    "2018": [data_A, data_B, data_C, data_D]
+    run2: [data_A, data_B, data_C, data_D, data_E, data_F, data_G, data_H]
+
+background:
+    label: 0
+
+    groups:
+        DY:
+            processes:
+                - dyTo2Mu_M-50_MiNNLO
+                - dyTo2Mu_M-100to200_MiNNLO
+            processes_per_year: {}
+
+        DYVBF:
+            processes:
+                - dy_VBF_filter
+            processes_per_year: {}
+
+        TT:
+            processes:
+                - ttjets_dl
+                - ttjets_sl
+            processes_per_year: {}
+
+        ST:
+            processes:
+                - st_tW_top
+                - st_tW_antitop
+                - st_tchannel_top
+                - st_tchannel_antitop
+            processes_per_year: {}
+            # The external 2017 directory also contains st_schannel_had/lep.
+            # They are not part of the original four-process ST contract and
+            # remain excluded until their use is explicitly validated.
+
+        EWK:
+            processes:
+                - ewk_zlljj
+            processes_per_year: {}
+
+        VV:
+            processes:
+                - ww_2l2nu
+                - wz_1l1nu2q
+                - wz_2l2q
+                - wz_3lnu
+                - zz_2l2q
+                - zz_4l
+            processes_per_year: {}
+
+        VVV:
+            processes:
+                - www
+                - wwz
+                - wzz
+                - zzz
+            processes_per_year: {}
+
+signal:
+    label: 1
+
+    groups:
+        VBF:
+            processes:
+                - vbf_powheg_dipole
+            processes_per_year: {}
+
+        GGH:
+            processes:
+                - ggh_powhegPS
+            processes_per_year: {}

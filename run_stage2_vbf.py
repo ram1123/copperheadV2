@@ -18,7 +18,9 @@ Example (2023 DY only, nominal, DY split by number of gen-matched VBF jets):
 """
 import argparse
 import glob
+import hashlib
 import itertools
+import json
 import logging
 import os
 import pickle
@@ -45,6 +47,9 @@ from modules.systematics import (  # noqa: F401
     feature_name_for_variation,
     stage2_shape_variations,
 )
+from MVA_training.VBF_run3.utils.pre_scale_cleaning import (
+    pre_scaling_clean_transformer,
+)
 
 
 DATASET_SEPARATOR = "::"
@@ -64,6 +69,377 @@ RECO_MATCH_FIELDS = ("jet1_hasMatchedGenJet_nominal", "jet2_hasMatchedGenJet_nom
 # Imported lazily so that the default kinematic path never pays the import cost and
 # never fails if the scan artifact or the checkpoints are absent.
 TRANSFORMER_SCORE_FIELD = "p_VBF_transformer"
+
+# Contract of the separately trained binary-Transformer-selected VBF DNNs.  This
+# is deliberately independent of ``--use_transformer_vbf_channel`` above: that
+# legacy option recomputes a 2017 three-class p_VBF and uses the opposite score
+# direction.  The new path consumes the score and preprocessing contract written
+# by preprocess_dnn.py instead.
+BINARY_TRANSFORMER_BTAG_VETO = (
+    "not(nBtagLoose>=2or(nBtagMedium>=1andnjets>=2))"
+)
+BINARY_TRANSFORMER_SENTINELS = {
+    "jet_pt_mass_log_and_other": 0.0,
+    "jet_eta_phi": -5.0,
+    "upart_qvg": -1.0,
+    "jj_deta": -1.0,
+    "rpt": -1.0,
+    "ll_zstar_log": -20.0,
+    "mmj_min_deta": -1.0,
+    "pt_centrality": -200.0,
+}
+
+
+def sha256_file(path):
+    """Return a stable SHA256 for one small contract/model artifact."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_binary_transformer_manifest(path):
+    """Load and strictly validate a binary Transformer preprocessing contract.
+
+    Thresholds and year/feature lists are intentionally *not* hard-coded here;
+    that keeps future working points compatible.  The selection direction and
+    preprocessing semantics are fixed because changing either would make Stage 2
+    inference different from the training represented by these manifests.
+    """
+    manifest_path = Path(path).expanduser().resolve()
+    if not manifest_path.is_file():
+        raise FileNotFoundError(
+            f"Binary Transformer manifest does not exist: {manifest_path}"
+        )
+    with open(manifest_path) as manifest_file:
+        manifest = json.load(manifest_file)
+    if not isinstance(manifest, dict):
+        raise ValueError(f"Binary Transformer manifest must be an object: {manifest_path}")
+
+    selection_contract = manifest.get("selection") or {}
+    if selection_contract.get("mode") != "transformer":
+        raise ValueError("Binary Transformer manifest selection.mode must be 'transformer'.")
+    score_field = selection_contract.get("score_column")
+    if not isinstance(score_field, str) or not score_field:
+        raise ValueError("Binary Transformer manifest is missing selection.score_column.")
+    if selection_contract.get("vbf_score_operator") != "lt":
+        raise ValueError(
+            "Binary Transformer Stage 2 requires selection.vbf_score_operator='lt'."
+        )
+    threshold = selection_contract.get("score_threshold")
+    if not isinstance(threshold, (int, float)) or not np.isfinite(threshold):
+        raise ValueError("Binary Transformer manifest score_threshold must be finite.")
+
+    mass_window = selection_contract.get("mass_window_gev") or {}
+    if (
+        float(mass_window.get("lower_inclusive", np.nan)) != 115.0
+        or float(mass_window.get("upper_exclusive", np.nan)) != 135.0
+    ):
+        raise ValueError(
+            "Binary Transformer training mass window must be 115 <= m_mumu < 135 GeV "
+            "to match the Stage-2 h-peak definition."
+        )
+    normalized_btag = "".join(str(selection_contract.get("btag_veto", "")).split())
+    if normalized_btag != BINARY_TRANSFORMER_BTAG_VETO:
+        raise ValueError(
+            "Binary Transformer manifest b-tag veto does not match the training/Stage-2 "
+            "contract: not (nBtagLoose>=2 or (nBtagMedium>=1 and njets>=2))."
+        )
+
+    if manifest.get("category") != "vbf" or manifest.get("region") != "h-peak":
+        raise ValueError("Binary Transformer manifest must describe category=vbf, region=h-peak.")
+    if manifest.get("jj_eta_region") != "all":
+        raise ValueError("Binary Transformer manifest jj_eta_region must be 'all'.")
+
+    preprocessing = manifest.get("feature_preprocessing") or {}
+    if preprocessing.get("sentinel_space") != "raw_before_scaling":
+        raise ValueError("Transformer sentinels must be applied in raw space before scaling.")
+    if preprocessing.get("standardized_value_clipping") is not None:
+        raise ValueError("Binary Transformer manifest must not clip standardized inputs.")
+    raw_clip = preprocessing.get("raw_pt_centrality_clip")
+    if list(raw_clip or []) != [-200.0, 200.0]:
+        raise ValueError("Binary Transformer pt_centrality raw clip must be [-200, 200].")
+    sentinels = preprocessing.get("sentinels") or {}
+    bad_sentinels = {
+        key: (sentinels.get(key), expected)
+        for key, expected in BINARY_TRANSFORMER_SENTINELS.items()
+        if sentinels.get(key) != expected
+    }
+    if bad_sentinels:
+        raise ValueError(
+            "Binary Transformer sentinel contract mismatch: "
+            f"{bad_sentinels}"
+        )
+
+    years = manifest.get("years")
+    if not isinstance(years, list) or not years or len(years) != len(set(years)):
+        raise ValueError("Binary Transformer manifest years must be a non-empty unique list.")
+    features = manifest.get("training_features")
+    if (
+        not isinstance(features, list)
+        or not features
+        or len(features) != len(set(features))
+    ):
+        raise ValueError(
+            "Binary Transformer manifest training_features must be a non-empty unique list."
+        )
+    n_folds = manifest.get("n_folds")
+    if not isinstance(n_folds, int) or n_folds <= 0:
+        raise ValueError("Binary Transformer manifest n_folds must be a positive integer.")
+    if (manifest.get("cv") or {}).get("n_folds", n_folds) != n_folds:
+        raise ValueError("Binary Transformer manifest n_folds disagrees with cv.n_folds.")
+
+    scale_features = manifest.get("scale_features") or []
+    no_scale_features = manifest.get("do_not_scale_features") or []
+    if set(scale_features) & set(no_scale_features):
+        raise ValueError("Manifest scale_features and do_not_scale_features overlap.")
+    if set(scale_features) | set(no_scale_features) != set(features):
+        raise ValueError(
+            "Manifest scale_features/do_not_scale_features do not exactly cover "
+            "training_features."
+        )
+    if manifest.get("weight_col") != "wgt_nominal":
+        raise ValueError("Binary Transformer Stage 2 currently requires weight_col=wgt_nominal.")
+
+    base_path_raw = manifest.get("base_path")
+    if not isinstance(base_path_raw, str) or not base_path_raw:
+        raise ValueError("Binary Transformer manifest is missing base_path.")
+    base_path = Path(base_path_raw).expanduser()
+    if not base_path.is_absolute():
+        base_path = manifest_path.parent / base_path
+    base_path = base_path.resolve()
+
+    return {
+        "manifest": manifest,
+        "manifest_path": manifest_path,
+        "manifest_sha256": sha256_file(manifest_path),
+        "model_path": manifest_path.parent,
+        "base_path": base_path,
+        "score_field": score_field,
+        "threshold": float(threshold),
+        "years": tuple(str(year) for year in years),
+        "n_folds": n_folds,
+        "training_features": [str(feature) for feature in features],
+        "scale_features": [str(feature) for feature in scale_features],
+        "no_scale_features": [str(feature) for feature in no_scale_features],
+        "systematics_enabled": bool(
+            (manifest.get("systematic_variations") or {}).get("enabled", False)
+        ),
+    }
+
+
+def resolve_binary_scored_year_path(base_path, year):
+    """Resolve compacted, f1_0, or flat scored input without guessing.
+
+    A candidate is considered populated only when it has the Stage-1 layout
+    ``sample/shard/*.parquet``.  This prevents a flat-year probe from mistaking
+    ``year/compacted/sample/shard`` for a second valid layout.
+    """
+    year_root = Path(base_path) / str(year)
+    candidates = {
+        "compacted": year_root / "compacted",
+        "f1_0": year_root / "f1_0",
+        "flat": year_root,
+    }
+    populated = {
+        name: path
+        for name, path in candidates.items()
+        if path.is_dir()
+        and next(glob.iglob(str(path / "*" / "*" / "*.parquet")), None) is not None
+    }
+    if not populated:
+        raise FileNotFoundError(
+            f"No scored Parquet sample/shard files found for {year}; tried "
+            + ", ".join(str(path) for path in candidates.values())
+        )
+    if len(populated) != 1:
+        raise ValueError(
+            f"Ambiguous scored-input layouts for {year}: "
+            f"{ {name: str(path) for name, path in populated.items()} }. "
+            "Keep only one populated compacted, f1_0, or flat layout."
+        )
+    layout, path = next(iter(populated.items()))
+    logger.info("Resolved binary scored input for %s: layout=%s path=%s", year, layout, path)
+    return path
+
+
+def binary_transformer_score_mask(scores, threshold):
+    """Training-identical binary channel boundary: finite score, strictly below."""
+    values = ak.to_numpy(
+        ak.fill_none(ak.materialize(scores), np.nan)
+    ).astype(np.float64, copy=False)
+    return np.isfinite(values) & (values < threshold)
+
+
+def validate_binary_scored_schemas(
+    sample_dict,
+    contract,
+    *,
+    divide_dy_into_matched_jets,
+    dy_matched_jets,
+    do_vbf_filter_study,
+):
+    """Fail early when a selected scored sample cannot satisfy the new contract.
+
+    One file per logical sample is enough for this driver-side preflight; Coffea
+    will still fail on any later shard whose schema drifts.  In particular, the
+    gen_2j path requires only gjj_mass and never asks for the reco-match flags
+    absent from the current scored inputs.
+    """
+    required_common = {
+        "event",
+        "dimuon_mass",
+        "wgt_nominal",
+        "njets_nominal",
+        "nBtagLoose_nominal",
+        "nBtagMedium_nominal",
+        "jj_mass_nominal",
+        "jj_dEta_nominal",
+        "jet1_pt_nominal",
+        "jet1_eta_nominal",
+        "jet2_eta_nominal",
+        contract["score_field"],
+    }
+    required_common.update(
+        feature
+        for feature in contract["training_features"]
+        if not feature.startswith("year_")
+    )
+    for sample_name, files in sample_dict.items():
+        if not files:
+            continue
+        fields = set(pq.read_schema(files[0]).names)
+        required = set(required_common)
+        if is_dy_sample(sample_name) and (
+            do_vbf_filter_study
+            or (divide_dy_into_matched_jets and dy_matched_jets == "gen_2j")
+        ):
+            required.add("gjj_mass")
+        if (
+            is_dy_sample(sample_name)
+            and divide_dy_into_matched_jets
+            and dy_matched_jets == "reco_012"
+        ):
+            required.update(RECO_MATCH_FIELDS)
+        missing = sorted(required - fields)
+        if missing:
+            raise KeyError(
+                f"Binary scored input sample '{sample_name}' is missing fields {missing}; "
+                f"checked {files[0]}. For the current scored inputs use "
+                "--dy_matched_jets gen_2j because reco match flags were not retained."
+            )
+
+
+def validate_binary_model_contract(
+    contract,
+    training_features,
+    scaler_payloads,
+    training_dir,
+):
+    """Cross-check preprocessing, scaler and training manifests before inference."""
+    expected_features = contract["training_features"]
+    if list(training_features) != expected_features:
+        raise ValueError(
+            "training_features.pkl differs from preprocess_manifest.json: "
+            f"pkl={list(training_features)}, manifest={expected_features}"
+        )
+    expected_scaled = contract["scale_features"]
+    for fold, payload in enumerate(scaler_payloads):
+        scaler_features = payload["features"]
+        final_features = payload["final_features"]
+        if scaler_features != expected_scaled:
+            raise ValueError(
+                f"Fold {fold} scaler feature order differs from manifest scale_features."
+            )
+        # preprocess_dnn stores final_features as scaled columns followed by
+        # passthrough columns, while training_features.pkl/config preserve the
+        # actual model input order.  Validate membership here; the exact order is
+        # independently pinned by those two authoritative artifacts below.
+        if (
+            final_features is None
+            or len(final_features) != len(expected_features)
+            or set(final_features) != set(expected_features)
+        ):
+            raise ValueError(
+                f"Fold {fold} scaler final_features differ from manifest training features."
+            )
+        means = payload["means"]
+        stds = payload["stds"]
+        if not np.isfinite(means).all() or not np.isfinite(stds).all():
+            raise ValueError(f"Fold {fold} scaler contains non-finite mean/std values.")
+        if np.any(stds <= 0):
+            raise ValueError(f"Fold {fold} scaler contains non-positive standard deviations.")
+
+    train_manifest_path = Path(training_dir) / "manifest.json"
+    if train_manifest_path.is_file():
+        with open(train_manifest_path) as train_manifest_file:
+            train_manifest = json.load(train_manifest_file)
+        config = train_manifest.get("config") or {}
+        trained_features = config.get("training_features")
+        if trained_features is not None and list(trained_features) != expected_features:
+            raise ValueError(
+                f"{train_manifest_path} training features differ from preprocessing manifest."
+            )
+        if config.get("n_folds", contract["n_folds"]) != contract["n_folds"]:
+            raise ValueError(
+                f"{train_manifest_path} n_folds differs from preprocessing manifest."
+            )
+
+
+def save_binary_transformer_contract(
+    dest_dir,
+    contract,
+    *,
+    model_label,
+    model_tag,
+    model_paths,
+    scaler_paths,
+    input_path,
+    sideband_mass,
+    dy_matched_jets,
+):
+    """Write a reproducible contract next to each year's Stage-2 histograms."""
+    destination = Path(dest_dir) / "binary_transformer_contract.json"
+    payload = {
+        "schema_version": 1,
+        "manifest": str(contract["manifest_path"]),
+        "manifest_sha256": contract["manifest_sha256"],
+        "model_label": model_label,
+        "model_tag": model_tag,
+        "score_column": contract["score_field"],
+        "score_operator": "lt",
+        "score_threshold": contract["threshold"],
+        "selection": {
+            "mass_window_gev": {"lower_inclusive": 115.0, "upper_exclusive": 135.0},
+            "btag_veto": "not (nBtagLoose>=2 or (nBtagMedium>=1 and njets>=2))",
+            "jj_eta_region": "all",
+            "sideband_mass": sideband_mass,
+        },
+        "nominal_only": True,
+        "input_path": str(input_path),
+        "dy_matched_jets": dy_matched_jets,
+        "n_folds": contract["n_folds"],
+        "training_features": contract["training_features"],
+        "feature_preprocessing": contract["manifest"]["feature_preprocessing"],
+        "artifacts": {
+            "models": [
+                {"path": str(path), "sha256": sha256_file(path)}
+                for path in model_paths
+            ],
+            "scalers": [
+                {"path": str(path), "sha256": sha256_file(path)}
+                for path in scaler_paths
+            ],
+        },
+    }
+    temporary = destination.with_suffix(".json.tmp")
+    with open(temporary, "w") as contract_file:
+        json.dump(payload, contract_file, indent=2, sort_keys=True)
+        contract_file.write("\n")
+    os.replace(temporary, destination)
+    logger.info("Saved binary Transformer contract to %s", destination)
+    return destination
 
 
 def transformer_threshold():
@@ -437,6 +813,8 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         allow_nominal_feature_fallback=True,
         use_nominal_dnn_features_for_systs=False,
         use_transformer_vbf_channel=False,
+        binary_transformer_contract=None,
+        binary_transformer_sideband_mass="pin125",
         jj_eta_region="all",
         dump_scores=False,
         binning=None,
@@ -464,6 +842,17 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.allow_nominal_feature_fallback = allow_nominal_feature_fallback
         self.use_nominal_dnn_features_for_systs = use_nominal_dnn_features_for_systs
         self.use_transformer_vbf_channel = use_transformer_vbf_channel
+        self.binary_transformer_contract = binary_transformer_contract
+        self.binary_transformer_sideband_mass = binary_transformer_sideband_mass
+        if use_transformer_vbf_channel and binary_transformer_contract is not None:
+            raise ValueError(
+                "Legacy three-class and manifest-driven binary Transformer channels "
+                "are mutually exclusive."
+            )
+        if binary_transformer_sideband_mass not in {"pin125", "raw"}:
+            raise ValueError(
+                "binary_transformer_sideband_mass must be 'pin125' or 'raw'."
+            )
         # One-hot year features (e.g. "year_2022preEE") don't exist as event
         # fields; they're synthesized in evaluate_scores() from the dataset's
         # metadata year string, so they're excluded from scaler lookup like
@@ -471,12 +860,20 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.year_onehot_features = {
             f for f in training_features if f.startswith("year_")
         }
-        self.no_scale_features = NO_SCALE_FEATURES | self.year_onehot_features
+        if binary_transformer_contract is not None:
+            # In the manifest-driven path the preprocessing artifact, not a
+            # Stage-2 constant, is authoritative for passthrough features.
+            self.no_scale_features = set(
+                binary_transformer_contract["no_scale_features"]
+            )
+        else:
+            self.no_scale_features = NO_SCALE_FEATURES | self.year_onehot_features
 
     def evaluate_scores(self, events, variation, year):
         fields = set(events.fields)
         event_numbers = ak.to_numpy(ak.materialize(events.event))
         n_events = len(events)
+        binary_transformer_mode = self.binary_transformer_contract is not None
 
         # Year is constant for the whole chunk and invariant across shape
         # variations, so the one-hot columns are synthesized directly from
@@ -510,9 +907,45 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 source,
             )
             values = ak.materialize(events[source])
-            fill_value = -10.0 if "phi" in feature else 0.0
+            # The binary Transformer training path has feature-specific raw-space
+            # sentinels.  Preserve null/non-finite information until the exact
+            # training cleaner runs below; the legacy paths retain their historic
+            # phi=-10/other=0 behavior byte-for-byte.
+            fill_value = np.nan if binary_transformer_mode else (
+                -10.0 if "phi" in feature else 0.0
+            )
             values = ak.fill_none(values, fill_value)
             columns[feature] = ak.to_numpy(values)
+
+        if binary_transformer_mode:
+            if "njets_nominal" not in fields:
+                raise KeyError(
+                    "Binary Transformer inference requires 'njets_nominal' for "
+                    "inclusive 0/1/2+ jet sentinel cleaning."
+                )
+            njets = ak.fill_none(
+                ak.materialize(events["njets_nominal"]), np.nan
+            )
+            cleaning_frame = pd.DataFrame(columns)
+            cleaning_frame["njets_nominal"] = ak.to_numpy(njets)
+            cleaning_frame = pre_scaling_clean_transformer(
+                cleaning_frame,
+                training_features=self.training_features,
+            )
+            columns = {
+                feature: cleaning_frame[feature].to_numpy(dtype=np.float64)
+                for feature in self.training_features
+            }
+            non_finite_raw = [
+                feature
+                for feature, values in columns.items()
+                if not np.isfinite(values).all()
+            ]
+            if non_finite_raw:
+                raise ValueError(
+                    "Binary Transformer sentinel cleaning left non-finite inputs: "
+                    f"{non_finite_raw}"
+                )
 
         if logger.isEnabledFor(logging.DEBUG):
             n_preview = min(5, n_events)
@@ -530,7 +963,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                     preview_df.to_string(index=False),
                 )
 
-        nan_val = -99.0
+        nan_val = np.nan if binary_transformer_mode else -99.0
         input_columns = {
             feature: np.full(n_events, nan_val, dtype=np.float64)
             for feature in self.training_features
@@ -554,12 +987,26 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 values = columns[feature]
                 if feature in scaler and feature not in self.no_scale_features:
                     mean, std = scaler[feature]
+                    if binary_transformer_mode and (
+                        not np.isfinite(mean)
+                        or not np.isfinite(std)
+                        or std <= 0
+                    ):
+                        raise ValueError(
+                            f"Invalid fold-{fold} scaler for {feature}: mean={mean}, std={std}"
+                        )
                     values = (values - mean) / std
                 input_columns[feature][fold_mask] = values[fold_mask]
 
         inputs = np.column_stack(
             [input_columns[feature] for feature in self.training_features]
         ).astype(np.float32)
+        if binary_transformer_mode and not np.isfinite(inputs).all():
+            bad_columns = np.flatnonzero(~np.isfinite(inputs).all(axis=0))
+            raise ValueError(
+                "Binary Transformer has non-finite post-scaling inputs in features: "
+                f"{[self.training_features[index] for index in bad_columns]}"
+            )
 
         logits = np.full(n_events, nan_val, dtype=np.float32)
         torch.set_num_threads(1)
@@ -570,8 +1017,31 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
 
             model = load_torchscript_model(self.model_paths[fold])
             with torch.inference_mode():
-                fold_logits = model(torch.from_numpy(inputs)).reshape(-1).numpy()
-            logits[fold_mask] = fold_logits[fold_mask]
+                if binary_transformer_mode:
+                    fold_logits = (
+                        model(torch.from_numpy(inputs[fold_mask]))
+                        .reshape(-1)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                    )
+                else:
+                    fold_logits = model(torch.from_numpy(inputs)).reshape(-1).numpy()
+            if binary_transformer_mode:
+                expected = int(np.count_nonzero(fold_mask))
+                if len(fold_logits) != expected:
+                    raise ValueError(
+                        f"Fold {fold} TorchScript returned {len(fold_logits)} logits for "
+                        f"{expected} inputs."
+                    )
+                if not np.isfinite(fold_logits).all():
+                    raise ValueError(
+                        f"Fold {fold} TorchScript returned non-finite logits for binary "
+                        "Transformer-selected events."
+                    )
+                logits[fold_mask] = fold_logits
+            else:
+                logits[fold_mask] = fold_logits[fold_mask]
 
             # has_non_finite = not np.isfinite(fold_logits).all()
             # if has_non_finite:
@@ -591,6 +1061,12 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         # if has_non_finite:
         #     raise ValueError("Found non-finite values in logits. This may indicate a problem with the model or input data.")
         finite_mask = np.isfinite(logits)
+        if binary_transformer_mode and not finite_mask.all():
+            bad_events = event_numbers[~finite_mask][:10].tolist()
+            raise ValueError(
+                "Binary Transformer inference left events without finite OOF logits; "
+                f"first event numbers: {bad_events}"
+            )
         logits = np.where(finite_mask, logits, nan_val)
         dnn_score = sigmoid_ak(logits)
         # valid_mask = logits != nan_val
@@ -606,6 +1082,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         dataset_key = events.metadata["dataset"]
         sample_type = events.metadata.get("sample", dataset_key)
         year = events.metadata["year"]
+        binary_transformer_mode = self.binary_transformer_contract is not None
         # events["MET_pt"] = events["PuppiMET_pt"]
         if self.use_transformer_vbf_channel:
             events = add_transformer_score(events, year)
@@ -725,6 +1202,9 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 needed_cols.update(RECO_MATCH_FIELDS)
             if self.use_transformer_vbf_channel:
                 needed_cols.add(TRANSFORMER_SCORE_FIELD)
+            if binary_transformer_mode:
+                needed_cols.add(self.binary_transformer_contract["score_field"])
+                needed_cols.add("njets_nominal")
 
             # DNN inputs are evaluated with feature_variation (which may be pinned to
             # "nominal" via use_nominal_dnn_features_for_systs), not the raw selection
@@ -780,7 +1260,11 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 process=sample_type,
                 # Apply the b-jet veto before transformer-based VBF selection,
                 # matching the control-plot categories.
-                category="bJetVeto" if self.use_transformer_vbf_channel else category,
+                category=(
+                    "bJetVeto"
+                    if self.use_transformer_vbf_channel or binary_transformer_mode
+                    else category
+                ),
                 region_name=region,
                 do_vbf_filter_study=self.do_vbf_filter_study,
                 variation=variation,
@@ -791,13 +1275,25 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 region_events = region_events[
                     region_events[TRANSFORMER_SCORE_FIELD] >= transformer_threshold()
                 ]
+            elif binary_transformer_mode:
+                # Strictly reproduce training: NaN/Inf never enter the channel,
+                # equality is rejected, and no jet-multiplicity/dijet cut is added.
+                binary_channel_mask = binary_transformer_score_mask(
+                    region_events[self.binary_transformer_contract["score_field"]],
+                    self.binary_transformer_contract["threshold"],
+                )
+                region_events = region_events[binary_channel_mask]
             # before fillEventNans: its fill_none(0) turns the ?bool match flags into a bool|int union
             reco_dy_filters = (
                 dy_matched_jet_filters(region_events, "reco_012")
                 if divide_dy_sample and self.dy_matched_jets == "reco_012" else None
             )
-            region_events = fillEventNans(region_events, category=category)
-            if region == "h-sidebands":
+            if not binary_transformer_mode:
+                region_events = fillEventNans(region_events, category=category)
+            if region == "h-sidebands" and (
+                not binary_transformer_mode
+                or self.binary_transformer_sideband_mass == "pin125"
+            ):
                 # Pin nominal and shifted dimuon masses to 125 GeV so sideband DNN
                 # scoring uses the signal-region mass hypothesis for every variation.
                 dimuon_mass_fields = [
@@ -839,7 +1335,20 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if reco_dy_filters is not None:
                 category_filters = reco_dy_filters
             elif divide_dy_sample:
-                category_filters = dy_matched_jet_filters(region_events, self.dy_matched_jets)
+                if binary_transformer_mode and self.dy_matched_jets == "gen_2j":
+                    matched2j = ak.to_numpy(
+                        ak.fill_none(
+                            ak.materialize(region_events.gjj_mass > 0), False
+                        )
+                    )
+                    category_filters = {
+                        "matched01J": ~matched2j,
+                        "matched2J": matched2j,
+                    }
+                else:
+                    category_filters = dy_matched_jet_filters(
+                        region_events, self.dy_matched_jets
+                    )
             else:
                 category_filters = {"hist": np.ones(len(scores), dtype=bool)}
 
@@ -1096,6 +1605,30 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
+        "--binary-transformer-manifest",
+        "--binary_transformer_manifest",
+        dest="binary_transformer_manifest",
+        default=None,
+        help=(
+            "Enable the manifest-driven binary Transformer VBF channel. The manifest "
+            "is the source of truth for the scored-input root, score field/direction/"
+            "threshold, years, folds, features and raw-space sentinels. This is a new "
+            "nominal-only path and does not change --use_transformer_vbf_channel."
+        ),
+    )
+    parser.add_argument(
+        "--binary-transformer-sideband-mass",
+        "--binary_transformer_sideband_mass",
+        dest="binary_transformer_sideband_mass",
+        default="pin125",
+        choices=("pin125", "raw"),
+        help=(
+            "DNN dimuon-mass treatment in h-sidebands for the binary Transformer "
+            "channel. 'pin125' (default) preserves current Stage-2 behavior; 'raw' "
+            "is an explicit compatible alternative."
+        ),
+    )
+    parser.add_argument(
         "--dy_matched_jets",
         dest="dy_matched_jets",
         default="reco_012",
@@ -1133,6 +1666,68 @@ if __name__ == "__main__":
     t1 = time.perf_counter()
     logger.info(f"[timing] Argument parsing time: {t1 - t0:.2f} seconds")
 
+    if args.binary_transformer_manifest and args.use_transformer_vbf_channel:
+        parser.error(
+            "--binary-transformer-manifest and --use_transformer_vbf_channel are "
+            "different channel definitions and are mutually exclusive."
+        )
+    if (
+        not args.binary_transformer_manifest
+        and args.binary_transformer_sideband_mass != "pin125"
+    ):
+        parser.error(
+            "--binary-transformer-sideband-mass is only meaningful with "
+            "--binary-transformer-manifest."
+        )
+
+    binary_transformer_contract = None
+    if args.binary_transformer_manifest:
+        binary_requested_years = parse_years_option(args.year, args.years)
+        binary_transformer_contract = load_binary_transformer_manifest(
+            args.binary_transformer_manifest
+        )
+        if args.jj_eta_region != "all":
+            parser.error(
+                "The inclusive binary Transformer channel requires --jj_eta_region all."
+            )
+        if (
+            not binary_transformer_contract["systematics_enabled"]
+            and not args.no_variations
+        ):
+            parser.error(
+                "This preprocessing manifest is nominal-only; pass --no_variations."
+            )
+        if args.nfolds != binary_transformer_contract["n_folds"]:
+            parser.error(
+                f"--nfolds={args.nfolds} differs from manifest n_folds="
+                f"{binary_transformer_contract['n_folds']}."
+            )
+        unsupported_years = sorted(
+            set(binary_requested_years) - set(binary_transformer_contract["years"])
+        )
+        if unsupported_years:
+            parser.error(
+                f"Requested years {unsupported_years} are absent from the binary "
+                f"Transformer manifest years {binary_transformer_contract['years']}."
+            )
+        manifest_model_path = binary_transformer_contract["model_path"]
+        if args.model_path != "test" and Path(args.model_path).resolve() != manifest_model_path:
+            parser.error(
+                f"--model_path={Path(args.model_path).resolve()} disagrees with the "
+                f"manifest artifact directory {manifest_model_path}."
+            )
+        # The manifest directory is authoritative; -input remains the output root.
+        args.model_path = str(manifest_model_path)
+        logger.info(
+            "Binary Transformer channel: manifest=%s score=%s < %s input=%s "
+            "sideband_mass=%s",
+            binary_transformer_contract["manifest_path"],
+            binary_transformer_contract["score_field"],
+            binary_transformer_contract["threshold"],
+            binary_transformer_contract["base_path"],
+            args.binary_transformer_sideband_mass,
+        )
+
     # Per-era stage2 switches (e.g. divide_dy_into_matched_jets); no CLI equivalent, so
     # that a produced set of histograms always matches a recorded configuration.
     stage2_switches = load_stage2_switches()
@@ -1147,6 +1742,8 @@ if __name__ == "__main__":
     t2 = time.perf_counter()
     logger.info(f"[timing] Dask client creation time: {t2 - t1:.2f} seconds")
 
+    # -input remains the output root in both old and new modes.  Only the new
+    # binary path reads events from manifest.base_path.
     base_path = Path(args.input_path)
     years = parse_years_option(args.year, args.years)
     logger.info(f"Years scheduled together: {years}")
@@ -1175,9 +1772,15 @@ if __name__ == "__main__":
     )
 
     sample_dict_by_year = {}
+    stage1_path_by_year = {}
     for year in years:
-        stage1_path = base_path / "stage1_output" / year / "f1_0"
-        stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
+        if binary_transformer_contract is not None:
+            stage1_path = resolve_binary_scored_year_path(
+                binary_transformer_contract["base_path"], year
+            )
+        else:
+            stage1_path = base_path / "stage1_output" / year / "f1_0"
+            stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
         logger.info(f"{year} stage1 path: {stage1_path}")
         if not os.path.exists(stage1_path):
             logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
@@ -1202,7 +1805,19 @@ if __name__ == "__main__":
 
         full_sample_dict = getStage1Samples(stage1_path, year, args.sample_config, data_samples=data_samples, sig_samples=sig_samples, bkg_samples=bkg_samples, do_vbf_filter_study=args.do_vbf_filter_study)
 
+        if binary_transformer_contract is not None:
+            validate_binary_scored_schemas(
+                full_sample_dict,
+                binary_transformer_contract,
+                divide_dy_into_matched_jets=divide_dy_for_year(
+                    stage2_switches["divide_dy_into_matched_jets"], year
+                ),
+                dy_matched_jets=args.dy_matched_jets,
+                do_vbf_filter_study=args.do_vbf_filter_study,
+            )
+
         sample_dict_by_year[year] = full_sample_dict
+        stage1_path_by_year[year] = stage1_path
         logger.debug(f"{year} full_sample_dict: {full_sample_dict}")
         logger.info(f"{year} full_sample_dict: {full_sample_dict.keys()}")
     t3 = time.perf_counter()
@@ -1226,9 +1841,13 @@ if __name__ == "__main__":
 
     with open(feature_dir / "training_features.pkl", "rb") as feature_file:
         training_features = pickle.load(feature_file)
+    if binary_transformer_contract is not None:
+        training_features = [str(feature) for feature in training_features]
     logger.info(f"len training_features: {len(training_features)}")
 
     scalers = []
+    scaler_payloads = []
+    scaler_paths = []
     model_paths = []
     for fold in range(nfolds):
         scaler_path = model_trained_path / f"scalers_{fold}.npz"
@@ -1236,10 +1855,45 @@ if __name__ == "__main__":
             features = [str(feature) for feature in scaler_file["features"]]
             means = scaler_file["mean"].astype(np.float64)
             stds = scaler_file["std"].astype(np.float64)
+            final_features = (
+                [str(feature) for feature in scaler_file["final_features"]]
+                if "final_features" in scaler_file.files
+                else None
+            )
         scalers.append(dict(zip(features, zip(means, stds))))
+        scaler_payloads.append(
+            {
+                "features": features,
+                "final_features": final_features,
+                "means": means,
+                "stds": stds,
+            }
+        )
+        scaler_paths.append(scaler_path)
         model_paths.append(
             (training_dir / f"fold{fold}" / "best_torchscript.pt").as_posix()
         )
+
+    if binary_transformer_contract is not None:
+        validate_binary_model_contract(
+            binary_transformer_contract,
+            training_features,
+            scaler_payloads,
+            training_dir,
+        )
+        for year in years:
+            hist_save_path = base_path / "stage2_histograms" / histDirName / year
+            save_binary_transformer_contract(
+                hist_save_path,
+                binary_transformer_contract,
+                model_label=dnn_model_label,
+                model_tag=args.model_tag,
+                model_paths=model_paths,
+                scaler_paths=scaler_paths,
+                input_path=stage1_path_by_year[year],
+                sideband_mass=args.binary_transformer_sideband_mass,
+                dy_matched_jets=args.dy_matched_jets,
+            )
 
     fileset = {}
     skipped_existing = []
@@ -1307,6 +1961,8 @@ if __name__ == "__main__":
                 allow_nominal_feature_fallback=args.allow_nominal_feature_fallback,
                 use_nominal_dnn_features_for_systs=args.use_nominal_dnn_features_for_systs,
                 use_transformer_vbf_channel=args.use_transformer_vbf_channel,
+                binary_transformer_contract=binary_transformer_contract,
+                binary_transformer_sideband_mass=args.binary_transformer_sideband_mass,
                 jj_eta_region=args.jj_eta_region,
                 dump_scores=args.dump_scores,
                 binning=dnn_edges,
