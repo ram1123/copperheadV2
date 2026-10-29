@@ -12,6 +12,15 @@ efficiency/rejection plots.
 
 Example command:
 --------------------
+# 2024 retrain with the applied "Train-1" 19-input set (2026-10-28 stage-1, latest code):
+B=/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_Oct28_tightPassLepVeto_DefaultjetPt25GeV_JetIDVars_LumiSplit/stage1_output/2024/compacted
+python MVA_training/pileup_dnn/train_pu_dnn.py \
+  -i "$B/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" "$B/ttjets_*/*/*.parquet" "$B/ewk_*/*/*.parquet" --use-glob \
+  -o validation/pu_dnn/run2024_dy_top_ewk_Train1_Oct29 --regions HEpos HEneg HFpos HFneg \
+  --features minDPhiMetJet maxDPhiMetJet puIdDisc chEmEF chHEF neEmEF neHEF muEF chMultiplicity \
+    neMultiplicity nConstituents nElectrons nMuons hfadjacentEtaStripsSize hfcentralEtaStripSize \
+    hfsigmaEtaEta hfsigmaPhiPhi hfEmEF hfHEF
+
 time python MVA_training/pileup_dnn/train_pu_dnn.py \
   -i \
     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet" \
@@ -368,6 +377,12 @@ def parse_args() -> argparse.Namespace:
         help="Plot file formats.",
     )
     parser.add_argument("--no-plots", action="store_true", help="Skip validation plots.")
+    parser.add_argument(
+        "--features",
+        nargs="+",
+        default=None,
+        help="Model input features (default: MODEL_FEATURES). Lets a variant be trained without editing the list.",
+    )
     return parser.parse_args()
 
 
@@ -834,9 +849,9 @@ def split_by_event_or_random(df: pd.DataFrame, seed: int) -> tuple[np.ndarray, n
     return train, val, test
 
 
-def selected_features(df: pd.DataFrame, region: str) -> list[str]:
+def selected_features(df: pd.DataFrame, region: str, features: list[str] | None = None) -> list[str]:
     keep = []
-    for feat in MODEL_FEATURES:
+    for feat in features or MODEL_FEATURES:
         if feat not in df.columns:
             continue
         values = pd.to_numeric(df[feat], errors="coerce").to_numpy(dtype=np.float32)
@@ -2093,7 +2108,7 @@ def train_region(jets: pd.DataFrame, region: str, output: Path, args: argparse.N
         print(f"[{region}] Only one class present ({class_counts}); skipping.")
         return None
 
-    features = selected_features(df_region, region)
+    features = selected_features(df_region, region, args.features)
     if not features:
         print(f"[{region}] No usable non-constant features; skipping.")
         return None
