@@ -94,3 +94,98 @@ def pre_scaling_clean(df):
     #     df[col] = np.where(np.isfinite(df[col]), df[col], 0.0)
 
     return df
+
+
+def _transformer_feature_sentinel(feature):
+    """Return the raw-space Transformer missing-value sentinel for one feature.
+
+    The sentinel is filled *before* the existing train-fold mean/std
+    standardisation.  It is deliberately outside the physical domain whenever
+    the observable has a bounded or non-negative domain; no clipping is applied
+    to the resulting standardised value.
+    """
+
+    name = feature.lower()
+    if "upart" in name and "qvg" in name:
+        return -1.0
+    if name.startswith(("jet1_", "jet2_")) and (
+        "eta" in name or "phi" in name
+    ):
+        return -5.0
+    if name == "rpt_nominal":
+        return -1.0
+    if name == "ll_zstar_log_nominal":
+        return -20.0
+    if name in {"jj_deta_nominal", "mmj_min_deta_nominal"}:
+        return -1.0
+    if "pt_centrality" in name:
+        return -200.0
+    return 0.0
+
+
+def pre_scaling_clean_transformer(df, training_features=None):
+    """Clean the inclusive 0/1/2+ jet phase space used by Transformer selection.
+
+    This is intentionally separate from :func:`pre_scaling_clean`: the legacy
+    cut-based training path keeps its historical cleaning byte-for-byte, while
+    this function implements the sentinel contract needed when 0- and 1-jet
+    events are admitted by a Transformer score.
+    """
+
+    if "njets_nominal" not in df.columns:
+        raise KeyError("Transformer cleaning requires 'njets_nominal'.")
+
+    features = list(training_features or df.columns)
+    njet = np.asarray(df["njets_nominal"], dtype=np.float64)
+    njet = np.where(np.isfinite(njet), njet, 0.0)
+    df["njets_nominal"] = njet
+
+    for feature in features:
+        if feature not in df.columns or feature.startswith("year_"):
+            continue
+
+        values = np.asarray(df[feature], dtype=np.float64)
+        sentinel = _transformer_feature_sentinel(feature)
+
+        if feature.startswith("jet1_"):
+            values = np.where((njet >= 1) & np.isfinite(values), values, sentinel)
+        elif feature.startswith("jet2_"):
+            values = np.where((njet >= 2) & np.isfinite(values), values, sentinel)
+        elif feature.startswith("jj_") or feature in {
+            "rpt_nominal",
+            "ll_zstar_log_nominal",
+        }:
+            values = np.where(
+                (njet >= 2) & np.isfinite(values), values, sentinel
+            )
+        elif feature == "mmj_min_dEta_nominal":
+            values = np.where(
+                (njet >= 1) & np.isfinite(values), values, sentinel
+            )
+        elif feature == "pt_centrality_nominal":
+            values = np.where(
+                (njet >= 2) & np.isfinite(values), values, -200.0
+            )
+            # This is raw-observable protection inherited from the historical
+            # cleaner, not clipping of a standardised DNN input.
+            values = np.clip(values, -200.0, 200.0)
+        else:
+            values = np.where(np.isfinite(values), values, sentinel)
+
+        df[feature] = values
+
+    # Assert the contract at the preprocessing boundary, before means/stds can
+    # turn an unnoticed NaN/Inf into invalid scaler and model artifacts.
+    remaining = [
+        feature
+        for feature in features
+        if feature in df.columns
+        and not np.isfinite(np.asarray(df[feature], dtype=np.float64)).all()
+    ]
+    if remaining:
+        raise ValueError(
+            "Transformer sentinel cleaning left non-finite training features: "
+            f"{remaining}"
+        )
+
+    return df

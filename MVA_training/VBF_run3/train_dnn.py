@@ -1841,6 +1841,91 @@ def train_all_folds(
         )
 
 
+def _train_one_fold_ray(
+    fold_idx: int,
+    cfg: TrainConfig,
+    data_dir: str,
+    out_dir: str,
+    adv: Optional[AdversarialConfig],
+    variation_spec: Optional[List[Tuple[str, Dict[str, str]]]],
+    init_from: Optional[str],
+    active_seed: int,
+) -> float:
+    """Ray task entry point: one independent CV fold on one visible GPU."""
+
+    # Ray workers are separate processes and do not inherit the driver's RNG
+    # state. Seed each fold task explicitly so rerunning the same contract is
+    # reproducible regardless of task scheduling order.
+    set_seed(active_seed)
+    return train_one_fold(
+        fold_idx,
+        cfg,
+        data_dir=data_dir,
+        out_dir=out_dir,
+        adv=adv,
+        variation_spec=variation_spec,
+        init_from=init_from,
+    )
+
+
+def train_all_folds_ray(
+    cfg: TrainConfig,
+    data_dir: str,
+    out_dir: str,
+    folds: Optional[List[int]],
+    adv: Optional[AdversarialConfig] = None,
+    variation_spec: Optional[List[Tuple[str, Dict[str, str]]]] = None,
+    init_from: Optional[str] = None,
+    active_seed: int = 12345,
+    cpus_per_fold: int = 8,
+    max_retries: int = 2,
+) -> None:
+    """Train exactly four folds concurrently, reserving one GPU per fold."""
+
+    if cfg.n_folds != 4:
+        raise ValueError(
+            f"Ray fold training requires data.cv.n_folds=4, got {cfg.n_folds}."
+        )
+    requested = list(range(cfg.n_folds)) if folds is None else sorted(set(folds))
+    if requested != [0, 1, 2, 3]:
+        raise ValueError(
+            "--ray-folds requires exactly folds 0,1,2,3 so four GPUs are used."
+        )
+
+    try:
+        import ray
+    except ImportError as error:
+        raise RuntimeError(
+            "Ray mode requires the Purdue AF global environment."
+        ) from error
+
+    ray.init(address="auto")
+    try:
+        fold_task = ray.remote(
+            num_gpus=1,
+            num_cpus=int(cpus_per_fold),
+            max_retries=int(max_retries),
+            retry_exceptions=True,
+        )(_train_one_fold_ray)
+        references = [
+            fold_task.remote(
+                fold,
+                cfg,
+                data_dir,
+                out_dir,
+                adv,
+                variation_spec,
+                init_from,
+                int(active_seed),
+            )
+            for fold in requested
+        ]
+        results = ray.get(references)
+        logger.info("Ray four-fold objectives: %s", dict(zip(requested, results)))
+    finally:
+        ray.shutdown()
+
+
 # --------------------------------------------------------------------------------------
 # Oputuna best hyperparameter integration
 # --------------------------------------------------------------------------------------
@@ -1951,6 +2036,27 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--data-dir", required=True, help="Directory with data_df_train_i.parquet etc.")
     p.add_argument("--out-dir", required=True, help="Output directory for trained_models/<tag>/<year_region_cat> (or any).")
     p.add_argument("--folds", default=None, help="Comma list of folds to train (e.g. 0,1,2,3). Default: all.")
+    p.add_argument(
+        "--ray-folds",
+        action="store_true",
+        help=(
+            "Run folds 0,1,2,3 concurrently as four Ray tasks with one GPU each. "
+            "This is the in-cluster driver flag; normally launch it through "
+            "submit_ray_dnn.py."
+        ),
+    )
+    p.add_argument(
+        "--ray-cpus-per-fold",
+        type=int,
+        default=8,
+        help="CPU reservation for each one-GPU Ray fold task (default: 8).",
+    )
+    p.add_argument(
+        "--ray-max-retries",
+        type=int,
+        default=2,
+        help="Ray retry count for a failed fold task (default: 2).",
+    )
     p.add_argument("--optuna-best-json",default=None,help="Path to optuna_best.json (will override config hyperparameters).")
     p.add_argument("--log-level", default="INFO", help="Logging level (INFO/DEBUG/...)")
     p.add_argument(
@@ -2158,15 +2264,29 @@ def main() -> None:
         logger.info("CUDA device: %s", torch.cuda.get_device_name(0))
     logger.info("Active training seed: %d", active_seed)
 
-    train_all_folds(
-        cfg,
-        data_dir=args.data_dir,
-        out_dir=args.out_dir,
-        folds=folds,
-        adv=adv,
-        variation_spec=variation_spec,
-        init_from=args.init_from,
-    )
+    if args.ray_folds:
+        train_all_folds_ray(
+            cfg,
+            data_dir=args.data_dir,
+            out_dir=args.out_dir,
+            folds=folds,
+            adv=adv,
+            variation_spec=variation_spec,
+            init_from=args.init_from,
+            active_seed=active_seed,
+            cpus_per_fold=args.ray_cpus_per_fold,
+            max_retries=args.ray_max_retries,
+        )
+    else:
+        train_all_folds(
+            cfg,
+            data_dir=args.data_dir,
+            out_dir=args.out_dir,
+            folds=folds,
+            adv=adv,
+            variation_spec=variation_spec,
+            init_from=args.init_from,
+        )
 
     # Save manifest for reproducibility
     manifest = {
@@ -2190,6 +2310,7 @@ def main() -> None:
         "cv": {
             "n_folds": cfg.n_folds,
             "folds_run": folds if folds is not None else "all",
+            "backend": "ray-four-gpu" if args.ray_folds else "local-sequential",
         },
         "optuna": {
             "best_json": str(args.optuna_best_json) if args.optuna_best_json else None,

@@ -52,7 +52,10 @@ from modules.systematics import (
     variation_column_name,
 )
 from modules.utils import logger
-from MVA_training.VBF_run3.utils.pre_scale_cleaning import pre_scaling_clean
+from MVA_training.VBF_run3.utils.pre_scale_cleaning import (
+    pre_scaling_clean,
+    pre_scaling_clean_transformer,
+)
 
 # Optional: keep your existing diagnostic plots (safe to disable from CLI)
 try:
@@ -85,6 +88,9 @@ class PreprocessConfig:
     category: str
     region: str
     jj_eta_region: str
+    category_selection: str
+    transformer_score_column: str
+    transformer_score_threshold: float | None
 
     required_columns: List[str]
     allow_missing_columns: bool
@@ -144,6 +150,24 @@ def load_config(cfg_path: str) -> PreprocessConfig:
     # the source of truth (run_analysis_pipeline.sh's JJ_ETA_REGION env var, or
     # this script's --jj-eta-region, override it per-run).
     jj_eta_region = str(cfg["analysis"].get("jj_eta_region", "all"))
+    # "auto" was present in the Run-3 YAML before the preprocessor supported
+    # score-based categorisation. Preserve its historical cut-based behaviour;
+    # Transformer selection is enabled only by the explicit new value.
+    category_selection = str(
+        cfg["analysis"].get("category_selection", "cut")
+    ).lower()
+    if category_selection == "auto":
+        category_selection = "cut"
+    transformer_cfg = cfg["analysis"].get("transformer", {}) or {}
+    transformer_score_column = str(
+        transformer_cfg.get(
+            "score_column", "transf_ggh_vs_vbf_binary_score"
+        )
+    )
+    configured_threshold = transformer_cfg.get("score_threshold", None)
+    transformer_score_threshold = (
+        None if configured_threshold is None else float(configured_threshold)
+    )
 
     required_columns = list(cfg["data"]["parquet"].get("required_columns", []))
     allow_missing_columns = bool(
@@ -171,6 +195,9 @@ def load_config(cfg_path: str) -> PreprocessConfig:
         category=category,
         region=region,
         jj_eta_region=jj_eta_region,
+        category_selection=category_selection,
+        transformer_score_column=transformer_score_column,
+        transformer_score_threshold=transformer_score_threshold,
         required_columns=required_columns,
         allow_missing_columns=allow_missing_columns,
         weight_col=weight_col,
@@ -200,6 +227,9 @@ def resolve_glob(base_path: str, year: str, glob_template: str, process: str) ->
     fallback_patterns = []
     if "/compacted/" in patt:
         fallback_patterns.append(patt.replace("/compacted/", "/f1_0/"))
+        # Transformer-scored Stage-2/3 outputs are laid out directly as
+        # <base>/<year>/<process>/<shard>/*.parquet (no compacted component).
+        fallback_patterns.append(patt.replace("/compacted/", "/"))
     if "/f1_0/" in patt:
         fallback_patterns.append(patt.replace("/f1_0/", "/compacted/"))
 
@@ -458,16 +488,19 @@ def events_to_dataframe(
     """
     Apply selection, convert to pandas, attach label + group + process (+ year if requested).
     """
-    events = applyRegionCatCuts(
-        events,
-        category=cfg.category,
-        region_name=cfg.region,
-        process=process,
-        variation="nominal",
-        do_vbf_filter_study=False,
-        do_VH_veto=False,
-        jj_eta_region=cfg.jj_eta_region,
-    )
+    if cfg.category_selection == "transformer":
+        events = apply_transformer_training_selection(events, cfg)
+    else:
+        events = applyRegionCatCuts(
+            events,
+            category=cfg.category,
+            region_name=cfg.region,
+            process=process,
+            variation="nominal",
+            do_vbf_filter_study=False,
+            do_VH_veto=False,
+            jj_eta_region=cfg.jj_eta_region,
+        )
 
     arr = events.compute()
     arr = arr[~ak.is_none(arr)]
@@ -518,6 +551,54 @@ def events_to_dataframe(
         )
 
     return df
+
+
+def apply_transformer_training_selection(
+    events: dak.Array | ak.Array, cfg: PreprocessConfig
+) -> dak.Array | ak.Array:
+    """Select the inclusive Transformer-defined VBF training phase space.
+
+    The binary score is ggH-oriented, hence the VBF side is ``score < threshold``.
+    No cut-based VBF jet, dijet-mass, or dijet-separation requirement is applied.
+    """
+
+    if cfg.transformer_score_threshold is None:
+        raise ValueError(
+            "Transformer categorisation requires --transformer-score-threshold."
+        )
+    required = {
+        "dimuon_mass",
+        "njets_nominal",
+        "nBtagLoose_nominal",
+        "nBtagMedium_nominal",
+        cfg.transformer_score_column,
+    }
+    missing = sorted(required - set(events.fields))
+    if missing:
+        raise KeyError(
+            "Transformer training selection is missing required columns: "
+            f"{missing}"
+        )
+
+    mass = events["dimuon_mass"]
+    njets = events["njets_nominal"]
+    nbt_loose = events["nBtagLoose_nominal"]
+    nbt_medium = events["nBtagMedium_nominal"]
+    score = events[cfg.transformer_score_column]
+
+    h_peak = ak.fill_none((mass >= 115.0) & (mass < 135.0), False)
+    btag_veto = ~(
+        ak.fill_none(nbt_loose >= 2, False)
+        | (
+            ak.fill_none(nbt_medium >= 1, False)
+            & ak.fill_none(njets >= 2, False)
+        )
+    )
+    finite_score = ak.fill_none(np.isfinite(score), False)
+    vbf_by_score = ak.fill_none(
+        score < float(cfg.transformer_score_threshold), False
+    )
+    return events[h_peak & btag_veto & finite_score & vbf_by_score]
 
 
 def weighted_std(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
@@ -591,6 +672,56 @@ def preprocess_output_is_complete(out_dir: str, n_folds: int) -> bool:
     return True
 
 
+def transformer_selection_contract(cfg: PreprocessConfig) -> Dict[str, Any]:
+    """Immutable part of the score-selection contract used for safe reuse."""
+
+    return {
+        "mode": "transformer",
+        "score_column": cfg.transformer_score_column,
+        "score_threshold": cfg.transformer_score_threshold,
+        "vbf_score_operator": "lt",
+        "mass_window_gev": {
+            "lower_inclusive": 115.0,
+            "upper_exclusive": 135.0,
+        },
+        "btag_veto": "not (nBtagLoose>=2 or (nBtagMedium>=1 and njets>=2))",
+    }
+
+
+def transformer_feature_preprocessing_contract() -> Dict[str, Any]:
+    """Raw sentinel and scaling contract for Transformer-selected training."""
+
+    return {
+        "sentinel_space": "raw_before_scaling",
+        "scaler": "existing_train_fold_weighted_mean_std_all_rows",
+        "standardized_value_clipping": None,
+        "raw_pt_centrality_clip": [-200.0, 200.0],
+        "sentinels": {
+            "jet_pt_mass_log_and_other": 0.0,
+            "jet_eta_phi": -5.0,
+            "upart_qvg": -1.0,
+            "jj_deta": -1.0,
+            "rpt": -1.0,
+            "ll_zstar_log": -20.0,
+            "mmj_min_deta": -1.0,
+            "pt_centrality": -200.0,
+        },
+    }
+
+
+def existing_transformer_contract_matches(
+    out_dir: str, cfg: PreprocessConfig
+) -> bool:
+    manifest_path = Path(out_dir) / "preprocess_manifest.json"
+    with open(manifest_path, "r") as f:
+        manifest = json.load(f)
+    return (
+        manifest.get("selection") == transformer_selection_contract(cfg)
+        and manifest.get("feature_preprocessing")
+        == transformer_feature_preprocessing_contract()
+    )
+
+
 def save_feature_list(save_dir: str, features: List[str]) -> None:
     with open(os.path.join(save_dir, "training_features.pkl"), "wb") as f:
         pickle.dump(features, f)
@@ -647,12 +778,15 @@ def preprocess(
         f for f in cfg.training_features if not f.startswith("year_")
     ]
     features2load = physical_training_features + ["event", cfg.weight_col]
+    if cfg.category_selection == "transformer":
+        features2load.append(cfg.transformer_score_column)
+    features2load = list(dict.fromkeys(features2load))
 
     logger.info("[preprocess] years: %s", years_list)
     logger.info("[preprocess] base_path: %s", base_path)
     logger.info(
-        "[preprocess] category=%s region=%s jj_eta_region=%s",
-        cfg.category, cfg.region, cfg.jj_eta_region,
+        "[preprocess] category=%s region=%s jj_eta_region=%s selection=%s",
+        cfg.category, cfg.region, cfg.jj_eta_region, cfg.category_selection,
     )
     logger.info("[preprocess] features2load: %s", features2load)
 
@@ -821,12 +955,27 @@ def preprocess(
             raise KeyError(
                 f"Training feature '{f}' missing from merged dataframe. (Check year feature or parquet columns.)"
             )
-        non_numeric = pd.to_numeric(df_total[f], errors="coerce").isna().any()
-        if non_numeric:
+        converted = pd.to_numeric(df_total[f], errors="coerce")
+        if cfg.category_selection == "transformer":
+            # Numeric NaN is expected for missing jets and is replaced below.
+            # Still reject strings/objects that only *became* NaN on coercion.
+            bad_coercion = converted.isna() & ~pd.isna(df_total[f])
+            if bad_coercion.any():
+                raise ValueError(
+                    f"Non-numeric values found in feature column '{f}'."
+                )
+            df_total[f] = converted
+        elif converted.isna().any():
             raise ValueError(f"Non-numeric values found in feature column '{f}'.")
 
-    logger.info("[preprocess] Running pre_scaling_clean...")
-    df_total = pre_scaling_clean(df_total)
+    if cfg.category_selection == "transformer":
+        logger.info("[preprocess] Running Transformer-category sentinel cleaning...")
+        df_total = pre_scaling_clean_transformer(
+            df_total, training_features=cfg.training_features
+        )
+    else:
+        logger.info("[preprocess] Running pre_scaling_clean...")
+        df_total = pre_scaling_clean(df_total)
 
     # ---- systematic-variation columns: complete, clean, and register ----
     variation_columns: List[str] = []
@@ -1113,7 +1262,7 @@ def preprocess(
     # ---- manifest for reproducibility ----
     manifest = {
         "pipeline": {
-            "preprocessor_version": "v1.1",
+            "preprocessor_version": "v1.2",
             "git_commit": get_git_commit(),
             "git_state": get_git_state(out_dir),
         },
@@ -1121,6 +1270,23 @@ def preprocess(
         "category": cfg.category,
         "region": cfg.region,
         "jj_eta_region": cfg.jj_eta_region,
+        "selection": (
+            transformer_selection_contract(cfg)
+            if cfg.category_selection == "transformer"
+            else {
+                "mode": "cut",
+                "score_column": None,
+                "score_threshold": None,
+                "vbf_score_operator": None,
+                "mass_window_gev": None,
+                "btag_veto": None,
+            }
+        ),
+        "feature_preprocessing": (
+            transformer_feature_preprocessing_contract()
+            if cfg.category_selection == "transformer"
+            else None
+        ),
         "years": years_list,
         "n_folds": cfg.n_folds,
         "cv": {
@@ -1226,6 +1392,33 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument(
         "--category", default=None, help="Override analysis.category from YAML"
     )
+    p.add_argument(
+        "--category-selection",
+        choices=["cut", "transformer"],
+        default=None,
+        help=(
+            "Category definition. Default keeps the config's historical cut-based "
+            "selection; 'transformer' is an explicit opt-in and requires "
+            "--transformer-score-threshold."
+        ),
+    )
+    p.add_argument(
+        "--transformer-score-threshold",
+        type=float,
+        default=None,
+        help=(
+            "Keep score < threshold in Transformer mode. The supplied binary "
+            "categorisation score is ggH-oriented, so its low-score side is VBF."
+        ),
+    )
+    p.add_argument(
+        "--transformer-score-column",
+        default=None,
+        help=(
+            "Override the binary Transformer score column (default: "
+            "transf_ggh_vs_vbf_binary_score)."
+        ),
+    )
     # dask_gateway and cluster index for Dask
     p.add_argument(
         "--cluster-index", type=int, default=0, help="Dask cluster index (default: 0)"
@@ -1302,6 +1495,53 @@ def main() -> None:
         object.__setattr__(
             cfg, "jj_eta_region", str(args.jj_eta_region)
         )  # pylint: disable=protected-access
+    if args.category_selection is not None:
+        object.__setattr__(
+            cfg, "category_selection", str(args.category_selection)
+        )  # pylint: disable=protected-access
+    if args.transformer_score_threshold is not None:
+        object.__setattr__(
+            cfg,
+            "transformer_score_threshold",
+            float(args.transformer_score_threshold),
+        )  # pylint: disable=protected-access
+    if args.transformer_score_column is not None:
+        object.__setattr__(
+            cfg, "transformer_score_column", str(args.transformer_score_column)
+        )  # pylint: disable=protected-access
+
+    if cfg.category_selection not in {"cut", "transformer"}:
+        raise ValueError(
+            f"Unsupported analysis.category_selection={cfg.category_selection!r}; "
+            "use 'cut' or 'transformer'."
+        )
+    if cfg.category_selection == "transformer":
+        if cfg.category != "vbf":
+            raise ValueError("Transformer VBF-DNN preprocessing requires category='vbf'.")
+        if cfg.region != "h-peak":
+            raise ValueError("Transformer VBF-DNN preprocessing requires region='h-peak'.")
+        if cfg.jj_eta_region != "all":
+            raise ValueError(
+                "Transformer categorisation admits 0/1-jet events and therefore "
+                "requires jj_eta_region='all'."
+            )
+        if cfg.transformer_score_threshold is None or not np.isfinite(
+            cfg.transformer_score_threshold
+        ):
+            raise ValueError(
+                "Transformer categorisation requires a finite "
+                "--transformer-score-threshold."
+            )
+        if args.include_systematic_variations:
+            raise ValueError(
+                "Transformer-scored inputs are nominal-only; do not pass "
+                "--include-systematic-variations."
+            )
+    elif args.transformer_score_threshold is not None:
+        raise ValueError(
+            "--transformer-score-threshold has no effect in cut mode; also pass "
+            "--category-selection transformer."
+        )
 
     out_dir = make_output_dir(
         out_root=args.out_root,
@@ -1328,6 +1568,15 @@ def main() -> None:
         and not args.include_systematic_variations
         and preprocess_output_is_complete(out_dir, cfg.n_folds)
     ):
+        if (
+            cfg.category_selection == "transformer"
+            and not existing_transformer_contract_matches(out_dir, cfg)
+        ):
+            raise SystemExit(
+                "[main] Existing complete output has a different Transformer "
+                "score/threshold contract. Use a new --tag (recommended) or "
+                "--force to replace it."
+            )
         logger.info(
             "[main] Complete output already found in %s (preprocess_manifest.json + "
             "all %d folds' parquets present) -- skipping preprocessing. Pass --force "
@@ -1336,6 +1585,15 @@ def main() -> None:
             cfg.n_folds,
         )
         return
+
+
+    if cfg.category_selection == "transformer" and not args.force:
+        existing = sorted(Path(out_dir).glob("data_df_*_*.parquet"))
+        if existing:
+            raise SystemExit(
+                f"[main] Refusing to mix Transformer contracts in {out_dir}; "
+                "incomplete fold parquets already exist. Use a new --tag or --force."
+            )
 
     client = get_dask_client(args.use_dask_gateway, cluster_index=args.cluster_index)
 

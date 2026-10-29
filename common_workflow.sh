@@ -73,6 +73,13 @@ parse_common_args() {
     dnn_years_csv="$(join_by "," "${years[@]}")"
     dnn_years_slug="${dnn_years_csv//,/-}"
     dnn_config="${DNN_CONFIG:-configs/dnn_run3_vbf.yaml}"
+    # Opt-in inputs for Transformer-defined VBF-DNN training. Unset defaults
+    # preserve the historical cut-based preprocessing and local training path.
+    dnn_input_base="${DNN_INPUT_BASE:-${save_path}/stage1_output/}"
+    dnn_category_selection="${DNN_CATEGORY_SELECTION:-}"
+    dnn_transformer_score_threshold="${TRANSFORMER_SCORE_THRESHOLD:-}"
+    dnn_transformer_score_column="${TRANSFORMER_SCORE_COLUMN:-}"
+    dnn_train_backend="${DNN_TRAIN_BACKEND:-local}"
     # Effective jet-eta topology the VBF DNN's dijet pair is restricted to
     # ("all" = none, or one of modules/selection.py's PAIR_JJ_ETA_REGIONS, e.g.
     # jj_both_central, jj_non_central, jj_both_he, ...). Source of truth is
@@ -678,11 +685,24 @@ run_dnn_workflow_once() {
     local -a pre_cmd=(
         python MVA_training/VBF_run3/preprocess_dnn.py
         --config "${dnn_config}"
-        --base-path "${save_path}/stage1_output/"
+        --base-path "${dnn_input_base}"
         --tag "${label}"
         --years "${dnn_years_csv}"
         --jj-eta-region "${dnn_jj_eta_region}"
     )
+    if [[ -n "${dnn_category_selection}" ]]; then
+        pre_cmd+=(--category-selection "${dnn_category_selection}")
+    fi
+    if [[ "${dnn_category_selection}" == "transformer" ]]; then
+        [[ -n "${dnn_transformer_score_threshold}" ]] || \
+            die "TRANSFORMER_SCORE_THRESHOLD is required when DNN_CATEGORY_SELECTION=transformer."
+        pre_cmd+=(--transformer-score-threshold "${dnn_transformer_score_threshold}")
+        if [[ -n "${dnn_transformer_score_column}" ]]; then
+            pre_cmd+=(--transformer-score-column "${dnn_transformer_score_column}")
+        fi
+    elif [[ -n "${dnn_transformer_score_threshold}" ]]; then
+        die "Set DNN_CATEGORY_SELECTION=transformer when TRANSFORMER_SCORE_THRESHOLD is provided."
+    fi
     if [[ "${dask_gateway}" == "1" ]]; then
         pre_cmd+=(--use-dask-gateway)
         if [[ "${cluster_index}" != "0" ]]; then
@@ -711,7 +731,10 @@ run_dnn_workflow_once() {
 
     log "Running DNN workflow for years=${dnn_years_csv}"
     log "  DNN config: ${dnn_config}"
+    log "  DNN input base: ${dnn_input_base}"
+    log "  DNN category selection: ${dnn_category_selection:-config/default cut}"
     log "  DNN jj_eta_region: ${dnn_jj_eta_region}"
+    log "  DNN train backend: ${dnn_train_backend}"
     log "  DNN base dir: ${dnn_base_dir}"
     log "  DNN HPO dir: ${dnn_hpo_dir}"
     log "  DNN best json: ${dnn_best_json}"
@@ -719,12 +742,33 @@ run_dnn_workflow_once() {
     [[ "${run_preprocess}" == "1" ]] && run_cmd "${pre_cmd[@]}"
     [[ "${run_hpo}" == "1" ]] && run_cmd_timed "${hpo_cmd[@]}"
     if [[ "${run_train}" == "1" ]]; then
-        if [[ -f "${dnn_best_json}" ]]; then
-            train_cmd+=(--optuna-best-json "${dnn_best_json}")
-        else
-            log "WARNING: ${dnn_best_json} not found; training will use config hyperparameters."
-        fi
-        run_cmd_timed "${train_cmd[@]}"
+        case "${dnn_train_backend}" in
+            local)
+                if [[ -f "${dnn_best_json}" ]]; then
+                    train_cmd+=(--optuna-best-json "${dnn_best_json}")
+                else
+                    log "WARNING: ${dnn_best_json} not found; training will use config hyperparameters."
+                fi
+                run_cmd_timed "${train_cmd[@]}"
+                ;;
+            ray)
+                local -a ray_train_cmd=(
+                    /work/pixi/global/.pixi/envs/default/bin/python
+                    MVA_training/VBF_run3/submit_ray_dnn.py submit
+                    --config "${dnn_config}"
+                    --data-dir "${dnn_base_dir}/"
+                    --out-dir "${dnn_base_dir}/${dnn_train_label}"
+                    --wait
+                )
+                if [[ -f "${dnn_best_json}" ]]; then
+                    ray_train_cmd+=(--optuna-best-json "${dnn_best_json}")
+                else
+                    log "WARNING: ${dnn_best_json} not found; Ray training will use config hyperparameters."
+                fi
+                run_cmd_timed "${ray_train_cmd[@]}"
+                ;;
+            *) die "DNN_TRAIN_BACKEND must be 'local' or 'ray', got '${dnn_train_backend}'." ;;
+        esac
     fi
 }
 

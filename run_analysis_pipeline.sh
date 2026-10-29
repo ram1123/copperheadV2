@@ -77,6 +77,15 @@ Env vars:
                 <-o>_DY01) or separate (DY + DYVBF, cards in <-o>_DYsep). Pass the same
                 suffixed -o to run_stats_pipeline_VBF.sh.
 
+  Transformer-selected VBF-DNN training (all opt-in; defaults stay cut-based/local):
+  DNN_INPUT_BASE               Existing scored sample root used by dnn_pre.
+  DNN_CATEGORY_SELECTION       Set to transformer to use the binary score.
+  TRANSFORMER_SCORE_THRESHOLD  Required in transformer mode; keeps score < threshold.
+  TRANSFORMER_SCORE_COLUMN     Optional score-column override; default is
+                               transf_ggh_vs_vbf_binary_score.
+  DNN_TRAIN_BACKEND            local (default) or ray. ray submits exactly four
+                               concurrent folds with one GPU per fold.
+
   pu_dnn_train mode (all optional, sensible defaults shown):
   PU_DNN_DY_GLOB       Compacted sample-name glob for the HS-jet proxy (default: dyTo2Mu_M-50_aMCatNLO)
   PU_DNN_TTBAR_GLOB    Compacted sample-name glob for a PU-jet proxy (default: ttjets_*)

@@ -54,6 +54,7 @@ pixi.lock
 *.jsonl
 *.out
 test*.py
+!test/test_transformer_vbfdnn.py
 test*.sh
 output/
 *.log.attempt*
