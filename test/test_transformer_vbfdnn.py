@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import awkward as ak
 import numpy as np
 import pandas as pd
+import pytest
 
 from MVA_training.VBF_run3.preprocess_dnn import (
     apply_transformer_training_selection,
@@ -160,6 +161,49 @@ def test_ray_contract_supports_eight_one_gpu_workers_for_two_models():
 
     assert headers["af-n-workers"] == "8"
     assert headers["af-gpus-per-worker"] == "1"
+
+
+def test_ray_contract_supports_elastic_max_sixteen_workers():
+    headers = ray_headers(
+        SimpleNamespace(
+            max_cluster_workers=16,
+            cpus_per_worker=4,
+            ram_per_worker_gb=16,
+            min_gpu_memory_gb=5,
+            ray_env="/work/pixi/global/.pixi/envs/default",
+        )
+    )
+
+    assert headers["af-max-workers"] == "16"
+    assert "af-n-workers" not in headers
+    assert headers["af-gpus-per-worker"] == "1"
+
+
+def test_ray_contract_rejects_elastic_max_above_sixteen():
+    with pytest.raises(ValueError, match=r"\[1, 16\]"):
+        ray_headers(
+            SimpleNamespace(
+                max_cluster_workers=17,
+                cpus_per_worker=4,
+                ram_per_worker_gb=16,
+                min_gpu_memory_gb=5,
+                ray_env="/work/pixi/global/.pixi/envs/default",
+            )
+        )
+
+
+def test_ray_contract_rejects_exact_and_elastic_worker_options_together():
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        ray_headers(
+            SimpleNamespace(
+                cluster_workers=4,
+                max_cluster_workers=16,
+                cpus_per_worker=4,
+                ram_per_worker_gb=16,
+                min_gpu_memory_gb=5,
+                ray_env="/work/pixi/global/.pixi/envs/default",
+            )
+        )
 
 
 def test_ray_driver_keeps_fold_task_in_an_importable_module():

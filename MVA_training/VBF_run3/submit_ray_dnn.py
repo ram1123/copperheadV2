@@ -3,8 +3,9 @@
 
 The submitted driver starts four independent Ray tasks.  Each task trains one
 cross-validation fold and reserves one GPU; this is fold-level parallelism, not
-distributed data-parallel training of one model.  ``--cluster-workers`` may be
-larger than four when several four-fold jobs share the same user Ray cluster.
+distributed data-parallel training of one model.  ``--cluster-workers`` requests
+an exact-size cluster and may be larger than four when several four-fold jobs
+share it.  ``--max-cluster-workers`` is an opt-in elastic alternative.
 """
 
 import argparse
@@ -64,9 +65,22 @@ def validate_four_fold_config(config: Path) -> None:
 
 
 def ray_headers(args: argparse.Namespace) -> dict[str, str]:
-    cluster_workers = int(getattr(args, "cluster_workers", 4))
-    if not 4 <= cluster_workers <= 64:
-        raise ValueError("--cluster-workers must be in [4, 64].")
+    max_cluster_workers = getattr(args, "max_cluster_workers", None)
+    cluster_workers = getattr(args, "cluster_workers", None)
+    if max_cluster_workers is not None and cluster_workers is not None:
+        raise ValueError(
+            "--cluster-workers and --max-cluster-workers are mutually exclusive."
+        )
+    if max_cluster_workers is not None:
+        max_cluster_workers = int(max_cluster_workers)
+        if not 1 <= max_cluster_workers <= 16:
+            raise ValueError("--max-cluster-workers must be in [1, 16].")
+    else:
+        # Preserve the historical contract: no worker-shape option means an
+        # exact four-worker cluster, and --cluster-workers remains exact-size.
+        cluster_workers = 4 if cluster_workers is None else int(cluster_workers)
+        if not 4 <= cluster_workers <= 64:
+            raise ValueError("--cluster-workers must be in [4, 64].")
     if not 1 <= args.cpus_per_worker <= 16:
         raise ValueError("--cpus-per-worker must be in [1, 16].")
     if not 1 <= args.ram_per_worker_gb <= 64:
@@ -74,14 +88,18 @@ def ray_headers(args: argparse.Namespace) -> dict[str, str]:
     if args.min_gpu_memory_gb < 5:
         raise ValueError("--min-gpu-memory-gb must be at least 5.")
     ray_env = require_ray_visible(args.ray_env, "Ray environment")
-    return {
-        "af-n-workers": str(cluster_workers),
+    headers = {
         "af-gpus-per-worker": "1",
         "af-min-gpu-memory-gb": str(args.min_gpu_memory_gb),
         "af-cpus-per-worker": str(args.cpus_per_worker),
         "af-ram-per-worker-gb": str(args.ram_per_worker_gb),
         "af-env": str(ray_env),
     }
+    if max_cluster_workers is not None:
+        headers["af-max-workers"] = str(max_cluster_workers)
+    else:
+        headers["af-n-workers"] = str(cluster_workers)
+    return headers
 
 
 def build_entrypoint(args: argparse.Namespace) -> tuple[list[str], Path, Path]:
@@ -265,13 +283,26 @@ def build_parser() -> argparse.ArgumentParser:
     submit_parser.add_argument("--epochs", type=int, default=None)
     submit_parser.add_argument("--log-level", default="INFO")
     submit_parser.add_argument("--ray-env", default=DEFAULT_RAY_ENV)
-    submit_parser.add_argument(
+    worker_group = submit_parser.add_mutually_exclusive_group()
+    worker_group.add_argument(
         "--cluster-workers",
         type=int,
-        default=4,
+        default=None,
         help=(
             "Exact number of one-GPU workers in the shared Ray cluster. One model "
-            "uses four; use 16 to run four four-fold models concurrently."
+            "uses four; use 16 to run four four-fold models concurrently. The "
+            "default remains an exact four-worker cluster."
+        ),
+    )
+    worker_group.add_argument(
+        "--max-cluster-workers",
+        type=int,
+        default=None,
+        help=(
+            "Elastic cluster upper bound (1-16), sent as af-max-workers. The "
+            "cluster starts with as many workers as are currently free; folds can "
+            "run sequentially when fewer than four GPUs are available. Mutually "
+            "exclusive with --cluster-workers."
         ),
     )
     submit_parser.add_argument("--cpus-per-worker", type=int, default=8)

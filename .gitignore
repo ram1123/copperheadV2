@@ -74,3 +74,4 @@ quick_tests/
 # imported at module load by modules/selection.py, so it must be tracked
 # despite the blanket *.yaml ignore above.
 !configs/MVA/VBF/dnn_binning.yaml
+!configs/samples/samples_run2_nanov15_btagzptfix_sept29_2026.yaml
