@@ -149,6 +149,7 @@ setup_logging() {
     shopt -u nullglob
 
     log_file="log_$(date +%Y%m%d_%H%M%S).txt"
+    export COLUMNS="${COLUMNS:-$(tput cols 2>/dev/null || echo 200)}"
     exec > >(tee -a "${log_file}") 2>&1
     # `exec > >(...)`'s process substitution is a detached background job --
     # bash does not wait for it automatically.

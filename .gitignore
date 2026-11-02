@@ -18,8 +18,6 @@ bin/
 *.npy
 *.pkl
 *.gz
-*.json
-*.yaml
 trained_models/
 fitting_mu1mu2pt/
 .ipynb_checkpoints/

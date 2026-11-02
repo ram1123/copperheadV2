@@ -16,6 +16,36 @@ Generate a minimal State Snapshot for this session, to be pasted at the start of
 Keep the whole thing under ~200 words. Do not restate CLAUDE.md content, my memory files, skills or anything already persisted in project docs — this snapshot is purely session-delta state
 ```
 
+
+# For sync:
+
+```bash
+cd /work/users/shar1172/copperhead_Sync
+./run_in_pixi.sh default python run_prestage.py --chunksize 600000 -y 2024 --NanoAODv 15 \
+    --yaml configs/datasets/sync_dataset_nanoAODv15_2024.yaml --data H --signal Higgs \
+    --use_gateway --prestage_output ./prestage_output_sync2024
+
+# 1) Make the prestage JSON findable under --prestage-tag sync2024 (if you haven't already)
+cp prestage_output_sync2024/processor_samples_2024_NanoAODv15.json \
+   prestage_output/processor_samples_2024_NanoAODv15_sync2024.json
+
+# 2) Stage-1 with the sync switches (do_sync_ntuple), on Dask Gateway
+./run_in_pixi.sh default python -W ignore run_stage1.py -y 2024 --NanoAODv 15 --max_file_len 900 \
+    --yaml configs/datasets/sync_dataset_nanoAODv15_2024.yaml \
+    --switches-yaml configs/switches/switches_official_sync.yaml \
+    --prestage-tag sync2024 --save_path $STAGE1_SAVE --use_gateway
+
+# 3) Convert parquet to ROOT: one Purdue-<DATASET>.root per dataset, data blinded in 115–135 GeV, parts merged with hadd
+./run_in_pixi.sh default python scripts/make_sync_ntuple.py \
+    --stage1 $STAGE1_SAVE/stage1_output/2024 \
+    --out $SYNC_OUT
+
+# 4) Check the agreed-selection flags in the produced files
+./run_in_pixi.sh default python validation/sync_2024_ntuples/r0v2_checks/check_agreed_flags.py \
+    $SYNC_OUT/*.root
+
+```
+
 # Compact command
 
 
