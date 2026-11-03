@@ -175,7 +175,8 @@ pu_dnn_model_dir: # Base dir for the region PU/HS jet-ID DNN (switches.do_use_pu
     2022postEE: validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
     "2023": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
     "2023BPix": validation/pu_dnn/run2022postEE_dy_top_ewk_RemoveMuon_OnlyDMetJet_8July # no puIdDisc available
-    "2024": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc
+    # "2024": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc
+    "2024": data/pu_dnn/run2024_dy_top_ewk_Train1_Oct29_ray/2024 # includes puIdDisc; Train-1 inputs retrained 2026-10-29 (Oct28 ntuples)
     "2025": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc; placeholder until a 2025-trained model exists
     "2026": validation/pu_dnn/run2024_dy_top_ewk_RemoveMuon_OnlyDMetJet # includes puIdDisc; placeholder until a 2026-trained model exists
 zpt_dnn_models_aMCatNLO:

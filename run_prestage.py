@@ -106,6 +106,14 @@ def _pdf_sumw_for_runs_tree(tree, keys):
             f"across the runs of one file; it was produced with more than one "
             f"PDF set and cannot be summed."
         )
+    # Some production blocks have the branch but no LHE weights at all (e.g. one
+    # 2022preEE ZZZ file); stage1 gives those events unity PDF members.
+    if n_members == [0]:
+        logger.warning(
+            f"[prestage] {tree.file.file_path} has empty LHEPdfSumw; "
+            f"excluding it from the PDF member sums"
+        )
+        return None
 
     members = ak.to_numpy(ak.to_regular(pdf_sumw)).astype(np.float64)
     weights = ak.to_numpy(tree[gen_key].array()).astype(np.float64)

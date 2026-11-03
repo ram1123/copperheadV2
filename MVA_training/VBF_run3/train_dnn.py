@@ -556,6 +556,9 @@ class InMemoryBatchLoader:
         perm = torch.randperm(n) if self.shuffle else torch.arange(n)
         for start in range(0, n, self.batch_size):
             idx = perm[start : start + self.batch_size]
+            # BatchNorm can't train on a 1-row batch (n % batch_size == 1); drop it, training loader only
+            if self.shuffle and idx.numel() == 1:
+                break
             xb, yb, wb = self.x[idx], self.y[idx], self.w[idx]
             if self.n_variations > 0:
                 # xb.repeat() (not .expand()) so the result is a real, writable

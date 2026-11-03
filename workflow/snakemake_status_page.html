@@ -384,9 +384,11 @@ function dnnCard(list) {
     <th>finished / target</th><th>running</th><th>complete · pruned · failed</th><th>final folds</th><th>wall</th></tr>` +
     list.map(d => {
       const st = d.status ? d.status.state : d.created ? "START" : "";
-      const badge = st === "OK" ? "done" : st === "FAIL" ? "failed" : st === "START" ? "running" : "pending";
-      const running = Math.max(d.created - d.finished, 0);
-      return `<tr><td>${esc(d.region)}</td><td><span class="badge b-${badge}">${st === "OK" ? "done" : st === "FAIL" ? "failed" : st ? "training" : "not started"}</span></td>
+      const badge = st === "OK" ? "done" : st === "FAIL" ? "failed" : st === "START" ? "running" : st === "STOPPED" ? "stopped" : "pending";
+      const label = st === "OK" ? "done" : st === "FAIL" ? "failed" : st === "STOPPED" ? "stopped (killed run)" : st ? "training" : "not started";
+      // only trials of a live region are running; a stopped one's leftovers get marked FAIL on rerun
+      const running = st === "START" ? Math.max(d.created - d.finished - (d.fail || 0), 0) : 0;
+      return `<tr><td>${esc(d.region)}</td><td><span class="badge b-${badge}" title="${esc(d.status ? d.status.time + " UTC" : "")}">${label}</span></td>
         <td>${d.preprocessed ? "yes" : "–"}</td>
         <td class="barcell">${bar([[d.complete || 0, COLORS.done], [d.pruned || 0, "var(--warn)"], [d.fail || 0, COLORS.failed], [running, COLORS.running]], Math.max(d.target, d.created))}</td>
         <td class="num">${d.finished} / ${d.target}</td><td class="num">${running}</td>

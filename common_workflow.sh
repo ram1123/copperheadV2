@@ -154,6 +154,7 @@ setup_logging() {
     shopt -u nullglob
 
     log_file="log_$(date +%Y%m%d_%H%M%S).txt"
+    export COLUMNS="${COLUMNS:-$(tput cols 2>/dev/null || echo 200)}"
     exec > >(tee -a "${log_file}") 2>&1
     # `exec > >(...)`'s process substitution is a detached background job --
     # bash does not wait for it automatically.
@@ -1156,8 +1157,9 @@ run_vbf_significance() {
     ensure_vbf_card "${year}"
     (
         cd "${card_dir}"
-        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 > "${stem}_prefitsignificance.log"
-        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 --freezeParameters allConstrainedNuisances > "${stem}_prefitsignificance_StatOnly.log"
+        # strategy 0: the default (1) can stop at a wrong minimum without a warning (docs/known_issues.md, 2026-10-30)
+        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 --cminDefaultMinimizerStrategy 0 > "${stem}_prefitsignificance.log"
+        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 --cminDefaultMinimizerStrategy 0 --freezeParameters allConstrainedNuisances > "${stem}_prefitsignificance_StatOnly.log"
     )
 }
 
