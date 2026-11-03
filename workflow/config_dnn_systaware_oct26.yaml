@@ -1,0 +1,28 @@
+# Systematic-aware (adversarial) VBF DNN on the Oct26 stage-1 ntuples: per-region DNN chain
+# (preprocess -> HPO 50 trials -> 4 folds on Ray) -> score dump -> bin scan -> stage2/3 -> stats.
+# docs/vbf_dnn_systematic_aware.md. Overrides workflow/config.yaml; run (repo root, session without GPU):
+#   snakemake -s workflow/Snakefile --configfile workflow/config.yaml workflow/config_dnn_systaware_oct26.yaml \
+#       --restart-times 3 --resources gateway=2 -- stats_all
+# lambda=0.001 from the probe (jj_both_central fold 0, lambda=0: nominal_loss=0.395, penalty=53.6); also in run_tag, save_postfix, HPO label.
+run_tag: "FilterEvents_Oct26_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit_SystAware_lam0p001"
+stage1_label: "Run3_nanoAODv15_FilterEvents_Oct26_tightPassLepVeto_OfficialRecomendation_Systematics_LumiSplit"
+years: ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
+use_existing_stage1: true
+
+dnn_chain: true
+dnn_model_label: ""
+dnn_model_years: []
+dnn_hpo_trials: 50
+dnn_hpo_backend: "ray"
+# 6, not 11 (2026-10-28): at 11 the cluster sat on 6-8 GPUs and was removed ~20 min in, twice in daytime.
+dnn_ray_max_workers: 6
+dnn_ray_ram_per_worker_gb: 64
+dnn_syst_aware: true
+dnn_adv_lambda: 0.001
+# dnn_variation_set: "full"
+# dnn_adv_extra_args: "--adversarial-high-score-cut 2.0"
+
+jj_eta_regions: ["jj_both_central", "jj_both_fwd25", "jj_one_fwd25_one_central"]
+jj_combine_regions: ["jj_both_central", "jj_one_fwd25_one_central", "jj_both_fwd25"]
+with_variations: true
+save_postfix: "Oct27_2026_Syst_DNNRay050_SystAware_lam0p001"

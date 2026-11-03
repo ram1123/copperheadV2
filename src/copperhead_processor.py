@@ -33,6 +33,7 @@ from src.corrections.evaluator import (
     PDF_N_EIGENVECTOR_MEMBERS,
     add_pdf_variations,
     add_stxs_variations,
+    btag_fixedwp_weights,
     btag_weights_jsonKeepDim,
     get_jetpuid_weights_eta_dependent,
     get_pdf_lha_id_range,
@@ -59,7 +60,7 @@ from src.corrections.jet import (
     jet_puid,
     getJecDataTag,
 )
-from src.corrections.muon_sf import add_muon_sfs_correctionlib
+from src.corrections.muon_sf import add_muon_sfs_correctionlib, muon_sfs_stat_syst_correctionlib
 from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 from src.corrections.met_xy_correction import apply_puppi_met_xy_correction
@@ -1911,28 +1912,37 @@ class EventProcessor(processor.ProcessorABC):
 
             # do mu SF start -------------------------------------
             logger.debug("doing musf!")
-            if is_run2(year) or is_run3(year):
+            if is_run3(year):
+                # stat and syst as separate nuisances; nominal keeps the muID/muIso/muTrig names
+                for name, sf in muon_sfs_stat_syst_correctionlib(mu1, mu2, self.config).items():
+                    weights.add(name, weight=sf["nom"])
+                    safe_nom = ak.where(sf["nom"] != 0, sf["nom"], 1.0)
+                    for comp in ("stat", "syst"):
+                        up, down = sf[comp]
+                        weights.add(f"{name}_{comp}",
+                            weight=ak.ones_like(sf["nom"]),
+                            weightUp=up / safe_nom,
+                            weightDown=down / safe_nom,
+                        )
+            elif is_run2(year):
                 muID, muIso, muTrig = add_muon_sfs_correctionlib(mu1, mu2, self.config)
+                weights.add("muID",
+                    weight=muID["nom"],
+                    weightUp=muID["up"],
+                    weightDown=muID["down"]
+                )
+                weights.add("muIso",
+                    weight=muIso["nom"],
+                    weightUp=muIso["up"],
+                    weightDown=muIso["down"]
+                )
+                weights.add("muTrig",
+                    weight=muTrig["nom"],
+                    weightUp=muTrig["up"],
+                    weightDown=muTrig["down"]
+                )
             else:
                 raise ValueError(f"Year {year} is not recognized as Run 2 or Run 3 year for muon SFs!")
-            # -----------------------------
-            # push into weights (same as run2)
-            # -----------------------------
-            weights.add("muID",
-                weight=muID["nom"],
-                weightUp=muID["up"],
-                weightDown=muID["down"]
-            )
-            weights.add("muIso",
-                weight=muIso["nom"],
-                weightUp=muIso["up"],
-                weightDown=muIso["down"]
-            )
-            weights.add("muTrig",
-                weight=muTrig["nom"],
-                weightUp=muTrig["up"],
-                weightDown=muTrig["down"]
-            )
             # do mu SF end -------------------------------------
 
             # --- --- --- --- --- --- --- --- --- --- --- --- --- --- #
@@ -3527,7 +3537,19 @@ class EventProcessor(processor.ProcessorABC):
             and (variation == "nominal")
             and self.config["switches"]["do_btag_wgt"]
         )
-        if do_btag_wgt:
+        if do_btag_wgt and is_run3(year):
+            # BTV fixedWP SFs for the L+M working points the b-veto uses (needs MC eff maps)
+            logger.debug("doing Run3 fixedWP btag wgt!")
+            btag_wgt, btag_syst = btag_fixedwp_weights(btag_jets, self.config, NanoAODv)
+            weights.add("btag", weight=btag_wgt)
+            safe_btag_wgt = ak.where(btag_wgt != 0, btag_wgt, 1.0)
+            for name, (up, down) in btag_syst.items():
+                weights.add(f"btagWP_{name}",
+                    weight=ak.ones_like(btag_wgt),
+                    weightUp=up / safe_btag_wgt,
+                    weightDown=down / safe_btag_wgt,
+                )
+        elif do_btag_wgt:
             if is_run3(year):
                 btag_eta_val = 2.5
             elif is_run2(year):

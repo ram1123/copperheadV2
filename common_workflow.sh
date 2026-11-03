@@ -108,11 +108,16 @@ except Exception:
     # trained) model than the years actually processed via -y; defaults to -y's years.
     dnn_model_years_csv="${MODEL_YEARS:-${dnn_years_csv}}"
     dnn_model_years_slug="${dnn_model_years_csv//,/-}"
-    dnn_base_dir="dnn/trained_models/${label}/${dnn_model_years_slug}_${region}_${category}_${dnn_jj_eta_region}"
+    # DNN_SYST_AWARE=1: systematic-aware (adversarial) VBF DNN, docs/vbf_dnn_systematic_aware.md. Its
+    # variation-augmented fold parquets can't share the nominal ones' dir, so the DNN tag gets a suffix.
+    dnn_syst_aware="${DNN_SYST_AWARE:-0}"
+    dnn_tag="${label}"
+    [[ "${dnn_syst_aware}" == "1" ]] && dnn_tag="${label}_SystAware"
+    dnn_base_dir="dnn/trained_models/${dnn_tag}/${dnn_model_years_slug}_${region}_${category}_${dnn_jj_eta_region}"
     dnn_hpo_dir="${dnn_base_dir}/hpo_optuna/${dnn_hpo_label}"
     dnn_best_json="${OPTUNA_BEST_JSON:-${dnn_hpo_dir}/optuna_best.json}"
     # MODEL_LABEL lets stage2/compact load a model trained under a different run label; training still writes to dnn_base_dir.
-    dnn_model_path="./dnn/trained_models/${MODEL_LABEL:-${label}}/${dnn_model_years_slug}_${region}_${category}_${dnn_jj_eta_region}"
+    dnn_model_path="./dnn/trained_models/${MODEL_LABEL:-${dnn_tag}}/${dnn_model_years_slug}_${region}_${category}_${dnn_jj_eta_region}"
 
     # jj_eta_region for the actual VBF stage-2 category selection / stage-3 datacards --
     # independent of dnn_jj_eta_region above (that one is what phase-space subset the DNN was
@@ -149,6 +154,7 @@ setup_logging() {
     shopt -u nullglob
 
     log_file="log_$(date +%Y%m%d_%H%M%S).txt"
+    export COLUMNS="${COLUMNS:-$(tput cols 2>/dev/null || echo 200)}"
     exec > >(tee -a "${log_file}") 2>&1
     # `exec > >(...)`'s process substitution is a detached background job --
     # bash does not wait for it automatically.
@@ -517,6 +523,9 @@ build_stage2_cmd() {
     if [[ -n "${DY_MATCHED_JETS:-}" ]]; then
         cmd+=(--dy_matched_jets "${DY_MATCHED_JETS}")
     fi
+    if [[ -n "${SAMPLE_CONFIG:-}" ]]; then
+        cmd+=(--sample-config "${SAMPLE_CONFIG}")
+    fi
     # DUMP_SCORES=1: also save per-event nominal DNN scores, the input of the DNN bin scan
     if [[ "${DUMP_SCORES:-0}" == "1" ]]; then
         cmd+=(--dump_scores)
@@ -556,6 +565,9 @@ build_stage2_plot_cmd() {
     if [[ "${do_vbf_filter_study}" == "1" ]]; then
         cmd+=(--vbf_filter_study)
     fi
+    if [[ -n "${SAMPLE_CONFIG:-}" ]]; then
+        cmd+=(--sample-config "${SAMPLE_CONFIG}")
+    fi
     printf '%s\0' "${cmd[@]}"
 }
 
@@ -578,6 +590,10 @@ build_stage3_cmd() {
     # DY_SCHEME=separate: DY + DYVBF, cards under <postfix>_DYsep; merge01: DY 0J+1J merged, cards under <postfix>_DY01
     if [[ -n "${DY_SCHEME:-}" ]]; then
         cmd+=(--dy_scheme "${DY_SCHEME}")
+    fi
+    # must match stage-2's SAMPLE_CONFIG: stage-3 groups the stage-2 histograms by it
+    if [[ -n "${SAMPLE_CONFIG:-}" ]]; then
+        cmd+=(--sample-config "${SAMPLE_CONFIG}")
     fi
     # SIGNAL_XSEC_RESCALE=1: interim signal BR fix for pre-fix stage-1; cards land under <postfix>_SigXS
     if [[ "${SIGNAL_XSEC_RESCALE:-0}" == "1" ]]; then
@@ -679,10 +695,23 @@ run_dnn_workflow_once() {
         python MVA_training/VBF_run3/preprocess_dnn.py
         --config "${dnn_config}"
         --base-path "${save_path}/stage1_output/"
-        --tag "${label}"
+        --tag "${dnn_tag}"
         --years "${dnn_years_csv}"
         --jj-eta-region "${dnn_jj_eta_region}"
     )
+    local -a adv_args=()
+    if [[ "${dnn_syst_aware}" == "1" ]]; then
+        pre_cmd+=(--include-systematic-variations --variation-set "${DNN_VARIATION_SET:-full}")
+        if [[ "${run_hpo}" == "1" || "${run_train}" == "1" ]]; then
+            # lambda=0 would silently train the nominal loss on the bigger inputs
+            [[ -n "${DNN_ADV_LAMBDA:-}" ]] || die "DNN_SYST_AWARE=1 needs DNN_ADV_LAMBDA (adversarial weight)"
+            adv_args=(--use_adversarial --adversarial-lambda "${DNN_ADV_LAMBDA}")
+            # DNN_ADV_EXTRA_ARGS: other adversarial_cli.py flags, e.g. "--adversarial-high-score-cut 2.0"
+            if [[ -n "${DNN_ADV_EXTRA_ARGS:-}" ]]; then
+                adv_args+=(${DNN_ADV_EXTRA_ARGS})
+            fi
+        fi
+    fi
     if [[ "${dask_gateway}" == "1" ]]; then
         pre_cmd+=(--use-dask-gateway)
         if [[ "${cluster_index}" != "0" ]]; then
@@ -697,6 +726,7 @@ run_dnn_workflow_once() {
         --out-dir "${dnn_hpo_dir}"
         --n-trials "${dnn_hpo_trials}"
         --folds "${dnn_hpo_folds}"
+        "${adv_args[@]}"
     )
     if [[ -n "${HPO_TIMEOUT_MIN:-}" ]]; then
         hpo_cmd+=(--timeout-min "${HPO_TIMEOUT_MIN}")
@@ -707,6 +737,7 @@ run_dnn_workflow_once() {
         --config "${dnn_config}"
         --data-dir "${dnn_base_dir}/"
         --out-dir "${dnn_base_dir}/${dnn_train_label}"
+        "${adv_args[@]}"
     )
 
     log "Running DNN workflow for years=${dnn_years_csv}"
@@ -715,6 +746,37 @@ run_dnn_workflow_once() {
     log "  DNN base dir: ${dnn_base_dir}"
     log "  DNN HPO dir: ${dnn_hpo_dir}"
     log "  DNN best json: ${dnn_best_json}"
+    log "  DNN systematic-aware: ${dnn_syst_aware}${adv_args[*]:+ (${adv_args[*]})}"
+
+    # HPO_BACKEND=ray: HPO trials and the per-fold final trainings run in parallel on the AF Ray
+    # GPU cluster (hpo_ray.py, same outputs); the submit blocks until the Ray job ends.
+    if [[ "${HPO_BACKEND:-local}" == "ray" && ( "${run_hpo}" == "1" || "${run_train}" == "1" ) ]]; then
+        [[ -z "${HPO_TIMEOUT_MIN:-}" ]] || die "HPO_TIMEOUT_MIN is not supported with HPO_BACKEND=ray"
+        [[ "${dnn_best_json}" == "${dnn_hpo_dir}/optuna_best.json" ]] \
+            || die "OPTUNA_BEST_JSON is not supported with HPO_BACKEND=ray (uses ${dnn_hpo_dir}/optuna_best.json)"
+        local stages=""
+        [[ "${run_hpo}" == "1" ]] && stages="hpo"
+        [[ "${run_train}" == "1" ]] && stages="${stages:+${stages},}train"
+        # Ray isn't in the repo's pixi envs: submit with the AF global env; the GPU workers run
+        # the trainings with this env's python, as the local path does.
+        local -a ray_cmd=(
+            "${RAY_PYTHON:-/work/pixi/global/.pixi/envs/default/bin/python}" MVA_training/VBF_run3/hpo_ray.py submit
+            --config "${dnn_config}"
+            --data-dir "${dnn_base_dir}/"
+            --out-dir "${dnn_hpo_dir}"
+            --n-trials "${dnn_hpo_trials}"
+            --folds "${dnn_hpo_folds}"
+            --stages "${stages}"
+            --train-out-dir "${dnn_base_dir}/${dnn_train_label}"
+            --train-python "$(command -v python)"
+            --max-workers "${RAY_MAX_WORKERS:-15}"
+            --ram-per-worker-gb "${RAY_RAM_PER_WORKER_GB:-32}"
+            "${adv_args[@]}"
+        )
+        [[ "${run_preprocess}" == "1" ]] && run_cmd "${pre_cmd[@]}"
+        run_cmd_timed "${ray_cmd[@]}"
+        return
+    fi
 
     [[ "${run_preprocess}" == "1" ]] && run_cmd "${pre_cmd[@]}"
     [[ "${run_hpo}" == "1" ]] && run_cmd_timed "${hpo_cmd[@]}"
@@ -1095,8 +1157,9 @@ run_vbf_significance() {
     ensure_vbf_card "${year}"
     (
         cd "${card_dir}"
-        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 > "${stem}_prefitsignificance.log"
-        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 --freezeParameters allConstrainedNuisances > "${stem}_prefitsignificance_StatOnly.log"
+        # strategy 0: the default (1) can stop at a wrong minimum without a warning (docs/known_issues.md, 2026-10-30)
+        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 --cminDefaultMinimizerStrategy 0 > "${stem}_prefitsignificance.log"
+        combineTool.py -d "${stem}.txt" -M Significance -m 125 --expectSignal=1 -n "_${year}_${save_postfix}_" -t -1 --rMin -2 --rMax 5 --cminDefaultMinimizerStrategy 0 --freezeParameters allConstrainedNuisances > "${stem}_prefitsignificance_StatOnly.log"
     )
 }
 
@@ -1184,7 +1247,14 @@ run_vbf_lhscan() {
         #   freeze_systs_mcstat -> statonly: DYNorm (unconstrained DY rateParams)
         #   statonly: data statistics only (allConstrainedNuisances + DY rateParams frozen)
         local named_systs dy_rateparams
-        named_systs="$(awk '$2=="lnN" || $2=="shape" || $2=="param" {print $1}' "${stem}.txt" | sort -u | paste -sd, -)"
+        # From the workspace, not the card text: "nuisance edit rename" lines (e.g. the
+        # HIG-19-006 cards) change the names, and combine silently ignores unknown freezes.
+        named_systs="$(python3 -c "
+import ROOT
+w = ROOT.TFile.Open('${stem}.root').Get('w')
+print(','.join(sorted(v.GetName() for v in w.set('nuisances') if not v.GetName().startswith('prop_bin'))))
+" 2>/dev/null | tail -n 1)"
+        [[ -n "${named_systs}" ]] || die "run_vbf_lhscan: no constrained nuisances read from ${stem}.root"
         dy_rateparams="$(awk '$2=="rateParam" {print $1}' "${stem}.txt" | sort -u | paste -sd, -)"
         local scan="lhscan${year}_${save_postfix}.with_syst"
         # Same strategy-0-then-2 fallback as run_vbf_impacts: a scan whose initial fit fails

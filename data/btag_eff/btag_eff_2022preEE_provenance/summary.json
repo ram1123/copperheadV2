@@ -1,0 +1,69 @@
+{
+  "year": "2022preEE",
+  "nanoaod": 12,
+  "tagger": "particleNet",
+  "score_field": "btagPNetB",
+  "wp_cuts": {
+    "L": 0.047,
+    "M": 0.245
+  },
+  "n_files": 541,
+  "failed_files": [],
+  "max_files": 20,
+  "max_events": 500000,
+  "weighting": "unit",
+  "samples": [
+    "dyTo2L_M-50_0j",
+    "dyTo2L_M-50_1j",
+    "dyTo2L_M-50_2j",
+    "dyTo2L_M-50_incl",
+    "dyTo2Mu_M-105To160",
+    "dyTo2Mu_MLL_10To50",
+    "dyTo2Mu_MLL_120To200",
+    "dyTo2Mu_MLL_50To120",
+    "dy_M-50_aMCatNLO",
+    "dy_VBF_filter",
+    "ewk_lljj",
+    "ewk_mmjj_mll_105_160",
+    "ewk_mmjj_mll_105_160_mjj120",
+    "ggh_powhegPS",
+    "tt_inclusive",
+    "ttjets_dl",
+    "ttjets_fh",
+    "ttjets_sl",
+    "vbf_aMCatNLO",
+    "vbf_powheg_dipole",
+    "ww_2l2nu",
+    "wz_1l1nu2q",
+    "wz_2l2q",
+    "wz_3lnu",
+    "zz",
+    "zz_2l2nu",
+    "zz_2l2q",
+    "zz_4l"
+  ],
+  "raw_jets_per_flavour": {
+    "0": 4247580.0,
+    "4": 495165.0,
+    "5": 606203.0
+  },
+  "git": {
+    "commit": "720e323b5c47cdfd7cff180d359741575a1364b2",
+    "dirty": true,
+    "diff_hash": "febc666ffdfcd01cb550557c9deaf6cadc5f2a37",
+    "diff_file": "git_diff.patch"
+  },
+  "argv": [
+    "scripts/derive_btag_efficiencies.py",
+    "--year",
+    "2022preEE",
+    "--nanoaod",
+    "12",
+    "--max-files",
+    "20",
+    "--max-events",
+    "500000",
+    "--workers",
+    "32"
+  ]
+}
