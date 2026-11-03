@@ -2965,10 +2965,10 @@
       "n_files_used": 245,
       "original_fraction": 1.0,
       "provenance": {
-        "commit": "55ef9b34dbd96b4be6adbaef22ba2eb8e075c9aa",
-        "diff_file": "_provenance/2024_NanoAODv15_20261013_193041/git_diff.patch",
+        "commit": "d0f1c4e2a330155015a2b784b189a869f60f990d",
+        "diff_file": "_provenance/2024_NanoAODv15_20261102_145513/git_diff.patch",
         "dirty": true,
-        "timestamp": "20261013_193041"
+        "timestamp": "20261102_145513"
       },
       "sumGenWgts": null,
       "sumLHEPdfWgts": null
@@ -3784,116 +3784,116 @@
       "n_files_used": 72,
       "original_fraction": 1.0,
       "provenance": {
-        "commit": "55ef9b34dbd96b4be6adbaef22ba2eb8e075c9aa",
-        "diff_file": "_provenance/2024_NanoAODv15_20261013_193041/git_diff.patch",
+        "commit": "d0f1c4e2a330155015a2b784b189a869f60f990d",
+        "diff_file": "_provenance/2024_NanoAODv15_20261102_145513/git_diff.patch",
         "dirty": true,
-        "timestamp": "20261013_193041"
+        "timestamp": "20261102_145513"
       },
-      "sumGenWgts": 91543948.90200002,
+      "sumGenWgts": 91543948.90200001,
       "sumLHEPdfWgts": [
-        91543948.90200002,
-        91652804.6881,
-        91380053.97940001,
+        91543948.90200001,
+        91652804.68809998,
+        91380053.97940004,
         91669510.84169999,
         91706361.78979999,
-        91643576.75400002,
-        91661381.80289999,
-        91823467.44759002,
-        91819569.28199999,
-        91500040.02989998,
-        91609567.5355,
-        91348370.5243,
-        91655021.42191,
-        91428950.63409993,
-        91468605.42060006,
+        91643576.75399998,
+        91661381.80290002,
+        91823467.44758998,
+        91819569.28200002,
+        91500040.02990001,
+        91609567.53550003,
+        91348370.52430004,
+        91655021.42191002,
+        91428950.63409996,
+        91468605.42060004,
         91581949.60960001,
-        91321154.75869997,
-        91334356.50339997,
-        91766242.49660002,
-        91676329.00400001,
-        91468730.78527997,
-        91698802.38156001,
-        91434931.62748004,
-        91543910.06400001,
+        91321154.75869998,
+        91334356.5034,
+        91766242.4966,
+        91676329.004,
+        91468730.78527999,
+        91698802.38155998,
+        91434931.62748006,
+        91543910.064,
         91507971.24269994,
         91530950.3056,
         91467203.20261,
-        91423085.4439,
+        91423085.44389997,
         91585167.53209999,
         91340474.79121688,
         91499493.74758999,
-        91336861.8321,
-        91571822.62200001,
+        91336861.83209999,
+        91571822.62200002,
         91433008.53588,
         91436045.32479998,
-        91557111.51559998,
-        91677707.55092002,
-        91521335.93473002,
-        91551062.15099996,
+        91557111.5156,
+        91677707.55092004,
+        91521335.93473001,
+        91551062.15099998,
         91535989.63933998,
-        91502198.01353788,
-        91550845.53700005,
-        91588616.87600203,
+        91502198.01353794,
+        91550845.53700003,
+        91588616.87600204,
         91494954.611734,
-        91564359.36777298,
-        91560887.60939997,
+        91564359.36777297,
+        91560887.60939999,
         91541998.79085803,
         91534426.63934,
-        91524916.0325,
-        91492719.06260002,
-        91520162.62360002,
+        91524916.03250003,
+        91492719.06260003,
+        91520162.6236,
         91529674.61159998,
-        91593204.55940998,
-        91535117.09859994,
-        91538038.5748,
-        91546644.77704006,
-        91525028.28599998,
+        91593204.55941,
+        91535117.09859999,
+        91538038.57479998,
+        91546644.77704003,
+        91525028.286,
         91573629.037,
-        91552548.70869999,
+        91552548.70869997,
         91561049.84227,
         91535472.68537797,
-        91537785.74252003,
-        91598120.24699998,
+        91537785.74252,
+        91598120.24699995,
         91568214.84525,
-        91563561.8034,
-        91595328.75009999,
-        91554302.04921813,
-        91549203.99428003,
-        91564520.91933,
-        91550583.18900001,
+        91563561.80339998,
+        91595328.75010002,
+        91554302.04921809,
+        91549203.99428,
+        91564520.91933002,
+        91550583.18899997,
         91560466.76309998,
         91545423.9291,
-        91534279.50388005,
-        91552617.23946,
+        91534279.50388004,
+        91552617.23946002,
         91535979.77000001,
         91526887.05600004,
-        91539310.16100001,
-        91592695.14800002,
-        91546037.7735,
+        91539310.16100003,
+        91592695.14800003,
+        91546037.77350003,
         91527369.73290002,
-        91552981.94299999,
-        91526360.90199998,
-        91555560.73930003,
+        91552981.943,
+        91526360.90199995,
+        91555560.7393,
         91573559.82200004,
-        91551502.20400003,
-        91545287.9619,
+        91551502.20400001,
+        91545287.96190001,
         91530568.76590002,
         91552288.90860002,
-        91541900.53310002,
-        91538822.50580001,
-        91556109.223,
-        91549538.81700002,
-        91562620.80400005,
+        91541900.5331,
+        91538822.5058,
+        91556109.22300003,
+        91549538.81700005,
+        91562620.804,
         91528425.94066,
         91534424.38000003,
-        91553573.32310008,
+        91553573.32310006,
         91534534.4703,
-        91552892.204,
+        91552892.20400003,
         91547387.58600001,
-        91555283.38200004,
-        91543948.90200002,
-        88939020.86881584,
-        93921027.38507055
+        91555283.38200003,
+        91543948.90200001,
+        88939020.86881587,
+        93921027.38507053
       ]
     }
   },
@@ -4630,115 +4630,115 @@
       "n_files_used": 65,
       "original_fraction": 1.0,
       "provenance": {
-        "commit": "55ef9b34dbd96b4be6adbaef22ba2eb8e075c9aa",
-        "diff_file": "_provenance/2024_NanoAODv15_20261013_193041/git_diff.patch",
+        "commit": "d0f1c4e2a330155015a2b784b189a869f60f990d",
+        "diff_file": "_provenance/2024_NanoAODv15_20261102_145513/git_diff.patch",
         "dirty": true,
-        "timestamp": "20261013_193041"
+        "timestamp": "20261102_145513"
       },
       "sumGenWgts": 1598515.3186199996,
       "sumLHEPdfWgts": [
-        1598523.4980000001,
-        1597187.4509607665,
-        1595653.2083386984,
-        1598308.3045645212,
+        1598523.498,
+        1597187.4509607663,
+        1595653.2083386988,
+        1598308.3045645214,
         1601875.2774058243,
         1594917.6712140003,
         1601087.6882044557,
-        1596389.0388400836,
+        1596389.0388400839,
         1596406.7062845821,
-        1599653.626819129,
-        1596470.947914784,
+        1599653.6268191293,
+        1596470.9479147831,
         1601022.8583852863,
-        1599575.90212153,
-        1602292.154037436,
-        1602266.2236029205,
-        1604221.5150269005,
+        1599575.9021215294,
+        1602292.154037435,
+        1602266.22360292,
+        1604221.5150269002,
         1600660.3771458252,
-        1601267.970703896,
+        1601267.9707038961,
         1592823.487315721,
-        1595529.8745448128,
+        1595529.874544813,
         1598280.2376433786,
-        1594368.3347316512,
-        1599047.6701988925,
-        1599517.237616001,
-        1592700.3522088428,
-        1598276.278477264,
+        1594368.3347316515,
+        1599047.670198893,
+        1599517.2376160002,
+        1592700.352208843,
+        1598276.2784772639,
         1597381.3972397908,
         1599091.1467900393,
-        1598038.9712875139,
-        1595828.7117601205,
-        1599333.0754179116,
-        1596496.300628557,
-        1597982.7667870007,
-        1598089.8167614716,
-        1595587.5087967007,
+        1598038.971287514,
+        1595828.7117601212,
+        1599333.075417912,
+        1596496.3006285576,
+        1597982.7667870005,
+        1598089.816761471,
+        1595587.508796701,
         1598849.9053546349,
         1600165.1670187367,
-        1597540.0841432544,
-        1598920.7955500002,
+        1597540.0841432554,
+        1598920.7955500004,
         1597729.1472103652,
-        1597089.187622174,
+        1597089.1876221735,
         1597042.2256250002,
-        1598677.1920093389,
-        1597797.4540443327,
-        1598683.0561442925,
+        1598677.1920093386,
+        1597797.4540443323,
+        1598683.0561442927,
         1597726.740678558,
         1595976.3197967298,
-        1598627.028553727,
-        1599346.4254748996,
-        1595986.932527508,
+        1598627.0285537275,
+        1599346.4254749,
+        1595986.9325275077,
         1597616.161801539,
         1598752.7991991742,
-        1599975.4586718546,
-        1598399.9626689812,
-        1598129.81867932,
-        1597489.373549271,
+        1599975.458671855,
+        1598399.962668981,
+        1598129.8186793195,
+        1597489.3735492711,
         1598543.0797664004,
-        1599231.7189807994,
-        1599576.1684220529,
-        1599277.6162643158,
-        1598756.201785457,
-        1598560.4518447132,
-        1599608.272801,
+        1599231.7189808004,
+        1599576.1684220526,
+        1599277.6162643163,
+        1598756.2017854578,
+        1598560.4518447134,
+        1599608.2728009997,
         1599181.7866959067,
-        1598606.2915913493,
-        1599609.705920544,
-        1598418.469738581,
-        1597916.5840043505,
-        1599783.1587693114,
-        1598046.0743550002,
-        1599527.4637734506,
+        1598606.2915913498,
+        1599609.7059205438,
+        1598418.4697385812,
+        1597916.5840043507,
+        1599783.158769312,
+        1598046.074355,
+        1599527.46377345,
         1597651.2123573544,
-        1597321.502305327,
-        1598840.811848645,
+        1597321.5023053265,
+        1598840.8118486453,
         1597433.111179,
-        1598272.1594990003,
-        1598524.7987384393,
+        1598272.1594990005,
+        1598524.79873844,
         1599444.3522579996,
-        1599046.100915851,
-        1597718.0395863298,
-        1598657.7492682994,
-        1598148.6300922015,
-        1598839.4398658457,
+        1599046.1009158518,
+        1597718.0395863296,
+        1598657.7492683,
+        1598148.6300922022,
+        1598839.4398658462,
         1599843.963616,
-        1598510.959491,
-        1598561.677048975,
+        1598510.9594909998,
+        1598561.6770489744,
         1598266.4132988004,
-        1599031.8309833105,
-        1598049.9546800002,
+        1599031.830983311,
+        1598049.9546799997,
         1598105.86009042,
         1598844.0502910002,
-        1598930.9968800005,
-        1599150.421976936,
-        1597882.844713268,
+        1598930.99688,
+        1599150.4219769358,
+        1597882.8447132676,
         1598715.5265960004,
-        1599095.2003263845,
-        1598241.1800523263,
+        1599095.200326385,
+        1598241.1800523265,
         1598952.1073799995,
-        1598723.1270710002,
+        1598723.1270710009,
         1598902.7541599998,
-        1598523.4980000001,
-        1555101.7561472412,
+        1598523.498,
+        1555101.7561472415,
         1645519.6370010944
       ]
     }
@@ -5834,132 +5834,1134 @@
           ]
         ],
         "uuid": "8e9a0338-5351-11f0-8f88-0323a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/07712fab-5444-4273-b156-fdaebf60b659.root": {
+        "num_entries": 157000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            157000
+          ]
+        ],
+        "uuid": "665ed426-3c39-11f1-bb08-80b65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/1a957c92-1c86-45e7-8594-949a4f6e6758.root": {
+        "num_entries": 17000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            17000
+          ]
+        ],
+        "uuid": "12c6d368-3d47-11f1-9bc6-15b65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/2c8073ef-7e40-436f-886f-da143c3e1967.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "70775506-3df0-11f1-b417-720b10acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/396a955e-e9a0-4b97-9529-494914a36795.root": {
+        "num_entries": 69000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            69000
+          ]
+        ],
+        "uuid": "5747a834-3d31-11f1-bd2b-cdcd36c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/436ea2f5-00a3-476a-ae66-36a8df0ecd6b.root": {
+        "num_entries": 157000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            157000
+          ]
+        ],
+        "uuid": "62019412-3c3a-11f1-ab61-50cd36c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/4ecad0ec-15fb-41d8-9893-36c37fc8b749.root": {
+        "num_entries": 162000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            162000
+          ]
+        ],
+        "uuid": "173e7aac-3c04-11f1-9992-0f0c8a0abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/6603b2fd-3813-4973-b0fc-6ccfcb23b138.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "ac1d3dd2-3d4b-11f1-840d-3d9110acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/6fe806b1-d999-465c-bbe6-84dd755cd338.root": {
+        "num_entries": 6000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            6000
+          ]
+        ],
+        "uuid": "34114d9c-3d3c-11f1-95ee-e37c4b86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/7710c834-b8c1-459f-8c16-5e28f1535fb0.root": {
+        "num_entries": 160000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            160000
+          ]
+        ],
+        "uuid": "d4663144-3c66-11f1-befc-c3cd36c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/816ddca2-fc4c-4b12-81f5-1e3307e3b4a9.root": {
+        "num_entries": 156000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            156000
+          ]
+        ],
+        "uuid": "57b03414-3c21-11f1-9bcb-4ab75d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/877759b4-2b54-4c92-93b9-567e69ef6e14.root": {
+        "num_entries": 167000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            167000
+          ]
+        ],
+        "uuid": "e69e37f2-3c49-11f1-9521-01b75d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/944f2b87-0392-4090-a2a6-cd84c3fa8237.root": {
+        "num_entries": 156000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            156000
+          ]
+        ],
+        "uuid": "f1594af4-3c69-11f1-9b69-edb65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/a6e065fc-c6b7-49c0-80b6-22b6b82aa47c.root": {
+        "num_entries": 159000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            159000
+          ]
+        ],
+        "uuid": "3bb3336c-3c2e-11f1-98db-e9b65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/bb86f39c-22ab-4726-9172-724dcc9a8b97.root": {
+        "num_entries": 156000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            156000
+          ]
+        ],
+        "uuid": "faa214ee-3c7b-11f1-b915-9eb65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/c145a26d-1c7e-4b30-b805-c4e281c92001.root": {
+        "num_entries": 157000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            157000
+          ]
+        ],
+        "uuid": "08a11b4e-3c59-11f1-95c7-19b75d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/e1955e60-a04e-4409-8884-932a9d10536f.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "209aa2e6-3d40-11f1-8349-bf0f10acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/ee81bff5-4255-4e9f-a612-474dccda716c.root": {
+        "num_entries": 156000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            156000
+          ]
+        ],
+        "uuid": "86855aa4-3c11-11f1-982a-0dcd36c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/100000/efeb43ba-d7a1-4817-8d66-0fa2e3458260.root": {
+        "num_entries": 157000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            157000
+          ]
+        ],
+        "uuid": "de1d3652-3c10-11f1-b748-9cb65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/1d067cce-b655-41a5-81cb-3724eb4a852b.root": {
+        "num_entries": 7000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            7000
+          ]
+        ],
+        "uuid": "54a8e78a-3c8e-11f1-b6c9-9c339e86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/3a05b737-dfc2-4caf-aeef-f1961a889323.root": {
+        "num_entries": 15000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            15000
+          ]
+        ],
+        "uuid": "b471fc38-3c8e-11f1-8ff7-d895d380beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/5134a91c-595a-417f-aacc-11d4db1eec0a.root": {
+        "num_entries": 161000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            161000
+          ]
+        ],
+        "uuid": "2706f496-3c7c-11f1-8e59-16bee183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/52480865-a198-4958-8e10-797b6cbd270f.root": {
+        "num_entries": 211000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            211000
+          ]
+        ],
+        "uuid": "04a1326e-3c85-11f1-9551-a2bce183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/73faaeac-622f-45f3-9168-df9ba0386fd9.root": {
+        "num_entries": 162000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            162000
+          ]
+        ],
+        "uuid": "3e798cbe-3c87-11f1-ae30-92bfe183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/9f23ce1c-4972-4783-b478-9fb995a41e27.root": {
+        "num_entries": 7000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            7000
+          ]
+        ],
+        "uuid": "013f734c-3c8f-11f1-9165-0719000abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/a7e46b26-1e78-454e-8cde-0b9b02e51738.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "6ac5e0d6-3c8e-11f1-b13a-b0898e80beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/ad34022f-168b-4bd4-9f9d-233a6e95f09b.root": {
+        "num_entries": 43000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            43000
+          ]
+        ],
+        "uuid": "8458d602-3c8e-11f1-bf6e-13b65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/be7d2a77-7ca9-419c-9b21-ac02f19ad134.root": {
+        "num_entries": 171000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            171000
+          ]
+        ],
+        "uuid": "6b8ac53a-3c80-11f1-b9e8-96bfe183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/d29e8620-6f71-443f-8adb-da2f2c18c0b2.root": {
+        "num_entries": 159000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            159000
+          ]
+        ],
+        "uuid": "e180e6c4-3c8b-11f1-91e6-87bde183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/e1ec533b-3417-4d4e-a5ab-7c3812a6963c.root": {
+        "num_entries": 57000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            57000
+          ]
+        ],
+        "uuid": "451d79ac-3c8e-11f1-a707-3bbfe183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/120000/f9303a2b-1393-4505-b8ba-1aaa0c81e19d.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "524a37dc-3c8e-11f1-a853-09041cacbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/1a078c65-c357-48f1-ac36-aadbea48a0f6.root": {
+        "num_entries": 6000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            6000
+          ]
+        ],
+        "uuid": "d955301a-3d15-11f1-b194-8804a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/2873f823-8355-4112-8c73-b595e9a2e781.root": {
+        "num_entries": 33000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            33000
+          ]
+        ],
+        "uuid": "ce239e94-3d14-11f1-b9ef-61b65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/53728dd8-e1a1-408f-897d-a5d28019dda1.root": {
+        "num_entries": 163000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            163000
+          ]
+        ],
+        "uuid": "52f45f4c-3cc4-11f1-976d-15cfb9bcbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/58dbf594-e81d-46e5-b283-ee646e0ca0bb.root": {
+        "num_entries": 12000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            12000
+          ]
+        ],
+        "uuid": "963f2480-3d14-11f1-83e1-2e1b3d86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/64e41ff6-4bbe-4d4f-b8d8-9e5961fa8405.root": {
+        "num_entries": 134000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            134000
+          ]
+        ],
+        "uuid": "6ba047a4-3d14-11f1-bfde-dfcdb9bcbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/81bc1082-8eb8-41e4-92d9-36807aaa9516.root": {
+        "num_entries": 3000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            3000
+          ]
+        ],
+        "uuid": "0d79aa58-3d50-11f1-bd53-8fdca8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/9b717fb4-a6ac-4c46-be5a-578bc87d3489.root": {
+        "num_entries": 40000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            40000
+          ]
+        ],
+        "uuid": "9dc2d04e-3d14-11f1-b3a6-40cd36c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/aeb726e8-71c1-40e0-bade-593b70dbf023.root": {
+        "num_entries": 63000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            63000
+          ]
+        ],
+        "uuid": "9851527a-3d14-11f1-8a00-81a8935abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/b4b68ae0-1608-4302-a21f-1ad3a6303f6c.root": {
+        "num_entries": 178000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            178000
+          ]
+        ],
+        "uuid": "5a3477fc-3cbe-11f1-a9b4-f113030abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/c9edf99f-0cbf-4f52-8076-ba04408fa53a.root": {
+        "num_entries": 70000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            70000
+          ]
+        ],
+        "uuid": "84f79ff4-3d14-11f1-9e2d-f87c4b86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/d3a6d71a-70db-4011-9367-de7c3beb4c31.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "c3e17186-3d14-11f1-9a30-37bee183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/e5229142-d61d-42f4-812c-bbffba62fd19.root": {
+        "num_entries": 16000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            16000
+          ]
+        ],
+        "uuid": "8d9acb22-3d14-11f1-9c84-0126a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/eb563ec8-684e-43eb-bd55-d0ce775ce613.root": {
+        "num_entries": 158000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            158000
+          ]
+        ],
+        "uuid": "a619637e-3cca-11f1-a7e1-4bb65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2550000/f3154044-cb00-442b-a570-182315c6a983.root": {
+        "num_entries": 123000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            123000
+          ]
+        ],
+        "uuid": "9f2b41b4-3d14-11f1-bd4c-0714030abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/0a96cb23-6cd7-415f-ae1a-3a41045f26bf.root": {
+        "num_entries": 16000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            16000
+          ]
+        ],
+        "uuid": "6cbb41fc-3cd3-11f1-b5d6-40eab392beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/111ab1aa-88dd-487a-b84d-970e8279c482.root": {
+        "num_entries": 23000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            23000
+          ]
+        ],
+        "uuid": "bb5e16d2-3cd2-11f1-8ae0-05a4a983beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/130a6dd2-4b9e-4855-be14-0b968b40181d.root": {
+        "num_entries": 5000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            5000
+          ]
+        ],
+        "uuid": "c469ee86-3cd2-11f1-a06f-d3011eacbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/13cc38f5-40ae-41c3-8a6d-59d712325f43.root": {
+        "num_entries": 3000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            3000
+          ]
+        ],
+        "uuid": "082ed7da-3cd3-11f1-8268-78e5b49dbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/1c20f149-9db1-4210-b3cf-66261725afaf.root": {
+        "num_entries": 3000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            3000
+          ]
+        ],
+        "uuid": "e377b86c-3cd2-11f1-af9c-7b04a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/1e58e472-c831-4a06-b013-fc592403e734.root": {
+        "num_entries": 161000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            161000
+          ]
+        ],
+        "uuid": "cbd2a0ae-3c9c-11f1-b14a-55bee183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/22b6200c-f3e8-4624-9d6f-dddb1ab35e0a.root": {
+        "num_entries": 6000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            6000
+          ]
+        ],
+        "uuid": "0ab92ad2-3cd3-11f1-a1eb-d75088c8beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/2dc86601-86f3-49fc-b84d-0aba02b525b0.root": {
+        "num_entries": 12000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            12000
+          ]
+        ],
+        "uuid": "e0d6feba-3cd2-11f1-a688-0223a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/32a659ba-1787-4b8a-ae75-3dcff81b3ecd.root": {
+        "num_entries": 9000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            9000
+          ]
+        ],
+        "uuid": "c766d78e-3cd2-11f1-8533-e42411acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/3aff8e53-96d2-46b9-aec3-6e308591064e.root": {
+        "num_entries": 7000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            7000
+          ]
+        ],
+        "uuid": "2f9a204a-3cd3-11f1-b61b-7a16000abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/3c018aa7-2d2f-40fe-a793-59b1806aaa99.root": {
+        "num_entries": 48000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            48000
+          ]
+        ],
+        "uuid": "d0fe40f2-3cd2-11f1-99f7-47b65d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/4164a9be-0f73-4f2d-a473-b19ff1e1083f.root": {
+        "num_entries": 3000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            3000
+          ]
+        ],
+        "uuid": "e524eb1c-3cd2-11f1-b5f9-3c31810abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/4aed335c-3b31-45d2-a0e7-c052e6cb772a.root": {
+        "num_entries": 9000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            9000
+          ]
+        ],
+        "uuid": "dbd85d32-3cd2-11f1-bd64-361b3d86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/4cb9bb26-0ed7-4d39-854e-ae084d1d8956.root": {
+        "num_entries": 7000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            7000
+          ]
+        ],
+        "uuid": "0be9a8c8-3cd3-11f1-93fa-2466a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/523cb592-d432-428d-8917-1b7f08835c16.root": {
+        "num_entries": 31000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            31000
+          ]
+        ],
+        "uuid": "cf647cfc-3cd2-11f1-92aa-c0803c0abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/5cd1f4c2-b82b-487a-a4e2-912fd57cc822.root": {
+        "num_entries": 26000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            26000
+          ]
+        ],
+        "uuid": "d24a2ffc-3cd2-11f1-99f7-0d040d0abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/6a92de6f-7160-478e-bcc5-d61554955cff.root": {
+        "num_entries": 20000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            20000
+          ]
+        ],
+        "uuid": "fa12dc14-3cd2-11f1-a5bd-a5329e86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/7bcde26d-abb5-448a-88dc-94e1aceaa4ce.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "d4023272-3cd2-11f1-9486-4fe05d9fbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/83fe91e6-cfbe-46b9-9cca-eb5f3a307476.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "db6b93c8-3cd2-11f1-8a18-97ce36c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/9e932837-9720-4489-bba5-43ffe6142d62.root": {
+        "num_entries": 17000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            17000
+          ]
+        ],
+        "uuid": "e9e6657c-3cd2-11f1-9d05-9314030abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/a16677e1-18a5-40d2-ba71-4961e25b4a1a.root": {
+        "num_entries": 13000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            13000
+          ]
+        ],
+        "uuid": "fc27be02-3cd2-11f1-bf47-09041cacbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/a5c830a0-95af-4446-bb0c-100e5aa1586e.root": {
+        "num_entries": 60000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            60000
+          ]
+        ],
+        "uuid": "d9b2509e-3cd2-11f1-a6cf-886912acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/b119a7aa-08cb-4a56-baa7-171ee416fb6f.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "be85e56a-3cd2-11f1-b9d3-0405010abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/bc1baf24-3e84-4933-9fe9-05507b7cb75e.root": {
+        "num_entries": 73000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            73000
+          ]
+        ],
+        "uuid": "f8303b1c-3cd2-11f1-b0cc-99bfe183beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/df6cfb62-8e59-44b9-9350-5fe3cbc2c7ff.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "f7a5782e-3cd2-11f1-98b9-6968210abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2560000/ec7fa813-53f6-4ad4-8f5d-a87645bc0420.root": {
+        "num_entries": 41000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            41000
+          ]
+        ],
+        "uuid": "dcc9b560-3cd2-11f1-ba63-3be36880beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/1d8edb9c-9c8a-4278-b385-22b6549eeb3f.root": {
+        "num_entries": 55000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            55000
+          ]
+        ],
+        "uuid": "3f8f7a48-3d39-11f1-b989-012d3d86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/28fb320a-eca1-49a0-be93-9824cd4424fc.root": {
+        "num_entries": 7000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            7000
+          ]
+        ],
+        "uuid": "40dac54c-3d39-11f1-9c6c-080f010abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/41366ee3-e315-4078-9e49-ba4999fe74c6.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "9c320ee6-3d39-11f1-8119-8c04a80abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/44af9178-e376-4f6c-abe4-4aa64d54d1b1.root": {
+        "num_entries": 29000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            29000
+          ]
+        ],
+        "uuid": "ecbee31e-3d4f-11f1-84ad-c6090d0abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/496eef16-bce0-440b-bffe-747dd75c2a99.root": {
+        "num_entries": 157000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            157000
+          ]
+        ],
+        "uuid": "e7992b7e-3d04-11f1-bddc-38a8935abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/4cb4d986-312b-4d2e-b346-dba7c2fb1526.root": {
+        "num_entries": 1000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "uuid": "6c94a046-3d88-11f1-a315-5fe36880beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/5a0da393-ea47-4a77-b1a0-38978f3a9658.root": {
+        "num_entries": 54000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            54000
+          ]
+        ],
+        "uuid": "5a1b8b9a-3d39-11f1-b57c-7c0b10acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/615078c7-5670-4c17-b7fc-ead88ea722ab.root": {
+        "num_entries": 161000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            161000
+          ]
+        ],
+        "uuid": "404bd8c4-3cf7-11f1-abe4-ee7c4b86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/7f84da8c-a409-4a0c-8761-67b135eb0908.root": {
+        "num_entries": 42000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            42000
+          ]
+        ],
+        "uuid": "48dd792e-3d39-11f1-a7dd-a9a4a983beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/865fa2dc-749b-44f0-9d60-9ef158ab87f6.root": {
+        "num_entries": 84000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            84000
+          ]
+        ],
+        "uuid": "45f09d36-3d39-11f1-be10-e47c4b86beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/8973bd48-f8f1-49cc-b985-fc6f3193cf34.root": {
+        "num_entries": 13000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            13000
+          ]
+        ],
+        "uuid": "51835482-3d38-11f1-80f7-0323a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/8a2957f3-175c-43dd-91a3-2d0be9316055.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "7bd80c9a-3d39-11f1-b850-6d04a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/8e9f4b95-7240-4846-8be2-dcbceb690393.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "0d2cd60e-3dca-11f1-b396-6f14000abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/932ac1cb-017d-407c-a7f0-e5926fc3f9c5.root": {
+        "num_entries": 6000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            6000
+          ]
+        ],
+        "uuid": "e334ae78-3d5e-11f1-afde-079110acbeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/ade18033-b48a-46ed-bb43-f84513654841.root": {
+        "num_entries": 157000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            157000
+          ]
+        ],
+        "uuid": "5bf1a3dc-3cfd-11f1-a2d6-b9b75d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/b84c5446-04cc-41ed-a9e6-19dd9e12a20e.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "cb15fbc4-3d38-11f1-ad72-0464a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/d8c7a6f8-0f67-4ad1-af40-47ebece8c7da.root": {
+        "num_entries": 61000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            61000
+          ]
+        ],
+        "uuid": "589e5866-3d38-11f1-89b9-0117030abeef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/d973805f-3b76-4880-8a08-3409db924c1c.root": {
+        "num_entries": 4000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            4000
+          ]
+        ],
+        "uuid": "5ecc6b50-3d84-11f1-a3b5-8edca8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/e1ae65dc-6cd8-4185-b764-0f5512f29785.root": {
+        "num_entries": 81000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            81000
+          ]
+        ],
+        "uuid": "afcecd3c-3d38-11f1-9eca-44b75d81beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/e31f72e6-7ced-4e13-80d9-f8682f5f024d.root": {
+        "num_entries": 2000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "uuid": "b3c9cfea-403f-11f1-a649-1801a8c0beef"
+      },
+      "root://eos.cms.rcac.purdue.edu:1094//store/mc/RunIII2024Summer24NanoAODv15/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/150X_mcRun3_2024_realistic_v2_ext1-v2/2820000/ee212c40-c8cb-4276-bbe3-2a0706abb0f9.root": {
+        "num_entries": 77000,
+        "object_path": "Events",
+        "steps": [
+          [
+            0,
+            77000
+          ]
+        ],
+        "uuid": "5e5492b0-3d39-11f1-aded-15499e86beef"
       }
     },
     "metadata": {
       "bad_files": [],
       "das_datasets": [
-        "/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM"
+        "/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM",
+        "/VBFH-Hto2Mu_Par-M-125_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2_ext1-v2/NANOAODSIM"
       ],
       "data_entries": null,
       "dataset": "vbf_powheg",
       "fraction": 1.0,
       "is_mc": true,
-      "nGenEvts": 5593000,
-      "n_files_requested": 99,
-      "n_files_used": 99,
+      "nGenEvts": 11190000,
+      "n_files_requested": 190,
+      "n_files_used": 190,
       "original_fraction": 1.0,
       "provenance": {
-        "commit": "55ef9b34dbd96b4be6adbaef22ba2eb8e075c9aa",
-        "diff_file": "_provenance/2024_NanoAODv15_20261013_193041/git_diff.patch",
+        "commit": "d0f1c4e2a330155015a2b784b189a869f60f990d",
+        "diff_file": "_provenance/2024_NanoAODv15_20261102_145513/git_diff.patch",
         "dirty": true,
-        "timestamp": "20261013_193041"
+        "timestamp": "20261102_145513"
       },
-      "sumGenWgts": 23373125.726640016,
+      "sumGenWgts": 46762888.071040004,
       "sumLHEPdfWgts": [
-        23373349.165200002,
-        23402238.124447174,
-        23393973.35148,
-        23393894.2688788,
-        23351878.805354018,
-        23404963.96944148,
-        23356000.727099013,
-        23358948.874410816,
-        23348124.425595317,
-        23374107.889869314,
-        23373571.012874108,
-        23378587.824348606,
-        23354418.0309893,
-        23386312.2551075,
-        23365787.65300931,
-        23347338.796341095,
-        23397118.066104665,
-        23382919.047677666,
-        23366243.877161372,
-        23348708.222019125,
-        23413069.844744593,
-        23365684.66144859,
-        23389976.934857305,
-        23376155.557561006,
-        23427861.875887007,
-        23390003.990656137,
-        23412523.711976245,
-        23396503.170201518,
-        23371033.514735572,
-        23437850.53323751,
-        23395613.457034193,
-        23451154.87511508,
-        23376089.209236063,
-        23428331.910403468,
-        23411690.269767404,
-        23365806.190557264,
-        23326297.006833307,
-        23375687.373510014,
-        23395571.564121,
-        23340431.609184604,
-        23362704.064981084,
-        23408701.391280003,
-        23305800.20541852,
-        23361335.843161684,
-        23337110.63406678,
-        23334413.349112555,
-        23332617.858414013,
-        23352135.643924832,
-        23400012.338076815,
-        23371467.985859454,
-        23364684.11258762,
-        23390815.58092205,
-        23361821.818026364,
-        23395654.19524692,
-        23378153.801588014,
-        23389572.010757342,
-        23389952.817862745,
-        23350623.400275003,
-        23369776.82436501,
-        23388180.647691004,
-        23380525.16410536,
-        23374080.245218504,
-        23372602.557936855,
-        23357781.35141815,
-        23396510.434970833,
-        23364030.50513524,
-        23371631.204777624,
-        23391177.039011005,
-        23373994.518262014,
-        23379875.242854,
-        23353632.579636995,
-        23377359.52828301,
-        23385791.864811018,
-        23376066.087127876,
-        23376821.080337014,
-        23364345.54478001,
-        23368184.088760797,
-        23384670.776380006,
-        23367055.679167006,
-        23368839.831183806,
-        23366326.157436606,
-        23377355.05399173,
-        23370549.14771602,
-        23350672.683580767,
-        23377425.021884006,
-        23369873.4839085,
-        23374374.101662733,
-        23372347.101450607,
-        23387044.484422013,
-        23378740.058807395,
-        23376048.0601273,
-        23375075.280350015,
-        23368258.000593,
-        23378763.56107501,
-        23366409.683379997,
-        23366668.106396016,
-        23368425.04660801,
-        23370592.0592,
-        23371645.64868401,
-        23368262.53578001,
-        23373349.165200002,
-        23086395.75638031,
-        23491066.101850152
+        46763335.107200034,
+        46821020.15317765,
+        46805200.11477131,
+        46804685.19918455,
+        46720078.20638579,
+        46826762.97562764,
+        46728781.46973302,
+        46734209.42720108,
+        46713508.20871713,
+        46763912.90956931,
+        46762437.22312959,
+        46774481.53005101,
+        46725482.747408465,
+        46789654.07926032,
+        46748883.941142134,
+        46711639.229014166,
+        46809600.54193792,
+        46783528.30667565,
+        46749071.63496762,
+        46714591.45600262,
+        46843373.8115176,
+        46747945.85331813,
+        46796803.27689502,
+        46768965.6380002,
+        46873139.928774014,
+        46797735.04405924,
+        46841019.20368948,
+        46809404.55950855,
+        46759213.77342022,
+        46893202.87226589,
+        46808164.87165102,
+        46919136.7332596,
+        46770081.27111878,
+        46875254.78522181,
+        46839703.747593805,
+        46747207.12181121,
+        46668778.5590552,
+        46767809.51994275,
+        46807936.88457634,
+        46697748.78614523,
+        46742082.810301326,
+        46835438.107140005,
+        46628435.21596002,
+        46739546.08709521,
+        46690898.60412824,
+        46686134.81811469,
+        46682075.02626687,
+        46721528.61627828,
+        46816799.02274143,
+        46759431.47189891,
+        46746982.24644144,
+        46797671.66107116,
+        46740077.3055917,
+        46807193.21423529,
+        46773886.68727503,
+        46795073.4593376,
+        46795741.08442185,
+        46717596.12143003,
+        46756485.531034976,
+        46792995.955467,
+        46777863.61828115,
+        46764462.25842639,
+        46761817.47431245,
+        46732478.46280759,
+        46810056.56914299,
+        46744940.82032672,
+        46759685.27858636,
+        46798898.97544699,
+        46764621.04229009,
+        46776873.388292104,
+        46724265.13903922,
+        46771585.25589993,
+        46788540.537603654,
+        46768678.120028704,
+        46770873.90537002,
+        46745479.70119402,
+        46752789.00117994,
+        46786332.877307005,
+        46750654.89096757,
+        46754194.63688781,
+        46749467.845367745,
+        46771639.46697698,
+        46757830.349574044,
+        46718129.4356859,
+        46771376.09101399,
+        46756438.857022844,
+        46765434.57469093,
+        46761102.12905433,
+        46790807.35945299,
+        46774550.12242342,
+        46768737.14156234,
+        46766759.44584002,
+        46753122.28058,
+        46774474.13241832,
+        46749474.772812024,
+        46749609.82968032,
+        46753525.22516801,
+        46757857.346020006,
+        46759959.36488203,
+        46753119.402670026,
+        46763335.107200034,
+        46188921.817056745,
+        46999517.80597095
       ]
     }
   },
@@ -6311,115 +7313,115 @@
       "n_files_used": 30,
       "original_fraction": 1.0,
       "provenance": {
-        "commit": "55ef9b34dbd96b4be6adbaef22ba2eb8e075c9aa",
-        "diff_file": "_provenance/2024_NanoAODv15_20261013_193041/git_diff.patch",
+        "commit": "d0f1c4e2a330155015a2b784b189a869f60f990d",
+        "diff_file": "_provenance/2024_NanoAODv15_20261102_145513/git_diff.patch",
         "dirty": true,
-        "timestamp": "20261013_193041"
+        "timestamp": "20261102_145513"
       },
-      "sumGenWgts": 1549151.18407,
+      "sumGenWgts": 1549151.1840700004,
       "sumLHEPdfWgts": [
         1549152.7693999996,
         1550198.5318300002,
         1548179.7490509995,
         1547319.370444,
-        1550524.3791953684,
-        1548081.2480274006,
+        1550524.3791953686,
+        1548081.2480274003,
         1549038.043528,
-        1548619.6077299996,
+        1548619.6077299998,
         1545466.3611734114,
-        1552682.751802,
-        1546250.9915580174,
+        1552682.7518020002,
+        1546250.9915580172,
         1549465.2794349997,
-        1549037.5823915,
+        1549037.5823915002,
         1551726.8098670004,
         1549137.2398143925,
         1555570.9324800603,
-        1547311.8898638694,
-        1548813.8751999992,
-        1545463.3056628658,
-        1548701.0965876235,
+        1547311.88986387,
+        1548813.8751999997,
+        1545463.3056628655,
+        1548701.096587623,
         1552559.1624142413,
-        1547527.1724837285,
-        1552702.009714,
+        1547527.1724837292,
+        1552702.0097140002,
         1546092.7115070005,
-        1547840.6909776998,
-        1547361.6976347403,
-        1547699.3794370005,
-        1555080.7299289631,
+        1547840.6909777003,
+        1547361.6976347405,
+        1547699.3794370003,
+        1555080.729928963,
         1551526.785841264,
-        1553656.666589,
+        1553656.6665889998,
         1549899.8769783305,
-        1556074.2448049998,
-        1549091.5537960255,
+        1556074.2448050005,
+        1549091.5537960252,
         1549813.2167105644,
         1551493.924618,
         1547747.4714439912,
         1546082.3010980003,
-        1551385.6390131102,
+        1551385.6390131097,
         1550606.5939999996,
         1547682.5026462919,
-        1550080.0175614033,
+        1550080.0175614036,
         1551041.0274329998,
         1546841.933868619,
-        1547235.4971026701,
+        1547235.49710267,
         1547574.4888502194,
-        1549485.1306602997,
-        1548937.259979296,
+        1549485.1306603,
+        1548937.2599792958,
         1548832.1823239992,
-        1549102.78337,
-        1547991.1276964,
+        1549102.7833700003,
+        1547991.1276963998,
         1547907.8890000004,
-        1549833.7916983261,
-        1548949.08912033,
+        1549833.791698326,
+        1548949.0891203305,
         1548698.868561655,
-        1548684.945346,
-        1550487.5827609997,
+        1548684.9453459997,
+        1550487.5827609994,
         1550088.348398803,
-        1549017.3310699998,
-        1549814.1095100008,
-        1550671.3986139994,
-        1549028.7817121497,
-        1549185.3478920003,
+        1549017.3310700003,
+        1549814.1095100003,
+        1550671.398613999,
+        1549028.78171215,
+        1549185.347892,
         1549014.4325983995,
-        1549300.9415200003,
-        1550811.063777247,
-        1549066.6276899998,
-        1550606.8226853118,
-        1550119.7811930007,
-        1548670.8135699998,
+        1549300.94152,
+        1550811.0637772472,
+        1549066.62769,
+        1550606.822685312,
+        1550119.7811930003,
+        1548670.8135699995,
         1548741.8086200005,
-        1549153.4332399997,
-        1549883.3004999992,
-        1549296.6817200002,
-        1548979.94397549,
+        1549153.43324,
+        1549883.300499999,
+        1549296.6817200005,
+        1548979.9439754903,
         1549376.3302900002,
-        1548967.8580969004,
-        1548737.26348,
-        1549705.826509999,
-        1549060.5156580003,
-        1548504.9526930004,
-        1549174.261232,
+        1548967.8580969002,
+        1548737.2634799995,
+        1549705.8265099998,
+        1549060.5156579998,
+        1548504.9526930002,
+        1549174.2612319998,
         1549228.0487881445,
         1549720.7302500003,
         1548395.5106110002,
-        1549595.54715,
-        1549160.5210499996,
-        1548950.3771000006,
-        1549207.4679100006,
-        1549629.9039799997,
-        1549566.8052200004,
-        1549122.3117799996,
-        1549353.92023,
-        1548960.3084500001,
-        1549099.462255,
-        1548442.9406799993,
-        1548941.4458625205,
-        1548910.6659300004,
+        1549595.5471499993,
+        1549160.5210499999,
+        1548950.3771000002,
+        1549207.4679100008,
+        1549629.90398,
+        1549566.8052200002,
+        1549122.3117800003,
+        1549353.9202299996,
+        1548960.30845,
+        1549099.4622550001,
+        1548442.9406799998,
+        1548941.4458625203,
+        1548910.6659300001,
         1548902.94283,
-        1549021.6572800002,
-        1549037.4630999996,
+        1549021.6572800004,
+        1549037.4631,
         1549152.7693999996,
-        1535843.8308375597,
+        1535843.8308375604,
         1559159.3193532294
       ]
     }
@@ -7157,116 +8159,116 @@
       "n_files_used": 65,
       "original_fraction": 1.0,
       "provenance": {
-        "commit": "55ef9b34dbd96b4be6adbaef22ba2eb8e075c9aa",
-        "diff_file": "_provenance/2024_NanoAODv15_20261013_193041/git_diff.patch",
+        "commit": "d0f1c4e2a330155015a2b784b189a869f60f990d",
+        "diff_file": "_provenance/2024_NanoAODv15_20261102_145513/git_diff.patch",
         "dirty": true,
-        "timestamp": "20261013_193041"
+        "timestamp": "20261102_145513"
       },
-      "sumGenWgts": 2447188.4357280014,
+      "sumGenWgts": 2447188.435727999,
       "sumLHEPdfWgts": [
-        2447185.80672,
-        2448377.770388999,
+        2447185.8067199998,
+        2448377.770388998,
         2445917.925533427,
         2445321.8620010265,
         2449249.3847603104,
-        2446460.6232640613,
-        2446144.9420292424,
-        2445461.9713544482,
-        2441420.9992819866,
+        2446460.623264062,
+        2446144.9420292415,
+        2445461.971354449,
+        2441420.999281987,
         2452005.96187407,
-        2442605.873154436,
-        2448268.364477734,
-        2446877.8694816604,
-        2452193.582568832,
+        2442605.8731544367,
+        2448268.3644777345,
+        2446877.86948166,
+        2452193.5825688317,
         2447536.3879243815,
-        2456002.069516542,
+        2456002.06951654,
         2445407.86274681,
-        2446711.0672731157,
-        2440343.7219930384,
+        2446711.067273115,
+        2440343.721993039,
         2446235.367733348,
         2451689.300372499,
         2444354.1748269307,
-        2453514.487012997,
-        2443478.7936956,
-        2445098.299258,
-        2445903.6138681956,
-        2446907.940464718,
-        2455946.755094435,
+        2453514.4870129963,
+        2443478.7936956002,
+        2445098.2992580007,
+        2445903.613868196,
+        2446907.940464717,
+        2455946.7550944346,
         2449825.0663047004,
-        2454560.791794282,
-        2450197.508720188,
-        2458588.0650381846,
-        2446388.271561298,
-        2449349.219068338,
+        2454560.7917942815,
+        2450197.5087201875,
+        2458588.0650381856,
+        2446388.2715612985,
+        2449349.219068337,
         2450616.486959449,
-        2445938.8341646446,
-        2441939.6390639,
-        2450637.9367837184,
-        2451387.9695075015,
+        2445938.8341646455,
+        2441939.6390639017,
+        2450637.9367837203,
+        2451387.969507501,
         2445479.101303443,
-        2448505.7685175464,
+        2448505.768517547,
         2450267.6107199998,
-        2443330.4781083707,
-        2445164.51059859,
-        2444748.708393471,
+        2443330.4781083716,
+        2445164.5105985897,
+        2444748.7083934695,
         2446322.368458899,
-        2444891.210240649,
-        2446026.7713271035,
-        2449748.2808850002,
-        2445365.488183842,
-        2445746.5779422596,
-        2447833.9249563054,
-        2447747.0416088873,
-        2446757.536821291,
-        2447354.4032811704,
-        2449028.2587468135,
-        2450502.5723603666,
-        2446816.858811,
+        2444891.210240648,
+        2446026.771327104,
+        2449748.2808850007,
+        2445365.4881838425,
+        2445746.5779422605,
+        2447833.924956306,
+        2447747.0416088877,
+        2446757.5368212904,
+        2447354.40328117,
+        2449028.258746814,
+        2450502.572360366,
+        2446816.858810999,
         2446880.211703458,
-        2450148.0667161006,
+        2450148.066716101,
         2448317.9613274327,
-        2447384.5781029128,
-        2447865.744593032,
-        2446639.7777056783,
-        2449309.4393182117,
-        2446769.4841426807,
-        2449226.5166605283,
+        2447384.5781029123,
+        2447865.744593031,
+        2446639.777705678,
+        2449309.4393182113,
+        2446769.48414268,
+        2449226.5166605287,
         2449297.81287147,
         2447351.790189972,
         2447461.6579215,
-        2447326.6526898006,
-        2448518.445620881,
-        2447471.949702786,
-        2447911.608865572,
-        2447435.0127920005,
+        2447326.6526897997,
+        2448518.4456208814,
+        2447471.9497027867,
+        2447911.6088655735,
+        2447435.012792,
         2446765.0442759995,
-        2446877.961840259,
+        2446877.961840258,
         2448319.5630020397,
-        2447428.629192201,
+        2447428.6291922,
         2446125.603280884,
-        2446969.8459907635,
-        2447135.5746378237,
-        2447925.791386802,
-        2446314.8193501,
-        2447946.9947729995,
-        2446446.999386269,
-        2446929.074370459,
+        2446969.845990764,
+        2447135.574637823,
+        2447925.7913868036,
+        2446314.8193501006,
+        2447946.994772999,
+        2446446.99938627,
+        2446929.0743704597,
         2448027.536883236,
-        2447568.1139315143,
+        2447568.113931514,
         2447849.1723618647,
         2447110.9658189993,
         2447394.4180199997,
-        2447095.5299199997,
+        2447095.5299200006,
         2447310.549238781,
-        2446832.6971690003,
-        2447051.224133591,
+        2446832.6971689994,
+        2447051.2241335907,
         2446910.1056349985,
-        2447015.33193,
-        2447328.2044930006,
-        2447609.8704160005,
-        2447185.80672,
-        2426451.098977883,
-        2461547.5056073256
+        2447015.3319300003,
+        2447328.204493,
+        2447609.870416,
+        2447185.8067199998,
+        2426451.098977884,
+        2461547.505607325
       ]
     }
   }

@@ -1,5 +1,7 @@
 CLAUDE.md
 .claude/
+data/
+reports/
 *History*/
 ebeMassResCalibration/
 zpt_rewgt/
