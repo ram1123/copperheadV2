@@ -145,7 +145,8 @@ new_zpt_weights_file_aMCatNLO:
     "2023BPix": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
     # "2024": data/zpt_rewgt/zpt_rewgt_params_IncDY_aMCatNLO_Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_PUDNN_TrainOn2024.yaml
     # "2024": data/zpt_rewgt/zpt_rewgt_params_IncDY_aMCatNLO_Run3_nanoAODv15_FilterJets_July08_tightPassLepVeto_DefaultjetPt25GeV_JVMFilterJets.yaml
-    "2024": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
+    # "2024": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
+    "2024": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FlagSkimV2_Oct30_OfficialRecomendation_Systematics_LumiSplit.yaml
     "2025": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
     "2026": data/zpt_rewgt/zpt_rewgt_params_Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation.yaml
 new_zpt_weights_file_MiNNLO:

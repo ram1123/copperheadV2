@@ -42,6 +42,7 @@ from src.corrections.evaluator import (
     pu_evaluator,
     qgl_weights_V2,
 )
+from src import flag_skim
 from src.corrections.fsr_recovery import fsr_recoveryV1
 from src.corrections.jet import (
     applyHemVeto,
@@ -60,7 +61,7 @@ from src.corrections.jet import (
     jet_puid,
     getJecDataTag,
 )
-from src.corrections.muon_sf import add_muon_sfs_correctionlib, muon_sfs_stat_syst_correctionlib
+from src.corrections.muon_sf import add_muon_sfs_correctionlib, muon_idiso_sf_by_wp, muon_sfs_stat_syst_correctionlib
 from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
 from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
 from src.corrections.met_xy_correction import apply_puppi_met_xy_correction
@@ -1148,15 +1149,25 @@ class EventProcessor(processor.ProcessorABC):
         do_lepton_ip_veto = self.config["switches"].get("do_lepton_ip_veto", False)
         # do_muon_ip_cut: muon IP cuts alone (no extra lepton vetoes), to separate the two effects
         do_muon_ip_cut = do_lepton_ip_veto or self.config["switches"].get("do_muon_ip_cut", False)
-        muon_selection = (
+        # Flag skim: loosest preselection, tighter muon ID/IP/lepton-veto/trigger-dR stored as flags (src/flag_skim.py)
+        do_flag_skim = self.config["switches"].get("do_flag_skim", False)
+        if do_flag_skim:
+            if do_muon_ip_cut or not self.config["switches"]["do_trigger_match"]:
+                raise ValueError("do_flag_skim needs do_trigger_match on and do_lepton_ip_veto/do_muon_ip_cut off (it stores them as flags)")
+            official_id_tag = {v: k for k, v in flag_skim.MUON_ID_FIELDS.items()}[self.config["muon_id"]]
+            events["Muon", "nano_idx"] = ak.local_index(events.Muon.pt, axis=1)
+        muon_kin_sel = (
             (events.Muon.pt_raw > self.config["muon_pt_cut"]) # pt_raw is pt b4 rochester #FIXME: Why pt_raw
             & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
-            & events.Muon[self.config["muon_id"]]
             & (events.Muon.isGlobal | events.Muon.isTracker) # Table 3.5  AN-19-124
         )
-        if do_muon_ip_cut:
+        muon_selection = muon_kin_sel & events.Muon[self.config["muon_id"]]
+        if do_muon_ip_cut or do_flag_skim:
             muon_ip = (abs(events.Muon.dxy) < self.config["muon_dxy_cut"]) & (abs(events.Muon.dz) < self.config["muon_dz_cut"])
+        if do_muon_ip_cut:
             muon_selection = muon_selection & muon_ip # AN-19-124 baseline IP cuts
+        if do_flag_skim:
+            events["Muon", "pass_ip"] = muon_ip
 
         # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
         # logger.info(f"Debug event muon pt_raw after roccor: {events.Muon.pt_raw[debug_mask_2].compute()}")
@@ -1188,7 +1199,15 @@ class EventProcessor(processor.ProcessorABC):
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
         self.selection.add("muon_iso", ak.any(events.Muon.pfRelIso04_all < self.config["muon_iso_cut"], axis=1))
-        if do_lepton_ip_veto:
+        if do_flag_skim:
+            muon_base = muon_kin_sel & events.Muon["looseId"] & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
+            flag_wp_sel = flag_skim.wp_muon_masks(events.Muon, muon_base, muon_ip)
+            official_tag = flag_skim.wp_tag(official_id_tag, False)
+            # primary pair (all mu1/mu2-derived columns): official-WP pair when it exists, else the loose pair
+            has_official_pair = ak.sum(flag_wp_sel[official_tag], axis=1) >= 2
+            # boolean form, not ak.where: its unpacked ListArray mask breaks Muon slicing on tiny chunks (IndexError)
+            muon_selection = (has_official_pair & flag_wp_sel[official_tag]) | (~has_official_pair & muon_base)
+        if do_lepton_ip_veto or do_flag_skim:
             # Extra loose-muon veto: exactly 2 loose muons (rejects >2); selected muons are a subset of loose,
             # so with nmuons>=2 this leaves exactly the 2 selected muons
             loose_muon = (
@@ -1198,7 +1217,8 @@ class EventProcessor(processor.ProcessorABC):
                 & (events.Muon.pfRelIso04_all < self.config["loose_muon_iso_cut"])
                 & muon_ip
             )
-            loose_muon_veto = (ak.sum(loose_muon, axis=1) == 2)
+            n_loose_veto_muons = ak.sum(loose_muon, axis=1)
+            loose_muon_veto = (n_loose_veto_muons == 2)
         # logger.info(f"muon_selectiont: {ak.to_dataframe(muon_selection.compute())}")
 
         # logger.info(f"Debug event muon pt after roccor: {events.Muon.pt[debug_mask_2].compute()}")
@@ -1278,7 +1298,18 @@ class EventProcessor(processor.ProcessorABC):
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
 
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
-            event_filter = event_filter & trigger_match
+            if do_flag_skim:
+                # per-WP pair (pt_roch-ordered, as above) matched at every dR; the event filter takes the loosest later
+                flag_drs = sorted(set(flag_skim.TRIGMATCH_DRS) | {dr_threshold}, reverse=True)
+                events["Muon", "trig_minDR"] = flag_skim.muon_trig_min_dr(events.Muon, trigger_cands)
+                flag_trig = {
+                    tag: flag_skim.trigger_match_flags(*flag_skim.leading_pair(events.Muon, sel), self.config["muon_leading_pt"], flag_drs)
+                    for tag, sel in flag_wp_sel.items()
+                }
+                # cutflow row keeps the official definition (official-WP pair at the configured dR)
+                trigger_match = flag_trig[official_tag][dr_threshold]
+            else:
+                event_filter = event_filter & trigger_match
 
             self.selection.add("trigger_match", trigger_match)
         else:
@@ -1366,7 +1397,7 @@ class EventProcessor(processor.ProcessorABC):
             & events.Electron[electron_id]
             & ~ecal_gap # reject electrons in ecal gap region, as specified in table 3.5 of AN-19-124
         )
-        if do_lepton_ip_veto:
+        if do_lepton_ip_veto or do_flag_skim:
             # EGM-style IP cuts, split barrel/endcap on supercluster eta
             ele_is_barrel = abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479
             electron_ip = ak.where(
@@ -1374,10 +1405,17 @@ class EventProcessor(processor.ProcessorABC):
                 (abs(events.Electron.dxy) < self.config["electron_dxy_cut_barrel"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_barrel"]),
                 (abs(events.Electron.dxy) < self.config["electron_dxy_cut_endcap"]) & (abs(events.Electron.dz) < self.config["electron_dz_cut_endcap"]),
             )
-            electron_selection = (
-                electron_selection
-                & (events.Electron.pfRelIso03_all < self.config["electron_iso_cut"])
-                & electron_ip
+            electron_iso_ip = (events.Electron.pfRelIso03_all < self.config["electron_iso_cut"]) & electron_ip
+        if do_lepton_ip_veto:
+            electron_selection = electron_selection & electron_iso_ip
+        if do_flag_skim:
+            # electron collection of the lepton/IP veto (electron_selection above stays the official one)
+            electron_selection_lepipveto = (
+                (events.Electron.pt > self.config["electron_pt_cut_lepton_ip_veto"])
+                & (abs(events.Electron.eta) < self.config["electron_eta_cut"])
+                & events.Electron[electron_id]
+                & ~ecal_gap
+                & electron_iso_ip
             )
         # self.selection.add("electron_pT", ak.any(events.Electron.pt > self.config["electron_pt_cut"], axis=1))
         # self.selection.add("electron_eta", ak.any(abs(events.Electron.eta) < self.config["electron_eta_cut"], axis=1))
@@ -1419,7 +1457,60 @@ class EventProcessor(processor.ProcessorABC):
 
         pv_good = (events.PV.npvsGood > 0)
         self.selection.add("PV_npvsGood", pv_good)
-        if do_lepton_ip_veto:
+        if do_flag_skim:
+            # post-FSR pairs (pt-ordered like mu1/mu2); pair positions index the stored base-muon list
+            base_sorted = events.Muon[muon_base]
+            base_sorted = base_sorted[ak.argsort(base_sorted.pt, ascending=False)]
+            prim1, prim2 = flag_skim.leading_pair(events.Muon, muon_selection)
+            prim_idx1, prim_idx2 = ak.fill_none(prim1.nano_idx, -1), ak.fill_none(prim2.nano_idx, -1)
+            flag_cols = flag_skim.muon_list_block(base_sorted)
+            flag_cols["primary_is_official_pair"] = has_official_pair
+            flag_wp_ok = {}
+            for tag, sel in flag_wp_sel.items():
+                m1_wp, m2_wp = flag_skim.leading_pair(events.Muon, sel)
+                n_wp = ak.sum(sel, axis=1)
+                flag_cols.update(flag_skim.pair_block(tag, m1_wp, m2_wp, n_wp, base_sorted, prim_idx1, prim_idx2, flag_trig[tag]))
+                flag_wp_ok[tag] = (n_wp >= 2) & flag_cols[f"pair_{tag}_OS"] & flag_trig[tag][flag_drs[0]]
+            flag_keep = None
+            for term in flag_wp_ok.values():
+                flag_keep = term if flag_keep is None else flag_keep | term
+
+            # lepton vetoes: official (electrons only, muon multiplicity via nMuons_*), loose lepton/IP veto, inverted
+            n_ele_lepipveto = ak.sum(electron_selection_lepipveto, axis=1)
+            veto_ele = events.Electron[electron_selection_lepipveto]
+            extra_ele = ak.pad_none(veto_ele[ak.argsort(veto_ele.pt, ascending=False)], 1)[:, 0]
+            extra_mu_sel = loose_muon & (events.Muon.nano_idx != prim_idx1) & (events.Muon.nano_idx != prim_idx2)
+            extra_mus = events.Muon[extra_mu_sel]
+            extra_mu = ak.pad_none(extra_mus[ak.argsort(extra_mus.pt, ascending=False)], 1)[:, 0]
+            flag_cols.update({
+                "nLooseVetoMuons": n_loose_veto_muons,
+                "nElectrons_official": nelectrons,
+                "nElectrons_lepIPVeto": n_ele_lepipveto,
+                "pass_officialEleVeto": electron_veto,
+                "pass_looseLepVeto": loose_muon_veto & (n_ele_lepipveto == 0),
+                "pass_invLooseLepVeto": (n_loose_veto_muons > 2) | (n_ele_lepipveto > 0),
+            })
+            for name, lep in (("extraMu", extra_mu), ("extraEle", extra_ele)):
+                for var, fill in (("pt", -999.0), ("eta", -999.0), ("phi", -999.0), ("charge", 0)):
+                    flag_cols[f"{name}_{var}"] = ak.fill_none(lep[var], fill)
+
+            # one-flag recipes for the existing scenarios (production trigger dR), see docs/flag_skim.md
+            official_ip_tag = flag_skim.wp_tag(official_id_tag, True)
+            official_pair_ok = flag_cols[f"pair_{official_tag}_OS"] & flag_trig[official_tag][dr_threshold]
+            flag_cols["pass_sel_official"] = (flag_cols[f"nMuons_{official_tag}"] == 2) & official_pair_ok & electron_veto
+            flag_cols["pass_sel_nMu2NoLepVeto"] = (flag_cols[f"nMuons_{official_tag}"] == 2) & official_pair_ok
+            flag_cols["pass_sel_lepIPVeto"] = (
+                (flag_cols[f"nMuons_{official_ip_tag}"] >= 2)
+                & flag_cols[f"pair_{official_ip_tag}_OS"]
+                & flag_trig[official_ip_tag][dr_threshold]
+                & flag_cols["pass_looseLepVeto"]
+            )
+
+            event_filter = event_filter & flag_keep
+            # cutflow rows keep the official definitions
+            self.selection.add("nmuons", flag_cols[f"nMuons_{official_tag}"] == 2)
+            self.selection.add("mm_charge", flag_cols[f"pair_{official_tag}_OS"])
+        elif do_lepton_ip_veto:
             # >=2 only: the loose-muon veto below is the single multiplicity cut (selected muons are a subset of loose)
             event_filter = event_filter & (nmuons >= 2)
             self.selection.add("nMuons_ge2", nmuons >= 2)
@@ -1429,9 +1520,10 @@ class EventProcessor(processor.ProcessorABC):
             event_filter = event_filter & (nmuons == 2)
             self.selection.add("nmuons", nmuons==2)
 
-        event_filter = event_filter & (mm_charge == -1)
-        self.selection.add("mm_charge", mm_charge==-1)
-        event_filter = event_filter & electron_veto
+        if not do_flag_skim:
+            event_filter = event_filter & (mm_charge == -1)
+            self.selection.add("mm_charge", mm_charge==-1)
+            event_filter = event_filter & electron_veto
 
         t8 = time.perf_counter()
         logger.debug(f"[timing] Electron selection filtering time: {t8 - t7:.2f} seconds")
@@ -1522,13 +1614,31 @@ class EventProcessor(processor.ProcessorABC):
         self.selection.add("h_sidebands_106_115_135_150", h_sidebands2)
         # ------------------- Cutflow dimuon mass window: END -----------------------
 
-        events = events[event_filter == True]
-        muons = muons[event_filter == True]
-        nmuons = ak.to_packed(nmuons[event_filter == True])
+        row_sel = event_filter == True
+        if do_flag_skim:
+            # one row per distinct WP muon pair (validation/flag_skim/stage1_v2_spec.md); later columns use the row's pair
+            row_sel, pair_row, n_pair_rows, muon_selection = flag_skim.pair_rows(
+                event_filter, muon_selection, flag_wp_sel, flag_wp_ok, events.Muon)
+            flag_wp_sel = {k: ak.to_packed(v[row_sel]) for k, v in flag_wp_sel.items()}  # packed: unpacked jagged masks fail muons[sel] on empty chunks
+            flag_cols = {k: v[row_sel] for k, v in flag_cols.items()}
+        events = events[row_sel]
+        if do_flag_skim:
+            muons = events.Muon[muon_selection]
+            nmuons = ak.num(muons, axis=1)
+            for tag, sel in flag_wp_sel.items():
+                flag_cols[f"pair_{tag}_isPrimary"] = flag_skim.row_is_pair(events.Muon, muon_selection, sel)
+            flag_cols["pair_row"] = pair_row
+            flag_cols["n_pair_rows"] = n_pair_rows
+            # each scenario flag is true on the one row built from its pair
+            for name, tag in (("official", official_tag), ("nMu2NoLepVeto", official_tag), ("lepIPVeto", official_ip_tag)):
+                flag_cols[f"pass_sel_{name}"] = flag_cols[f"pass_sel_{name}"] & flag_cols[f"pair_{tag}_isPrimary"]
+        else:
+            muons = muons[row_sel]
+            nmuons = ak.to_packed(nmuons[row_sel])
 
         if is_mc and do_pu_wgt:
             for variation in pu_wgts.keys():
-                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][event_filter == True])
+                pu_wgts[variation] = ak.to_packed(pu_wgts[variation][row_sel])
 
         t9 = time.perf_counter()
         logger.debug(f"[timing] GEN weight and PU time: {t9 - t8:.2f} seconds")
@@ -2528,8 +2638,8 @@ class EventProcessor(processor.ProcessorABC):
         # ------------------------------------------------------------#
         if (self.config["switches"]["do_HemVeto"] and self.config["switches"]["do_HemVetoStudy"]):
             logger.debug("Adding HemVeto_filter and is_HemRegion for HemVetoStudy!")
-            HemVeto_filter = ak.to_packed(HemVeto_filter[event_filter==True])   # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
-            is_HemRegion = ak.to_packed(is_HemRegion[event_filter==True]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+            HemVeto_filter = ak.to_packed(HemVeto_filter[row_sel])   # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
+            is_HemRegion = ak.to_packed(is_HemRegion[row_sel]) # used for HemVetoStudy, doesn't compute if do_hemVetoStudy is False
 
             _add_block(out_dict, {
                 "HemVeto_filter" : HemVeto_filter,
@@ -2574,6 +2684,12 @@ class EventProcessor(processor.ProcessorABC):
             "h_sidebands" : ak.fill_none(h_sidebands, value=False),
             "h_peak" : ak.fill_none(h_peak, value=False),
         })
+        if do_flag_skim:
+            _add_block(out_dict, flag_cols)
+            if is_mc:
+                # per-WP ID x Iso SF of the primary pair; the event weight keeps the configured WP
+                for wp, sf in muon_idiso_sf_by_wp(mu1, mu2, self.config).items():
+                    out_dict[f"muIDIso_sf_{wp}ID"] = sf
         t18 = time.perf_counter()
         logger.debug(f"[timing] various region (z-peak) fill time: {t18 - t17:.2f} seconds")
 

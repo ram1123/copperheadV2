@@ -22,7 +22,8 @@ saved torchscript loads in stage-2.
 Sub-commands:
   submit  run in the AF session: submits "hpo_ray.py run ..." as a Ray job, then by default
           follows its logs into <out-dir>/ray_job_<id>.log until it ends. Ctrl-C stops following,
-          not the job. The job runs this repo in place from /work (git provenance as in a local
+          not the job; SIGTERM/SIGHUP (e.g. the snakemake run is killed) stops the job too.
+          The job runs this repo in place from /work (git provenance as in a local
           run), so don't edit train_dnn.py / hpo_optuna.py while it runs.
   run     the Ray job entrypoint (driver); worker: one Optuna worker (started by run).
 
@@ -48,6 +49,7 @@ import asyncio
 import json
 import os
 import shlex
+import signal
 import subprocess
 import sys
 import threading
@@ -168,6 +170,40 @@ def _abs_on_cluster_storage(path: str, what: str) -> str:
     return real
 
 
+class _Terminated(Exception):
+    pass
+
+
+def _raise_terminated(signum, _frame):
+    raise _Terminated(signal.Signals(signum).name)
+
+
+def _stop_job(client, job_id: str) -> None:
+    try:
+        print(f"[hpo_ray] stop_job({job_id}) -> {client.stop_job(job_id)}", flush=True)
+    except Exception as err:  # cluster already gone: nothing left to stop
+        print(f"[hpo_ray] stop_job({job_id}) failed: {err}", flush=True)
+
+
+def _wait_for_end(client, job_id: str, poll_s: float = 60.0, max_errors: int = 30):
+    """Poll until the job ends; ride out gateway errors and outages (connection refused, seen
+    2026-10-28 for ~1 min while the job kept running) for max_errors polls, but not a removed cluster."""
+    errors = 0
+    while True:
+        try:
+            status = client.get_job_status(job_id)
+        except Exception as e:
+            errors += 1
+            if "You have no Ray cluster" in str(e) or errors >= max_errors:
+                raise
+            print(f"[hpo_ray] status query failed ({errors}/{max_errors}): {e}", flush=True)
+        else:
+            errors = 0
+            if status.is_terminal():
+                return status
+        time.sleep(poll_s)
+
+
 def submit(args: argparse.Namespace) -> None:
     from ray.job_submission import JobStatus, JobSubmissionClient
 
@@ -213,7 +249,16 @@ def submit(args: argparse.Namespace) -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     client = JobSubmissionClient(args.address, headers=headers)
-    job_id = client.submit_job(entrypoint=entrypoint, runtime_env=runtime_env)
+    # The gateway answers 429 while no GPU is free or the cluster is still starting; wait it out.
+    for attempt in range(1, 97):
+        try:
+            job_id = client.submit_job(entrypoint=entrypoint, runtime_env=runtime_env)
+            break
+        except RuntimeError as e:
+            if "status code 429" not in str(e) or attempt == 96:
+                raise
+            print(f"[hpo_ray] submit refused (429), retry {attempt}/95 in 5 min: {e}", flush=True)
+            time.sleep(300)
     print(f"[hpo_ray] submitted job {job_id}", flush=True)
     if args.no_follow:
         return
@@ -228,12 +273,30 @@ def submit(args: argparse.Namespace) -> None:
                 f.write(chunk)
                 f.flush()
 
+    # Killing the submitter (e.g. kill -TERM of snakemake's process group) also stops the job, so an
+    # orphaned job can't keep holding the GPUs (and the optuna journal) a rerun needs.
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, _raise_terminated)
     try:
-        asyncio.run(_follow())
-    except KeyboardInterrupt:
-        print(f"\n[hpo_ray] stopped following; job {job_id} keeps running.")
-        return
-    status = client.get_job_status(job_id)
+        try:
+            asyncio.run(_follow())
+        except KeyboardInterrupt:
+            print(f"\n[hpo_ray] stopped following; job {job_id} keeps running.")
+            return
+        except _Terminated:
+            raise
+        except Exception as e:
+            # A dropped log stream (e.g. WebSocket 1006) does not end the job: wait for it by polling.
+            print(f"\n[hpo_ray] log stream lost ({e}); polling job {job_id} every 60 s", flush=True)
+        status = _wait_for_end(client, job_id)
+    except _Terminated as e:
+        print(f"\n[hpo_ray] got {e}: stopping job {job_id}", flush=True)
+        _stop_job(client, job_id)
+        sys.exit(143)
+    except Exception as e:
+        print(f"[hpo_ray] lost track of job {job_id} ({e}); stopping it", flush=True)
+        _stop_job(client, job_id)
+        raise
     print(f"[hpo_ray] job {job_id} ended: {status}", flush=True)
     if status != JobStatus.SUCCEEDED:
         sys.exit(1)

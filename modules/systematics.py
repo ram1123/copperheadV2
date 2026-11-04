@@ -74,6 +74,7 @@ def feature_name_for_variation(
     fields,
     allow_nominal_fallback=False,
     nominal_only_features=None,
+    warn=True,
 ):
     """Resolve DNN inputs; default caller passes nominal to match sideHustle5."""
     # training_features often already carry a literal "_nominal" suffix
@@ -92,7 +93,7 @@ def feature_name_for_variation(
     candidates = [f"{base}_{use_var}", f"{base}_nominal", feat]
     for idx, c in enumerate(candidates):
         if c in fields:
-            if idx > 0:
+            if idx > 0 and warn:
                 logger.warning(
                     f"[stage2] DNN feature '{base}_{use_var}' unavailable for "
                     f"variation '{variation}'; falling back to '{c}'."
@@ -299,10 +300,11 @@ def assert_matches_stage2(
         for feat in features:
             if feat.startswith("year_"):
                 continue
-            stage2_col = feature_name_for_variation(feat, variation, fields)
+            # warn=False: the expected fallbacks would log once per feature x variation x sample
+            stage2_col = feature_name_for_variation(feat, variation, fields, warn=False)
             ours = resolved[variation].get(feat)
             if ours is None:
-                nominal_col = feature_name_for_variation(feat, "nominal", fields)
+                nominal_col = feature_name_for_variation(feat, "nominal", fields, warn=False)
                 assert stage2_col == nominal_col, (
                     f"variation={variation} feature={feat}: helper says 'falls back to "
                     f"nominal' ({nominal_col}) but stage2 resolves {stage2_col}"

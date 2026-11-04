@@ -196,9 +196,10 @@ OPTUNA_STATES = {1: "complete", 2: "pruned", 3: "fail"}
 DNN_STATUS_RE = re.compile(r"^\[([^\]]+)\] (START|OK|FAIL) (\S+) (\S+) y=(\S+) h=(\S+)(?: wall=(\d+)s)?")
 
 
-def dnn_progress(cfg):
+def dnn_progress(cfg, live_regions=frozenset()):
     """Per jj region of a dnn_chain run: HPO trials from the optuna journal, trained folds, and the
-    START/OK/FAIL lines of run_dnn_trainings.sh's status log."""
+    START/OK/FAIL lines of run_dnn_trainings.sh's status log. A START whose region has no running
+    dnn_region job in this run is a killed run's leftover (it never wrote OK/FAIL): STOPPED."""
     if not cfg.get("dnn_chain"):
         return []
     label = cfg.get("stage23_label") or cfg.get("stage1_label")
@@ -207,6 +208,10 @@ def dnn_progress(cfg):
     years = cfg.get("dnn_years") or cfg.get("years") or []
     trials = int(cfg.get("dnn_hpo_trials", 50))
     hpo = f"v1_multifold_{trials:03d}Trials"
+    # same naming as workflow/Snakefile's DNN_HPO_LABEL / DNN_CHAIN_PARAMS tag for dnn_syst_aware
+    if cfg.get("dnn_syst_aware") and cfg.get("dnn_adv_lambda") is not None:
+        hpo += "_lam" + f"{float(cfg['dnn_adv_lambda']):g}".replace(".", "p")
+        label += "_SystAware"
     regions = cfg.get("jj_eta_regions") or [cfg.get("jj_eta_region") or "all"]
     status = {}
     try:
@@ -234,7 +239,11 @@ def dnn_progress(cfg):
         except OSError:
             pass
         folds = sum((d / f"trained_best_optuna_{hpo}" / f"fold{f}" / "best_torchscript.pt").exists() for f in range(4))
-        out.append({"region": r, "target": trials, "created": created, "finished": sum(ended.values()), **ended,
+        if status.get(r, {}).get("state") == "START" and r not in live_regions:
+            status[r] = {**status[r], "state": "STOPPED"}
+        # finished = complete + pruned, as hpo_ray.py counts toward its target (FAIL = lost, rerun)
+        out.append({"region": r, "target": trials, "created": created,
+                    "finished": ended.get("complete", 0) + ended.get("pruned", 0), **ended,
                     "folds": folds, "preprocessed": (d / "training_features.pkl").exists(), "status": status.get(r)})
     return out
 
@@ -521,7 +530,8 @@ def build_run(path, proc, now, served):
                    "cells": global_cells},
         "stats": stats_results(stat_jobs, global_cells, served, cfg.get("status_reference")) if stat_jobs else [],
         "config": config_summary(cfg),
-        "dnn": dnn_progress(cfg),
+        "dnn": dnn_progress(cfg, {j["wildcards"].split("jjtag=_", 1)[-1] for j in jobs
+                                  if j["rule"] == "dnn_region" and j["status"] in ("running", "restarting")}),
         "stage1": stage1,
     }
 

@@ -33,6 +33,47 @@ SINGLE_JET_ETA_REGIONS = [
 ]
 
 
+# Named event selections on a flag-skim stage-1 ntuple (do_flag_skim, docs/flag_skim.md). Selections
+# whose muon pair is not the stored primary pair require pair_<wp>_isPrimary, so mu1/mu2/jet columns apply.
+def _flag_pair_ok(events, wp, n_mu=2, dr="dR0p4"):
+    n_ok = (events[f"nMuons_{wp}"] == n_mu) if n_mu else (events[f"nMuons_{wp}"] >= 2)
+    return n_ok & events[f"pair_{wp}_OS"] & events[f"pair_{wp}_trigMatch_{dr}"] & events[f"pair_{wp}_isPrimary"]
+
+
+FLAG_SKIM_SELECTIONS = {
+    "official": lambda ev: ev["pass_sel_official"],
+    "lepIPVeto": lambda ev: ev["pass_sel_lepIPVeto"] & ev["pair_mediumID_IP_isPrimary"],
+    "nMu2NoLepVeto": lambda ev: ev["pass_sel_nMu2NoLepVeto"],
+    "tightID": lambda ev: _flag_pair_ok(ev, "tightID_noIP") & ev["pass_officialEleVeto"],
+    "looseID": lambda ev: _flag_pair_ok(ev, "looseID_noIP") & ev["pass_officialEleVeto"],
+    "ipOnly": lambda ev: _flag_pair_ok(ev, "mediumID_IP") & ev["pass_officialEleVeto"],
+    "trigDR0p1": lambda ev: ev["pass_sel_official"] & ev["pair_mediumID_noIP_trigMatch_dR0p1"],
+    "tightIDlepIPVeto": lambda ev: _flag_pair_ok(ev, "tightID_IP", n_mu=None) & ev["pass_looseLepVeto"],
+    "tightIDIP": lambda ev: _flag_pair_ok(ev, "tightID_IP") & ev["pass_officialEleVeto"],
+    "looseIDIP": lambda ev: _flag_pair_ok(ev, "looseID_IP") & ev["pass_officialEleVeto"],
+    "looseIDlepIPVeto": lambda ev: _flag_pair_ok(ev, "looseID_IP", n_mu=None) & ev["pass_looseLepVeto"],
+}
+# selections whose muon ID differs from the configured (Medium) one: event weights get SF(WP)/SF(Medium)
+FLAG_SKIM_ID_SF = {
+    "tightID": "TightID", "looseID": "LooseID", "tightIDlepIPVeto": "TightID",
+    "tightIDIP": "TightID", "looseIDIP": "LooseID", "looseIDlepIPVeto": "LooseID",
+}
+
+
+def applyFlagSkimSelection(events, name):
+    if name not in FLAG_SKIM_SELECTIONS:
+        raise ValueError(f"unknown flag-skim selection {name!r}; choose from {sorted(FLAG_SKIM_SELECTIONS)}")
+    events = events[ak.fill_none(FLAG_SKIM_SELECTIONS[name](events), False)]
+    sf_wp = FLAG_SKIM_ID_SF.get(name)
+    if sf_wp and f"muIDIso_sf_{sf_wp}" in events.fields:  # MC only
+        nominal_sf = events["muIDIso_sf_MediumID"]
+        ratio = ak.where(nominal_sf != 0, events[f"muIDIso_sf_{sf_wp}"] / ak.where(nominal_sf != 0, nominal_sf, 1.0), 1.0)
+        for field in events.fields:
+            if field.startswith("wgt_"):
+                events = ak.with_field(events, events[field] * ratio, field)
+    return events
+
+
 def filterRegion(events, region="h-peak"):
     if isinstance(events, pd.DataFrame):
         fields = events.columns

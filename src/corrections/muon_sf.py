@@ -50,6 +50,29 @@ def _evaluate_nom_up_down(corr, eta, pt):
     return nom, up, down
 
 
+def muon_idiso_sf_by_wp(mu1, mu2, config, wps=("Loose", "Medium", "Tight")):
+    """
+    Nominal event ID x Iso SF (mu1*mu2) per muon-ID WP, for the flag skim. Correction names are the
+    configured Medium-ID ones with the WP swapped in; a WP missing from the payload is skipped.
+    """
+    info = config["muSFFileList"]
+    corrset = get_corrset(info["json_file"])
+    out = {}
+    for wp in wps:
+        names = (info["id"].replace("Medium", wp, 1), info["iso"].replace("MediumID", f"{wp}ID"))
+        missing = [name for name in names if name not in corrset]
+        if missing:
+            logger.warning(f"muon_idiso_sf_by_wp: {missing} not in {info['json_file']}, skipping {wp}")
+            continue
+        sf = None
+        for name in names:
+            for mu in (mu1, mu2):
+                val = corrset[name].evaluate(mu.eta_raw, mu.pt_raw, "nominal")
+                sf = val if sf is None else sf * val
+        out[wp] = sf
+    return out
+
+
 def add_muon_sfs_correctionlib(mu1, mu2, config):
     """
     Add muon SFs using correctionlib (supports both Run 2 and Run 3, depending on configuration).

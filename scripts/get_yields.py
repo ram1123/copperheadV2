@@ -28,6 +28,17 @@ time python scripts/get_yields.py \
     --categorizer cutbased \
     --output-csv yield_Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics.csv \
     --summary-output-csv yield_Run3_nanoAODv12_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Systematics_summary.csv
+
+Flag-skim stage-1 (do_flag_skim, docs/flag_skim.md): one ntuple holds every scenario, so pick one with
+--flag_skim_selection (modules.selection.FLAG_SKIM_SELECTIONS; same cut + Tight/Loose ID SF rescale as stage-2):
+for sel in official lepIPVeto tightID looseID ipOnly trigDR0p1 nMu2NoLepVeto tightIDlepIPVeto tightIDIP looseIDIP looseIDlepIPVeto; do
+  python scripts/get_yields.py \
+    --input /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FlagSkimV2_Oct30_OfficialRecomendation_Systematics_LumiSplit/stage1_output \
+    --years 2024 --flag_skim_selection $sel
+done
+
+H-peak (MC only; data is never read in h-peak/signal, the analysis is blinded):
+python scripts/get_yields.py --input <stage1_output> --years 2024 --flag_skim_selection official --regions h-peak
 """
 
 import argparse
@@ -41,6 +52,7 @@ from typing import Any, Dict, List, Tuple
 import awkward as ak
 import dask_awkward as dak
 import pandas as pd
+import pyarrow.parquet as pq
 
 # Your modules
 from modules import selection
@@ -81,6 +93,9 @@ V1_FIELDS_2COMPUTE: List[str] = [
     # "nfatJets_drmuon",
     # "MET_pt",
 ]
+
+# flag-skim columns read only with --flag_skim_selection (what FLAG_SKIM_SELECTIONS / the ID SF rescale use)
+FLAG_SKIM_FIELD_PREFIXES = ("pass_", "pair_", "nMuons_", "muIDIso_sf_")
 
 TRANSFORMER_SCORE_FIELDS: List[str] = [
     "transf_vbf_score",
@@ -198,6 +213,7 @@ def get_yield(
     category: str,
     region: str,
     categorizer: str,
+    flag_skim_selection: str = "",
 ) -> Dict[str, Any]:
     """
     Compute total yield for a given process (glob pattern) and configuration.
@@ -242,11 +258,23 @@ def get_yield(
             "yield_2plusj": 0.0,
         }
 
+    schema_names = pq.read_schema(sorted(parquet_files)[0]).names
+    if flag_skim_selection:
+        fields += [c for c in schema_names if c.startswith(FLAG_SKIM_FIELD_PREFIXES) and c not in fields]
+    elif "pass_sel_official" in schema_names:
+        # a flag-skim ntuple holds every selection's rows (one per muon pair); counting it unfiltered mixes them
+        raise ValueError("flag-skim stage-1 input needs --flag_skim_selection")
+
     # dask_awkward read per process
     events_lazy = dak.from_parquet(sorted(parquet_files), columns=fields)
+    if flag_skim_selection:
+        # mask lazily so only selected rows are materialized; applyFlagSkimSelection below adds the ID SF rescale
+        events_lazy = events_lazy[selection.FLAG_SKIM_SELECTIONS[flag_skim_selection](events_lazy)]
 
     # Materialize into awkward.Array
     events = events_lazy.compute()
+    if flag_skim_selection:
+        events = selection.applyFlagSkimSelection(events, flag_skim_selection)
 
     # Apply region / category cuts
     if categorizer == "transformer-score":
@@ -350,6 +378,19 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--flag_skim_selection",
+        default="",
+        choices=[""] + sorted(selection.FLAG_SKIM_SELECTIONS),
+        help="Named selection on a flag-skim stage-1 ntuple (required for such input); tags the output names.",
+    )
+    parser.add_argument(
+        "--regions",
+        nargs="+",
+        default=["h-sidebands"],
+        choices=["z-peak", "h-sidebands", "h-peak", "signal"],
+        help="Dimuon-mass regions to compute (data is skipped in h-peak/signal: blinded).",
+    )
+    parser.add_argument(
         "--output-csv",
         default="",
         help="Optional output CSV path override for the per-sample yields table.",
@@ -386,11 +427,7 @@ def main() -> None:
     # regions = ["signal", "h-sidebands"]  # "z-peak",
     # regions = ["signal"]  # "z-peak",
     # regions = ["h-sidebands", "z-peak"]
-    regions = [
-        "h-sidebands",
-        # "h-peak"
-        # "signal",
-    ]
+    regions = args.regions
 
     # categories = ["vbf", "ggh"]
     categories = ["vbf"]
@@ -428,6 +465,8 @@ def main() -> None:
     suffix = "_VHVeto" if do_VH_veto else ""
     if do_vbf_filter_study:
         suffix += "_vbf_filter_study"
+    if args.flag_skim_selection:
+        suffix += f"_FS{args.flag_skim_selection}"
     categorizer_tag = args.categorizer.replace("-", "_")
 
     # For legacy stage1_output inputs, keep the historical tag naming.
@@ -462,6 +501,7 @@ def main() -> None:
             do_vbf_filter_study=do_vbf_filter_study,
             do_VH_veto=do_VH_veto,
             categorizer=args.categorizer,
+            flag_skim_selection=args.flag_skim_selection,
         )
 
         _, _, combined_sample_dict = get_bkg_sig_dicts(
@@ -487,8 +527,8 @@ def main() -> None:
         print("-" * 60)
 
         for proc in processes:
-            # if "data" in proc and region == "h-peak":
-                # continue
+            if "data" in proc and region in ("h-peak", "signal"):  # blinded
+                continue
             rows.append(get_yield(proc, **common_kwargs))
 
     df = pd.DataFrame(rows)

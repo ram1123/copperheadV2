@@ -1,3 +1,16 @@
+"""Stage-1 validation (data/MC) plots from compacted stage-1 parquet: per category / njets / jj-eta region /
+Z-pT option. A flag-skim stage-1 (docs/flag_skim.md) needs --flag_skim_selection (env FLAG_SKIM_SELECTION).
+
+How to run (repo root, default pixi env; normally via the Snakemake `plots` rule):
+    python plotter/validation_plotter_unified.py --load <label>/stage1_output --save_path <plot dir> \
+        --use-compacted compacted -cat vbf --njets 2 --jj-eta-region all --region h-sidebands z-peak -y 2024 [...]
+
+Example (flag-skim, official selection):
+    ./run_in_pixi.sh default python plotter/validation_plotter_unified.py \
+        --load /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/<flag-skim label>/stage1_output \
+        --save_path validation/flag_skim/plots --use-compacted compacted -cat vbf --njets 2 --jj-eta-region all \
+        --region z-peak -y 2024 --flag_skim_selection official
+"""
 import argparse
 import copy
 import glob
@@ -187,6 +200,7 @@ class ValidationHistProcessor(processor.ProcessorABC):
         do_vbf_filter_study,
         jj_eta_region,
         group_dict_by_year,
+        flag_skim_selection=None,
     ):
         # hist_templates_by_category[category] is already pre-filtered to
         # variables configured in that category's plot_settings (built by
@@ -200,11 +214,19 @@ class ValidationHistProcessor(processor.ProcessorABC):
         self.do_vbf_filter_study = do_vbf_filter_study
         self.jj_eta_region = jj_eta_region
         self.group_dict_by_year = group_dict_by_year
+        # set on the client from --flag_skim_selection / env FLAG_SKIM_SELECTION (docs/flag_skim.md); pickled to workers
+        self.flag_skim_selection = (os.environ.get("FLAG_SKIM_SELECTION", "") if flag_skim_selection is None
+                                    else flag_skim_selection)
 
     def process(self, events):
         dataset_key = events.metadata["sample"]
         year = events.metadata["year"]
         is_data = "data" in dataset_key.lower()
+        if self.flag_skim_selection:
+            events = selection.applyFlagSkimSelection(events, self.flag_skim_selection)
+        elif "pass_sel_official" in events.fields:
+            # a flag-skim ntuple holds every selection's events (and extra pair rows); plotting it unfiltered mixes them
+            raise ValueError("flag-skim stage-1 input needs --flag_skim_selection (env FLAG_SKIM_SELECTION)")
 
         # Precompute the available zpt-weight-variant fields once per chunk.
         # A zpt_option missing from this map (e.g. "no_zpt" when the sample
@@ -1263,6 +1285,13 @@ if __name__ == "__main__":
         type=float,
         help="Same as --he-pt-cut but for the HF region (|eta|>3.0). Default: off (no cut).",
     )
+    parser.add_argument(
+        "--flag_skim_selection",
+        dest="flag_skim_selection",
+        default=os.environ.get("FLAG_SKIM_SELECTION", ""),
+        choices=[""] + sorted(selection.FLAG_SKIM_SELECTIONS),
+        help="Flag-skim stage-1 input (docs/flag_skim.md): plot only this selection (default: env FLAG_SKIM_SELECTION)",
+    )
     # add dnn score to the plotting variable list
     parser.add_argument(
      "--dnn-score",
@@ -1307,6 +1336,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------
     # gather arguments
     args = parser.parse_args()
+    os.environ["FLAG_SKIM_SELECTION"] = args.flag_skim_selection  # read by every ValidationHistProcessor
     logger.setLevel(args.log_level)
     logger.info(f"args: {args}")
     logger.info(f"region: {args.regions}")

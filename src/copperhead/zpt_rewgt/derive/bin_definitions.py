@@ -44,9 +44,15 @@ poly_fit_ranges = {
         "njet2": [10, 120],
     },
     "2024": {
-        "njet0": [15, 150],
-        "njet1": [21, 120],
-        "njet2": [15, 170],
+        # Nov 2026 FSv2: was [15,150] (f1 curved through sparse 90-150 points); 90 left a kink at the join, 110 ends f1
+        # just past the 85-95 GeV turnover so the tail continues smoothly
+        "njet0": [15, 110],
+        # Nov 2026 FSv2 (Data - non-DY)/DY, with 5 GeV bins to 120 (overrides below): f1 ending at 120/100/90/80
+        # kinked on a local fluctuation (up to -5/+5.6 sigma); 110 is smooth. Was [21,120] with 10 GeV bins.
+        "njet1": [21, 110],
+        # was [15,170]: order-8 f1 ran away in the sparse 120-170 bins and the f0/f1 join sat on the 15 GeV peak;
+        # f1 ends at 100 (data flat there) so a 115-120 dip doesn't drag the tail start down (+5.5 sigma at 132)
+        "njet2": [25, 100],
     },
     "2025": {
         "njet0": [15, 110],
@@ -88,6 +94,23 @@ YEAR_NJET_BINNING_OVERRIDES = {
         (120.0, 10.0),
         (145.0, 5.0),
         (170.0, 10.0),
+        (200.0, 25.0),
+    ],
+    # 2024 njet1/njet2 (Nov 2026): 5 GeV bins through 120 so the f1 end at xmax1 is constrained by data
+    ("2024", "1"): [
+        (10.0, 1.0),
+        (30.0, 1.0),
+        (50.0, 2.5),
+        (80.0, 2.5),
+        (120.0, 5.0),
+        (200.0, 25.0),
+    ],
+    ("2024", "2"): [
+        (10.0, 1.0),
+        (30.0, 1.0),
+        (60.0, 2.0),
+        (80.0, 2.5),
+        (120.0, 5.0),
         (200.0, 25.0),
     ],
     ("2024", "0"): [

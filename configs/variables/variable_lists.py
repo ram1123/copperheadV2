@@ -414,6 +414,8 @@ VAR_SETS: Dict[str, List[str]] = {
     "muon_ip": muon_ip_vars + mu12_ip_comb_vars,
     # "vbf_additional": VBF_ADDITIONAL_VARS,
     "jet_id": JET_ID_VARIABLES,
+    # opt-in (--variables jet_multiplicity): b-jet counts and dijet pT, not in the default jet groups
+    "jet_multiplicity": ["nBtagLoose_nominal", "nBtagMedium_nominal", "jj_pt_nominal"],
 }
 
 # VAR_SETS keys included by get_all_vars() when no explicit group selection is

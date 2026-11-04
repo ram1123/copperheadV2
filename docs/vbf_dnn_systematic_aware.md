@@ -57,6 +57,18 @@ Things to keep in mind:
   JER and the muon terms.
 - Weight-only systematics (b-tag, pileup, …) do not change the inputs, so this loss does not
   touch them.
+- A feature keeps its nominal value under a variation when stage-1 has no shifted column for it.
+  Preprocessing logs this once per pattern (`[variations] … keep N feature(s) at nominal`).
+  Stage-2 makes the same choices, so training and evaluation agree. Checked on the Oct26
+  ntuples:
+  - JES/JER: the 8 dimuon features stay nominal. This is correct, because jets do not move them.
+  - `mu_scale`/`mu_resol`: the jet features stay nominal, which is correct. But
+    `dimuon_cos_theta_cs`, `dimuon_phi_cs`, `rpt`, `ll_zstar_log`, `mmj_min_dEta` and
+    `pt_centrality` also stay nominal, although they depend on the muons, because stage-1 does
+    not store muon-varied copies of them. The muon variations therefore only reach the six
+    `dimuon_*` kinematic features. Closing this gap needs a stage-1 change and a rerun.
+  - `nsoftjets5`/`htsoft2` are pinned to nominal for every variation, as in stage-2, even
+    though stage-1 stores their JES variants.
 
 ### Flags (`train_dnn.py`, `hpo_optuna.py`, `hpo_ray.py`)
 
@@ -94,6 +106,33 @@ gives `trained_best_optuna_v1_multifold_100Trials_lam0p05`.
 For stage-2 or compact `-D`, set `DNN_SYST_AWARE=1` and the same `HPO_LABEL` to load the
 systematic-aware model, or point `MODEL_LABEL` at `<label>_SystAware` directly. The bin scan for
 `configs/MVA/VBF/dnn_binning.yaml` has to be redone for the new model, as for any new model.
+
+### Snakemake (`dnn_chain`)
+
+With `dnn_chain: true`, these config keys turn the per-region chain (`dnn_region` → `dnn_scoredump`
+→ `dnn_binscan` → stage-2/3 → stats) into its systematic-aware version:
+
+- `dnn_syst_aware: true`
+- `dnn_adv_lambda` (required)
+- `dnn_variation_set` and `dnn_adv_extra_args` (optional)
+- `dnn_ray_ram_per_worker_gb`
+
+λ is appended to the HPO label (`v1_multifold_100Trials_lam0p05`), and the score dump, bin scan
+and stage-2 load the model from `<label>_SystAware`. Example override:
+`workflow/config_dnn_systaware_oct26.yaml`.
+
+```bash
+snakemake -s workflow/Snakefile --configfile workflow/config.yaml workflow/config_dnn_systaware_oct26.yaml \
+    --restart-times 3 --resources gateway=2 -- stats_all
+```
+
+Notes:
+
+- Use a new `run_tag` and `save_postfix` for each λ.
+- `dnn_binning.yaml` is keyed by model label and region only. A second λ under the same
+  `<label>_SystAware` therefore needs `FORCE_BINSCAN=1`, or a separate model label.
+- The `dnn_region` rule preprocesses with a local Dask cluster. Run `dnn_pre` with `-k` (Dask
+  Gateway) beforehand; the rule then finds the output complete and skips preprocessing.
 
 ### Storage and memory
 

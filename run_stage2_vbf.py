@@ -7,7 +7,10 @@ How to run (repo root, `default` pixi env). Usually driven by `run_analysis_pipe
 (env DY_MATCHED_JETS -> --dy_matched_jets) or the Snakemake stage2 rule (config dy_matched_jets):
     ./run_in_pixi.sh default python run_stage2_vbf.py -y <year> -input <save_path> -l <label> \
         --model_tag <tag> --model_path <dnn model dir> -bkg DY ... --save_postfix <postfix> \
-        [--no_variations] [--jj_eta_region <region>] [--dy_matched_jets reco_012|gen_2j]
+        [--no_variations] [--jj_eta_region <region>] [--dy_matched_jets reco_012|gen_2j] \
+        [--flag_skim_selection <name>]
+A flag-skim stage-1 (do_flag_skim, docs/flag_skim.md) needs --flag_skim_selection (env
+FLAG_SKIM_SELECTION), one of modules.selection.FLAG_SKIM_SELECTIONS; the name must be in --save_postfix.
 
 Example (2023 DY only, nominal, DY split by number of gen-matched VBF jets):
     ./run_in_pixi.sh default python run_stage2_vbf.py -y 2023 \
@@ -441,6 +444,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         jj_eta_region="all",
         dump_scores=False,
         binning=None,
+        flag_skim_selection="",
     ):
         NO_SCALE_FEATURES = {
             "year",
@@ -458,6 +462,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.divide_dy_by_year = divide_dy_by_year
         self.dy_matched_jets = dy_matched_jets
         self.jj_eta_region = jj_eta_region
+        self.flag_skim_selection = flag_skim_selection
         # also return the nominal per-event (score, weight), for DNN bin scans
         self.dump_scores = dump_scores
         # resolved on the driver (selection.resolve_dnn_binning); workers only see the default
@@ -608,6 +613,16 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         sample_type = events.metadata.get("sample", dataset_key)
         year = events.metadata["year"]
         # events["MET_pt"] = events["PuppiMET_pt"]
+        divide_dy_sample = is_dy_sample(sample_type) and divide_dy_for_year(
+            self.divide_dy_by_year, year
+        )
+        if divide_dy_sample and self.dy_matched_jets == "reco_012":
+            events = attach_reco_match_flags(events)  # reads the chunk's raw rows: before any event filter
+        if self.flag_skim_selection:
+            events = selection.applyFlagSkimSelection(events, self.flag_skim_selection)
+        elif "pass_sel_official" in events.fields:
+            # a flag-skim ntuple holds every selection's events; histogramming it unfiltered mixes them
+            raise ValueError("flag-skim stage-1 input needs --flag_skim_selection (env FLAG_SKIM_SELECTION)")
         if self.use_transformer_vbf_channel:
             events = add_transformer_score(events, year)
         fields = set(events.fields)
@@ -685,9 +700,6 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 .Double()
             )
 
-        divide_dy_sample = is_dy_sample(sample_type) and divide_dy_for_year(
-            self.divide_dy_by_year, year
-        )
         histogram_categories = (
             DY_MATCH_CATEGORIES_BY_SCHEME[self.dy_matched_jets]
             if divide_dy_sample else ("hist",)
@@ -695,8 +707,6 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         score_hists = {
             category: make_score_hist() for category in histogram_categories
         }
-        if divide_dy_sample and self.dy_matched_jets == "reco_012":
-            events = attach_reco_match_flags(events)
 
         selected_events = 0
         score_dump = []
@@ -1120,7 +1130,16 @@ if __name__ == "__main__":
             "phase-space runs don't collide."
         ),
     )
+    parser.add_argument(
+        "--flag_skim_selection",
+        dest="flag_skim_selection",
+        default=os.environ.get("FLAG_SKIM_SELECTION", ""),
+        choices=[""] + sorted(selection.FLAG_SKIM_SELECTIONS),
+        help="Named selection on a flag-skim stage-1 (modules.selection.FLAG_SKIM_SELECTIONS); must appear in --save_postfix.",
+    )
     args = parser.parse_args()
+    if args.flag_skim_selection and args.flag_skim_selection not in args.save_postfix:
+        parser.error(f"--save_postfix must contain the flag-skim selection name {args.flag_skim_selection!r}")
 
     logger.setLevel(args.log_level)
     t1 = time.perf_counter()
@@ -1303,6 +1322,7 @@ if __name__ == "__main__":
                 jj_eta_region=args.jj_eta_region,
                 dump_scores=args.dump_scores,
                 binning=dnn_edges,
+                flag_skim_selection=args.flag_skim_selection,
             ),
         )
         t5 = time.perf_counter()

@@ -1,4 +1,5 @@
 import os
+import shlex
 from datetime import datetime
 
 
@@ -65,6 +66,13 @@ DY_SCHEME_ENV = f"DY_SCHEME={DY_SCHEME} " if DY_SCHEME != "matched" else ""
 SAMPLE_CONFIG = config.get("sample_config") or ""
 if SAMPLE_CONFIG:
     os.environ["SAMPLE_CONFIG"] = SAMPLE_CONFIG
+# Named stage-2 selection on a flag-skim stage-1 (docs/flag_skim.md), passed the same way; one run_tag +
+# save_postfix per selection, and the postfix must name it so two selections never share histograms.
+FLAG_SKIM_SELECTION = config.get("flag_skim_selection") or ""
+if FLAG_SKIM_SELECTION:
+    if FLAG_SKIM_SELECTION not in SAVE_POSTFIX:
+        raise ValueError(f"save_postfix {SAVE_POSTFIX!r} must contain flag_skim_selection {FLAG_SKIM_SELECTION!r}")
+    os.environ["FLAG_SKIM_SELECTION"] = FLAG_SKIM_SELECTION
 # Interim signal BR fix for stage-1 made with BR(H->mumu) = 2.6e-4 (run_stage3_vbf.py --signal_xsec_rescale):
 # stage3 writes to <save_postfix>_SigXS, so validate/stats read from there too.
 SIGXS_ENV = "SIGNAL_XSEC_RESCALE=1 " if config.get("signal_xsec_rescale", False) else ""
@@ -673,9 +681,24 @@ rule vbf_dnn:
 DNN_CHAIN = bool(config.get("dnn_chain", False))
 DNN_TRIALS = int(config.get("dnn_hpo_trials", 50))
 DNN_HPO_LABEL = f"v1_multifold_{DNN_TRIALS:03d}Trials"  # = run_dnn_trainings.sh's -H default
+# dnn_syst_aware: systematic-aware (adversarial) DNN, docs/vbf_dnn_systematic_aware.md. Models go to
+# dnn/trained_models/<label>_SystAware/; lambda is part of the HPO label so two lambdas never mix.
+DNN_SYST_AWARE = bool(config.get("dnn_syst_aware", False))
+DNN_SYST_ENV = ""
+if DNN_SYST_AWARE:
+    if config.get("dnn_adv_lambda") is None:
+        raise ValueError("dnn_syst_aware needs dnn_adv_lambda")
+    DNN_ADV_LAMBDA = float(config["dnn_adv_lambda"])
+    DNN_HPO_LABEL += "_lam" + f"{DNN_ADV_LAMBDA:g}".replace(".", "p")
+    DNN_SYST_ENV = (
+        f"DNN_SYST_AWARE=1 DNN_ADV_LAMBDA={DNN_ADV_LAMBDA:g} "
+        + f"DNN_VARIATION_SET={config.get('dnn_variation_set') or 'full'} "
+        + (f"DNN_ADV_EXTRA_ARGS={shlex.quote(config['dnn_adv_extra_args'])} " if config.get("dnn_adv_extra_args") else "")
+    )
 # "ray": HPO + final folds on the AF Ray GPU cluster (needs a session without a GPU); "" = local.
 DNN_HPO_BACKEND_ENV = (
     f"HPO_BACKEND={config['dnn_hpo_backend']} RAY_MAX_WORKERS={int(config.get('dnn_ray_max_workers', 15))} "
+    f"RAY_RAM_PER_WORKER_GB={int(config.get('dnn_ray_ram_per_worker_gb', 32))} "
     if config.get("dnn_hpo_backend") else ""
 )
 # Model dirs go to /work/projects (dnn/trained_models/<label> is a symlink; /work/users is too small).
@@ -693,7 +716,8 @@ if DNN_CHAIN and DNN_MODEL_LABEL not in ("", dnn_chain_label()):
     raise ValueError(f"dnn_chain trains under {dnn_chain_label()} but dnn_model_label={DNN_MODEL_LABEL}; set it to \"\"")
 # stage2 loads the chain's models: same HPO label and the dnn_years model dir.
 STAGE2_DNN_CHAIN_ENV = (
-    f"HPO_LABEL={DNN_HPO_LABEL} " + ("" if DNN_MODEL_YEARS else f"MODEL_YEARS={DNN_YEARS_CSV} ")
+    ("DNN_SYST_AWARE=1 " if DNN_SYST_AWARE else "")
+    + f"HPO_LABEL={DNN_HPO_LABEL} " + ("" if DNN_MODEL_YEARS else f"MODEL_YEARS={DNN_YEARS_CSV} ")
     if DNN_CHAIN else ""
 )
 
@@ -703,13 +727,26 @@ DNN_CHAIN_PARAMS = dict(
     years=DNN_YEARS_CSV,
     hpo=DNN_HPO_LABEL,
     label=lambda wc: dnn_chain_label(),
+    # model dir name under dnn/trained_models (= common_workflow.sh's dnn_tag)
+    tag=lambda wc: dnn_chain_label() + ("_SystAware" if DNN_SYST_AWARE else ""),
     region=lambda wc: wc.jjtag[1:] or "all",
+    syst_env=DNN_SYST_ENV,
 )
+
+
+def _dnn_region_prev(wc):
+    # Ray: one region at a time. Parallel regions share one Ray cluster, the first grabs most GPUs and
+    # the rest stay queued; the cluster does not hand its GPUs on when that region ends.
+    if config.get("dnn_hpo_backend") != "ray" or wc.jjtag not in STAGE23_JJ_TAGS:
+        return []
+    i = STAGE23_JJ_TAGS.index(wc.jjtag)
+    return [STATEDIR + f"/dnn_region{STAGE23_JJ_TAGS[i - 1]}.done"] if i > 0 else []
 
 
 rule dnn_region:
     input:
         [] if USE_EXISTING_STAGE1 else expand(STATEDIR + "/stage1_compact_{year}.done", year=DNN_YEARS),
+        _dnn_region_prev,
     output:
         done=STATEDIR + "/dnn_region{jjtag}.done",
     log:
@@ -729,16 +766,16 @@ rule dnn_region:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        if [[ ! -e dnn/trained_models/{params.label} ]]; then
-            mkdir -p {params.store}/{params.label}
-            ln -sfn {params.store}/{params.label} dnn/trained_models/{params.label}
+        if [[ ! -e dnn/trained_models/{params.tag} ]]; then
+            mkdir -p {params.store}/{params.tag}
+            ln -sfn {params.store}/{params.tag} dnn/trained_models/{params.tag}
         fi
         sleep {params.stagger}
-        {params.backend_env}bash scripts/run_dnn_trainings.sh -l {params.label} -y {params.years} \
+        {params.syst_env}{params.backend_env}bash scripts/run_dnn_trainings.sh -l {params.label} -y {params.years} \
             -S {params.status} -r {params.region} -t {params.trials} -H {params.hpo} \
             > {log} 2>&1 < /dev/null
         # run_dnn_trainings.sh exits 0 on a failed model; its OK line means every stage-2 file exists
-        grep -qF "] OK {params.label} {params.region} y={params.years} h={params.hpo} " {params.status}
+        grep -qF "] OK {params.tag} {params.region} y={params.years} h={params.hpo} " {params.status}
 
         echo "{rule} {wildcards} SUCCESS attempt=" >> {FAIL_LOG}
         touch {output.done}
@@ -763,7 +800,7 @@ rule dnn_scoredump:
         set -euo pipefail
         set -x
         mkdir -p {params.logdir} {params.statedir}
-        MODEL_LABEL=self HPO_LABEL={params.hpo} bash scripts/run_jj_region_scan.sh -l {params.label} \
+        {params.syst_env}MODEL_LABEL=self HPO_LABEL={params.hpo} bash scripts/run_jj_region_scan.sh -l {params.label} \
             -r {params.region} -y {params.years} -o {params.postfix} -s scoredump \
             > {log} 2>&1 < /dev/null
 
@@ -788,7 +825,7 @@ rule dnn_binscan:
         set -x
         mkdir -p {params.logdir} {params.statedir}
         # every region rewrites configs/MVA/VBF/dnn_binning.yaml: one scan at a time
-        MODEL_LABEL=self HPO_LABEL={params.hpo} flock configs/MVA/VBF/.dnn_binning.lock \
+        {params.syst_env}MODEL_LABEL=self HPO_LABEL={params.hpo} flock configs/MVA/VBF/.dnn_binning.lock \
             bash scripts/run_jj_region_scan.sh -l {params.label} \
             -r {params.region} -y {params.years} -o {params.postfix} -s binscan \
             > {log} 2>&1 < /dev/null
@@ -808,10 +845,9 @@ rule dnn_binscan:
 # ---------------------------------------
 rule stage2:
     input:
-        lambda wc: [] if STAGE23_STANDALONE else [
-            STATEDIR + f"/stage1_compact_{wc.year}.done",
-            STATEDIR + (f"/dnn_binscan{wc.jjtag}.done" if DNN_CHAIN else "/dnn_train.done"),
-        ],
+        lambda wc: [] if STAGE23_STANDALONE else (
+            [] if USE_EXISTING_STAGE1 else [STATEDIR + f"/stage1_compact_{wc.year}.done"]
+        ) + [STATEDIR + (f"/dnn_binscan{wc.jjtag}.done" if DNN_CHAIN else "/dnn_train.done")],
     output:
         done=STATEDIR + "/stage2_{year}{jjtag}.done",
     log:
