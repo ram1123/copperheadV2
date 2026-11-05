@@ -112,6 +112,59 @@ def safe_ap(
     return float(average_precision_score(y_true, y_score, sample_weight=sample_weight))
 
 
+def binned_ams(
+    y_true: np.ndarray,
+    y_score: np.ndarray,
+    weights: np.ndarray,
+    n_bins: int = 20,
+    bmin: float = 0.25,
+    relmax: float = 0.3,
+    signed: bool = False,
+) -> float:
+    """
+    Binned AMS sqrt(sum 2((s+b)ln(1+s/b)-s)), as the ggH channel's calculate_AMS. n_bins equal-signal bins,
+    merged from the top until B >= bmin and MC rel. error <= relmax (bmin 0.25 per fold ~ B >= 1 in total).
+    Merging uses |w|; s, b use |w| (val_ams_absWgt) or signed weights if signed (val_ams, b <= 0 bins skipped).
+    """
+    y = np.asarray(y_true, dtype=np.int64)
+    w_signed = np.asarray(weights, dtype=np.float64)
+    w = np.abs(w_signed)
+    if len(np.unique(y)) < 2:
+        return float("nan")
+    order = np.argsort(-np.asarray(y_score, dtype=np.float64), kind="stable")
+    y, w, w_signed = y[order], w[order], w_signed[order]
+    s_cum = np.cumsum(np.where(y == 1, w, 0.0))
+    edges = np.searchsorted(s_cum, s_cum[-1] * np.arange(1, n_bins) / n_bins)
+    # TODO: the merging rule (bmin, relmax) is ad hoc, from an audit script (mva-categorizer-18); derive it, or
+    #  align it with scan_bins_for_dnn.py's bin guards, which the final binning actually uses.
+    merged: List[List[float]] = []  # [s, b, signed s, signed b]
+    s = b = v = ss = bs = 0.0
+    for chunk in np.split(np.arange(len(y)), edges):
+        sig = y[chunk] == 1
+        s += w[chunk][sig].sum()
+        b += w[chunk][~sig].sum()
+        v += (w[chunk][~sig] ** 2).sum()
+        ss += w_signed[chunk][sig].sum()
+        bs += w_signed[chunk][~sig].sum()
+        if b >= bmin and np.sqrt(v) <= relmax * b:
+            merged.append([s, b, ss, bs])
+            s = b = v = ss = bs = 0.0
+    if s > 0 or b > 0:  # low-stat leftover at the bottom joins the last bin
+        if merged:
+            for k, x in enumerate((s, b, ss, bs)):
+                merged[-1][k] += x
+        else:
+            merged.append([s, b, ss, bs])
+    if signed:
+        merged = [m[2:] for m in merged]
+    z2 = sum(2.0 * ((sm + bm) * np.log1p(sm / bm) - sm) for sm, bm, *_ in merged if bm > 0)
+    return float(np.sqrt(z2))
+
+
+# Early-stopping monitors where larger is better.
+MAXIMIZED_MONITORS = ("val_auc_weighted", "val_ams_absWgt", "val_ams")
+
+
 # --------------------------------------------------------------------------------------
 # Dataclasses (config view)
 # --------------------------------------------------------------------------------------
@@ -175,6 +228,11 @@ class TrainConfig:
     es_min_delta: float
     es_warmup_epochs: int
     es_restore_best: bool
+
+    # binned AMS (val_ams_absWgt / val_ams), see binned_ams
+    ams_n_bins: int
+    ams_bmin: float
+    ams_relmax: float
 
     # plots
     plots_enable: bool
@@ -268,6 +326,11 @@ def load_config(cfg_path: str) -> TrainConfig:
     es_warmup_epochs = int(es.get("warmup_epochs", 0))
     es_restore_best = bool(es.get("restore_best", True))
 
+    ams = cfg.get("metrics", {}).get("ams", {}) or {}
+    ams_n_bins = int(ams.get("n_bins", 20))
+    ams_bmin = float(ams.get("bmin", 0.25))
+    ams_relmax = float(ams.get("relmax", 0.3))
+
     plots = cfg.get("plots", {})
     plots_enable = bool(plots.get("enable", True))
     plots_subdir = str(plots.get("out_subdir", "plots"))
@@ -337,6 +400,9 @@ def load_config(cfg_path: str) -> TrainConfig:
         es_min_delta=es_min_delta,
         es_warmup_epochs=es_warmup_epochs,
         es_restore_best=es_restore_best,
+        ams_n_bins=ams_n_bins,
+        ams_bmin=ams_bmin,
+        ams_relmax=ams_relmax,
         plots_enable=plots_enable,
         plots_subdir=plots_subdir,
         score_bins=score_bins,
@@ -1295,6 +1361,9 @@ def evaluate(
 
     out["ap_w"] = safe_ap(y_np, prob_np, sample_weight=w_metrics)
     out["ap"] = float(average_precision_score(y_np, prob_np)) if len(np.unique(y_np)) > 1 else float("nan")
+    ams_kw = dict(n_bins=cfg.ams_n_bins, bmin=cfg.ams_bmin, relmax=cfg.ams_relmax)
+    out["ams_absWgt"] = binned_ams(y_np, prob_np, w_np, **ams_kw)
+    out["ams"] = binned_ams(y_np, prob_np, w_np, signed=True, **ams_kw)
 
     # also store the metric-weights for plots downstream
     out["w_metrics"] = w_metrics
@@ -1462,7 +1531,7 @@ def train_one_fold(
     scheduler = None
     if cfg.scheduler_name.lower() == "reduce_on_plateau":
         scheduler_mode = cfg.rop_mode
-        if cfg.es_monitor == "val_auc_weighted":
+        if cfg.es_monitor in MAXIMIZED_MONITORS:
             scheduler_mode = "max"
         elif cfg.es_monitor == "val_loss":
             scheduler_mode = "min"
@@ -1506,6 +1575,8 @@ def train_one_fold(
         "val_loss": [],
         "train_auc_w": [],
         "val_auc_w": [],
+        "val_ams_absWgt": [],
+        "val_ams": [],
         "lr": [],
     }
 
@@ -1622,11 +1693,15 @@ def train_one_fold(
 
         val_loss = float(val_eval["loss"])
         val_auc_w = float(val_eval["auc_w"])
+        val_ams_absWgt = float(val_eval["ams_absWgt"])
+        val_ams = float(val_eval["ams"])
 
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
         history["train_auc_w"].append(train_auc_w)
         history["val_auc_w"].append(val_auc_w)
+        history["val_ams_absWgt"].append(val_ams_absWgt)
+        history["val_ams"].append(val_ams)
         history["lr"].append(float(optimizer.param_groups[0]["lr"]))
 
         if adv is not None:
@@ -1651,7 +1726,7 @@ def train_one_fold(
 
         if evaluate_train_each_epoch:
             logger.info(
-                "[fold %d] epoch %d/%d  train_loss=%.6f val_loss=%.6f  train_auc_w=%.4f val_auc_w=%.4f lr=%.3e",
+                "[fold %d] epoch %d/%d  train_loss=%.6f val_loss=%.6f  train_auc_w=%.4f val_auc_w=%.4f val_ams_absWgt=%.4f lr=%.3e",
                 fold_idx,
                 epoch,
                 cfg.epochs - 1,
@@ -1659,17 +1734,19 @@ def train_one_fold(
                 val_loss,
                 train_auc_w,
                 val_auc_w,
+                val_ams_absWgt,
                 history["lr"][-1],
             )
         else:
             logger.info(
-                "[fold %d] epoch %d/%d  train_loss(batch)=%.6f val_loss=%.6f  val_auc_w=%.4f lr=%.3e",
+                "[fold %d] epoch %d/%d  train_loss(batch)=%.6f val_loss=%.6f  val_auc_w=%.4f val_ams_absWgt=%.4f lr=%.3e",
                 fold_idx,
                 epoch,
                 cfg.epochs - 1,
                 train_loss,
                 val_loss,
                 val_auc_w,
+                val_ams_absWgt,
                 history["lr"][-1],
             )
 
@@ -1678,6 +1755,10 @@ def train_one_fold(
             monitor_val = val_loss
         elif cfg.es_monitor == "val_auc_weighted":
             monitor_val = val_auc_w
+        elif cfg.es_monitor == "val_ams_absWgt":
+            monitor_val = val_ams_absWgt
+        elif cfg.es_monitor == "val_ams":
+            monitor_val = val_ams
         else:
             monitor_val = val_loss
 
@@ -1788,9 +1869,9 @@ def train_one_fold(
 
         # Save a quick text summary of metrics
         metrics_summary = {
-            "train": {k: float(train_final[k]) for k in ["loss", "auc_w", "auc", "ap_w", "ap"]},
-            "val": {k: float(val_final[k]) for k in ["loss", "auc_w", "auc", "ap_w", "ap"]},
-            "eval": {k: float(eval_final[k]) for k in ["loss", "auc_w", "auc", "ap_w", "ap"]},
+            "train": {k: float(train_final[k]) for k in ["loss", "auc_w", "auc", "ap_w", "ap", "ams_absWgt", "ams"]},
+            "val": {k: float(val_final[k]) for k in ["loss", "auc_w", "auc", "ap_w", "ap", "ams_absWgt", "ams"]},
+            "eval": {k: float(eval_final[k]) for k in ["loss", "auc_w", "auc", "ap_w", "ap", "ams_absWgt", "ams"]},
             "ks_overtraining": ks,
             "best_monitor_value": float(best_metric) if best_metric is not None else None,
             "best_epoch": int(best_epoch) if best_epoch is not None else None,
@@ -1964,6 +2045,16 @@ def build_argparser() -> argparse.ArgumentParser:
     )
 
     p.add_argument(
+        "--es-monitor",
+        choices=("val_loss", "val_auc_weighted", "val_ams_absWgt", "val_ams"),
+        default=None,
+        help=(
+            "Override early_stopping.monitor (and its mode) from the config. val_ams_absWgt / val_ams = "
+            "binned AMS of the validation fold (binned_ams, bins from metrics.ams) with |w| / signed "
+            "weights. Default: unchanged."
+        ),
+    )
+    p.add_argument(
         "--epochs",
         type=int,
         default=None,
@@ -2101,6 +2192,14 @@ def main() -> None:
                     optuna_applied["grad_clip_norm"])
         if trial_seed is not None:
             logger.info("[optuna] Reusing winning trial seed: %d", active_seed)
+
+    if args.es_monitor is not None:
+        cfg = replace(
+            cfg,
+            es_monitor=args.es_monitor,
+            es_mode="min" if args.es_monitor == "val_loss" else "max",
+        )
+        logger.info("[early stopping] monitor=%s mode=%s (--es-monitor)", cfg.es_monitor, cfg.es_mode)
 
     # --seed is applied last so it wins over both the config and the optuna
     # trial seed; without it, seeding is exactly as before.

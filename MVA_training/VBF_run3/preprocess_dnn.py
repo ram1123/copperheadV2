@@ -40,7 +40,7 @@ import pyarrow.parquet as pq
 import yaml
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.git_utils import get_git_commit, get_git_state
-from modules.selection import applyRegionCatCuts
+from modules.selection import applyRegionCatCuts, applyRegionCatCutsByScore, transformer_score_field
 from modules.systematics import (
     VARIATION_COL_SEP,
     VARIATION_SETS,
@@ -106,6 +106,9 @@ class PreprocessConfig:
 
     training_features: List[str]
     do_not_scale_features: List[str]
+
+    # VBF/ggH category from the binary transformer score (--use-transformer-vbf-channel)
+    use_transformer_vbf_channel: bool = False
 
 # --------------------------------------------------------------------------------------
 # YAML + sample resolution helpers
@@ -458,7 +461,8 @@ def events_to_dataframe(
     """
     Apply selection, convert to pandas, attach label + group + process (+ year if requested).
     """
-    events = applyRegionCatCuts(
+    apply_category_cuts = applyRegionCatCutsByScore if cfg.use_transformer_vbf_channel else applyRegionCatCuts
+    events = apply_category_cuts(
         events,
         category=cfg.category,
         region_name=cfg.region,
@@ -467,6 +471,7 @@ def events_to_dataframe(
         do_vbf_filter_study=False,
         do_VH_veto=False,
         jj_eta_region=cfg.jj_eta_region,
+        year=year,
     )
 
     arr = events.compute()
@@ -647,6 +652,8 @@ def preprocess(
         f for f in cfg.training_features if not f.startswith("year_")
     ]
     features2load = physical_training_features + ["event", cfg.weight_col]
+    if cfg.use_transformer_vbf_channel:
+        features2load.append(transformer_score_field())
 
     logger.info("[preprocess] years: %s", years_list)
     logger.info("[preprocess] base_path: %s", base_path)
@@ -812,6 +819,14 @@ def preprocess(
         raise KeyError(
             f"Weight column '{cfg.weight_col}' not found in merged dataframe."
         )
+
+    if cfg.use_transformer_vbf_channel:
+        # transformer channel admits 0/1-jet events: pre_scaling_clean sentinels, else phi -10 / 0
+        # (missing_jet_rule "training" in the manifest)
+        df_total = pre_scaling_clean(df_total)
+        for f in cfg.training_features:
+            if f in df_total.columns:
+                df_total[f] = pd.to_numeric(df_total[f]).fillna(-10.0 if "phi" in f else 0.0)
 
     # numeric coercion check (training features only)
     # print("df_total[year].head():")
@@ -1119,6 +1134,9 @@ def preprocess(
         },
         "base_path": str(base_path),
         "category": cfg.category,
+        "use_transformer_vbf_channel": cfg.use_transformer_vbf_channel,
+        # absent-jet fill used in training, applied again by run_stage2_vbf.py ("none": always two jets)
+        "missing_jet_rule": "training" if cfg.use_transformer_vbf_channel else "none",
         "region": cfg.region,
         "jj_eta_region": cfg.jj_eta_region,
         "years": years_list,
@@ -1275,6 +1293,16 @@ def build_argparser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "--use-transformer-vbf-channel",
+        action="store_true",
+        help=(
+            "Select the VBF/ggH category with the binary transformer score "
+            "(modules.selection.applyRegionCatCutsByScore) instead of the jj_mass/jj_dEta/"
+            "jet1_pt cuts. Needs stage1 parquet scored by "
+            "MVA_training/transformer_binary/score.py; --base-path points at that copy."
+        ),
+    )
+    p.add_argument(
         "--force",
         action="store_true",
         help=(
@@ -1302,6 +1330,8 @@ def main() -> None:
         object.__setattr__(
             cfg, "jj_eta_region", str(args.jj_eta_region)
         )  # pylint: disable=protected-access
+    if args.use_transformer_vbf_channel:
+        object.__setattr__(cfg, "use_transformer_vbf_channel", True)  # pylint: disable=protected-access
 
     out_dir = make_output_dir(
         out_root=args.out_root,

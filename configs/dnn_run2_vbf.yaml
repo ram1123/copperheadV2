@@ -160,14 +160,21 @@ training:
 
 early_stopping:
   enable: true
-  monitor: "val_auc_weighted" # "val_auc_weighted" or "val_loss"
-  mode: "max" # when auc then max, with loss min
+  # val_ams_absWgt | val_ams (binned AMS, |w| / signed weights) | val_auc_weighted | val_loss; HPO default objective
+  monitor: "val_ams_absWgt"
+  mode: "max" # max for the AMS and AUC monitors, min for val_loss
   patience: 5
   min_delta: 1.0e-4
   warmup_epochs: 3
   restore_best: true
 
 metrics:
+  # binned AMS (train_dnn.binned_ams): n_bins equal-signal bins, merged from the top until B >= bmin and MC rel.
+  # error <= relmax (bmin 0.25 per fold ~ B >= 1 in total). TODO: ad hoc merging rule, see binned_ams.
+  ams:
+    n_bins: 20
+    bmin: 0.25
+    relmax: 0.3
   weighted:
     auc: true
     pr: true

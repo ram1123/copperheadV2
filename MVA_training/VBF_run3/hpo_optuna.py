@@ -11,7 +11,7 @@ import argparse
 import json
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import matplotlib
 import numpy as np
@@ -31,6 +31,7 @@ from optuna.visualization.matplotlib import (
 
 # Import your functions/classes from train_dnn.py
 from train_dnn import (
+    MAXIMIZED_MONITORS,
     TrainConfig,
     load_config,
     set_seed,
@@ -162,7 +163,9 @@ def suggest_hidden(trial: optuna.Trial) -> list[int]:
     return hidden
 
 
-def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
+def suggest_hparams(
+    trial: optuna.Trial, cfg: TrainConfig, label_smoothing_range: Tuple[float, float] = (0.01, 0.20)
+) -> Dict[str, Any]:
     """
     Define the search space. Keep it realistic for your VBF DNN:
     - LR, weight_decay, dropout, hidden sizes, activation, batch_norm, label_smoothing, grad clip.
@@ -192,7 +195,7 @@ def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
     lr = trial.suggest_float("lr", 1e-5, 8e-4, log=True)
     weight_decay = trial.suggest_float("weight_decay", 1e-5, 2e-3, log=True)
 
-    label_smoothing = trial.suggest_float("label_smoothing", 0.01, 0.20)
+    label_smoothing = trial.suggest_float("label_smoothing", *label_smoothing_range)
     grad_clip_norm = trial.suggest_float("grad_clip_norm", 0.5, 3.0)
 
     # (optional) training dynamics
@@ -212,8 +215,8 @@ def suggest_hparams(trial: optuna.Trial, cfg: TrainConfig) -> Dict[str, Any]:
     )
 
 
-def apply_hparams(cfg: TrainConfig, hp: Dict[str, Any]) -> TrainConfig:
-    """Return a new TrainConfig with overrides."""
+def apply_hparams(cfg: TrainConfig, hp: Dict[str, Any], es_monitor: str = "val_auc_weighted") -> TrainConfig:
+    """Return a new TrainConfig with overrides; es_monitor is also the trial objective."""
     new_cfg = replace(
         cfg,
         activation=hp["activation"],
@@ -224,8 +227,8 @@ def apply_hparams(cfg: TrainConfig, hp: Dict[str, Any]) -> TrainConfig:
         weight_decay=float(hp["weight_decay"]),
         label_smoothing=float(hp["label_smoothing"]),
         grad_clip_norm=float(hp["grad_clip_norm"]),
-        es_monitor="val_auc_weighted",  # always monitor AUC for HPO
-        es_mode="max",  # max if auc, min if loss
+        es_monitor=es_monitor,  # what each trial early-stops on and reports
+        es_mode="max",  # all --objective choices are maximized
         batch_size=int(hp.get("batch_size", cfg.batch_size)),
         # Speed-ups for HPO:
         plots_enable=False,
@@ -249,6 +252,8 @@ def objective_factory(
     out_dir: str,
     folds: List[int],
     seed: int,
+    es_monitor: str = "val_auc_weighted",
+    label_smoothing_range: Tuple[float, float] = (0.01, 0.20),
 ):
     out_dir = str(Path(out_dir))
 
@@ -256,8 +261,8 @@ def objective_factory(
         # determinism-ish per trial
         set_seed(seed + trial.number)
 
-        hp = suggest_hparams(trial, base_cfg)
-        cfg = apply_hparams(base_cfg, hp)
+        hp = suggest_hparams(trial, base_cfg, label_smoothing_range)
+        cfg = apply_hparams(base_cfg, hp, es_monitor)
 
         # isolate outputs per trial (optional)
         trial_dir = Path(out_dir) / "optuna_trials" / f"trial_{trial.number:05d}"
@@ -380,8 +385,34 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--n-trials", type=int, default=50)
     p.add_argument("--timeout-min", type=int, default=None)
     p.add_argument("--study-name", default="vbf_dnn_hpo")
-    p.add_argument("--storage", default=None, help="e.g. sqlite:////path/to/study.db")
+    p.add_argument(
+        "--storage",
+        default=None,
+        help="e.g. sqlite:////path/to/study.db, or journal:/path/to/study.log (file-based, safe for "
+        "workers on different nodes sharing the file system, as in ray_dnn.py)",
+    )
     p.add_argument("--seed", type=int, default=12345)
+    p.add_argument(
+        "--objective",
+        choices=("val_auc_weighted", "val_ams_absWgt", "val_ams"),
+        default=None,
+        help="Trial objective and early-stopping monitor. Default: the config's early_stopping.monitor "
+        "(val_ams_absWgt in configs/dnn_run*_vbf.yaml). val_ams_absWgt / val_ams = binned AMS of the "
+        "validation fold with |w| / signed weights (train_dnn.binned_ams), which sees the purity of "
+        "the top score bins.",
+    )
+    p.add_argument(
+        "--label-smoothing-range",
+        default="0.01,0.20",
+        help="LO,HI of the label_smoothing search range (default 0.01,0.20).",
+    )
+    p.add_argument(
+        "--sampler-seed",
+        type=int,
+        default=None,
+        help="TPE sampler seed (default: --seed). Parallel workers on one study need different ones; "
+        "--seed sets the training seed (seed + trial number) and must be the same for all of them.",
+    )
     return p
 
 
@@ -390,19 +421,35 @@ def main() -> None:
 
     base_cfg = load_config(args.config)
     set_seed(args.seed)
+    if args.objective is None:
+        args.objective = base_cfg.es_monitor
+        if args.objective not in MAXIMIZED_MONITORS:
+            raise SystemExit(
+                f"early_stopping.monitor in {args.config} is {args.objective!r}; the HPO maximizes, so set "
+                f"it to one of {MAXIMIZED_MONITORS} or pass --objective."
+            )
 
     if args.folds is None:
         folds = list(range(base_cfg.n_folds))
     else:
         folds = [int(x.strip()) for x in args.folds.split(",") if x.strip()]
 
+    ls_range = tuple(float(x) for x in args.label_smoothing_range.split(","))
+    if len(ls_range) != 2 or not 0.0 <= ls_range[0] < ls_range[1] < 1.0:
+        raise ValueError(f"--label-smoothing-range must be LO,HI with 0 <= LO < HI < 1, got {args.label_smoothing_range}")
+
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     storage = args.storage
     if storage is None:
         storage = f"sqlite:///{(out_dir / 'optuna_study.db').resolve()}"
+    elif storage.startswith("journal:"):
+        storage = optuna.storages.JournalStorage(
+            optuna.storages.journal.JournalFileBackend(storage[len("journal:"):])
+        )
 
-    sampler = optuna.samplers.TPESampler(seed=args.seed, multivariate=False)
+    sampler_seed = args.seed if args.sampler_seed is None else args.sampler_seed
+    sampler = optuna.samplers.TPESampler(seed=sampler_seed, multivariate=False)
     pruner = optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=3)
 
     study = optuna.create_study(
@@ -420,6 +467,8 @@ def main() -> None:
         out_dir=str(out_dir),
         folds=folds,
         seed=args.seed,
+        es_monitor=args.objective,
+        label_smoothing_range=ls_range,
     )
 
     timeout = None if args.timeout_min is None else int(args.timeout_min) * 60
@@ -445,6 +494,8 @@ def main() -> None:
         "best_params": study.best_params,
         "n_trials": len(study.trials),
         "trial_seed": int(args.seed + study.best_trial.number),
+        "objective": args.objective,
+        "label_smoothing_range": list(ls_range),
     }
 
     with open(out_dir / "optuna_best.json", "w") as f:

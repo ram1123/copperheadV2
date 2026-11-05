@@ -82,14 +82,7 @@ V1_FIELDS_2COMPUTE: List[str] = [
     # "MET_pt",
 ]
 
-TRANSFORMER_SCORE_FIELDS: List[str] = [
-    "transf_vbf_score",
-    "transf_vbf_logit",
-    "transf_ggh_score",
-    "transf_ggh_logit",
-    "transf_bkg_score",
-    "transf_bkg_logit",
-]
+# Transformer score column (--categorizer transformer-score): score_field in configs/MVA/transformer_categorizer.yaml
 
 
 def order_processes(processes: List[str]) -> List[str]:
@@ -216,9 +209,9 @@ def get_yield(
         if "gjj_mass" not in fields:
             fields.append("gjj_mass")
     if categorizer == "transformer-score":
-        for field in TRANSFORMER_SCORE_FIELDS:
-            if field not in fields:
-                fields.append(field)
+        # binary-transformer score column, score_field in configs/MVA/transformer_categorizer.yaml
+        if selection.transformer_score_field() not in fields:
+            fields.append(selection.transformer_score_field())
 
     # glob over all matching sample dirs
     parquet_pattern = os.path.join(load_path, process, "**", "*.parquet")
@@ -329,8 +322,8 @@ def main() -> None:
         help=(
             "Categorization strategy for ggH/VBF yields. "
             "'cutbased' uses the existing jj-mass/jj-dEta selection, while "
-            "'transformer-score' tags events using transf_vbf_score and "
-            "transf_ggh_score."
+            "'transformer-score' splits the b-tag-vetoed events by the binary transformer score "
+            "(score_field and cutoff in configs/MVA/transformer_categorizer.yaml)."
         ),
     )
     parser.add_argument(
