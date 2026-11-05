@@ -106,10 +106,10 @@ The trial objective and the early-stopping monitor both default to `early_stoppi
 `val_ams_absWgt`. Rerunning the HPO command with the same `--out-dir` and `--seed` adds trials to the same study.
 The reference model used 146 trials (96 + 50).
 
-**Compare** against another model on the held-out folds:
+**Compare** against another model on the evaluation folds (each model's never-trained-on quarter):
 
 ```bash
-python MVA_training/VBF_run3/evaluate_heldout.py --config configs/dnn_run2_vbf.yaml --data-dir D --out heldout.json \
+python MVA_training/VBF_run3/evaluate_folds.py --config configs/dnn_run2_vbf.yaml --data-dir D --out eval_folds.json \
     --model NEW=D:trained_best_optuna_<hpo label> --model OLD=<other model dir>:<its training tag>
 ```
 
@@ -137,7 +137,7 @@ top score bins are, which is where the VBF significance comes from.
 !!! note "Run-to-run noise"
     Retraining a trial with the same settings and seed does not reproduce its HPO value exactly on GPU: the best
     trial's mean validation AMS was 0.476 in the HPO and 0.466 when retrained. That difference is as large as the
-    spread among the top eight trials. Compare models on the held-out folds, not on the HPO value.
+    spread among the top eight trials. Compare models on the evaluation folds, not on the HPO value.
 
 ## 5. Stage 2 → combine
 

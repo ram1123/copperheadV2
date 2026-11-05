@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Compare trained VBF DNNs on the held-out folds of one preprocess_dnn.py dataset: fold i is scored by each model's
+Compare trained VBF DNNs on the evaluation folds of one preprocess_dnn.py dataset: fold i is scored by each model's
 fold-i network (--split evaluation: never trained on it; validation: early-stopped on it). Features are re-scaled
 with each model's own scalers, so models from another preprocessing work too.
 Reports per model: weighted AUC; binned AMS (|w| and signed, train_dnn.binned_ams) per fold and pooled; S, B, top
 background processes and the cut-based-VBF share of the signal above each --top-effs signal efficiency.
 
 Usage (CPU, inference only):
-  python MVA_training/VBF_run3/evaluate_heldout.py --config configs/dnn_run2_vbf.yaml \
-      --data-dir dnn/trained_models/<label>/<years>_h-peak_vbf_all --out heldout.json \
+  python MVA_training/VBF_run3/evaluate_folds.py --config configs/dnn_run2_vbf.yaml \
+      --data-dir dnn/trained_models/<label>/<years>_h-peak_vbf_all --out eval_folds.json \
       --model NEW=dnn/trained_models/<label>/<years>_h-peak_vbf_all:trained_best_optuna_<tag> \
       --model OLD=<other model dir>:<its training tag>
 """
