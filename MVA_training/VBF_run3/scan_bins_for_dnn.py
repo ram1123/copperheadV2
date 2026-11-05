@@ -1315,5 +1315,6 @@ if __name__ == "__main__":
                                   ("jj region", args.jj_region, copy_info.get("jj_eta_region"))):
             if given and seen and given != seen:
                 raise SystemExit(f"--{name.replace(' ', '-')} {given} disagrees with the stage-2 run ({seen})")
+        report = cmp_path.resolve()  # --output-dir may lie outside the repo
         update_config_entry(edges, model_label, jj_region,
-                            {**metadata, "report": str(cmp_path.relative_to(REPO_ROOT))})
+                            {**metadata, "report": str(report.relative_to(REPO_ROOT) if report.is_relative_to(REPO_ROOT) else report)})

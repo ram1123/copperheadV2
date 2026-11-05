@@ -1,0 +1,61 @@
+# Binary ggH-vs-VBF transformer categoriser (MVA_training/transformer_binary/): after the b-tag veto,
+# VBF = score < cutoff, ggH = score >= cutoff. Read by modules/selection.py and the transformer_binary scripts.
+
+# Columns score.py writes into the stage-1 parquet copy.
+score_field: transf_ggh_vs_vbf_binary_score  # out-of-fold ggH probability (nominal kinematics only)
+fold_field: transf_fold_id  # fold whose model scored the event
+
+# Per run period, from cutoff_scan.py (Run 2: yield floor only; no cutoff passes the flatness gate). null = not derived.
+cutoff:
+  run2: 0.088  # rough run: Xudong's Sep08 checkpoints on the Sept29 tree (mva-categorizer-18)
+  run3: null
+
+# Samples: groups of configs/samples/samples.yaml (modules.sample_config), resolved per year.
+samples:
+  config: configs/samples/samples.yaml
+  signal_groups:  # class -> samples.yaml signal group; the score is the ggH probability (ggH label 1)
+    ggH: GGH
+    VBF: VBF
+
+# train.py defaults (b-hive Sep08 production); train.py --hparams / ray_train.py "hparams" override them.
+training:
+  batch_size: 4096
+  learning_rate: 1.0e-3
+  betas: [0.95, 0.999]
+  eps: 1.0e-6
+  weight_decay: 0.01
+  lr_decay_factor: 0.01
+  max_epochs: 1000
+  patience: 10
+  num_enc: 3
+  num_head: 8
+  embed_dim: 128
+  dropout: 0.1
+
+# hpo.py (Ray Tune + Optuna TPE): [kind, args...] per hyperparameter; embed_dim is a multiple of every num_head.
+hpo:
+  metric: best_val_loss
+  search_space:
+    learning_rate: [loguniform, 1.0e-4, 3.0e-3]
+    weight_decay: [loguniform, 1.0e-4, 1.0e-1]
+    batch_size: [choice, [2048, 4096, 8192, 16384]]
+    dropout: [uniform, 0.0, 0.3]
+    embed_dim: [choice, [64, 128, 192, 256]]
+    num_enc: [choice, [2, 3, 4, 5]]
+    num_head: [choice, [4, 8]]
+
+# cutoff_scan.py (mva-categorizer-10 method, see its docstring).
+cutoff_scan:
+  years: ["2016postVFP", "2016preVFP", "2017", "2018"]
+  background_groups: [DY, TT, ST, EWK, VV, VVV]  # significance background (no DYVBF, as mva-10)
+  check_groups: [DY, TT, ST, EWK]  # MC of the h-sideband data/MC flatness gate and yield floor
+  check_variables:  # name: [lo, hi, n_bins]; gated by the flatness check
+    dimuon_pt: [0, 300, 31]
+    dimuon_rapidity: [-2.5, 2.5, 50]
+    dimuon_cos_theta_cs: [-1, 1, 50]
+    dimuon_phi_cs: [-3.15, 3.15, 50]
+  report_only:  # reported, not gated
+    dimuon_mass: [110.0, 150.0, 21]
+  combine_reference: {ggH: 1.94, VBF: 1.69}  # mva-10's combine significances of the cut-based categories
+  k_sigma: 1.0  # flatness tolerance: reference chi2/ndof + k_sigma * sqrt(2/ndof)
+  n_grid: 1000  # cutoffs on linspace(0, 1, n_grid + 1)

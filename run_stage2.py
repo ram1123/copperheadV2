@@ -15,7 +15,7 @@ import sys, inspect
 import configs.categories.category_cuts as category_cuts
 import json
 # from modules.utils import removeForwardJets, fromPdDftoAkZip
-from modules.selection import filterRegion
+from modules.selection import filterRegion, transformer_vbf_mask
 import time
 from modules.utils import logger
 
@@ -162,7 +162,7 @@ def getDeltaPhi(phi1,phi2):
     dphi = abs(np.mod(phi1 - phi2 + np.pi, 2 * np.pi) - np.pi)
     return dphi
         
-def process4gghCategory(events: ak.Record, edge_cfg_path:str, year:str, model_trainYear:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False, model_base_path=".") -> ak.Record:
+def process4gghCategory(events: ak.Record, edge_cfg_path:str, year:str, model_trainYear:str, model_name:str, wgt_unc_fields=[], jec_unc_fields=[], do_6p7=False, model_base_path=".", category_str="ggh") -> ak.Record:
     """
     Takes the given stage1 output, runs MVA, and returns a new 
     ak.Record with MVA score + relevant info from stage1 output
@@ -292,12 +292,14 @@ def process4gghCategory(events: ak.Record, edge_cfg_path:str, year:str, model_tr
     # filter events for ggH category
     # region, _ = filterRegion(events, region="full")
     region, _ = filterRegion(events, region="signal")
-    category_str = "ggh"
     cut_names = getCategoryCutNames(category_str)
     gghCat_selection = (
         categoryWrapperLoop(cut_names, events)
         & region
     )
+    if category_str == "ggh_transformer":
+        # transformer ggH channel: b-tag veto above, then score >= cutoff
+        gghCat_selection = gghCat_selection & ~transformer_vbf_mask(events, year)
     logger.info(f"gghCat_selection: {gghCat_selection}")
     logger.info(f"gghCat_selection sum: {ak.sum(gghCat_selection)}")
     logger.info(f"gghCat_selection anti sum: {ak.sum(~gghCat_selection)}")
@@ -683,7 +685,18 @@ if __name__ == "__main__":
     dest="category",
     default="ggH",
     action="store",
-    help="string value production category we're working on",
+    help=(
+        "production category: ggH (b-tag veto and not the VBF cuts) or ggH_transformer "
+        "(b-tag veto and transformer score >= the cutoff, score_field and cutoff in "
+        "configs/MVA/transformer_categorizer.yaml; needs transformer-scored stage1, see --stage1_subdir)"
+    ),
+    )
+    parser.add_argument(
+    "--stage1_subdir",
+    dest="stage1_subdir",
+    default=None,
+    action="store",
+    help="read <load_path>/<year>/<stage1_subdir> instead of f1_0 (e.g. the transformer-scored copy of compacted)",
     )
     parser.add_argument(
     "-samp",
@@ -759,7 +772,9 @@ if __name__ == "__main__":
     if len(args.samples) == 0:
         logger.info("samples list is zero!")
         raise ValueError
-    if args.fraction is None: # fraction == 1.0
+    if args.stage1_subdir:
+        load_path = f"{args.load_path}/{args.year}/{args.stage1_subdir}"
+    elif args.fraction is None: # fraction == 1.0
         load_path = f"{args.load_path}/{args.year}/f1_0"
     else:
         frac_str = args.fraction.replace(".", "_")
@@ -895,7 +910,7 @@ if __name__ == "__main__":
                     # test on only wgts first
                     logger.info(f"[partition_idx:{partition_idx}] Events field: {events.fields}")
                     logger.warning("This is first call of process4gghCategory")
-                    processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path)
+                    processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, wgt_unc_fields=wgt_unc_fields, do_6p7=args.do_6p7, model_base_path=mva_base_path, category_str=args.category.lower())
                     processed_events_l.append(processed_events)
     
                     smaller_jec_unc_field_l = split_maxlen(jec_unc_fields, 4)
@@ -904,14 +919,14 @@ if __name__ == "__main__":
                         
                         logger.info(f"[partition_idx:{partition_idx}] Events field: {events.fields}")
                         logger.warning("This is 2nd call of process4gghCategory")
-                        processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path)
+                        processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, jec_unc_fields=small_jec_unc_fields, model_base_path=mva_base_path, category_str=args.category.lower())
                         processed_events_l.append(processed_events)
     
                     processed_events = mergeAkZips(processed_events_l)
                     del processed_events_l
                 else:
                     logger.warning(f"[partition_idx:{partition_idx}] This is 3rd call of process4gghCategory")
-                    processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path)
+                    processed_events = process4gghCategory(events, args.edge_cfg_path, args.year, args.model_trainYear, args.model_name, do_6p7=args.do_6p7, model_base_path=mva_base_path, category_str=args.category.lower())
             elif category == "vbf":
                 processed_events = process4vbfCategory(events) 
             else: 
