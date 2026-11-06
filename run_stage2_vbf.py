@@ -1264,6 +1264,9 @@ if __name__ == "__main__":
 
     args.dnn_missing_jet_rule = resolve_missing_jet_rule(model_trained_path, args.dnn_missing_jet_rule)
     logger.info(f"DNN missing-jet rule: {args.dnn_missing_jet_rule}")
+    if args.use_transformer_vbf_channel:
+        for year in years:  # if cutoff is missing for any year, ValueError is raised
+            selection.transformer_cutoff(year)
 
     with open(feature_dir / "training_features.pkl", "rb") as feature_file:
         training_features = pickle.load(feature_file)
