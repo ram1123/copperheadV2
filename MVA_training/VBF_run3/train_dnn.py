@@ -16,7 +16,7 @@ Outputs (per fold i):
 
 Notes:
 - Uses BCEWithLogitsLoss (returns_logits=true).
-- Supports weighted loss if cfg.data.weights.use_in_loss=true.
+- data.weights.use_in_loss=true: training loss weighted by |w|, each class summing to half; false: unweighted mean.
 - Weighted metrics via sklearn sample_weight where available.
 - Calibration/KS implemented manually (weighted).
 
@@ -803,34 +803,18 @@ def training_loop_loss(
     label_smoothing: float,
     normalize_in_batch: bool,
 ) -> torch.Tensor:
-    """`original_loss` as the training loop has always computed it.
-
-    This is a verbatim extraction of the inline block that used to sit in
-    `train_one_fold`'s batch loop -- same calls, same operand order -- so the
-    non-adversarial path stays bit-for-bit identical while the adversarial terms
-    reuse exactly the same functional form.
-
-    NOTE (pre-existing behaviour, deliberately preserved): `bce_with_logits_loss`
-    with `weights=None` already returns the *scalar* mean BCE, so multiplying by
-    `loss_w` and dividing by `sum|loss_w|` cancels and this reduces to the
-    unweighted mean. The per-event weights therefore do not currently reach the
-    training loss (they do reach `evaluate()`). Changing that would move the
-    baseline and is out of scope here; see assumptions.md.
     """
-    loss_raw = bce_with_logits_loss(
+    Used by the nominal training loop and by the adversarial terms. The loop passes
+    class-balanced |w| when data.weights.use_in_loss=true, and ones otherwise (plain mean).
+    """
+    return bce_with_logits_loss(
         logits=logits,
         targets=targets,
-        weights=None,
+        weights=wb,
         pos_weight=pos_weight,
         label_smoothing=label_smoothing,
-        normalize_in_batch=False,
-    )
-    loss_w = make_loss_weights(
-        w=wb,
         normalize_in_batch=normalize_in_batch,
-        clip_abs_max=None,
     )
-    return torch.sum(loss_raw * loss_w) / (torch.sum(torch.abs(loss_w)) + 1e-12)
 
 
 @dataclass(frozen=True)
@@ -1553,7 +1537,12 @@ def train_one_fold(
             threshold=cfg.rop_threshold,
         )
 
-    # pos_weight for BCE (optional)
+    # use_in_loss: training loss weighted by |w|, scaled so signal and background each sum to half the total
+    abs_wgts, is_sig = np.abs(ds_train.w), ds_train.y > 0.5
+    class_scale_t = torch.tensor([abs_wgts.sum() / (2 * abs_wgts[~is_sig].sum()), abs_wgts.sum() / (2 * abs_wgts[is_sig].sum())],
+                                 dtype=torch.float32, device=device)  # [background, signal]
+
+    # pos_weight for BCE (optional), applied on top of the class balance
     pos_weight_t = None
     if cfg.pos_weight is not None:
         pos_weight_t = torch.tensor([cfg.pos_weight], dtype=torch.float32, device=device)
@@ -1599,6 +1588,12 @@ def train_one_fold(
             xb = xb.to(device)
             yb = yb.to(device)
             wb = wb.to(device)
+            # loss weights: class-balanced |w| (use_in_loss) or 1 (unweighted mean)
+            if cfg.use_weight_in_loss:
+                is_signal = (yb > 0.5).long()  # index into class_scale_t: 0 = background, 1 = signal
+                wb = torch.abs(wb) * class_scale_t[is_signal]
+            else:
+                wb = torch.ones_like(wb)
 
             optimizer.zero_grad(set_to_none=True)
 
