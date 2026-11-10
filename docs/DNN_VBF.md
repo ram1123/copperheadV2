@@ -3,6 +3,10 @@ title: DNN for VBF
 
 
 
+!!! tip "Transformer VBF channel"
+    To train and run the DNN in the VBF channel defined by the binary transformer (binned-AMS HPO objective),
+    see [Transformer VBF channel](TransformerVBF.md).
+
 ## Input Features for DNN in VBF Analysis
 
 The following features are used as input to the Deep Neural Network (DNN) for the Vector Boson Fusion (VBF) analysis:

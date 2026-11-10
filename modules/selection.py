@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,7 @@ from modules.utils import logger
 # repo_root/modules/selection.py -> repo_root
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DNN_BINNING_YAML = REPO_ROOT / "configs" / "MVA" / "VBF" / "dnn_binning.yaml"
+TRANSFORMER_CATEGORIZER_YAML = REPO_ROOT / "configs" / "MVA" / "transformer_categorizer.yaml"
 
 # jj_eta_region names using both jet1 AND jet2 (only meaningful for njets>=2
 PAIR_JJ_ETA_REGIONS = [
@@ -353,127 +355,46 @@ def applyRegionCatCuts(
     return events
 
 
-def applyRegionCatCutsByScore(
-    events,
-    category: str,
-    region_name: str,
-    process: str,
-    variation: str,
-    do_vbf_filter_study: bool = False,
-    year: str | None = None,
-    do_VH_veto: bool = False,
-    jj_eta_region: str = "all",
-    njets_selection: str = "inclusive",
-):
+@lru_cache(maxsize=None)
+def transformer_config() -> dict:
+    """TRANSFORMER_CATEGORIZER_YAML, read once."""
+    with open(TRANSFORMER_CATEGORIZER_YAML) as stream:
+        return yaml.safe_load(stream)
+
+
+def transformer_score_field() -> str:
+    """Stage-1 column of the transformer score (yaml score_field)."""
+    return transformer_config()["score_field"]
+
+
+def transformer_cutoff(year) -> float:
+    """Transformer cutoff of `year`'s run period (yaml cutoff)."""
+    cutoffs = transformer_config()["cutoff"]
+    period = "run3" if is_run3(year) else "run2"
+    if cutoffs.get(period) is None:
+        raise ValueError(
+            f"No {period} transformer cutoff in {TRANSFORMER_CATEGORIZER_YAML}; derive it first "
+            "(MVA_training/transformer_binary)."
+        )
+    return float(cutoffs[period])
+
+
+def transformer_vbf_mask(events, year, cutoff=None):
+    """True where the transformer puts the event in the VBF channel (score < cutoff)."""
+    cutoff = transformer_cutoff(year) if cutoff is None else cutoff
+    return ak.fill_none(events[transformer_score_field()] < cutoff, value=False)
+
+
+def applyRegionCatCutsByScore(events, category: str, year: str, cutoff=None, **kwargs):
     """
-    Apply the same region-level selection as `applyRegionCatCuts`, but assign
-    ggH/VBF categories using transformer scores instead of the cut-based VBF
-    definition.
-
-    Strategy:
-    - if transf_vbf_score > transf_ggh_score, tag as VBF
-    - otherwise tag as ggH
+    applyRegionCatCuts(category="bJetVeto", **kwargs), then the transformer split instead of the
+    jj_mass/jj_dEta/jet1_pt cuts: vbf = score < cutoff, ggh = score >= cutoff.
     """
-    use_var = (
-        "nominal"
-        if (isinstance(variation, str) and variation.startswith("wgt"))
-        else variation
-    )
-
-    # Helper to fetch the right column, falling back to _nominal or base if needed
-    def varcol(base):
-        """
-        Fetch the appropriate column from the events object, handling variations.
-
-        Attempts to retrieve the column named '{base}_{use_var}', falling back to '{base}_nominal' and then '{base}'.
-        Raises a KeyError if none of these columns are present in events.fields.
-
-        Parameters
-        ----------
-        base : str
-            The base name of the column to retrieve.
-
-        Returns
-        -------
-        awkward.Array
-            The selected column from the events object.
-
-        Raises
-        ------
-        KeyError
-            If none of the candidate columns are found in events.fields.
-        """
-        # print(f"Fetching variable column for: {base}")
-        # print(f"Using variation: {use_var}")
-        for cand in (f"{base}_{use_var}", f"{base}_nominal", base):
-            if cand in events.fields:
-                return events[cand]
-        raise KeyError(
-            f"[selection] Missing required field for selection: tried {base}_{use_var}, {base}_nominal, {base}"
-        )
-
-    # do mass region cut
-    region, _ = filterRegion(events, region=region_name)
-
-    # --- category cuts: USE varcol(...) for JES/JER-affected columns ---
-    nbt_loose = varcol("nBtagLoose")
-    nbt_medium = varcol("nBtagMedium")
-    jj_mass = varcol("jj_mass")
-    jj_dEta = varcol("jj_dEta")
-    jet1_pt = varcol("jet1_pt")
-    njets = varcol("njets")
-
-    prod_cat_cut = ak.ones_like(region, dtype="bool")
-
-    required_fields = {"transf_vbf_score", "transf_ggh_score"}
-    missing_fields = sorted(required_fields - set(events.fields))
-    if missing_fields:
-        raise KeyError(
-            "Missing transformer score field(s) required for score-based "
-            f"categorization: {missing_fields}"
-        )
-
-    vbf_score = ak.fill_none(events["transf_vbf_score"], float("-inf"))
-    ggh_score = ak.fill_none(events["transf_ggh_score"], float("-inf"))
-    # is_vbf = ak.fill_none(vbf_score > ggh_score, value=False)
-    is_vbf = ak.fill_none((vbf_score/(vbf_score + ggh_score)) > 0.92522, value=False)
-    # is_vbf = ak.fill_none(vbf_score > 0.925, value=False)
-
-    if category == "nocat":
-        prod_cat_cut = prod_cat_cut  # no additional cut
-    else:
-        # NOTE: btag cut for VH and ttH categories
-        btagLoose_filter = ak.fill_none((nbt_loose >= 2), value=False)
-        btagMedium_filter = ak.fill_none((nbt_medium >= 1), value=False) & ak.fill_none(
-            (njets >= 2), value=False
-        )
-        btag_cut = btagLoose_filter | btagMedium_filter
-
-        if category == "vbf":
-            prod_cat_cut = prod_cat_cut & is_vbf
-            prod_cat_cut = prod_cat_cut & (~btag_cut)         
-        elif category == "ggh":
-            prod_cat_cut = prod_cat_cut & (~is_vbf)
-            prod_cat_cut = prod_cat_cut & (~btag_cut)        
-        else:
-            raise ValueError(
-                "Invalid category option! Valid options are: 'vbf', 'ggh', 'nocat'."
-            )
-
-    if do_vbf_filter_study:
-        process_lower = process.lower()
-        if process_lower.startswith("dy"):
-            gjj_threshold = 300 if (year is not None and is_run3(year)) else 350
-            vbf_filter = ak.fill_none((events.gjj_mass > gjj_threshold), value=False)
-            is_vbf_filter = "dy_vbf_filter" in process_lower
-            if is_vbf_filter:
-                prod_cat_cut = prod_cat_cut & vbf_filter
-            else:
-                prod_cat_cut = prod_cat_cut & (~vbf_filter)
-
-    category_selection = prod_cat_cut & region
-    events = events[category_selection]
-    return events
+    if category not in ("vbf", "ggh"):
+        raise ValueError(f"Invalid category {category!r} for transformer categorisation; use 'vbf' or 'ggh'.")
+    events = applyRegionCatCuts(events, category="bJetVeto", year=year, **kwargs)
+    is_vbf = transformer_vbf_mask(events, year, cutoff)
+    return events[is_vbf] if category == "vbf" else events[~is_vbf]
 
 
 binning_based_on_significanceScan = np.array([

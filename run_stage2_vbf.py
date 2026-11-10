@@ -19,6 +19,7 @@ Example (2023 DY only, nominal, DY split by number of gen-matched VBF jets):
 import argparse
 import glob
 import itertools
+import json
 import logging
 import os
 import pickle
@@ -39,6 +40,7 @@ from coffea.nanoevents import BaseSchema
 from modules import selection
 from modules.dask_utils import get_dask_client
 from modules.utils import get_compacted_path, logger, fillEventNans
+from MVA_training.VBF_run3.utils.pre_scale_cleaning import pre_scaling_clean
 from modules.sample_config import get_bkg_sig_dicts
 from modules.systematics import (  # noqa: F401
     discover_shape_systs,
@@ -57,37 +59,6 @@ DY_MATCH_CATEGORIES_BY_SCHEME = {
 }
 # nominal-jet flags, used for every variation so an event stays in one DY component
 RECO_MATCH_FIELDS = ("jet1_hasMatchedGenJet_nominal", "jet2_hasMatchedGenJet_nominal")
-
-# --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
-
-# The score and its working point both come from plotter/mva_A1xB2_scoring.py.
-# Imported lazily so that the default kinematic path never pays the import cost and
-# never fails if the scan artifact or the checkpoints are absent.
-TRANSFORMER_SCORE_FIELD = "p_VBF_transformer"
-
-
-def transformer_threshold():
-    from plotter.mva_A1xB2_scoring import THRESHOLD
-
-    return THRESHOLD
-
-
-def add_transformer_score(events, year):
-    """Attach out-of-fold p_VBF to every event in the chunk, once.
-
-    The transformer's inputs resolve to the nominal jet columns, so p_VBF is the same
-    number for every weight and shape variation of a given event. Scoring here rather
-    than inside the variation loop therefore changes no result and avoids re-running
-    the model 43 variations x 2 regions times per chunk. The consequence for
-    systematics is worth stating plainly: shape variations still move events across
-    the region and b-tag cuts, but never across the VBF/ggH boundary.
-    """
-    from plotter.mva_A1xB2_scoring import score_vbf_probability
-
-    return ak.with_field(
-        events, score_vbf_probability(events, year), TRANSFORMER_SCORE_FIELD
-    )
-# --- optional transformer-based VBF channel (--use_transformer_vbf_channel) ---------
 
 
 def load_stage2_switches():
@@ -411,6 +382,31 @@ def parse_years_option(year, years):
 _MODEL_CACHE = {}
 
 
+def resolve_missing_jet_rule(model_dir: Path, requested: str | None) -> str:
+    """
+    Missing-jet rule from <model_dir>/preprocess_manifest.json (older manifests: 'training' if
+    use_transformer_vbf_channel); else `requested` or 'flat'. A contradicting `requested` is an error.
+    """
+    recorded = None
+    manifest_path = model_dir / "preprocess_manifest.json"
+    if manifest_path.is_file():
+        with open(manifest_path) as stream:
+            manifest = json.load(stream)
+        recorded = manifest.get("missing_jet_rule")
+        if recorded is None and manifest.get("use_transformer_vbf_channel"):
+            recorded = "training"
+        if recorded == "none":
+            recorded = None
+    if recorded is None:
+        return requested or "flat"
+    if requested is not None and requested != recorded:
+        raise SystemExit(
+            f"--dnn_missing_jet_rule {requested} contradicts the rule the model was trained with "
+            f"({recorded}, {manifest_path}); drop the flag to use the recorded rule."
+        )
+    return recorded
+
+
 def load_torchscript_model(model_path):
     """Load each TorchScript model once per worker process."""
     if model_path not in _MODEL_CACHE:
@@ -439,6 +435,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         use_transformer_vbf_channel=False,
         jj_eta_region="all",
         dump_scores=False,
+        dnn_missing_jet_rule="flat",
         binning=None,
     ):
         NO_SCALE_FEATURES = {
@@ -457,6 +454,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         self.divide_dy_by_year = divide_dy_by_year
         self.dy_matched_jets = dy_matched_jets
         self.jj_eta_region = jj_eta_region
+        self.dnn_missing_jet_rule = dnn_missing_jet_rule
         # also return the nominal per-event (score, weight), for DNN bin scans
         self.dump_scores = dump_scores
         # resolved on the driver (selection.resolve_dnn_binning); workers only see the default
@@ -511,8 +509,20 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             )
             values = ak.materialize(events[source])
             fill_value = -10.0 if "phi" in feature else 0.0
-            values = ak.fill_none(values, fill_value)
-            columns[feature] = ak.to_numpy(values)
+            values = ak.to_numpy(ak.fill_none(values, fill_value))
+            # BaseSchema gives absent jets as NaN, not None, so fill_none alone leaves them NaN
+            columns[feature] = np.where(np.isfinite(values), values, fill_value)
+
+        if self.dnn_missing_jet_rule == "training":
+            # training sentinels for absent jets (pre_scaling_clean, keyed on this variation's njets)
+            njets_source = feature_name_for_variation(
+                "njets_nominal", variation, fields, allow_nominal_fallback=self.allow_nominal_feature_fallback,
+            )
+            frame = pd.DataFrame({f: columns[f] for f in self.training_features if f not in self.year_onehot_features})
+            frame["njets_nominal"] = ak.to_numpy(ak.fill_none(ak.materialize(events[njets_source]), 0))
+            frame = pre_scaling_clean(frame)
+            for feature in frame.columns.drop("njets_nominal"):
+                columns[feature] = frame[feature].to_numpy(dtype=np.float64)
 
         if logger.isEnabledFor(logging.DEBUG):
             n_preview = min(5, n_events)
@@ -607,8 +617,6 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
         sample_type = events.metadata.get("sample", dataset_key)
         year = events.metadata["year"]
         # events["MET_pt"] = events["PuppiMET_pt"]
-        if self.use_transformer_vbf_channel:
-            events = add_transformer_score(events, year)
         fields = set(events.fields)
 
         # --- Reconstruct wgt_zpt_up/down from existing stage-1 output ------------------
@@ -724,7 +732,7 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             if divide_dy_sample and self.dy_matched_jets == "reco_012":
                 needed_cols.update(RECO_MATCH_FIELDS)
             if self.use_transformer_vbf_channel:
-                needed_cols.add(TRANSFORMER_SCORE_FIELD)
+                needed_cols.add(selection.transformer_score_field())
 
             # DNN inputs are evaluated with feature_variation (which may be pinned to
             # "nominal" via use_nominal_dnn_features_for_systs), not the raw selection
@@ -751,6 +759,11 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
                 )
                 needed_cols.add(source)
                 feature_sources.append(source)
+            if self.dnn_missing_jet_rule == "training":
+                needed_cols.add(feature_name_for_variation(
+                    "njets_nominal", feature_variation, events.fields,
+                    allow_nominal_fallback=self.allow_nominal_feature_fallback,
+                ))
 
             needed_cols4print = sorted(needed_cols)
             needed_cols = needed_cols & set(events.fields) # merge with existing fields
@@ -775,22 +788,22 @@ class CoffeaStage2VBFProcessor(processor.ProcessorABC):
             filtered_events = events[needed_cols]
             # if variation in debug_variations:
             #     raise ValueError(f"Needed columns for {variation}: {needed_cols4print} \n fields for {variation}: {fields}")
-            region_events = selection.applyRegionCatCuts(
+            # transformer channel: region and b-tag veto, then score < cutoff instead of the jj/jet1 cuts
+            apply_category_cuts = (
+                selection.applyRegionCatCutsByScore
+                if self.use_transformer_vbf_channel
+                else selection.applyRegionCatCuts
+            )
+            region_events = apply_category_cuts(
                 filtered_events,
                 process=sample_type,
-                # Apply the b-jet veto before transformer-based VBF selection,
-                # matching the control-plot categories.
-                category="bJetVeto" if self.use_transformer_vbf_channel else category,
+                category=category,
                 region_name=region,
                 do_vbf_filter_study=self.do_vbf_filter_study,
                 variation=variation,
                 jj_eta_region=self.jj_eta_region,
                 year=year,
             )
-            if self.use_transformer_vbf_channel:
-                region_events = region_events[
-                    region_events[TRANSFORMER_SCORE_FIELD] >= transformer_threshold()
-                ]
             # before fillEventNans: its fill_none(0) turns the ?bool match flags into a bool|int union
             reco_dy_filters = (
                 dy_matched_jet_filters(region_events, "reco_012")
@@ -1088,11 +1101,20 @@ if __name__ == "__main__":
         default=False,
         action=argparse.BooleanOptionalAction,
         help=(
-            "Define the VBF channel by the 2017 three-class transformer's "
-            "out-of-fold p_VBF (see plotter/mva_A1xB2_scoring.py) instead of the "
-            "kinematic jj_mass/jj_dEta/jet1_pt cut. Off by default; the DNN score "
-            "and the datacard binning are unaffected either way. 2017 only -- the "
-            "ensemble is 2017-trained and carries no year feature."
+            "Define the VBF channel by the binary ggH-vs-VBF transformer "
+            "(b-tag veto and transformer score < the cutoff, score_field and cutoff in "
+            "configs/MVA/transformer_categorizer.yaml) instead of the kinematic "
+            "jj_mass/jj_dEta/jet1_pt cut. Needs stage1 parquet scored by "
+            "MVA_training/transformer_binary/score.py, see --stage1_subdir. Off by default."
+        ),
+    )
+    parser.add_argument(
+        "--stage1_subdir",
+        dest="stage1_subdir",
+        default=None,
+        help=(
+            "Read stage1_output/<year>/<stage1_subdir> instead of compacted (or f1_0), "
+            "e.g. the transformer-scored copy of compacted."
         ),
     )
     parser.add_argument(
@@ -1107,6 +1129,19 @@ if __name__ == "__main__":
             "'gen_2j': <sample>_matched01J/matched2J on gjj_mass > 0 (>=2 gen jets). "
             "Stage-3 detects the scheme from the file "
             "names; the two can't share one histogram directory (use a new --save_postfix)."
+        ),
+    )
+    parser.add_argument(
+        "--dnn_missing_jet_rule",
+        dest="dnn_missing_jet_rule",
+        default=None,
+        choices=["flat", "training"],
+        help=(
+            "DNN inputs of absent jets: 'flat' fills phi -10 and everything else 0 (mva-categorizer-13 "
+            "convention); 'training' applies the sentinels preprocess_dnn trained with (pre_scaling_clean). "
+            "Only matters where 0/1-jet events are selected (--use_transformer_vbf_channel). Default: the "
+            "rule in the model's preprocess_manifest.json (missing_jet_rule), else 'flat'; a value that "
+            "contradicts the manifest is an error."
         ),
     )
     parser.add_argument(
@@ -1176,8 +1211,11 @@ if __name__ == "__main__":
 
     sample_dict_by_year = {}
     for year in years:
-        stage1_path = base_path / "stage1_output" / year / "f1_0"
-        stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
+        if args.stage1_subdir:
+            stage1_path = base_path / "stage1_output" / year / args.stage1_subdir
+        else:
+            stage1_path = base_path / "stage1_output" / year / "f1_0"
+            stage1_path = get_compacted_path(stage1_path) # get compacted stage1 output if they exist
         logger.info(f"{year} stage1 path: {stage1_path}")
         if not os.path.exists(stage1_path):
             logger.critical(f"Stage1 path {stage1_path} does not exist! Exiting!")
@@ -1223,6 +1261,12 @@ if __name__ == "__main__":
             missing.append(f"missing scaler: {scaler_path}")
     if missing:
         raise FileNotFoundError("\n".join(missing))
+
+    args.dnn_missing_jet_rule = resolve_missing_jet_rule(model_trained_path, args.dnn_missing_jet_rule)
+    logger.info(f"DNN missing-jet rule: {args.dnn_missing_jet_rule}")
+    if args.use_transformer_vbf_channel:
+        for year in years:  # if cutoff is missing for any year, ValueError is raised
+            selection.transformer_cutoff(year)
 
     with open(feature_dir / "training_features.pkl", "rb") as feature_file:
         training_features = pickle.load(feature_file)
@@ -1309,6 +1353,7 @@ if __name__ == "__main__":
                 use_transformer_vbf_channel=args.use_transformer_vbf_channel,
                 jj_eta_region=args.jj_eta_region,
                 dump_scores=args.dump_scores,
+                dnn_missing_jet_rule=args.dnn_missing_jet_rule,
                 binning=dnn_edges,
             ),
         )

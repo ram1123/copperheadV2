@@ -48,12 +48,25 @@ Options:
         if a compacted output already exists on disk for a sample.
   -D    Add DNN score during the compact step. Default is off.
   -V    Enable --vbf_filter_study for the VBF stage-2/plot/stage-3 workflow.
+  -T    Binary-transformer VBF channel: stage2 (run_stage2_vbf.py --use_transformer_vbf_channel)
+        and dnn_pre (preprocess_dnn.py --use-transformer-vbf-channel) select the VBF category by
+        the transformer score and the cutoff in configs/MVA/transformer_categorizer.yaml instead of
+        the jj_mass/jj_dEta/jet1_pt cuts. -S/-l must point at the transformer-scored stage-1 copy
+        (docs/TransformerVBF.md). 2p/stage3/combine need no flag.
+  -L    Stage-1 subdirectory stage2 reads (stage1_output/<year>/<subdir>, run_stage2_vbf.py --stage1_subdir),
+        e.g. compacted. Default: compacted, else f1_0.
   -w    Path to a standalone switches yaml (stage-1 only), e.g.
         configs/switches/switches_official.yaml, used instead of
         configs/switches/switches_official.yaml. 
         Default: unset (falls back to configs/switches/switches_official.yaml).
 
 Env vars:
+  STAGE2_YEARS_TOGETHER Set to 1 to run stage2 for all -y years in one run_stage2_vbf.py call
+                (one Dask client) instead of one call per year.
+  DUMP_SCORES   Set to 1 to also save per-event nominal DNN scores in stage2 (input of
+                MVA_training/VBF_run3/scan_bins_for_dnn.py --stage2-scores).
+  ALLOW_DEFAULT_DNN_BINNING Set to 1 to let stage2 use the default DNN binning when
+                configs/MVA/VBF/dnn_binning.yaml has no entry for the model (score dump runs).
   WITH_VARIATIONS Set to 1 to run stage2/stage3 with systematic variations.
                 Default 0 (nominal only; stage-2 output dir gets a _NoSyst suffix).
   MODEL_YEARS   Comma-separated years used to build the DNN model directory name
@@ -129,7 +142,14 @@ for year in "${years[@]}"; do
             run_cutflow_merge "${year}"
             ;;
         2|stage2)
-            run_mode_from_nul < <(build_stage2_cmd "${year}")
+            # STAGE2_YEARS_TOGETHER=1: one run_stage2_vbf.py call (one Dask client) for all requested years
+            if [[ "${STAGE2_YEARS_TOGETHER:-0}" == "1" ]]; then
+                [[ "${stage2_invoked:-0}" == "1" ]] && continue
+                stage2_invoked="1"
+                run_mode_from_nul < <(build_stage2_cmd "$(join_by "," "${years[@]}")")
+            else
+                run_mode_from_nul < <(build_stage2_cmd "${year}")
+            fi
             ;;
         2p|stage2_plot)
             run_mode_from_nul < <(build_stage2_plot_cmd "${year}" "h-sidebands")

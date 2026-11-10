@@ -65,6 +65,16 @@ background:
                 - st_t_top
                 - st_t_antitop
             processes_per_year:
+                2018: &st_run2
+                    - st_tW_top
+                    - st_tW_antitop
+                    - st_tchannel_top
+                    - st_tchannel_antitop
+                    - st_schannel_had
+                    - st_schannel_lep
+                2017: *st_run2
+                2016postVFP: *st_run2
+                2016preVFP: *st_run2
                 2022preEE: {}
                 2022postEE: {}
                 2023: {}
@@ -104,16 +114,12 @@ background:
                     - ewk_mmjj_mll_105_160
                 2018:
                     - ewk_zlljj
-                    - ewk_lljj_mll50_mjj120
                 2017:
                     - ewk_zlljj
-                    - ewk_lljj_mll50_mjj120
                 2016postVFP:
                     - ewk_zlljj
-                    - ewk_lljj_mll50_mjj120
                 2016preVFP:
                     - ewk_zlljj
-                    - ewk_lljj_mll50_mjj120
         VV:
             processes:
                 - ww_2l2nu
@@ -129,25 +135,33 @@ background:
                     - wz_1l1nu2q
                     - wz_2l2q
                     - wz_3lnu
-                    - zz
+                    - zz_2l2q
+                    - zz_4l
+                    - zz_2l2nu
                 2017:
                     - ww_2l2nu
                     - wz_1l1nu2q
                     - wz_2l2q
                     - wz_3lnu
-                    - zz
+                    - zz_2l2q
+                    - zz_4l
+                    - zz_2l2nu
                 2016postVFP:
                     - ww_2l2nu
                     - wz_1l1nu2q
                     - wz_2l2q
                     - wz_3lnu
-                    - zz
+                    - zz_2l2q
+                    - zz_4l
+                    - zz_2l2nu
                 2016preVFP:
                     - ww_2l2nu
                     - wz_1l1nu2q
                     - wz_2l2q
                     - wz_3lnu
-                    - zz
+                    - zz_2l2q
+                    - zz_4l
+                    - zz_2l2nu
         VVV:
             processes:
                 - www

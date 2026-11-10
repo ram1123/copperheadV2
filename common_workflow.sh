@@ -24,6 +24,8 @@ common_defaults() {
     is_cutflow="0"
     force_compact="0"
     switches_yaml_file=""
+    use_transformer_vbf_channel="0"
+    stage1_subdir=""
     compact_add_dnn_score="${COMPACT_ADD_DNN_SCORE:-0}"
     with_variations="${WITH_VARIATIONS:-0}"
     do_vbf_filter_study="${DO_VBF_FILTER_STUDY:-0}"
@@ -34,7 +36,7 @@ common_defaults() {
 }
 
 parse_common_args() {
-    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:w:ksfzZFDV" opt; do
+    while getopts ":hc:m:v:y:l:n:b:d:o:r:t:p:i:M:S:w:L:ksfzZFDVT" opt; do
         case "${opt}" in
             h) usage ;;
             c) dataset_yaml="${OPTARG}" ;;
@@ -53,6 +55,7 @@ parse_common_args() {
             M) is_mc="${OPTARG}" ;;
             S) save_root="${OPTARG}" ;;
             w) switches_yaml_file="${OPTARG}" ;;
+            L) stage1_subdir="${OPTARG}" ;;
             k) dask_gateway="1" ;;
             s) skip_bad_files="1" ;;
             f) debug_fraction="1" ;;
@@ -61,6 +64,7 @@ parse_common_args() {
             F) force_compact="1" ;;
             D) compact_add_dnn_score="1" ;;
             V) do_vbf_filter_study="1" ;;
+            T) use_transformer_vbf_channel="1" ;;
             *) usage ;;
         esac
     done
@@ -477,13 +481,17 @@ build_pu_dnn_train_cmd() {
 }
 
 build_stage2_cmd() {
+    # one year, or a comma-separated list that run_stage2_vbf.py schedules together on one Dask client
     local year="$1"
     local -a data_args=()
     local -a bkg_args=()
     local -a sig_args=()
-    local token
-    for token in $(data_streams_for_year "${year}"); do
-        data_args+=("${token}")
+    local token y
+    for y in ${year//,/ }; do
+        for token in $(data_streams_for_year "${y}"); do
+            # union of the eras; each year only globs the data_<era> directories its stage-1 output has
+            [[ " ${data_args[*]} " == *" ${token} "* ]] || data_args+=("${token}")
+        done
     done
     for token in $(stage2_bkg_groups); do
         bkg_args+=("${token}")
@@ -516,6 +524,12 @@ build_stage2_cmd() {
     # DY_MATCHED_JETS: unset = run_stage2_vbf.py default (reco_012, 0/1/2 gen-matched VBF jets); stage-3 detects it
     if [[ -n "${DY_MATCHED_JETS:-}" ]]; then
         cmd+=(--dy_matched_jets "${DY_MATCHED_JETS}")
+    fi
+    if [[ "${use_transformer_vbf_channel}" == "1" ]]; then
+        cmd+=(--use_transformer_vbf_channel)
+    fi
+    if [[ -n "${stage1_subdir}" ]]; then
+        cmd+=(--stage1_subdir "${stage1_subdir}")
     fi
     # DUMP_SCORES=1: also save per-event nominal DNN scores, the input of the DNN bin scan
     if [[ "${DUMP_SCORES:-0}" == "1" ]]; then
@@ -683,6 +697,9 @@ run_dnn_workflow_once() {
         --years "${dnn_years_csv}"
         --jj-eta-region "${dnn_jj_eta_region}"
     )
+    if [[ "${use_transformer_vbf_channel}" == "1" ]]; then
+        pre_cmd+=(--use-transformer-vbf-channel)
+    fi
     if [[ "${dask_gateway}" == "1" ]]; then
         pre_cmd+=(--use-dask-gateway)
         if [[ "${cluster_index}" != "0" ]]; then
@@ -1014,7 +1031,7 @@ collect_vbf_significance_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_significance_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
+    local ordered_years=(2016preVFP 2016postVFP 2017 2018 Run2 2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
     local year stem sig_log stat_log sig_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"
@@ -1048,7 +1065,7 @@ collect_vbf_limit_summary() {
     local tmp_rows
     tmp_rows="$(mktemp "${card_dir}/.vbf_limit_rows_XXXXXX.csv")"
     : > "${tmp_rows}"
-    local ordered_years=(2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
+    local ordered_years=(2016preVFP 2016postVFP 2017 2018 Run2 2022preEE 2022postEE 2023 2023BPix 2024 2025 2026 2025_2026 Run3)
     local year stem lim_log stat_log lim_val stat_val
     for year in "${ordered_years[@]}"; do
         stem="$(vbf_card_stem "${year}")"

@@ -73,3 +73,5 @@ quick_tests/
 # imported at module load by modules/selection.py, so it must be tracked
 # despite the blanket *.yaml ignore above.
 !configs/MVA/VBF/dnn_binning.yaml
+# binary-transformer VBF/ggH cutoff, read by modules/selection.py
+!configs/MVA/transformer_categorizer.yaml
