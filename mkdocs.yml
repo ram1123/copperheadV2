@@ -126,6 +126,7 @@ nav:
           - Outputs:
                 - Get Yields: GetYields.md
                 - Plotting Codes: PlottingCodes.md
+                - Signal Composition per Category: signal_composition.md
     - Analysis:
           - VBF:
                 - DNN: DNN_VBF.md
