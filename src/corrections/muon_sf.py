@@ -156,3 +156,79 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
     muTrig = {"nom": mu_trig_nom, "up": mu_trig_up, "down": mu_trig_down}
 
     return muID, muIso, muTrig
+
+
+def _has_category(corr, key, eta=0.5, pt=40.0):
+    """True if the correction's scale_factors category has `key` (probed eagerly on one point)."""
+    try:
+        corr.evaluate(eta, pt, key)
+        return True
+    except Exception:
+        return False
+
+
+def muon_sfs_stat_syst_correctionlib(mu1, mu2, config):
+    """
+    Run3 muon ID/Iso/trigger SFs with the MUO stat and syst components as separate nuisances
+    (stat: uncorrelated across years, syst: correlated). The payload's "stat"/"syst" entries are
+    absolute uncertainties; each variation shifts both muons coherently.
+
+    Trigger (single-muon HLT, either muon can fire it):
+        SF = [1 - (1 - SF1*eMC1)(1 - SF2*eMC2)] / [1 - (1 - eMC1)(1 - eMC2)]
+    with eMC from "nominal_MCeff"; a muon below muon_leading_pt or outside the acceptance gets
+    eff 0. Payloads without MC efficiencies (2025) fall back to the leading-muon SF.
+
+    Returns {"muID"|"muIso"|"muTrig": {"nom": arr, "stat": (up, down), "syst": (up, down)}},
+    with up/down as absolute event SFs.
+    """
+    info = config["muSFFileList"]
+    corrset = get_corrset(info["json_file"])
+    corrs = {"muID": corrset[info["id"]], "muIso": corrset[info["iso"]], "muTrig": corrset[info["trig"]]}
+    mus = (mu1, mu2)
+
+    def per_muon(corr, eta, pt):
+        nom = corr.evaluate(eta, pt, "nominal")
+        return nom, corr.evaluate(eta, pt, "stat"), corr.evaluate(eta, pt, "syst")
+
+    out = {}
+    for name in ("muID", "muIso"):
+        (n1, st1, sy1), (n2, st2, sy2) = (per_muon(corrs[name], m.eta_raw, m.pt_raw) for m in mus)
+        out[name] = {
+            "nom": n1 * n2,
+            "stat": ((n1 + st1) * (n2 + st2), (n1 - st1) * (n2 - st2)),
+            "syst": ((n1 + sy1) * (n2 + sy2), (n1 - sy1) * (n2 - sy2)),
+        }
+
+    # Trigger: clip inputs into the SF validity window; out-of-window muons cannot fire the HLT
+    trig = corrs["muTrig"]
+    eta_max, pt_min = config["muon_eta_cut"], config["muon_leading_pt"]
+    has_mc_eff = _has_category(trig, "nominal_MCeff")
+    in_win, eff, sf, st, sy = [], [], [], [], []
+    for m in mus:
+        in_win.append((m.pt_raw > pt_min) & (abs(m.eta_raw) < eta_max))
+        pt_safe = ak.where(m.pt_raw > pt_min, m.pt_raw, pt_min + 0.01)
+        eta_safe = ak.where(abs(m.eta_raw) < eta_max, m.eta_raw, 0.0)
+        n, s_st, s_sy = per_muon(trig, eta_safe, pt_safe)
+        sf.append(n)
+        st.append(s_st)
+        sy.append(s_sy)
+        if has_mc_eff:
+            eff.append(ak.where(in_win[-1], trig.evaluate(eta_safe, pt_safe, "nominal_MCeff"), 0.0))
+
+    if has_mc_eff:
+        p_mc = 1.0 - (1.0 - eff[0]) * (1.0 - eff[1])
+        def event_sf(s1, s2):
+            p_data = 1.0 - (1.0 - np.minimum(s1 * eff[0], 1.0)) * (1.0 - np.minimum(s2 * eff[1], 1.0))
+            return ak.where(p_mc > 0, p_data / ak.where(p_mc > 0, p_mc, 1.0), 1.0)
+    else:
+        logger.warning(f"{info['trig']} has no MC efficiencies in {info['json_file']}; "
+                       "using the leading-muon trigger SF")
+        def event_sf(s1, s2):
+            return ak.where(in_win[0], s1, 1.0)
+
+    out["muTrig"] = {
+        "nom": event_sf(sf[0], sf[1]),
+        "stat": (event_sf(sf[0] + st[0], sf[1] + st[1]), event_sf(sf[0] - st[0], sf[1] - st[1])),
+        "syst": (event_sf(sf[0] + sy[0], sf[1] + sy[1]), event_sf(sf[0] - sy[0], sf[1] - sy[1])),
+    }
+    return out

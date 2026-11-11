@@ -260,8 +260,8 @@ switches:
         "2023": false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2023BPix": false # they are set by `add_pt_cut_for_HE_HF_jets`
         "2024": 50
-        "2025": false # they are set by `add_pt_cut_for_HE_HF_jets`
-        "2026": false # they are set by `add_pt_cut_for_HE_HF_jets`
+        "2025": 50 # same as 2024 (HE pT>50); 2025/26 follow 2024
+        "2026": 50 # same as 2024 (HE pT>50); 2025/26 follow 2024
     add_pt_cut_for_HE_HF_jets:
         # official recommendation:
         # 2022 and 2023: HE and HF both >50 GeV
@@ -369,6 +369,19 @@ switches:
         "2024": true
         "2025": true
         "2026": true
+    do_jec_residual_freeze: # JME 2024 data mitigation: 2.0<|eta|<2.5 jets with pT(L1L2L3) < 30 GeV get L2L3Residual(30 GeV)
+        # 2025: JME "should not be a problem, but check" (own guidance -> no freeze); 2026 JEC cloned from 2025.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": true
+        "2025": false
+        "2026": false
     jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised, 4 is the official JME ad hoc mitigation.
         # ---------------------------------------
         # jer strat description
@@ -531,18 +544,18 @@ switches:
         "2024": false
         "2025": false
         "2026": false
-    do_btag_wgt: # NOTE: for nanoAODv15 Run2, it should be false for now
+    do_btag_wgt: # Run2: shape SFs; Run3: BTV fixedWP (L+M) SFs with MC eff maps (btag_eff_json)
         '2016preVFP': true
         '2016postVFP': true
         '2017': true
         '2018': true
-        '2022preEE': false
-        '2022postEE': false
-        "2023": false
-        "2023BPix": false
-        "2024": false
-        "2025": false
-        "2026": false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+        "2025": true
+        "2026": true
     save_all_weight_variations:
         '2016preVFP': true
         '2016postVFP': true

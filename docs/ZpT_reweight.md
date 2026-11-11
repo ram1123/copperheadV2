@@ -75,7 +75,7 @@ Output location:
 Important details:
 
 1. The script looks in `stage1_output/<year>/compacted` first, then `stage1_output/<year>/f1_0`.
-2. It always divides out `separate_wgt_zpt` before deriving new weights, so the fit starts from the unweighted DY shape.
+2. It should divide out `separate_wgt_zpt` before deriving new weights, so the fit starts from the unweighted DY shape. **Check the log:** until 2026-11-03 the script looked for the pre-July-2026 column name `separate_wgt_zpt_wgt` and silently skipped this (fixed so far only in the `copperhead_test` worktree). Pitfalls and lessons: `.claude/skills/zpt-reweighting/references/lessons-learned.md`.
 3. It loops over `njet = 0, 1, >=2` internally.
 
 ## Step 1: Run The F-test

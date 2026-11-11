@@ -33,6 +33,7 @@ from modules import selection
 from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
+from modules.coffea_parquet_utils import patch_parquet_nullable_ints
 from modules.sample_config import get_bkg_sig_dicts, get_data_processes
 from configs.variables.variable_lists import get_all_vars, unique_preserve_order, VAR_SETS
 from scripts.compact_parquet_data import ensure_compacted
@@ -202,6 +203,8 @@ class ValidationHistProcessor(processor.ProcessorABC):
         self.group_dict_by_year = group_dict_by_year
 
     def process(self, events):
+        # coffea's parquet reader garbles nullable int columns; must patch on the worker before columns load
+        patch_parquet_nullable_ints()
         dataset_key = events.metadata["sample"]
         year = events.metadata["year"]
         is_data = "data" in dataset_key.lower()
@@ -273,6 +276,18 @@ class ValidationHistProcessor(processor.ProcessorABC):
                             continue
 
                         values = ak.to_numpy(ak.fill_none(region_events[value_var], value=-999.0))
+                        if values.dtype.kind in "iu" and value_var.startswith(("jet1_", "jet2_")):
+                            # null ints come back as the dtype max (modules/coffea_parquet_utils.py): drop missing jets
+                            pt_var = f"{value_var.split('_')[0]}_pt_{value_var.rsplit('_', 1)[1]}"
+                            if pt_var in region_events.fields:
+                                pt = ak.to_numpy(ak.fill_none(region_events[pt_var], value=np.nan))
+                                values = np.where(np.isnan(pt), -999.0, values)
+                        if any(sub in value_var for sub in _HF_SENTINEL_VAR_SUBSTRINGS):
+                            # non-HF jets are not always -1 (NanoAODv15 fills 0): keep only |eta| >= 3 jets
+                            eta_var = f"{value_var.split('_hf')[0]}_eta_{value_var.rsplit('_', 1)[1]}"
+                            if eta_var in region_events.fields:
+                                eta = ak.to_numpy(ak.fill_none(region_events[eta_var], value=0.0))
+                                values = np.where(np.abs(eta) >= 3.0, values, -999.0)
 
                         for zpt_option in self.zpt_options:
                             to_fill_setting = {
@@ -804,6 +819,7 @@ def _run_validation_scope(
     variables2plot = get_all_vars(min_set_of_vars)
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"]
+    variables2plot += [f"{v}_range2" for v in ("mu1_pt", "mu2_pt", "dimuon_pt") if v in variables2plot]  # [0,100] zoom
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"]
     logger.debug(f"variables2plot: {variables2plot}")
@@ -1357,6 +1373,7 @@ if __name__ == "__main__":
 
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
+    variables2plot += [f"{v}_range2" for v in ("mu1_pt", "mu2_pt", "dimuon_pt") if v in variables2plot]  # [0,100] zoom
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
     logger.debug(f"variables2plot: {variables2plot}")

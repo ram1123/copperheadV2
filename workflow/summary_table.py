@@ -7,7 +7,8 @@ Sections (each printed only if the DAG has such jobs):
   2. Per-year steps (stage1, compact, plots, zpt, mass calibration, PU DNN).
   3. Year x jj-region grid for the stage2 -> stage2plot -> stage3 -> s3validate chain,
      one symbol per step in that order.
-  4. Year-less steps per region (VBF DNN training, Run3 plot, stats, impacts, lhscan, summary).
+  4. Year-less steps per region (VBF DNN training incl. the per-region dnn_chain, Run3 plot, stats,
+     impacts, lhscan, summary).
 A cell aggregates every job of that kind (stage1 reps, zpt njets bins, plot variants) and shows
 the WORST status, so one missing job is never hidden by a finished one. Output files matching no
 known pattern are listed on stderr, so a renamed .done file in the Snakefile shows up here.
@@ -59,6 +60,10 @@ GLOBAL_STEPS = [
     ("dnn_pre", "dnnPre", r"dnn_pre"),
     ("dnn_hpo", "dnnHPO", r"dnn_hpo"),
     ("dnn_train", "dnnTrain", r"dnn_train"),
+    # per-region chain (Snakefile dnn_chain: true)
+    ("dnn_region", "dnnRegion", rf"dnn_region{REG}"),
+    ("dnn_scoredump", "scoreDump", rf"dnn_scoredump{REG}"),
+    ("dnn_binscan", "binScan", rf"dnn_binscan{REG}"),
     ("plot_run3", "plot(Run3)", rf"stage2_plot_Run3{REG}"),
     ("stats", "stats", rf"stats{REG}"),
     ("impacts", "impacts", rf"impacts{REG}"),

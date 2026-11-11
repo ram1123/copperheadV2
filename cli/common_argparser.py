@@ -5,6 +5,7 @@ This function defines the full, shared CLI.
 """
 import argparse
 import logging
+import os
 from pathlib import Path
 
 from modules.classify_year import is_run2, is_run3
@@ -76,8 +77,9 @@ def build_common_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--sample-config",
         dest="sample_config",
-        default="configs/samples/samples.yaml",
-        help="Path to the sample configuration YAML file",
+        # SAMPLE_CONFIG env: set by workflow/Snakefile's sample_config for every job
+        default=os.environ.get("SAMPLE_CONFIG") or "configs/samples/samples.yaml",
+        help="Path to the sample configuration YAML file (default: $SAMPLE_CONFIG or configs/samples/samples.yaml)",
     )
     parser.add_argument(
         "--switches-yaml",

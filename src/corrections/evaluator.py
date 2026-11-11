@@ -1438,6 +1438,78 @@ def btag_weights_jsonKeepDim(processor, systs, jets, btag_eta_val, weights, bjet
         btag_syst[sys]["down"] = btag_syst[sys]["down"] * normalization
     return btag_wgt, btag_syst
 
+BTAG_FIXEDWP_SYSTS = {
+    # name: (BTV systematic suffix, varied flavours); BTV multi-era scheme
+    "hf_corr": ("correlated", (4, 5)),
+    "hf_uncorr": ("uncorrelated", (4, 5)),
+    "lf_corr": ("correlated", (0,)),
+    "lf_uncorr": ("uncorrelated", (0,)),
+}
+
+
+def btag_fixedwp_tagger(NanoAODv):
+    """(BTV payload prefix, NanoAOD score branch, jet.yaml WP suffix) used for the Run3 b-veto."""
+    if NanoAODv == 12:
+        return "particleNet", "btagPNetB", "ParticleNet"
+    return "UParTAK4", "btagUParTAK4B", "UParT"
+
+
+def btag_fixedwp_weights(jets, config, NanoAODv):
+    """
+    BTV fixedWP event weight for the two working points the b-veto uses (L and M), method 1a:
+        w = prod_jets P_data / P_MC, with per-jet tag category
+            pass M:          P_MC = eM,       P_data = sM eM
+            pass L, fail M:  P_MC = eL - eM,  P_data = sL eL - sM eM
+            fail L:          P_MC = 1 - eL,   P_data = 1 - sL eL
+    SFs: <tagger>_comb (b, c) and <tagger>_light (udsg); e: MC tagging efficiencies from
+    config["btag_eff_json"] (scripts/derive_btag_efficiencies.py). `jets` must be the jets the
+    veto counts (btag_jet_selection). Returns (nominal, {syst: (up, down)}), absolute weights.
+    """
+    tagger, score_field, wp_suffix = btag_fixedwp_tagger(NanoAODv)
+    sf_set = get_corrset(config["btag_sf_json"])
+    eff_corr = get_corrset(config["btag_eff_json"])["btag_eff"]
+    sf_heavy, sf_light = sf_set[f"{tagger}_comb"], sf_set[f"{tagger}_light"]
+
+    flav = ak.values_astype(abs(jets.hadronFlavour), np.int32)
+    is_heavy = (flav == 4) | (flav == 5)
+    abseta = np.minimum(abs(jets.eta), 2.4999) # SF/eff binning ends at |eta| = 2.5, pT in [20, 1000)
+    pt = np.minimum(np.maximum(jets.pt, 20.0), 999.9) # ufuncs: np.clip is not jagged-safe
+    heavy_flav = ak.where(is_heavy, flav, 5) # each payload only accepts its own flavours
+    light_flav = ak.zeros_like(flav)
+    score = getattr(jets, score_field)
+    pass_m = score > config[f"btag_medium_wp_{wp_suffix}"]
+    pass_l = score > config[f"btag_loose_wp_{wp_suffix}"]
+
+    eff = {wp: np.minimum(np.maximum(eff_corr.evaluate(wp, flav, abseta, pt), 1e-6), 1.0 - 1e-6) for wp in ("L", "M")}
+
+    def sf(wp, syst_heavy, syst_light):
+        return ak.where(
+            is_heavy,
+            sf_heavy.evaluate(syst_heavy, wp, heavy_flav, abseta, pt),
+            sf_light.evaluate(syst_light, wp, light_flav, abseta, pt),
+        )
+
+    p_mc = ak.where(pass_m, eff["M"], ak.where(pass_l, eff["L"] - eff["M"], 1.0 - eff["L"]))
+    p_mc = ak.where(p_mc > 0, p_mc, 1e-6)
+
+    def event_weight(syst_heavy="central", syst_light="central"):
+        s_l, s_m = sf("L", syst_heavy, syst_light), sf("M", syst_heavy, syst_light)
+        d_m, d_l = s_m * eff["M"], np.minimum(s_l * eff["L"], 1.0)
+        p_data = ak.where(pass_m, d_m, ak.where(pass_l, d_l - d_m, 1.0 - d_l))
+        # BTV: a non-positive L-not-M numerator (SF_M > SF_L in a bin) -> that jet's factor is 1
+        ratio = ak.where(pass_l & ~pass_m & (p_data <= 0), 1.0, p_data / p_mc)
+        return ak.prod(ratio, axis=1) # empty events -> 1
+
+    nominal = event_weight()
+    variations = {}
+    for name, (suffix, flavours) in BTAG_FIXEDWP_SYSTS.items():
+        heavy = flavours != (0,)
+        up = event_weight(f"up_{suffix}" if heavy else "central", "central" if heavy else f"up_{suffix}")
+        down = event_weight(f"down_{suffix}" if heavy else "central", "central" if heavy else f"down_{suffix}")
+        variations[name] = (up, down)
+    return nominal, variations
+
+
 def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
     """
     We assume jets to be non padded jet that has passed the base jet selection.

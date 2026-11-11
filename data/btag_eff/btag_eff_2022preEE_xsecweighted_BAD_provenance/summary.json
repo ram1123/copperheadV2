@@ -1,0 +1,37 @@
+{
+  "year": "2022preEE",
+  "nanoaod": 12,
+  "tagger": "particleNet",
+  "score_field": "btagPNetB",
+  "wp_cuts": {
+    "L": 0.047,
+    "M": 0.245
+  },
+  "n_files": 541,
+  "failed_files": [],
+  "max_files": 20,
+  "raw_jets_per_flavour": {
+    "0": 4247580.0,
+    "4": 495165.0,
+    "5": 606203.0
+  },
+  "git": {
+    "commit": "720e323b5c47cdfd7cff180d359741575a1364b2",
+    "dirty": true,
+    "diff_hash": "6a897af20f1a2b31c3f13df115328eec9e60d2bf",
+    "diff_file": "git_diff.patch"
+  },
+  "argv": [
+    "scripts/derive_btag_efficiencies.py",
+    "--year",
+    "2022preEE",
+    "--nanoaod",
+    "12",
+    "--max-files",
+    "20",
+    "--max-events",
+    "500000",
+    "--workers",
+    "32"
+  ]
+}

@@ -126,8 +126,9 @@ fi
 do_combine=1
 [[ ${#region_list[@]} -lt 2 ]] && do_combine=0
 
-model_label_for() {
-    if [[ "${model_label_mode}" == "self" ]]; then printf '%s' "$1"; else printf '%s' "${model_label_mode}"; fi
+model_label_for() {  # "self" + DNN_SYST_AWARE=1 -> <label>_SystAware, = common_workflow.sh's dnn_tag
+    local sfx=""; [[ "${DNN_SYST_AWARE:-0}" == "1" ]] && sfx="_SystAware"
+    if [[ "${model_label_mode}" == "self" ]]; then printf '%s%s' "$1" "${sfx}"; else printf '%s' "${model_label_mode}"; fi
 }
 # stage-3 card dirs carry no region suffix for the inclusive phase space (stage3_output_postfix)
 region_dir_suffix() {
