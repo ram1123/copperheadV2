@@ -63,7 +63,7 @@ from src.corrections.jet import (
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib
 from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
-from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
+from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_KitMuScaleRe_Run3_bs_split, apply_roccor
 from src.corrections.met_xy_correction import apply_puppi_met_xy_correction
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
@@ -237,22 +237,30 @@ def getJetType(NanoAODv: int, year: str):
 SYNC_MUON_PT_RAW_CUT = 20.0
 SYNC_MASS_RAW_MIN = 50.0
 SYNC_MASS_RAW_MAX = 200.0
-# Round-0 2nd-iteration agreed sync selection (Analysis_History_Docs/NewSel_sync.pdf); feeds only the
+# with muon_sel_corrected_kinematics (Round 1): window on the ScaRe+FSR mass = Round-1 "mass inclusive" region
+SYNC_MASS_CORR_MIN = 60.0
+SYNC_MASS_CORR_MAX = 160.0
+# Agreed sync selection, now Round 1 ("Synchronization update", HMuMu WG 2026-11-05); feeds only the
 # *_agreed sync flags, so it is kept apart from the analysis cuts in configs/parameters/*.yaml.
-SYNC_AGREED_MUON_ID = "mediumId"
-SYNC_AGREED_ISO_RAW_CUT = 0.25          # pfRelIso04_all before FSR-photon removal
+# Agreed muon (user update 2026-11-10): pT/eta after ScaRe+FSR; pT >= 30 -> mediumId + loose iso,
+# pT < 30 -> tightId + tight iso; iso = pfRelIso04_all with FSR photons removed.
+SYNC_AGREED_MUON_PT_CUT = 20.0          # after ScaRe + FSR
+SYNC_AGREED_MUON_ID_PT_SPLIT = 30.0     # corrected pT boundary between the two ID/iso WPs
+SYNC_AGREED_MUON_ID_HIGHPT = "mediumId"
+SYNC_AGREED_MUON_ID_LOWPT = "tightId"
+SYNC_AGREED_ISO_LOOSE_CUT = 0.25        # Muon POG loose PFIso04
+SYNC_AGREED_ISO_TIGHT_CUT = 0.15        # Muon POG tight PFIso04
+SYNC_AGREED_ISO_RAW_CUT = 0.25          # previous agreement (raw iso), kept as mu*_passIsoRaw
 SYNC_AGREED_MU1_PT_CUT = 26.0           # after ScaRe + FSR, pT-resorted
 SYNC_AGREED_MU2_PT_CUT = 20.0
-SYNC_AGREED_ELECTRON_PT_CUT = 20.0      # no ECAL-gap exclusion
-SYNC_AGREED_ELECTRON_ETA_CUT = 2.5
-SYNC_AGREED_JET_PT_CUT = 30.0           # after JEC + JER
+SYNC_AGREED_ELECTRON_PT_CUT = 10.0      # Round 1; no ECAL-gap exclusion
+SYNC_AGREED_ELECTRON_ETA_CUT = 2.4      # Round 1
+SYNC_AGREED_JET_PT_CUT = 25.0           # Round 1, after JEC + JER
 SYNC_AGREED_JET_ETA_CUT = 4.7
 SYNC_AGREED_JET_ID = "tight"
 SYNC_AGREED_BTAG_ETA_CUT = 2.5
 SYNC_AGREED_VBF_MJJ_CUT = 400.0
-SYNC_AGREED_VBF_DETA_CUT = 2.5
-SYNC_AGREED_VBF_J1_PT_CUT = 30.0
-SYNC_AGREED_VBF_J2_PT_CUT = 30.0
+SYNC_AGREED_VBF_DETA_CUT = 2.5         # Round 1: no VBF jet-pT cut beyond the jet selection
 
 
 def safe_ratio(num, den, default=0.0):
@@ -857,17 +865,18 @@ class EventProcessor(processor.ProcessorABC):
                 f"jj{tag}_dEta_agreed": deta,
                 # j1 is the higher-pT jet of the pair (combinations keep the pT order)
                 f"pass_vbf{tag}_agreed": ak.fill_none(
-                    (jj.mass > SYNC_AGREED_VBF_MJJ_CUT) & (deta > SYNC_AGREED_VBF_DETA_CUT)
-                    & (j1.pt > SYNC_AGREED_VBF_J1_PT_CUT) & (j2.pt > SYNC_AGREED_VBF_J2_PT_CUT),
-                    False,
-                ),
+                    (jj.mass > SYNC_AGREED_VBF_MJJ_CUT) & (deta > SYNC_AGREED_VBF_DETA_CUT), False),
             })
         if hasattr(jets, "btagUParTAK4B"):
             bjets = sel_jets[abs(sel_jets.eta) < SYNC_AGREED_BTAG_ETA_CUT]
             n_loose = ak.sum(bjets.btagUParTAK4B > self.config["btag_loose_wp_UParT"], axis=1)
             n_medium = ak.sum(bjets.btagUParTAK4B > self.config["btag_medium_wp_UParT"], axis=1)
             bveto = (n_medium == 0) & (n_loose < 2)
+            # per-jet b-tag decision on agreed jets (selected and |eta| < 2.5), aligned with Jet_*
+            in_beta = sel & (abs(jets.eta) < SYNC_AGREED_BTAG_ETA_CUT)
             out.update({
+                "Jet_passBtagLooseAgreed": in_beta & (jets.btagUParTAK4B > self.config["btag_loose_wp_UParT"]),
+                "Jet_passBtagMediumAgreed": in_beta & (jets.btagUParTAK4B > self.config["btag_medium_wp_UParT"]),
                 "nBtagLoose_agreed": n_loose,
                 "nBtagMedium_agreed": n_medium,
                 "pass_bveto_agreed": bveto,
@@ -1221,6 +1230,9 @@ class EventProcessor(processor.ProcessorABC):
             BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
             events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
+            events["Muon", "pt_is_bsc"] = BSConstraint_mask
+        else:
+            events["Muon", "pt_is_bsc"] = ak.zeros_like(events.Muon.pt, dtype=bool)
         # logger.debug(f"muons pT: {events.Muon.pt[:5].compute()}")
 
         # Save raw variables before computing any corrections
@@ -1240,7 +1252,13 @@ class EventProcessor(processor.ProcessorABC):
                 apply_roccor(events, self.config["roccor_file"], is_mc)
             elif is_run3(year):
                 logger.debug("doing Run3 KIT muon Scale Resolution!")
-                apply_KitMuScaleRe_Run3(events, self.config["roccor_file"], is_mc)
+                roccor_nonbs = self.config.get("roccor_file_nonBS", self.config["roccor_file"])
+                if roccor_nonbs != self.config["roccor_file"]:
+                    # VXBS ScaRe for beam-spot-constrained pT, regular ScaRe for NanoAOD-pT fallback
+                    apply_KitMuScaleRe_Run3_bs_split(
+                        events, self.config["roccor_file"], roccor_nonbs, events.Muon.pt_is_bsc, is_mc)
+                else:
+                    apply_KitMuScaleRe_Run3(events, self.config["roccor_file"], is_mc)
             else:
                 raise ValueError(f"Year {year} is neither Run2 nor Run3!")
             events["Muon", "pt"] = events.Muon.pt_roch
@@ -1276,13 +1294,14 @@ class EventProcessor(processor.ProcessorABC):
         # logger.info(f"Debug event muon isGlobal after roccor: {events.Muon.isGlobal[debug_mask_2].compute()}")
         # logger.info(f"Debug event muon isTracker after roccor: {events.Muon.isTracker[debug_mask_2].compute()}")
 
-        self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
-        self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
-        self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
-        self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
-        if do_muon_ip_cut:
-            self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
-        self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
+        if not self.config["muon_sel_corrected_kinematics"]:  # else filled after FSR, on the corrected selection
+            self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
+            self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
+            self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
+            self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
+            if do_muon_ip_cut:
+                self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
+            self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
         # but apply muon iso overwrite, so base muon selection could be done
@@ -1293,13 +1312,42 @@ class EventProcessor(processor.ProcessorABC):
             applied_fsr = fsr_recoveryV1(events)# testing for pt_raw inconsistency
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
 
-        # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
-        muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
-        self.selection.add("muon_iso", ak.any(events.Muon.pfRelIso04_all < self.config["muon_iso_cut"], axis=1))
+        if self.config["muon_sel_corrected_kinematics"]:
+            # pT/eta cuts on ScaRe+FSR kinematics (FSR is computed above, applied to Muon.pt only after trigger matching)
+            mu_pt_sel = events.Muon.pt_fsr if do_fsr else events.Muon.pt
+            mu_eta_sel = events.Muon.eta_fsr if do_fsr else events.Muon.eta
+            muon_selection = (
+                (mu_pt_sel > self.config["muon_pt_cut"])
+                & (abs(mu_eta_sel) < self.config["muon_eta_cut"])
+                & (events.Muon.isGlobal | events.Muon.isTracker)
+            )
+            if do_muon_ip_cut:
+                muon_selection = muon_selection & muon_ip
+        else:
+            mu_pt_sel = events.Muon.pt_raw
+            mu_eta_sel = events.Muon.eta_raw
+        # pT-dependent ID/iso WP; muon_id_pt_split = 0 keeps the single muon_id / muon_iso_cut WP
+        mu_lowpt = mu_pt_sel < self.config["muon_id_pt_split"]
+        mu_pass_id = ak.where(mu_lowpt, events.Muon[self.config["muon_id_lowpt"]], events.Muon[self.config["muon_id"]])
+        # iso: possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
+        mu_pass_iso = events.Muon.pfRelIso04_all < ak.where(mu_lowpt, self.config["muon_iso_cut_lowpt"], self.config["muon_iso_cut"])
+        if self.config["muon_sel_corrected_kinematics"]:
+            # same cutflow entries as the raw-kinematics path, on the corrected pT/eta and pT-dependent ID
+            self.selection.add("muon_pT_roch", ak.any(mu_pt_sel > self.config["muon_pt_cut"], axis=1))
+            self.selection.add("muon_eta", ak.any(abs(mu_eta_sel) < self.config["muon_eta_cut"], axis=1))
+            self.selection.add("muon_id", ak.any(mu_pass_id, axis=1))
+            self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
+            if do_muon_ip_cut:
+                self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
+            self.selection.add("muon_selection", ak.any(ak.fill_none(muon_selection & mu_pass_id, False), axis=1))
+        muon_selection = ak.fill_none(muon_selection & mu_pass_id & mu_pass_iso, False)
+        self.selection.add("muon_iso", ak.any(mu_pass_iso, axis=1))
         if do_sync:
-            events["Muon", "sync_pass_id"] = events.Muon[self.config["muon_id"]] & (events.Muon.isGlobal | events.Muon.isTracker)
+            events["Muon", "sync_pt_sel"] = mu_pt_sel  # pT the muon selection cuts on (raw or ScaRe+FSR)
+            events["Muon", "sync_eta_sel"] = mu_eta_sel
+            events["Muon", "sync_pass_id"] = mu_pass_id & (events.Muon.isGlobal | events.Muon.isTracker)
             events["Muon", "sync_iso"] = events.Muon.pfRelIso04_all # FSR photons removed if do_fsr
-            events["Muon", "sync_pass_iso"] = events.Muon.pfRelIso04_all < self.config["muon_iso_cut"]
+            events["Muon", "sync_pass_iso"] = mu_pass_iso
             events["Muon", "sync_pass_sel"] = muon_selection
             events["Muon", "sync_has_fsr"] = applied_fsr if do_fsr else ak.zeros_like(events.Muon.pt, dtype="bool")
             events["Muon", "sync_pass_ip"] = muon_ip
@@ -1307,9 +1355,9 @@ class EventProcessor(processor.ProcessorABC):
         if do_lepton_ip_veto or do_sync:
             # Extra loose-muon veto: exactly 2 loose muons (rejects >2); selected muons are a subset of loose,
             # so with nmuons>=2 this leaves exactly the 2 selected muons
-            loose_muon = (
-                (events.Muon.pt_raw > self.config["loose_muon_pt_cut"])
-                & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            loose_muon = (  # same pT/eta definition as the selected muons (raw, or ScaRe+FSR)
+                (mu_pt_sel > self.config["loose_muon_pt_cut"])
+                & (abs(mu_eta_sel) < self.config["muon_eta_cut"])
                 & events.Muon[self.config["loose_muon_id"]]
                 & (events.Muon.pfRelIso04_all < self.config["loose_muon_iso_cut"])
                 & muon_ip
@@ -1331,6 +1379,13 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
         # --------------------------------------------------------
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
+        # muon_sel_corrected_kinematics (Round-1 sync): match ScaRe+FSR muons instead (offline pT, eta, phi)
+        use_corr_mu = self.config["muon_sel_corrected_kinematics"]
+        if use_corr_mu and do_fsr:
+            events["Muon", "pt"] = events.Muon.pt_fsr
+            events["Muon", "eta"] = events.Muon.eta_fsr
+            events["Muon", "phi"] = events.Muon.phi_fsr
+        trig_pt_field = "pt" if use_corr_mu else "pt_roch"
         if self.config["switches"]["do_trigger_match"]:
             do_seperate_mu1_leading_pt_cut = False
             logger.debug("doing trigger match!")
@@ -1376,28 +1431,28 @@ class EventProcessor(processor.ProcessorABC):
             muons_sorted = (padded_muons[sorted_args])
             mu1 = muons_sorted[:,0]
 
-            mu1_dr_match = mu1.delta_r(trigger_cands) <= dr_threshold
+            mu1_dr_match = mu1.delta_r(trigger_cands) < dr_threshold
 
             mu1_dr_match = ak.sum(mu1_dr_match, axis=1) > 0
             mu1_dr_match = ak.fill_none(mu1_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu1_leading_pt_match = mu1.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
+            mu1_leading_pt_match = mu1[trig_pt_field] >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu1_leading_pt_match = ak.fill_none(mu1_leading_pt_match, value=False)
             mu1_trigger_match = mu1_dr_match & mu1_leading_pt_match
 
             mu2 = muons_sorted[:,1]
-            mu2_dr_match = mu2.delta_r(trigger_cands) <= dr_threshold
+            mu2_dr_match = mu2.delta_r(trigger_cands) < dr_threshold
 
             mu2_dr_match = ak.sum(mu2_dr_match, axis=1) > 0
             mu2_dr_match = ak.fill_none(mu2_dr_match, value=False) # None is coming from the muon pad none, not trigger_cands, so this is ok
-            mu2_leading_pt_match = mu2.pt_roch >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
+            mu2_leading_pt_match = mu2[trig_pt_field] >= self.config["muon_leading_pt"] # apply leading pt cut for trigger matching muon
             mu2_leading_pt_match = ak.fill_none(mu2_leading_pt_match, value=False)
             mu2_trigger_match = mu2_dr_match & mu2_leading_pt_match
 
             trigger_match = mu1_trigger_match  | mu2_trigger_match # if neither mu1 or mu2 is matched, fail trigger match
             if do_sync:
                 # per-muon match, same dR / leading-pT definition, so it can be read off the sync muon pair
-                mu_trig_dr = ak.fill_none(ak.any(events.Muon.metric_table(trigger_cands) <= dr_threshold, axis=2), False)
-                events["Muon", "sync_trig_matched"] = mu_trig_dr & (events.Muon.pt_roch >= self.config["muon_leading_pt"])
+                mu_trig_dr = ak.fill_none(ak.any(events.Muon.metric_table(trigger_cands) < dr_threshold, axis=2), False)
+                events["Muon", "sync_trig_matched"] = mu_trig_dr & (events.Muon[trig_pt_field] >= self.config["muon_leading_pt"])
                 sync_flags["pass_trigger_match"] = trigger_match
             else:
                 event_filter = event_filter & trigger_match
@@ -1441,17 +1496,24 @@ class EventProcessor(processor.ProcessorABC):
 
         muons = events.Muon[muon_selection]
         if do_sync:
-            # Pair = two leading-raw-pT muons among the analysis-selected muons if >=2 pass, otherwise among
+            # Pair = two leading muons (in selection pT) among the analysis-selected muons if >=2 pass, otherwise among
             # muons passing only the sync preselection; identical to the analysis pair whenever it has exactly 2.
             nmuons_selected = ak.sum(muon_selection, axis=1)
-            sync_presel_mu = (events.Muon.pt_raw > SYNC_MUON_PT_RAW_CUT) & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
-            # Agreed good muon: raw pT/eta preselection + mediumId + raw iso; pair = two leading in corrected pT
+            sync_presel_mu = (events.Muon.sync_pt_sel > SYNC_MUON_PT_RAW_CUT) & (abs(events.Muon.sync_eta_sel) < self.config["muon_eta_cut"])
+            # Agreed good muon: Muon.pt/eta/pfRelIso04_all are here after ScaRe + FSR (FSR-photon-removed iso);
+            # pair = two leading in corrected pT
+            mu_highpt = events.Muon.pt >= SYNC_AGREED_MUON_ID_PT_SPLIT
+            agreed_id = ak.where(mu_highpt, events.Muon[SYNC_AGREED_MUON_ID_HIGHPT], events.Muon[SYNC_AGREED_MUON_ID_LOWPT])
+            agreed_iso = events.Muon.pfRelIso04_all < ak.where(mu_highpt, SYNC_AGREED_ISO_LOOSE_CUT, SYNC_AGREED_ISO_TIGHT_CUT)
             agreed_mu = ak.fill_none(
-                sync_presel_mu & events.Muon[SYNC_AGREED_MUON_ID]
-                & (events.Muon.pfRelIso04_all_raw < SYNC_AGREED_ISO_RAW_CUT),
+                (events.Muon.pt > SYNC_AGREED_MUON_PT_CUT)
+                & (abs(events.Muon.eta) < self.config["muon_eta_cut"])
+                & agreed_id & agreed_iso,
                 False,
             )
             events["Muon", "sync_pass_iso_raw"] = events.Muon.pfRelIso04_all_raw < SYNC_AGREED_ISO_RAW_CUT
+            events["Muon", "sync_pass_id_agreed"] = ak.fill_none(agreed_id, False)
+            events["Muon", "sync_pass_iso_agreed"] = ak.fill_none(agreed_iso, False)
             events["Muon", "sync_pass_agreed"] = agreed_mu
             muons_ag = events.Muon[agreed_mu]
             muons_ag = muons_ag[ak.argsort(muons_ag.pt, ascending=False)][:, :2]
@@ -1459,14 +1521,14 @@ class EventProcessor(processor.ProcessorABC):
             # selected muons are a subset of preselected ones, so this is "selected if >=2 else preselected"
             cand_mask = ak.fill_none(sync_presel_mu & (muon_selection | (nmuons_selected < 2)), False)
             muon_cands = events.Muon[cand_mask]
-            muons = muon_cands[ak.argsort(muon_cands.pt_raw, ascending=False)][:, :2]
+            muons = muon_cands[ak.argsort(muon_cands.sync_pt_sel, ascending=False)][:, :2]
             sync_flags["nmuons_selected"] = nmuons_selected
             sync_flags["nmuons_presel"] = ak.sum(sync_presel_mu, axis=1)
             sync_flags["mu_pair_from_selected"] = nmuons_selected >= 2
-            # do_lepton_ip_veto emulation: pair = two leading raw-pT muons among selected muons passing IP
+            # do_lepton_ip_veto emulation: pair = two leading muons (in selection pT) among selected muons passing IP
             sel_ip = muon_selection & muon_ip
             muons_ip = events.Muon[sel_ip]
-            muons_ip = muons_ip[ak.argsort(muons_ip.pt_raw, ascending=False)][:, :2]
+            muons_ip = muons_ip[ak.argsort(muons_ip.sync_pt_sel, ascending=False)][:, :2]
             sync_flags["nmuons_selected_ip"] = ak.sum(sel_ip, axis=1)
             sync_flags["nloose_muons_ip"] = ak.sum(loose_muon, axis=1)
             sync_flags["pass_muon_ip"] = ak.fill_none((ak.num(muons, axis=1) == 2) & ak.all(muons.sync_pass_ip, axis=1), False)
@@ -1713,10 +1775,19 @@ class EventProcessor(processor.ProcessorABC):
             dimuon_raw = raw_p4[0] + raw_p4[1]
             sync_flags["dimuon_mass_raw"] = dimuon_raw.mass
             sync_flags["dimuon_pt_raw"] = dimuon_raw.pt
+            corr_window = self.config["muon_sel_corrected_kinematics"]
+
+            def _in_mass_window(m_raw, m_corr):
+                # Round 1: corrected-mass window; earlier rounds: raw-mass window
+                if corr_window:
+                    return (m_corr > SYNC_MASS_CORR_MIN) & (m_corr < SYNC_MASS_CORR_MAX)
+                return (m_raw > SYNC_MASS_RAW_MIN) & (m_raw < SYNC_MASS_RAW_MAX)
+
+            dimuon_corr = pair[:, 0] + pair[:, 1]  # after ScaRe + FSR
             sync_presel = ak.fill_none(
                 (ak.num(muons, axis=1) == 2)
-                & (pair[:, 0].pt_raw > SYNC_MUON_PT_RAW_CUT) & (pair[:, 1].pt_raw > SYNC_MUON_PT_RAW_CUT)
-                & (dimuon_raw.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw.mass < SYNC_MASS_RAW_MAX),
+                & (pair[:, 0].sync_pt_sel > SYNC_MUON_PT_RAW_CUT) & (pair[:, 1].sync_pt_sel > SYNC_MUON_PT_RAW_CUT)
+                & _in_mass_window(dimuon_raw.mass, dimuon_corr.mass),
                 False,
             )
             # Same window on the IP pair (selected muons already have raw pT > 20); events keep if either pair passes
@@ -1733,7 +1804,7 @@ class EventProcessor(processor.ProcessorABC):
             sync_flags["dimuon_pt_ip"] = dimuon_ip.pt
             sync_presel_ip = ak.fill_none(
                 (ak.num(muons_ip, axis=1) == 2)
-                & (dimuon_raw_ip.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw_ip.mass < SYNC_MASS_RAW_MAX),
+                & _in_mass_window(dimuon_raw_ip.mass, dimuon_ip.mass),
                 False,
             )
             # Agreed pair: same raw window; its pT cuts are on corrected (ScaRe+FSR) pT
@@ -1754,7 +1825,7 @@ class EventProcessor(processor.ProcessorABC):
                 (pair_ag[:, 0].pt > SYNC_AGREED_MU1_PT_CUT) & (pair_ag[:, 1].pt > SYNC_AGREED_MU2_PT_CUT), False)
             sync_presel_ag = ak.fill_none(
                 (ak.num(muons_ag, axis=1) == 2)
-                & (dimuon_raw_ag.mass > SYNC_MASS_RAW_MIN) & (dimuon_raw_ag.mass < SYNC_MASS_RAW_MAX),
+                & _in_mass_window(dimuon_raw_ag.mass, dimuon_ag.mass),
                 False,
             )
             event_filter = event_filter & (sync_presel | sync_presel_ip | sync_presel_ag)
@@ -3069,9 +3140,11 @@ class EventProcessor(processor.ProcessorABC):
             for i, mu in ((1, mu1), (2, mu2)):
                 sync_block.update({
                     f"mu{i}_charge": mu.charge,
+                    f"mu{i}_index": mu.sync_idx,       # index in the NanoAOD Muon collection
                     f"mu{i}_pt_nano": mu.pt_nano,     # NanoAOD Muon_pt
                     f"mu{i}_pt_bsc": mu.pt_raw,       # beam-spot constrained = "raw" pT before ScaRe/FSR
                     f"mu{i}_pt_scare": mu.pt_roch,    # after ScaRe
+                    f"mu{i}_ptIsBSC": mu.pt_is_bsc,   # True: bsConstrainedPt + VXBS ScaRe; False: Nano pT + regular ScaRe
                     f"mu{i}_pt_corr": mu.pt,          # after ScaRe + FSR (final)
                     f"mu{i}_eta_raw": mu.eta_raw,
                     f"mu{i}_phi_raw": mu.phi_raw,
@@ -3086,6 +3159,9 @@ class EventProcessor(processor.ProcessorABC):
                     f"mu{i}_hasFsr": mu.sync_has_fsr,
                     f"mu{i}_passIP": mu.sync_pass_ip,
                     f"mu{i}_passIsoRaw": mu.sync_pass_iso_raw,
+                    f"mu{i}_tightId": mu.tightId,
+                    f"mu{i}_passIdAgreed": mu.sync_pass_id_agreed,
+                    f"mu{i}_passIsoAgreed": mu.sync_pass_iso_agreed,
                     f"mu{i}_passSelectionAgreed": mu.sync_pass_agreed,
                 })
                 if hasattr(mu, "sync_trig_matched"):
@@ -3290,19 +3366,21 @@ class EventProcessor(processor.ProcessorABC):
 
         # apply clean jet selection
         # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
+        # muon_sel_corrected_kinematics: clean against ScaRe+FSR muon eta/phi (Round-1 sync), else raw
+        mu_eta_f, mu_phi_f = ("eta", "phi") if self.config["muon_sel_corrected_kinematics"] else ("eta_raw", "phi_raw")
         _, _, mu1_jet_dR = delta_r_V1(
-            mu1[:, np.newaxis].eta_raw,
+            mu1[:, np.newaxis][mu_eta_f],
             jets.eta,
-            mu1[:, np.newaxis].phi_raw,
+            mu1[:, np.newaxis][mu_phi_f],
             jets.phi,
         )
         matched_mu1_jet = mu1_jet_dR <= 0.4
         matched_mu1_jet = ak.fill_none(matched_mu1_jet, value=False)
 
         _, _, mu2_jet_dR = delta_r_V1(
-            mu2[:, np.newaxis].eta_raw,
+            mu2[:, np.newaxis][mu_eta_f],
             jets.eta,
-            mu2[:, np.newaxis].phi_raw,
+            mu2[:, np.newaxis][mu_phi_f],
             jets.phi,
         )
         matched_mu2_jet = mu2_jet_dR <= 0.4
@@ -3538,6 +3616,8 @@ class EventProcessor(processor.ProcessorABC):
                 "Jet_isSelected": jet_selection,
                 "Jet_isBtagCandidate": btag_selection,
             }
+            if "jec_residual_frozen" in jets.fields:  # data with do_jec_residual_freeze
+                sync_jet_dict["Jet_jecResidualFrozen"] = jets.jec_residual_frozen
             if hasattr(jets, "btagUParTAK4B"):
                 sync_jet_dict.update({
                     "Jet_btagUParTAK4B": jets.btagUParTAK4B,

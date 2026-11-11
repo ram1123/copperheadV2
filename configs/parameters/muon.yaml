@@ -58,6 +58,66 @@ muon_id:
     "2024": mediumId
     "2025": mediumId
     "2026": mediumId
+muon_sel_corrected_kinematics: # muon pT/eta cuts on ScaRe+FSR-corrected kinematics instead of raw (HMuMu Round-1 sync: 2024-2026)
+    2016preVFP: false
+    2016postVFP: false
+    "2017": false
+    "2018": false
+    2016_RERECO: false
+    "2017_RERECO": false
+    "2018_RERECO": false
+    2022preEE: false
+    2022postEE: false
+    "2023": false
+    "2023BPix": false
+    "2024": true
+    "2025": true
+    "2026": true
+muon_id_pt_split: # corrected-pT [GeV] below which muon_id_lowpt / muon_iso_cut_lowpt apply; 0 = off
+    2016preVFP: 0.0
+    2016postVFP: 0.0
+    "2017": 0.0
+    "2018": 0.0
+    2016_RERECO: 0.0
+    "2017_RERECO": 0.0
+    "2018_RERECO": 0.0
+    2022preEE: 0.0
+    2022postEE: 0.0
+    "2023": 0.0
+    "2023BPix": 0.0
+    "2024": 30.0
+    "2025": 30.0
+    "2026": 30.0
+muon_id_lowpt: # muon ID for pT < muon_id_pt_split
+    2016preVFP: mediumId
+    2016postVFP: mediumId
+    "2017": mediumId
+    "2018": mediumId
+    2016_RERECO: mediumId
+    "2017_RERECO": mediumId
+    "2018_RERECO": mediumId
+    2022preEE: mediumId
+    2022postEE: mediumId
+    "2023": mediumId
+    "2023BPix": mediumId
+    "2024": tightId
+    "2025": tightId
+    "2026": tightId
+muon_iso_cut_lowpt: # pfRelIso04_all (after FSR) cut for pT < muon_id_pt_split; 0.15 = Muon POG tight PFIso04
+    2016preVFP: 0.25
+    2016postVFP: 0.25
+    "2017": 0.25
+    "2018": 0.25
+    2016_RERECO: 0.25
+    "2017_RERECO": 0.25
+    "2018_RERECO": 0.25
+    2022preEE: 0.25
+    2022postEE: 0.25
+    "2023": 0.25
+    "2023BPix": 0.25
+    "2024": 0.15
+    "2025": 0.15
+    "2026": 0.15
 muon_flags:
     2016preVFP: []
     2016postVFP: []
@@ -115,7 +175,7 @@ muon_trigmatch_dr:
     2022postEE: 0.4 # 0.1
     "2023": 0.4 # 0.1
     "2023BPix": 0.4 # 0.1
-    "2024": 0.4 # 0.1
+    "2024": 0.1 # 0.1
     "2025": 0.4 # 0.1
     "2026": 0.4 # 0.1
 muon_trigmatch_pt:

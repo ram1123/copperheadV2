@@ -112,16 +112,28 @@ muSFFileList:
         id: NUM_MediumID_DEN_TrackerMuons
         iso: NUM_LoosePFIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
+        # muons below muon_id_pt_split (configs/parameters/muon.yaml): tightId + tight PFIso
+        id_lowpt: NUM_TightID_DEN_TrackerMuons
+        iso_lowpt: NUM_TightPFIso_DEN_TightID
+        trig_lowpt: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2025":
         json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_Z.json.gz
         id: NUM_MediumID_DEN_TrackerMuons
         iso: NUM_LoosePFIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
+        # muons below muon_id_pt_split (configs/parameters/muon.yaml): tightId + tight PFIso
+        id_lowpt: NUM_TightID_DEN_TrackerMuons
+        iso_lowpt: NUM_TightPFIso_DEN_TightID
+        trig_lowpt: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2026": # PLACEHOLDER: MUO/Run3-26Prompt-Summer24-NanoAODv15/ exists on cvmfs but is empty, reusing 2025 muon SFs pending real 2026 payload
         json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_Z.json.gz
         id: NUM_MediumID_DEN_TrackerMuons
         iso: NUM_LoosePFIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
+        # muons below muon_id_pt_split (configs/parameters/muon.yaml): tightId + tight PFIso
+        id_lowpt: NUM_TightID_DEN_TrackerMuons
+        iso_lowpt: NUM_TightPFIso_DEN_TightID
+        trig_lowpt: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
 new_zpt_weights_file_aMCatNLO:
     "2016preVFP": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml
     "2016postVFP": data/zpt_rewgt/zpt_rewgt_params_aMCatNLO.yaml

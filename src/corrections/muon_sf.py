@@ -69,6 +69,7 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
           - "id": correction name
           - "iso": correction name
           - "trig": correction name
+          - "id_lowpt"/"iso_lowpt"/"trig_lowpt": required when config muon_id_pt_split > 0 (used below the split)
     """
     mu_sf_lookup_info = config["muSFFileList"]
     
@@ -89,6 +90,28 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
     muID_corr = corrset[id_name]
     muIso_corr = corrset[iso_name]
     muTrig_corr = corrset[trig_name]
+
+    # pT-dependent muon WP (muon_id_pt_split > 0): below the split muons pass muon_id_lowpt / muon_iso_cut_lowpt,
+    # so they take the *_lowpt SFs; the split is evaluated on the same pT the selection cuts on.
+    pt_split = float(config.get("muon_id_pt_split", 0.0) or 0.0)
+    lowpt_names = {k: mu_sf_lookup_info.get(f"{k}_lowpt") for k in ("id", "iso", "trig")}
+    if pt_split > 0 and not all(lowpt_names.values()):
+        raise ValueError(f"muon_id_pt_split={pt_split} needs id_lowpt/iso_lowpt/trig_lowpt in muSFFileList, got {lowpt_names}")
+    if pt_split > 0:
+        lowpt_corr = {k: corrset[v] for k, v in lowpt_names.items()}
+        sel_pt_field = "pt" if config.get("muon_sel_corrected_kinematics", False) else "pt_raw"  # mu.pt is ScaRe+FSR here
+        mu1_low = mu1[sel_pt_field] < pt_split
+        mu2_low = mu2[sel_pt_field] < pt_split
+
+    # muon_sel_corrected_kinematics (Round-1 sync): SFs at the ScaRe+FSR pT/eta (mu.pt/eta here), else raw
+    pt_f, eta_f = ("pt", "eta") if config.get("muon_sel_corrected_kinematics", False) else ("pt_raw", "eta_raw")
+
+    def _eval_wp(corr, kind, mu, is_low, eta, pt):
+        vals = _evaluate_nom_up_down(corr, eta, pt)
+        if pt_split <= 0:
+            return vals
+        vals_low = _evaluate_nom_up_down(lowpt_corr[kind], eta, pt)
+        return tuple(ak.where(is_low, lo, hi) for lo, hi in zip(vals_low, vals))
     logger.debug(f"get_corr_input_names muID_corr: {get_corr_input_names(muID_corr)}")
     logger.debug(f"get_corr_input_names muIso_corr: {get_corr_input_names(muIso_corr)}")
     logger.debug(f"get_corr_input_names muTrig_corr: {get_corr_input_names(muTrig_corr)}")
@@ -96,8 +119,8 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
     # -----------------------------
     # ID (event = mu1*mu2)
     # -----------------------------
-    mu1_id_nom, mu1_id_up, mu1_id_down = _evaluate_nom_up_down(muID_corr, mu1.eta_raw, mu1.pt_raw)
-    mu2_id_nom, mu2_id_up, mu2_id_down = _evaluate_nom_up_down(muID_corr, mu2.eta_raw, mu2.pt_raw)
+    mu1_id_nom, mu1_id_up, mu1_id_down = _eval_wp(muID_corr, "id", mu1, pt_split > 0 and mu1_low, mu1[eta_f], mu1[pt_f])
+    mu2_id_nom, mu2_id_up, mu2_id_down = _eval_wp(muID_corr, "id", mu2, pt_split > 0 and mu2_low, mu2[eta_f], mu2[pt_f])
 
     muID = {
         "nom": mu1_id_nom * mu2_id_nom,
@@ -108,8 +131,8 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
     # -----------------------------
     # ISO (event = mu1*mu2)
     # -----------------------------
-    mu1_iso_nom, mu1_iso_up, mu1_iso_down = _evaluate_nom_up_down(muIso_corr, mu1.eta_raw, mu1.pt_raw)
-    mu2_iso_nom, mu2_iso_up, mu2_iso_down = _evaluate_nom_up_down(muIso_corr, mu2.eta_raw, mu2.pt_raw)
+    mu1_iso_nom, mu1_iso_up, mu1_iso_down = _eval_wp(muIso_corr, "iso", mu1, pt_split > 0 and mu1_low, mu1[eta_f], mu1[pt_f])
+    mu2_iso_nom, mu2_iso_up, mu2_iso_down = _eval_wp(muIso_corr, "iso", mu2, pt_split > 0 and mu2_low, mu2[eta_f], mu2[pt_f])
 
     muIso = {
         "nom": mu1_iso_nom * mu2_iso_nom,
@@ -127,16 +150,16 @@ def add_muon_sfs_correctionlib(mu1, mu2, config):
     trig_pt_lower_limit = config["muon_leading_pt"]
     logger.debug(f"trig_eta_upper_limit: {trig_eta_upper_limit}")
     logger.debug(f"trig_pt_lower_limit: {trig_pt_lower_limit}")
-    in_bounds = (mu1.pt_raw > trig_pt_lower_limit) & (abs(mu1.eta_raw) < trig_eta_upper_limit)
+    in_bounds = (mu1[pt_f] > trig_pt_lower_limit) & (abs(mu1[eta_f]) < trig_eta_upper_limit)
 
     # Clip inputs to valid range to prevent correctionlib from throwing errors
     # (we only use the computed SF where in_bounds=True; out-of-bounds get SF=1.0)
-    pt_safe = ak.where(mu1.pt_raw > trig_pt_lower_limit, mu1.pt_raw, (trig_pt_lower_limit + .01))
-    eta_safe = ak.where(abs(mu1.eta_raw) < trig_eta_upper_limit, mu1.eta_raw, 0.0)
+    pt_safe = ak.where(mu1[pt_f] > trig_pt_lower_limit, mu1[pt_f], (trig_pt_lower_limit + .01))
+    eta_safe = ak.where(abs(mu1[eta_f]) < trig_eta_upper_limit, mu1[eta_f], 0.0)
 
     # Evaluate trigger SFs using safe inputs
-    mu_trig_nom_eval, mu_trig_up_eval, mu_trig_down_eval = _evaluate_nom_up_down(
-        muTrig_corr, eta_safe, pt_safe
+    mu_trig_nom_eval, mu_trig_up_eval, mu_trig_down_eval = _eval_wp(
+        muTrig_corr, "trig", mu1, pt_split > 0 and mu1_low, eta_safe, pt_safe
     )
 
     # Apply logic: use computed SF if in_bounds, otherwise use 1.0

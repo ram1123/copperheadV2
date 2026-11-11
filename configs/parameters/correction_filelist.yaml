@@ -11,12 +11,34 @@ roccor_file:
   "2023": data/roch_corr/2023_Summer23.json
   2023BPix: data/roch_corr/2023_Summer23BPix.json
   # "2024":  /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-11-27/muon_scalesmearing.json.gz
-  "2024": data/roch_corr/2024_Summer24.json # From Hyeon (Copied from GitLab)
+  # 2024: MUO 2026-04-28 bug-fixed ScaRe, VXBS variant for beam-spot-constrained pT (we use bsConstrainedPt);
+  # copy of /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-06-18/muon_scalesmearing_VXBS.json.gz
+  # (previous: data/roch_corr/2024_Summer24.json = MUO 2025-10-17 non-VXBS version, superseded)
+  "2024": data/roch_corr/2024_muon_scalesmearing_VXBS.json
   # "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing_VXBS.json.gz
   "2025": data/roch_corr/2025_muon_scalesmearing_VXBS.json
   # PLACEHOLDER: MUO/Run3-26Prompt-Summer24-NanoAODv15/ exists on cvmfs but is empty (no Rochester payload yet);
   # reusing the 2025 muon_scalesmearing_VXBS corrections pending a real 2026 payload.
   "2026": data/roch_corr/2025_muon_scalesmearing_VXBS.json
+# Regular (non-VXBS) ScaRe for muons that keep NanoAOD pT (bsConstrainedChi2 >= 30, or no beam constraint);
+# roccor_file (VXBS) is used for muons with beam-spot-constrained pT. Same file = no split (HMuMu Round-1 sync, slide 11).
+roccor_file_nonBS:
+  "2016preVFP": data/roch_corr/RoccoR2016aUL.txt
+  2016postVFP: data/roch_corr/RoccoR2016bUL.txt
+  '2017': data/roch_corr/RoccoR2017UL.txt
+  '2018': data/roch_corr/RoccoR2018UL.txt
+  2016_RERECO: data/roch_corr/RoccoR2016.txt
+  '2017_RERECO': data/roch_corr/RoccoR2017.txt
+  '2018_RERECO': data/roch_corr/RoccoR2018.txt
+  2022preEE: data/roch_corr/2022_Summer22.json
+  2022postEE: data/roch_corr/2022_Summer22EE.json
+  "2023": data/roch_corr/2023_Summer23.json
+  2023BPix: data/roch_corr/2023_Summer23BPix.json
+  # copy of MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-06-18/muon_scalesmearing.json.gz (== latest)
+  "2024": data/roch_corr/2024_muon_scalesmearing.json
+  # copy of MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz (== latest)
+  "2025": data/roch_corr/2025_muon_scalesmearing.json
+  "2026": data/roch_corr/2025_muon_scalesmearing.json # PLACEHOLDER, as roccor_file 2026
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json

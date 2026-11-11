@@ -372,6 +372,19 @@ switches:
         "2024": true
         "2025": true
         "2026": true
+    do_jec_residual_freeze: # JME 2024 data mitigation: 2.0<|eta|<2.5 jets with pT(L1L2L3) < 30 GeV get L2L3Residual(30 GeV)
+        # 2025: JME "should not be a problem, but check" (own guidance -> no freeze); 2026 JEC cloned from 2025.
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': false
+        '2022postEE': false
+        "2023": false
+        "2023BPix": false
+        "2024": true
+        "2025": false
+        "2026": false
     jer_strat: # JER strat. -1 is to not apply jer, 0 is JME default, 1 is jer strat1, 2 is jer strat2, 3 is jer 1n2Revised, 4 is the official JME ad hoc mitigation.
         # ---------------------------------------
         # jer strat description

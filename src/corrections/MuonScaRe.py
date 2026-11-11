@@ -174,7 +174,14 @@ def get_rndm(eta, nL, cset, events, nested=False):
     # get random number following the CB
     # print(nmuons)
     # rndm_f = [random() for i in nmuons for j in range(int(i))]
-    rndm_f = generateRandomVals(eta, nL, events)
+    if "RandomSmearing" in cset:
+        # official MUO generator (payloads 2024+): per muon from (event, lumi, NanoAOD phi), as muonscarekit
+        zeros = ak.zeros_like(events.Muon.phi, dtype=np.int64)
+        evt = ak.values_astype(events.event, np.int64) + zeros
+        lumi = ak.values_astype(events.luminosityBlock, np.int64) + zeros
+        rndm_f = cset.get("RandomSmearing").evaluate(evt, lumi, events.Muon.phi)
+    else:
+        rndm_f = generateRandomVals(eta, nL, events)
     # print(f"nmuons: {ak.num(nL, axis=1).compute()}")
 
     cb_f = CrystallBall(mean_f, sigma_f, alpha_f, n_f)
@@ -308,6 +315,10 @@ def pt_resol(pt, eta, nL, cset, events, nested=False):
 
     pt_corr = filter_boundaries(pt_corr, pt, nested)
 
+    # as official muonscarekit: no smearing where it is unphysical (e.g. heavy CB tail, n~1, in 2024 regular payload)
+    pt_filter = (pt_corr / pt > 2) | (pt_corr / pt < 0.1) | (pt_corr < 0)
+    pt_corr = ak.where(pt_filter, pt, pt_corr)
+
     return pt_corr
 
 
@@ -358,10 +369,10 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
     else:
         logger.error("ERROR: updn must be 'up' or 'dn'")
 
-    # if nested:
-    #     pt_var = ak.unflatten(pt_var_f, nmuons)
-    # else:
-    #     pt_var = pt_var_f
+    # as official muonscarekit
+    pt_filter = (pt_var_f / pt_woresol_f > 2) | (pt_var_f / pt_woresol_f < 0.1) | (pt_var_f < 0)
+    pt_var_f = ak.where(pt_filter, pt_woresol_f, pt_var_f)
+
     pt_var = pt_var_f
 
     return pt_var

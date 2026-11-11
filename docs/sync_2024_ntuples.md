@@ -23,10 +23,11 @@ Only the listed datasets are used (no `_ext1`). Config: `configs/datasets/sync_d
 ## Ntuple preselection (the only cuts)
 
 - Data: golden JSON `Cert_Collisions2024_378981_386951_Golden.json`.
-- Muon pair: two muons with raw $p_T > 20$ GeV and $|\eta| < 2.4$, and $50 < m_{\mu\mu}^{raw} < 200$ GeV.
-  "Raw" = beam-spot-constrained $p_T$ (NanoAOD `Muon_bsConstrainedPt` when `bsConstrainedChi2 < 30`, else `Muon_pt`),
-  before ScaRe and FSR. This is the $p_T$ our analysis cuts on; the NanoAOD `Muon_pt` is stored as `mu*_pt_nano`.
-- Pair choice: the two leading-raw-$p_T$ muons among the analysis-selected muons (ID+iso, below) if at least two pass,
+- Muon pair: two muons with $p_T > 20$ GeV and $|\eta| < 2.4$, and $50 < m_{\mu\mu}^{raw} < 200$ GeV. Since 2026-11-10
+  (2024-2026, `muon_sel_corrected_kinematics` in `configs/parameters/muon.yaml`) $p_T$/$\eta$ are taken after ScaRe+FSR;
+  before, they were "raw" = beam-spot-constrained $p_T$ (NanoAOD `Muon_bsConstrainedPt` when `bsConstrainedChi2 < 30`,
+  else `Muon_pt`), before ScaRe and FSR. For those years the mass window is $60 < m_{\mu\mu} < 160$ GeV on the ScaRe+FSR mass (raw 50-200 otherwise); NanoAOD `Muon_pt` is `mu*_pt_nano`.
+- Pair choice: the two leading muons (in the $p_T$ the selection cuts on) among the analysis-selected muons (ID+iso, below) if at least two pass,
   otherwise among muons passing only the preselection (`mu_pair_from_selected` tells which). This is identical to the
   analysis pair whenever the event passes the analysis selection.
 - An event is also kept if the *IP pair* (below) passes the same window, even when the default pair does not;
@@ -52,7 +53,7 @@ Cut values: `configs/parameters/{muon,electron}.yaml`. Jet-level quantities are 
 | Group | Branches |
 | --- | --- |
 | Event | `run`, `luminosityBlock`, `event`, `sample_id` (0 Muon0, 6 Muon1, 1 VBF, 2 ggH, 3 ttH, 4 ZH, 5 WplusH), `PV_npvs`, `PV_npvsGood` |
-| Trigger | `HLT_IsoMu24`, `pass_HLT`, `pass_trigger_match` (≥1 of the two leading selected muons matched, ΔR<0.4 to a muon TrigObj with filterBit 8, and ScaRe $p_T$ ≥ 26 GeV), `mu{1,2}_trigMatched` |
+| Trigger | `HLT_IsoMu24`, `pass_HLT`, `pass_trigger_match` (≥1 of the two leading selected muons matched, ΔR < `muon_trigmatch_dr` (strict; 0.1 for 2024) to a muon TrigObj with filterBit 8, and ScaRe $p_T$ ≥ 26 GeV), `mu{1,2}_trigMatched` |
 | Event flags | `pass_MET_filters`, `pass_PV`, `pass_nmuons` (exactly 2 selected muons), `pass_OS`, `nelectrons`, `pass_electron_veto`, `pass_jet_veto_map`, `pass_analysis_preselection`, `nmuons_selected`, `nmuons_presel` |
 | IP-veto flags | `pass_analysis_preselection_ip`, `pass_muon_ip` (default pair passes IP), `mu{1,2}_passIP`, `nmuons_selected_ip`, `nloose_muons_ip`, `pass_nmuons_ip`, `pass_OS_ip`, `pass_trigger_match_ip`, `nelectrons_ip`, `pass_electron_veto_ip`, `mu_pair_ip_is_sync_pair`, `dimuon_mass_raw_ip`, `dimuon_mass_ip`, `dimuon_pt_ip` |
 | Category | `pass_bveto`, `pass_vbf_cuts`, `cat_vbf`, `cat_ggh`; mass regions `z_peak`, `h_sidebands`, `h_peak` (on corrected mass) |
@@ -75,8 +76,13 @@ Full table with corrections and payloads: `docs/Run3_selection_and_samples.md` (
 For 2024 (`configs/switches/switches_official.yaml`, `configs/parameters/*.yaml`):
 
 - Trigger `HLT_IsoMu24`; trigger matching as above.
-- Muons: beam-spot constraint → ScaRe (MUO correctionlib `muon_scalesmearing`) → FSR recovery; raw $p_T > 20$ GeV,
-  $|\eta| < 2.4$, `mediumId`, global or tracker, `pfRelIso04_all` < 0.25 (FSR photons removed); exactly two selected
+- Muons: beam-spot constraint → ScaRe (MUO correctionlib `muon_scalesmearing`) → FSR recovery; $p_T > 20$ GeV and
+  $|\eta| < 2.4$ after ScaRe+FSR, global or tracker; corrected $p_T \ge 30$ GeV: `mediumId` + `pfRelIso04_all` < 0.25,
+  $p_T < 30$ GeV: `tightId` + iso < 0.15 (iso with FSR photons removed). Keys `muon_sel_corrected_kinematics`,
+  `muon_id_pt_split`, `muon_id_lowpt`, `muon_iso_cut_lowpt` (2024-2026; other years keep raw $p_T$/$\eta$, `mediumId`,
+  iso < 0.25). Before 2026-11-10 2024 also used the raw selection. Muon SFs follow the same split: below 30 GeV
+  `NUM_TightID_DEN_TrackerMuons`, `NUM_TightPFIso_DEN_TightID`, trigger `..._DEN_CutBasedIdTight_and_PFIsoTight`
+  (`*_lowpt` keys in `configs/parameters/SF_filelist.yaml`). Exactly two selected
   muons, opposite charge; no muon IP cuts, no extra loose-lepton veto in the baseline.
 - Electron veto: `mvaIso_WP90`, $p_T > 20$ GeV, $|\eta| < 2.5$ excluding 1.44–1.57.
 - MET filters: goodVertices, globalSuperTightHalo2016Filter, EcalDeadCellTriggerPrimitiveFilter, BadPFMuonFilter,
@@ -92,13 +98,19 @@ For 2024 (`configs/switches/switches_official.yaml`, `configs/parameters/*.yaml`
 
 ## Round 0, 2nd iteration (`update_after_Hmm_15Oct`): agreed selection (`*_agreed` branches)
 
+> **Superseded for new productions (2026-11-11):** the `*_agreed` branches now implement the Round-1 values
+> (see the Round 1 section below: electron veto $p_T>10$, $|\eta|<2.4$; jets $p_T>25$; corrected-mass window;
+> L2L3Residual freeze on 2024 data). The values in this section describe the Round-0 iteration-2 ntuples.
+
 Common selection agreed between the groups (slides "New sync tuple selection", V. D'Amante,
 `Analysis_History_Docs/NewSel_sync.pdf`). It is a comparison convention, not our analysis selection; all
 1st-iteration branches are kept unchanged (`pass_analysis_preselection`, `*_ip`), and the agreed selection is
 added as separate flags. Cut values: `SYNC_AGREED_*` constants in `src/copperhead_processor.py`.
 
-- **Muons** (`mu{1,2}_passSelectionAgreed`, `mu{1,2}_passIsoRaw`, `nmuons_agreed`): raw $p_T > 20$ GeV, $|\eta| < 2.4$,
-  `mediumId`, **raw** `pfRelIso04_all` < 0.25 (before FSR-photon removal). Agreed pair = the two leading good muons
+- **Muons** (`mu{1,2}_passSelectionAgreed`, `mu{1,2}_passIdAgreed`, `mu{1,2}_passIsoAgreed`, `nmuons_agreed`;
+  updated 2026-11-10): $p_T > 20$ GeV **after ScaRe+FSR**, $|\eta| < 2.4$ **after FSR**; for corrected $p_T \ge 30$ GeV
+  `mediumId` + `pfRelIso04_all` (FSR photons removed) < 0.25, for $p_T < 30$ GeV `tightId` + iso < 0.15.
+  `mu{1,2}_passIsoRaw` (raw iso < 0.25, the earlier agreement) is kept as a diagnostic. Agreed pair = the two leading good muons
   in corrected (ScaRe+FSR) $p_T$: `mu{1,2}_pt_agreed`, `pass_mu_pt_agreed` ($p_T$ > 26 / 20 GeV), `pass_OS_agreed`,
   `pass_nmuons_agreed` (exactly 2 good muons), `pass_trigger_match_agreed`, `dimuon_{mass_raw,mass,pt}_agreed`,
   `mu_pair_agreed_is_sync_pair` (same two muons as the default pair). Events are kept if the default, IP or agreed pair
@@ -156,3 +168,34 @@ cp prestage_output_sync2024/processor_samples_2024_NanoAODv15.json prestage_outp
 copied with `xrdcp` to `/eos/cms/store/group/phys_higgs/cmshmm/run3_sync/Purdue/update_after_Hmm_15Oct/`.
 1st iteration (`--layout dirs`, Oct 13): directories `Purdue-<DATASETNAME>/` with split files directly under
 `/eos/cms/store/group/phys_higgs/cmshmm/run3_sync/Purdue/`.
+
+## Round 1 (`round1_sync/`): "close to baseline analysis" selection
+
+Agreement: slides "Synchronization update" (V. D'Amante, HMuMu WG 2026-11-05). Implemented as the `*_agreed`
+stage-1 flags (sync mode only; the default analysis changes only as listed at the end of this section: 2024-2026 muon selection/SFs, trigger match, jet cleaning, ScaRe; 2024 data JEC freeze)
+plus `scripts/make_sync_ntuple.py --round round1`.
+
+- Muons: as in the 2024 analysis selection above (corrected pT/eta, Medium/Tight ID + iso split at 30 GeV), exactly 2,
+  corrected pT > 26/20, trigger match `HLT_IsoMu24`, ΔR < 0.1, `filterBits & 8`.
+- Electron veto: `mvaIso_WP90`, $p_T > 10$ GeV, $|\eta| < 2.4$, no ECAL-gap exclusion.
+- Jets: $p_T > 25$ GeV after JEC+JER, $|\eta| < 4.7$, tight ID, outside the jet veto map (jet dropped), $\Delta R(j,\mu) > 0.4$,
+  2024 HE pT > 50 GeV with gen-matched-only JER. The 2.0<|η|<2.5 L2L3Residual freeze **is applied** to 2024 data (see below).
+- b-veto: UParTAK4 on selected jets with $|\eta| < 2.5$: $N_M = 0$ and $N_L \le 1$.
+- VBF: two leading selected jets, $m_{jj} > 400$ GeV, $|\Delta\eta_{jj}| > 2.5$, no further jet-pT cut; ggF = rest.
+- ScaRe 2024: MUO `muon_scalesmearing_VXBS` (2026-04-28 fix, beam-spot-constrained variant), local copy
+  `data/roch_corr/2024_muon_scalesmearing_VXBS.json`; replaces the superseded 2025-10-17 non-VXBS file.
+- Round-1 tree (`--round round1`): only baseline events (agreed selection + trigger match + b-veto); branches
+  `run, luminosityBlock, event, sample_id, HLT_IsoMu24, pass_trigger_match, mu{1,2}_{pt,eta,phi,charge,index,mediumId,
+  tightId,pfRelIso04_fsr,passId,passIso,hasFsr,trigMatched}, dimuon_{mass,pt}, nJet + Jet_{pt,eta,phi,mass,btagUParTAK4B,
+  passBtagLoose,passBtagMedium[,hadronFlavour]}, njets, nbjets_{loose,medium}, pass_bveto, pass_vbf, cat_vbf, cat_ggf,
+  dijet_{mass,dEta,pt,eta}, PuppiMET_{pt,phi}`, mass-region flags `in_*` on corrected $m_{\mu\mu}$, and for MC
+  `weight_{gen,norm,pu,muID,muIso,muTrig}`, `xsec_pb`, `lumi_pb`, `weight_central` (product of these).
+  `Purdue_round1_corrections.txt` lists the correction files and JERC tags. Data blinded if any stored pair has
+  corrected (ScaRe+FSR) $115 \le m_{\mu\mu} \le 135$ GeV.
+- Default analysis, years with `muon_sel_corrected_kinematics` (2024-2026): trigger match on ScaRe+FSR muons (offline
+  pT > 26, ΔR with post-FSR η/φ), ScaRe per muon: VXBS payload for beam-spot-constrained pT (`bsConstrainedChi2`<30), regular MUO payload
+  (`roccor_file_nonBS`) for muons that keep NanoAOD pT (`mu{1,2}_ptIsBSC` in the sync output), MC smearing as the official muonscarekit script (random number from the payload's
+  `RandomSmearing(event, lumi, phi)` where the payload has it, 2024+; smearing skipped if it moves pT by more than ×2 or below ×0.1), muon ID/iso/trigger SFs at the corrected pT/η, jet–muon ΔR cleaning with post-FSR η/φ;
+  sync preselection 60 < m_μμ(ScaRe+FSR) < 160 (raw 50–200 for the other years).
+- 2024 data: 2.0<|η|<2.5 L2L3Residual freeze (`do_jec_residual_freeze`, `data_jec_with_residual_freeze` in
+  `src/corrections/jet.py`); only frozen jets change, flagged per jet as `Jet_jecResidualFrozen` in the sync parquet.

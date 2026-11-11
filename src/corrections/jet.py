@@ -764,8 +764,33 @@ def get_jec_sources(cset, jec_tag, jet_type="AK4PFPuppi"):
 
     return sorted(sources)
 
+def data_jec_with_residual_freeze(cset, jec_tag, algo, input_map, abseta_min=2.0, abseta_max=2.5, pt_freeze=30.0):
+    """
+    Data L1FastJet x L2Relative x L3Absolute x L2L3Residual factor with the JME 2024 mitigation:
+    in abseta_min < |eta| < abseta_max, a jet whose MC-truth-corrected pT (L1L2L3, before the residual)
+    is below pt_freeze gets the L2L3Residual evaluated at pt_freeze.
+    Returns (factor, freeze); the caller keeps the compound L1L2L3Res value for jets with freeze False.
+    """
+    pt = input_map["JetPt"]
+    factor = 1.0
+    for level in ("L1FastJet", "L2Relative", "L3Absolute"):
+        corr = cset[f"{jec_tag}_{level}_{algo}"]
+        scale = corr.evaluate(*[{**input_map, "JetPt": pt}[inp.name] for inp in corr.inputs])
+        factor = factor * scale
+        pt = pt * scale
+    abseta = abs(input_map["JetEta"])
+    freeze = (abseta > abseta_min) & (abseta < abseta_max) & (pt < pt_freeze)
+    corr = cset[f"{jec_tag}_L2L3Residual_{algo}"]
+    pt_res = ak.where(freeze, pt_freeze, pt)
+    return factor * corr.evaluate(*[{**input_map, "JetPt": pt_res}[inp.name] for inp in corr.inputs]), freeze
+
+
 def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jec_parameters = config["jec_parameters"]
+    # required in every switches profile, so none silently skips the 2024 data freeze
+    if "do_jec_residual_freeze" not in config["switches"]:
+        raise KeyError("switches profile has no 'do_jec_residual_freeze' block (add it, see switches_official.yaml)")
+    do_residual_freeze = config["switches"]["do_jec_residual_freeze"]
 
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
@@ -838,6 +863,11 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
         # inputs = get_corr_inputs(example_value_dict, sf)
         printCorrObjInputs(sf) # for debugging
         new_jec_scale = sf.evaluate(*inputs)
+        if unc == "nominal" and (not is_mc) and do_residual_freeze:
+            # only frozen jets change, so every other jet keeps the exact compound value
+            frozen_scale, freeze = data_jec_with_residual_freeze(cset, jec_tag, algo, input_map)
+            new_jec_scale = ak.where(freeze, frozen_scale, new_jec_scale)
+            jets["jec_residual_frozen"] = freeze
         # logger.debug(f"new_jec_scale: {new_jec_scale}")
         # logger.debug(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
 
