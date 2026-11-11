@@ -819,6 +819,7 @@ def _run_validation_scope(
     variables2plot = get_all_vars(min_set_of_vars)
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"]
+    variables2plot += [f"{v}_range2" for v in ("mu1_pt", "mu2_pt", "dimuon_pt") if v in variables2plot]  # [0,100] zoom
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"]
     logger.debug(f"variables2plot: {variables2plot}")
@@ -1372,6 +1373,7 @@ if __name__ == "__main__":
 
     if "jj_mass_nominal" in variables2plot:
         variables2plot += ["jj_mass_nominal_range2"] # add another range to plot
+    variables2plot += [f"{v}_range2" for v in ("mu1_pt", "mu2_pt", "dimuon_pt") if v in variables2plot]  # [0,100] zoom
     if "dimuon_mass" in variables2plot:
         variables2plot += ["dimuon_mass_zpeak"] # add another range to plot
     logger.debug(f"variables2plot: {variables2plot}")
