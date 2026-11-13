@@ -5,6 +5,8 @@ wrapper
 
 import awkward as ak
 
+VBF_TAG_FIELD = "vbf_tag_override"  # same column as modules/selection.VBF_TAG_FIELD
+
 
 class CustomInvBtagCut:
     name = "InvBtagCut"
@@ -39,6 +41,10 @@ class CustomInvVbfCut: # specified in line 830 of AN-19-124
     def __init__(self):
         pass
     def filterCategory(events): # apparently self is not needed
+        # transformer-tagged ntuples (scripts/build_transformer_slim_stage1.py): ggH = complement of the
+        # tag, matching modules/selection.py's VBF channel
+        if VBF_TAG_FIELD in events.fields:
+            return ~ak.fill_none(events[VBF_TAG_FIELD], value=False)
         # vbf_cut = ak.fill_none(events.vbf_cut, value=False) # this require jj_mass > 400 AND jj_dEta > 2.5
         vbf_cut = (events.jj_mass_nominal > 400) & (events.jj_dEta_nominal > 2.5)
         vbf_cut = ak.fill_none(vbf_cut, value=False)
