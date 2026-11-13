@@ -784,22 +784,6 @@
         "xlabel": "$\\phi_{\\mu\\mu jj}$",
         "color": "royalblue"
     },
-    "mu1_iso": {
-        "variable": "mu1_iso",
-        "binning_linspace": [0, 0.25, 51],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "$\\mathrm{Iso}(\\mu_1)$",
-        "color": "royalblue"
-    },
-    "mu2_iso": {
-        "variable": "mu2_iso",
-        "binning_linspace": [0, 0.25, 51],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "$\\mathrm{Iso}(\\mu_2)$",
-        "color": "royalblue"
-    },
     "mu1_pt_over_mu2_pt": {
         "variable": "mu1_pt_over_mu2_pt",
         "binning_linspace": [1, 7, 51],
@@ -1611,14 +1595,6 @@
         "xlabel": "$\\eta(\\mu_1)-\\eta(\\mu_2)$",
         "color": "royalblue"
     },
-    "mu12_eta_absdiff": {
-        "variable": "mu12_eta_absdiff",
-        "binning_linspace": [0, 5, 51],
-        "density": false,
-        "ylabel": "Events",
-        "xlabel": "$|\\eta(\\mu_1)-\\eta(\\mu_2)|$",
-        "color": "royalblue"
-    },
     "mu12_eta_prod": {
         "variable": "mu12_eta_prod",
         "binning_linspace": [-6, 6, 51],
@@ -1651,8 +1627,8 @@
         "xlabel": "$\\min[|\\eta(\\mu_1)|,|\\eta(\\mu_2)|]$",
         "color": "royalblue"
     },
-    "mu12_absEta_max": {
-        "variable": "mu12_absEta_max",
+    "mu_max_abs_eta": {
+        "variable": "mu_max_abs_eta",
         "binning_linspace": [0, 2.4, 49],
         "density": false,
         "ylabel": "Events",
