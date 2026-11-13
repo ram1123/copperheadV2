@@ -110,6 +110,18 @@ switches:
         "2024": true
         "2025": true
         "2026": true
+    muon_sel_corrected_kinematics: # muon pT/eta selection, loose-muon veto, trigger match, jet cleaning and muon SFs on ScaRe+FSR kinematics instead of raw (Run 3; 2024 = HMuMu Round-1)
+        '2016preVFP': false
+        '2016postVFP': false
+        '2017': false
+        '2018': false
+        '2022preEE': true
+        '2022postEE': true
+        "2023": true
+        "2023BPix": true
+        "2024": true
+        "2025": true
+        "2026": true
     do_geofit:
         '2016preVFP': false
         '2016postVFP': false
@@ -393,10 +405,9 @@ switches:
         # 1 : jer strat 1 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets if pT > 50. For fake jets with pT < 50 and passing tight PU Id, apply stochastic method. For fake jets with pT < 50 and failing tight PU Id, apply no jer smearing.
         # 2 : jer strat 2 from Brenda VBF SUSY. Apply scaling method for real jets. Apply stochastic method for fake jets except fake jets with pT <= 50 and abseta > 2.5. For fake jets with pT <= 50 and abseta > 2.5, apply no jer smearing.
         # 3 : our custom Run2 jer smearinig method for CHS jets. Source: https://indico.cern.ch/event/1499935/#175-update-from-purdue, slide 19
-        # 4 : official JME "option (b)" ad hoc mitigation for the poor Run3 2.5<|eta|<3.0 data/MC agreement
-        #     (https://cms-jme-jerc.docs.cern.ch/recommendations/jer/): apply scaling method for real jets;
-        #     apply NO stochastic smearing for fake jets, unconditionally (no PUID/pT/eta gating, unlike
-        #     strat 1/2). JME's doc names this exact approach for H->WW, H->mumu, and VBF SUSY.
+        # 4 : JME Run-3 HE mitigation ("Mitigation techniques" table, 2022-2024): in HE (2.5<|eta|<=3.0) JER
+        #     only for gen-matched jets (no stochastic smearing for unmatched HE jets); standard hybrid
+        #     method elsewhere (|eta|<2.5 and HF).
         '2016preVFP': -1 # For nanoAODv12, jer_strat should be 3
         '2016postVFP': -1 # For nanoAODv12, jer_strat should be 3
         '2017': -1 # For nanoAODv12, jer_strat should be 3
