@@ -185,6 +185,8 @@ def muon_sfs_stat_syst_correctionlib(mu1, mu2, config):
     corrset = get_corrset(info["json_file"])
     corrs = {"muID": corrset[info["id"]], "muIso": corrset[info["iso"]], "muTrig": corrset[info["trig"]]}
     mus = (mu1, mu2)
+    # muon_sel_corrected_kinematics (Round-1): SFs at the ScaRe+FSR pT/eta the selection cut on, else raw
+    pt_f, eta_f = ("pt", "eta") if config["switches"]["muon_sel_corrected_kinematics"] else ("pt_raw", "eta_raw")
 
     def per_muon(corr, eta, pt):
         nom = corr.evaluate(eta, pt, "nominal")
@@ -192,7 +194,7 @@ def muon_sfs_stat_syst_correctionlib(mu1, mu2, config):
 
     out = {}
     for name in ("muID", "muIso"):
-        (n1, st1, sy1), (n2, st2, sy2) = (per_muon(corrs[name], m.eta_raw, m.pt_raw) for m in mus)
+        (n1, st1, sy1), (n2, st2, sy2) = (per_muon(corrs[name], m[eta_f], m[pt_f]) for m in mus)
         out[name] = {
             "nom": n1 * n2,
             "stat": ((n1 + st1) * (n2 + st2), (n1 - st1) * (n2 - st2)),
@@ -205,9 +207,9 @@ def muon_sfs_stat_syst_correctionlib(mu1, mu2, config):
     has_mc_eff = _has_category(trig, "nominal_MCeff")
     in_win, eff, sf, st, sy = [], [], [], [], []
     for m in mus:
-        in_win.append((m.pt_raw > pt_min) & (abs(m.eta_raw) < eta_max))
-        pt_safe = ak.where(m.pt_raw > pt_min, m.pt_raw, pt_min + 0.01)
-        eta_safe = ak.where(abs(m.eta_raw) < eta_max, m.eta_raw, 0.0)
+        in_win.append((m[pt_f] > pt_min) & (abs(m[eta_f]) < eta_max))
+        pt_safe = ak.where(m[pt_f] > pt_min, m[pt_f], pt_min + 0.01)
+        eta_safe = ak.where(abs(m[eta_f]) < eta_max, m[eta_f], 0.0)
         n, s_st, s_sy = per_muon(trig, eta_safe, pt_safe)
         sf.append(n)
         st.append(s_st)

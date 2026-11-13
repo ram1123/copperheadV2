@@ -202,3 +202,22 @@ def apply_KitMuScaleRe_Run3(events, roccor_file_path: str, is_mc:bool, test_mode
 
     # rename the rochester corrected pt to one we use
     events["Muon", "pt_roch"] = events["Muon", "ptcorr"]
+
+
+# Fields written by apply_KitMuScaleRe_Run3 (MC adds the scale/resolution intermediates)
+_SCARE_FIELDS = (
+    "ptcorr", "pt_roch", "pt_roch_scale_up", "pt_roch_scale_down",
+    "ptscalecorr", "ptscalecorr_up", "ptscalecorr_dn", "ptcorr_resolup", "ptcorr_resoldn",
+    "pt_roch_resol_up", "pt_roch_resol_down",
+)
+
+
+def apply_KitMuScaleRe_Run3_bs_split(events, bs_file: str, nonbs_file: str, is_bsc, is_mc: bool):
+    """ScaRe per muon: VXBS payload (bs_file) where pT is beam-spot constrained (is_bsc),
+    regular payload (nonbs_file) where it is NanoAOD pT. Smearing seeds depend only on the muon,
+    so both passes see the same random numbers."""
+    apply_KitMuScaleRe_Run3(events, nonbs_file, is_mc)
+    nonbs = {f: events.Muon[f] for f in _SCARE_FIELDS if f in events.Muon.fields}
+    apply_KitMuScaleRe_Run3(events, bs_file, is_mc)
+    for f, val in nonbs.items():
+        events["Muon", f] = ak.where(is_bsc, events.Muon[f], val)

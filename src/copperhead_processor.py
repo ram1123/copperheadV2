@@ -58,7 +58,7 @@ from src.corrections.jet import (
 )
 from src.corrections.muon_sf import add_muon_sfs_correctionlib, muon_sfs_stat_syst_correctionlib
 from src.corrections.pu_dnn import add_dphi_met_jet_features, eval_pu_dnn, load_pu_dnn_configs
-from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_roccor
+from src.corrections.rochester import apply_KitMuScaleRe_Run3, apply_KitMuScaleRe_Run3_bs_split, apply_roccor
 from src.corrections.met_xy_correction import apply_puppi_met_xy_correction
 
 coffea_nanoevent = TypeVar('coffea_nanoevent')
@@ -1197,6 +1197,9 @@ class EventProcessor(processor.ProcessorABC):
             BSConstraint_mask = ak.fill_none(BSConstraint_mask, False)
             events["Muon", "pt"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPt, events.Muon.pt)
             events["Muon", "ptErr"] = ak.where(BSConstraint_mask, events.Muon.bsConstrainedPtErr, events.Muon.ptErr)
+            events["Muon", "pt_is_bsc"] = BSConstraint_mask
+        else:
+            events["Muon", "pt_is_bsc"] = ak.zeros_like(events.Muon.pt, dtype=bool)
 
         # Save raw variables before computing any corrections
         # rochester corrects pt only, but fsr_recovery changes all vals below
@@ -1211,11 +1214,18 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["switches"]["do_roccor"]:
             # TODO make more elegant distinction between Run2 and Run3
             if is_run2(year):
+                # Fixme: corrected and non-corrected BS should be also added to Run-2
                 logger.debug("doing Run2 rochester!")
                 apply_roccor(events, self.config["roccor_file"], is_mc)
             elif is_run3(year):
                 logger.debug("doing Run3 KIT muon Scale Resolution!")
-                apply_KitMuScaleRe_Run3(events, self.config["roccor_file"], is_mc)
+                roccor_nonbs = self.config.get("roccor_file_nonBS", self.config["roccor_file"])
+                if roccor_nonbs != self.config["roccor_file"]:
+                    # VXBS ScaRe for beam-spot-constrained pT, regular ScaRe for muons that keep NanoAOD pT
+                    apply_KitMuScaleRe_Run3_bs_split(
+                        events, self.config["roccor_file"], roccor_nonbs, events.Muon.pt_is_bsc, is_mc)
+                else:
+                    apply_KitMuScaleRe_Run3(events, self.config["roccor_file"], is_mc)
             else:
                 raise ValueError(f"Year {year} is neither Run2 nor Run3!")
             events["Muon", "pt"] = events.Muon.pt_roch
@@ -1239,13 +1249,19 @@ class EventProcessor(processor.ProcessorABC):
             muon_selection = muon_selection & muon_ip # AN-19-124 baseline IP cuts
 
 
-        self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
-        self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
-        self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
-        self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
-        if do_muon_ip_cut:
-            self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
-        self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
+        # muon_sel_corrected_kinematics switch (Run 3; Round-1 for 2024): selection, loose veto, trigger match,
+        # jet cleaning and SFs use ScaRe+FSR muon kinematics instead of the raw (BSC) ones
+        use_corr_mu = self.config["switches"]["muon_sel_corrected_kinematics"]
+        if use_corr_mu and is_run2(year):  # Run-2 SFs (add_muon_sfs_correctionlib) stay on raw kinematics
+            raise ValueError(f"muon_sel_corrected_kinematics is Run-3 only, but true for {year}")
+        if not use_corr_mu:  # else filled after FSR, on the corrected kinematics
+            self.selection.add("muon_pT_roch", ak.any(events.Muon.pt_roch >= self.config["muon_pt_cut"], axis=1))
+            self.selection.add("muon_eta", ak.any(abs(events.Muon.eta_raw) <= self.config["muon_eta_cut"], axis=1))
+            self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
+            self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
+            if do_muon_ip_cut:
+                self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
+            self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
 
         # calculate FSR recovery, but don't apply it until trigger matching is done
         # but apply muon iso overwrite, so base muon selection could be done
@@ -1255,15 +1271,39 @@ class EventProcessor(processor.ProcessorABC):
             fsr_recoveryV1(events)  # adds pt_fsr/iso_fsr fields to events.Muon
             events["Muon", "pfRelIso04_all"] = events.Muon.iso_fsr
 
+        if use_corr_mu:
+            # pT/eta cuts on ScaRe+FSR kinematics (FSR is applied to Muon.pt only at trigger matching)
+            mu_pt_sel = events.Muon.pt_fsr if do_fsr else events.Muon.pt
+            mu_eta_sel = events.Muon.eta_fsr if do_fsr else events.Muon.eta
+            muon_selection = (
+                (mu_pt_sel > self.config["muon_pt_cut"])
+                & (abs(mu_eta_sel) < self.config["muon_eta_cut"])
+                & events.Muon[self.config["muon_id"]]
+                & (events.Muon.isGlobal | events.Muon.isTracker)
+            )
+            if do_muon_ip_cut:
+                muon_selection = muon_selection & muon_ip
+            muon_selection = ak.fill_none(muon_selection, False)
+            self.selection.add("muon_pT_roch", ak.any(mu_pt_sel > self.config["muon_pt_cut"], axis=1))
+            self.selection.add("muon_eta", ak.any(abs(mu_eta_sel) < self.config["muon_eta_cut"], axis=1))
+            self.selection.add("muon_id", ak.any(events.Muon[self.config["muon_id"]], axis=1))
+            self.selection.add("muon_isGlobal_or_Tracker", ak.any(events.Muon.isGlobal | events.Muon.isTracker, axis=1))
+            if do_muon_ip_cut:
+                self.selection.add("muon_ip", ak.any(muon_ip, axis=1))
+            self.selection.add("muon_selection", ak.any(muon_selection, axis=1))
+        else:
+            mu_pt_sel = events.Muon.pt_raw
+            mu_eta_sel = events.Muon.eta_raw
+
         # apply iso portion of base muon selection, now that possible FSR photons are integrated into pfRelIso04_all as specified in line 360 of AN-19-124
         muon_selection = muon_selection & (events.Muon.pfRelIso04_all < self.config["muon_iso_cut"])
         self.selection.add("muon_iso", ak.any(events.Muon.pfRelIso04_all < self.config["muon_iso_cut"], axis=1))
         if do_lepton_ip_veto:
             # Extra loose-muon veto: exactly 2 loose muons (rejects >2); selected muons are a subset of loose,
             # so with nmuons>=2 this leaves exactly the 2 selected muons
-            loose_muon = (
-                (events.Muon.pt_raw > self.config["loose_muon_pt_cut"])
-                & (abs(events.Muon.eta_raw) < self.config["muon_eta_cut"])
+            loose_muon = (  # same pT/eta definition as the selected muons (raw, or ScaRe+FSR)
+                (mu_pt_sel > self.config["loose_muon_pt_cut"])
+                & (abs(mu_eta_sel) < self.config["muon_eta_cut"])
                 & events.Muon[self.config["loose_muon_id"]]
                 & (events.Muon.pfRelIso04_all < self.config["loose_muon_iso_cut"])
                 & muon_ip
@@ -1275,6 +1315,12 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"[timing] Muon selection time: {t5 - t4:.2f} seconds")
         # --------------------------------------------------------
         # apply tirgger match after base muon selection and Rochester correction, but b4 FSR recovery as implied in line 373 of AN-19-124
+        # use_corr_mu (Round-1): match ScaRe+FSR muons instead (offline pT, eta, phi)
+        if use_corr_mu and do_fsr:
+            events["Muon", "pt"] = events.Muon.pt_fsr
+            events["Muon", "eta"] = events.Muon.eta_fsr
+            events["Muon", "phi"] = events.Muon.phi_fsr
+        trig_pt_field = "pt" if use_corr_mu else "pt_roch"
         if self.config["switches"]["do_trigger_match"]:
             do_seperate_mu1_leading_pt_cut = False
             logger.debug("doing trigger match!")
@@ -1301,7 +1347,7 @@ class EventProcessor(processor.ProcessorABC):
             for mu in _leading_two(events.Muon[muon_selection]):
                 # None comes from the muon padding, not trigger_cands, so False is correct
                 dr_match = ak.fill_none(ak.sum(mu.delta_r(trigger_cands) <= dr_threshold, axis=1) > 0, value=False)
-                leading_pt_match = ak.fill_none(mu.pt_roch >= self.config["muon_leading_pt"], value=False)
+                leading_pt_match = ak.fill_none(mu[trig_pt_field] >= self.config["muon_leading_pt"], value=False)
                 muon_matches.append(dr_match & leading_pt_match)
             trigger_match = muon_matches[0] | muon_matches[1]
             event_filter = event_filter & trigger_match
@@ -1335,9 +1381,10 @@ class EventProcessor(processor.ProcessorABC):
 
         # do the separate mu1 leading pt cut that copperheadV1 does instead of trigger matching
         if do_seperate_mu1_leading_pt_cut:
-            # cut is on raw pt, so sort by raw pt (sorting by corrected pt gives fewer events)
-            mu1, _ = _leading_two(muons, key="pt_raw")
-            pass_leading_pt = ak.fill_none((mu1.pt_raw > self.config["muon_leading_pt"]), value=False)
+            # cut on raw pt (sorting by corrected pt gives fewer events); ScaRe+FSR pt when use_corr_mu
+            lead_pt_field = "pt" if use_corr_mu else "pt_raw"
+            mu1, _ = _leading_two(muons, key=lead_pt_field)
+            pass_leading_pt = ak.fill_none((mu1[lead_pt_field] > self.config["muon_leading_pt"]), value=False)
             event_filter = event_filter & pass_leading_pt
 
             self.selection.add("leading_muon_pt", pass_leading_pt)
@@ -2639,19 +2686,21 @@ class EventProcessor(processor.ProcessorABC):
 
         # apply clean jet selection
         # AN-19-124 line 465: "Jets are also cleaned w.r.t. the selected muon candidates by requiring a geometrical separation of ∆R ( j, µ ) > 0.4"
+        # muon_sel_corrected_kinematics: clean against ScaRe+FSR muon eta/phi (Round-1), else raw
+        mu_eta_f, mu_phi_f = ("eta", "phi") if self.config["switches"]["muon_sel_corrected_kinematics"] else ("eta_raw", "phi_raw")
         _, _, mu1_jet_dR = delta_r_V1(
-            mu1[:, np.newaxis].eta_raw,
+            mu1[:, np.newaxis][mu_eta_f],
             jets.eta,
-            mu1[:, np.newaxis].phi_raw,
+            mu1[:, np.newaxis][mu_phi_f],
             jets.phi,
         )
         matched_mu1_jet = mu1_jet_dR <= 0.4
         matched_mu1_jet = ak.fill_none(matched_mu1_jet, value=False)
 
         _, _, mu2_jet_dR = delta_r_V1(
-            mu2[:, np.newaxis].eta_raw,
+            mu2[:, np.newaxis][mu_eta_f],
             jets.eta,
-            mu2[:, np.newaxis].phi_raw,
+            mu2[:, np.newaxis][mu_phi_f],
             jets.phi,
         )
         matched_mu2_jet = mu2_jet_dR <= 0.4

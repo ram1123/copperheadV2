@@ -607,9 +607,9 @@ def get_jec_sources(cset, jec_tag, jet_type="AK4PFPuppi"):
 def data_jec_with_residual_freeze(cset, jec_tag, algo, input_map, abseta_min=2.0, abseta_max=2.5, pt_freeze=30.0):
     """
     Data L1FastJet x L2Relative x L3Absolute x L2L3Residual factor with the JME 2024 mitigation:
-    in abseta_min < |eta| < abseta_max, a jet whose MC-truth-corrected pT (before the residual) is
-    below pt_freeze gets the L2L3Residual evaluated at pt_freeze. Outside that region this equals
-    the <jec_tag>_L1L2L3Res compound correction (same level stack, JetPt updated after each level).
+    in abseta_min < |eta| < abseta_max, a jet whose MC-truth-corrected pT (L1L2L3, before the residual)
+    is below pt_freeze gets the L2L3Residual evaluated at pt_freeze.
+    Returns (factor, freeze); the caller keeps the compound L1L2L3Res value for jets with freeze False.
     """
     pt = input_map["JetPt"]
     factor = 1.0
@@ -622,11 +622,15 @@ def data_jec_with_residual_freeze(cset, jec_tag, algo, input_map, abseta_min=2.0
     freeze = (abseta > abseta_min) & (abseta < abseta_max) & (pt < pt_freeze)
     corr = cset[f"{jec_tag}_L2L3Residual_{algo}"]
     pt_res = ak.where(freeze, pt_freeze, pt)
-    return factor * corr.evaluate(*[{**input_map, "JetPt": pt_res}[inp.name] for inp in corr.inputs])
+    return factor * corr.evaluate(*[{**input_map, "JetPt": pt_res}[inp.name] for inp in corr.inputs]), freeze
 
 
 def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
     jec_parameters = config["jec_parameters"]
+    # required in every switches profile, so none silently skips the 2024 data freeze
+    if "do_jec_residual_freeze" not in config["switches"]:
+        raise KeyError("switches profile has no 'do_jec_residual_freeze' block (add it, see switches_official.yaml)")
+    do_residual_freeze = config["switches"]["do_jec_residual_freeze"]
 
     jerc_load_path = jec_parameters["jerc_load_path"]
     logger.debug(f"jerc_load_path: {jerc_load_path}")
@@ -700,10 +704,12 @@ def do_jec_scale(jets, events, config, is_mc, dataset, uncs=["nominal"]):
 
         # inputs = get_corr_inputs(example_value_dict, sf)
         printCorrObjInputs(sf) # for debugging
-        if unc == "nominal" and (not is_mc) and config["switches"].get("do_jec_residual_freeze", False):
-            new_jec_scale = data_jec_with_residual_freeze(cset, jec_tag, algo, input_map)
-        else:
-            new_jec_scale = sf.evaluate(*inputs)
+        new_jec_scale = sf.evaluate(*inputs)
+        if unc == "nominal" and (not is_mc) and do_residual_freeze:
+            # only frozen jets change, so every other jet keeps the exact compound value
+            frozen_scale, freeze = data_jec_with_residual_freeze(cset, jec_tag, algo, input_map)
+            new_jec_scale = ak.where(freeze, frozen_scale, new_jec_scale)
+            jets["jec_residual_frozen"] = freeze
         # logger.debug(f"new_jec_scale: {new_jec_scale}")
         # logger.debug(f"new_jec_scale {unc}: {new_jec_scale.compute()}")
 
@@ -779,18 +785,15 @@ def applyStrat1n2Revised(apply_scaling, jer_smearing, jet_puId, jet_pt, jet_eta,
     return ak.where(apply_stat2, jer_smearing2, jer_smearing1)
 
 
-def applyStrat4(apply_scaling, jer_smearing):
-    """Official JME ad hoc mitigation ("option b") for the poor Run3
-    2.5 < |eta| < 3.0 data/MC agreement, per
-    https://cms-jme-jerc.docs.cern.ch/recommendations/jer/ : the jet is
-    corrected only when a matched gen-jet is found (scaling method); if no
-    match is available, no stochastic smearing is applied. Unlike
-    applyStrat1/applyStrat2, this drops the stochastic component
-    UNCONDITIONALLY for every unmatched jet -- no PUID/pT/eta gating. The
-    doc names this exact approach for H->WW, H->mumu, and VBF SUSY.
+def applyStrat4(apply_scaling, jer_smearing, jet_eta):
+    """JME Run-3 forward mitigation ("Mitigation techniques" slide, 2022-2024): in HE
+    (2.5 < |eta| <= 3.0, same region as the HE pT cut) JER only for gen-matched jets, so
+    unmatched HE jets get no stochastic smearing. Everywhere else (|eta| < 2.5 and HF) the
+    standard hybrid method applies (scaling for matched, stochastic for unmatched).
     """
     no_smearing = ak.ones_like(jer_smearing)
-    return ak.where(apply_scaling, jer_smearing, no_smearing)
+    in_he = (abs(jet_eta) > 2.5) & (abs(jet_eta) <= 3.0)
+    return ak.where(in_he & ~apply_scaling, no_smearing, jer_smearing)
 
 
 def apply_jer_unc(jets):
@@ -969,7 +972,7 @@ def do_jer_smear(jets, config, event_id, syst_l=["nom", "up", "down"]):
         elif jer_strat == 3:
             jer_smearing = applyStrat1n2Revised(apply_scaling, jer_smearing, get_puId(jets), pt_jec, jets.eta, year)
         elif jer_strat == 4:
-            jer_smearing = applyStrat4(apply_scaling, jer_smearing)
+            jer_smearing = applyStrat4(apply_scaling, jer_smearing, jets.eta)
         else:
             raise ValueError(f"jer strategy {jer_strat} is not yet supported!")
         # jets["pt"] = jer_smearing * pt_jec # Source: https://github.com/cms-jet/JECDatabase/blob/4d736bfcc4db71a539f5e31a3b66d014df9add72/scripts/JERC2JSON/minimalDemo.py#L111
