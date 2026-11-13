@@ -250,6 +250,10 @@ def build_datacards(var_name, yield_df, parameters):
                     for dy_process in parameters.get(
                         "dy_matched_processes", ["DY_matched01J", "DY_matched2J"]
                     ):
+                        # absent from the card (e.g. DY 2-matched-jet in 0J/1J): combine rejects an unmatched rateParam
+                        if dy_process not in yield_df.group.unique():
+                            logger.warning(f"{dy_process} not in yields: no rateParam written")
+                            continue
                         # DY_matched01J -> DY01J (unchanged names), DY_recoMatched0J -> DYreco0J
                         norm_tag = dy_process.replace("DY_matched", "DY").replace(
                             "DY_recoMatched", "DYreco"

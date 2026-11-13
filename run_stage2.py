@@ -846,7 +846,10 @@ if __name__ == "__main__":
             n_part_target = 2
         else:
             n_part_target = 1
-        filelist_l = split_into_n_parts(filelist_big, n_part_target)
+        # drop empty parts (fewer files than parts, e.g. a single slim data file): dak.from_parquet([]) fails
+        filelist_l = [p for p in split_into_n_parts(filelist_big, n_part_target) if p]
+        if not filelist_l:
+            raise ValueError(f"[Sample] no parquet files for {sample}: {full_load_path}")
         logger.info(f"[Sample] sample: {sample}")
         logger.info(f"[Sample] len(filelist_l): {len(filelist_l)}")
         # logger.info(f"filelist_l: {filelist_l}")

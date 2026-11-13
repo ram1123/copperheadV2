@@ -32,6 +32,17 @@ SINGLE_JET_ETA_REGIONS = [
     "single_fwd30",
 ]
 
+# exclusive jet-multiplicity regions (with the PAIR 3-way split: a full partition of a
+# score-tagged VBF channel that, unlike the kinematic cut, also accepts 0/1-jet events)
+NJETS_REGIONS = [
+    "njets0",
+    "njets1",
+]
+
+# Precomputed per-event VBF tag (e.g. a transformer-score cut baked into a dedicated ntuple);
+# when present it replaces the kinematic jj_mass/jj_dEta/jet1_pt VBF cut.
+VBF_TAG_FIELD = "vbf_tag_override"
+
 
 def filterRegion(events, region="h-peak"):
     if isinstance(events, pd.DataFrame):
@@ -207,6 +218,14 @@ def applyRegionCatCuts(
             )
             vbf_cut = vbf_cut & vbf_he_hf_pass
 
+        if VBF_TAG_FIELD in events.fields:
+            vbf_cut = ak.fill_none(events[VBF_TAG_FIELD], value=False)
+            if vbf_he_ptcut is not None or vbf_hf_ptcut is not None:
+                vbf_cut = vbf_cut & vbf_he_hf_pass  # keep the HE/HF mitigation on top of the tag
+        elif category == "vbf" and jj_eta_region in NJETS_REGIONS:
+            # the kinematic cut never selects 0/1-jet events: a missing tag column must not pass silently
+            raise KeyError(f"jj_eta_region='{jj_eta_region}' needs the '{VBF_TAG_FIELD}' column (not loaded)")
+
         if category == "vbf":
             # print("vbf mode!")
             prod_cat_cut = prod_cat_cut & vbf_cut
@@ -288,6 +307,11 @@ def applyRegionCatCuts(
             "(or 'all') instead."
         )
 
+    if jj_eta_region in NJETS_REGIONS and njets_selection != "inclusive":
+        raise ValueError(
+            f"jj_eta_region='{jj_eta_region}' already fixes njets; use njets_selection='inclusive'."
+        )
+
     if jj_eta_region and jj_eta_region != "all":
 
         # 1) prefer precomputed mask if present
@@ -332,8 +356,10 @@ def applyRegionCatCuts(
                 "single_fwd25": is_single_jet & j1_f25,
                 "single_he": is_single_jet & j1_he,
                 "single_fwd30": is_single_jet & j1_hf,
+                "njets0": njets == 0,
+                "njets1": njets == 1,
             }
-            assert set(masks.keys()) == set(PAIR_JJ_ETA_REGIONS) | set(SINGLE_JET_ETA_REGIONS), (
+            assert set(masks.keys()) == set(PAIR_JJ_ETA_REGIONS) | set(SINGLE_JET_ETA_REGIONS) | set(NJETS_REGIONS), (
                 "masks dict drifted from the module-level PAIR_JJ_ETA_REGIONS/"
                 "SINGLE_JET_ETA_REGIONS name lists -- keep them in sync."
             )

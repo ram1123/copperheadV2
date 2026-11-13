@@ -122,4 +122,5 @@ AAA_ERROR_FRAGMENTS = (
     "OSError: Failed to open file",
     "Failed to open file",
     "Operation expired",
+    "I/O operation on closed file",  # XRootD handle dropped mid-read (seen in prestage 2024F)
 )

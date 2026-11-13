@@ -389,7 +389,7 @@ if __name__ == "__main__":
 
         if args.year == "all":
             # years = ["2018", "2017", "2016postVFP", "2016preVFP"]
-            years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+            years = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]  # LumiSplit: 2025/26 separate
         else:
             years = [args.year]
         row_labels = []
@@ -402,7 +402,7 @@ if __name__ == "__main__":
 
         if args.year == "all":
             # years_for_jec = ["2018", "2017", "2016postVFP", "2016preVFP"]
-            years_for_jec = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024"]
+            years_for_jec = ["2022preEE", "2022postEE", "2023", "2023BPix", "2024", "2025", "2026"]
             jec_unc_base = []
             for y in years_for_jec:
                 jec_unc_base.extend(getJecJerUncertainties(jec_yml_path, year=y))

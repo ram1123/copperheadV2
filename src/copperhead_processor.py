@@ -662,6 +662,62 @@ def pick_vbf_pairs(jets):
     }
 
 
+def build_extended_jet_vars(jets, pair_dict, dimuon, mu1, mu2, met_phi, variation):
+    """
+    Event-level min/max/count variables over ALL selected jets (not only jet1/jet2),
+    for VBF DNN feature studies. Empty jet sets give None (as jet1_* for 0-jet events);
+    counts give 0.
+    """
+    out = {}
+    abs_eta = np.abs(jets.eta)
+    out[f"jets_max_abs_eta_{variation}"] = ak.max(abs_eta, axis=1)
+    out[f"jets_min_abs_eta_{variation}"] = ak.min(abs_eta, axis=1)
+    out[f"njets_absEta_gt2p5_{variation}"] = ak.sum(abs_eta > 2.5, axis=1)
+
+    # PNetB / UParT scores are -1 outside the tracker (|eta| > 2.5): use valid scores only
+    for tagger in ["btagPNetQvG", "btagPNetB", "btagUParTAK4QvG", "btagUParTAK4B"]:
+        if not hasattr(jets, tagger):
+            continue
+        score = jets[tagger]
+        score = score[score >= 0]
+        out[f"jets_max_{tagger}_{variation}"] = ak.max(score, axis=1)
+        out[f"jets_min_{tagger}_{variation}"] = ak.min(score, axis=1)
+
+    puid = get_puId(jets)
+    out[f"jets_max_puId_{variation}"] = ak.max(puid, axis=1)
+    out[f"jets_min_puId_{variation}"] = ak.min(puid, axis=1)
+
+    # muon-jet angles over 2 muons x all jets
+    out[f"mujet_min_dR_{variation}"] = np.minimum(
+        ak.min(jets.delta_r(mu1), axis=1), ak.min(jets.delta_r(mu2), axis=1)
+    )
+    dphi_mu1 = _delta_phi(jets.phi, mu1.phi)
+    dphi_mu2 = _delta_phi(jets.phi, mu2.phi)
+    out[f"mujet_min_dPhi_{variation}"] = np.minimum(ak.min(dphi_mu1, axis=1), ak.min(dphi_mu2, axis=1))
+    out[f"mujet_max_dPhi_{variation}"] = np.maximum(ak.max(dphi_mu1, axis=1), ak.max(dphi_mu2, axis=1))
+
+    mmj_dEta = np.abs(dimuon.eta - jets.eta)
+    out[f"mmjall_min_dEta_{variation}"] = ak.min(mmj_dEta, axis=1)
+    out[f"mmjall_max_dEta_{variation}"] = ak.max(mmj_dEta, axis=1)
+
+    out[f"jetmet_min_dPhi_{variation}"] = ak.min(_delta_phi(jets.phi, met_phi), axis=1)
+
+    # extra jets (beyond the two leading-pT jets): central-jet-veto style variables
+    jet1, jet2 = pair_dict["lead"]
+    extra = jets[:, 2:]
+    y1 = getRapidity(jet1)
+    y2 = getRapidity(jet2)
+    zep_extra = (getRapidity(extra) - 0.5 * (y1 + y2)) / np.abs(y1 - y2)
+    out[f"extrajets_min_abs_zeppenfeld_{variation}"] = ak.min(np.abs(zep_extra), axis=1)
+    between = (extra.eta > np.minimum(jet1.eta, jet2.eta)) & (extra.eta < np.maximum(jet1.eta, jet2.eta))
+    out[f"nextrajets_between_{variation}"] = ak.fill_none(ak.sum(between, axis=1), 0)
+    out[f"extrajets_between_max_pt_{variation}"] = ak.max(extra.pt[between], axis=1)
+
+    j1_mjj, j2_mjj = pair_dict["max_mjj"]
+    out[f"jj_mass_maxAllPairs_{variation}"] = (j1_mjj + j2_mjj).mass
+    return out
+
+
 def apply_ECALBadCalib_EventFilter_recipe(
     events,
     base_mask,
@@ -2092,6 +2148,7 @@ class EventProcessor(processor.ProcessorABC):
                 "dimuon_dPhi": dimuon_dPhi,
                 "dimuon_dR": dimuon_dR,
                 "acoplanarity": acoplanarity,
+                "mu_max_abs_eta": np.maximum(np.abs(mu1.eta), np.abs(mu2.eta)),
             },
         )
 
@@ -3008,6 +3065,9 @@ class EventProcessor(processor.ProcessorABC):
                 "btagPNetB",
                 "btagUParTAK4B",
                 "btagRobustParTAK4B",
+                # else filled with -1 below for every JES/JER variation
+                "btagPNetQvG",
+                "btagUParTAK4QvG",
                 # Need following when running over JEC. First two for 2022 and 2023. All below for 2024
                 "genJetIdx",
                 "btagDeepFlavB",
@@ -3415,6 +3475,11 @@ class EventProcessor(processor.ProcessorABC):
                     f"jet3_hasMatchedGenJet_{variation}": jet3.genJetIdx != -1,
                     f"jet4_hasMatchedGenJet_{variation}": jet4.genJetIdx != -1,
                 })
+
+        if self.config["switches"].get("save_extended_jet_vars", True):
+            jet_loop_out_dict.update(
+                build_extended_jet_vars(jets, pair_dict, dimuon, mu1, mu2, events.PuppiMET.phi, variation)
+            )
 
         # ------------------------------------------------------------------
         # Add additional Jet NanoAOD variables for leading 4 jets
