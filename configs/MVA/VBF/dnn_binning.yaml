@@ -1578,3 +1578,309 @@ models:
         region: h-peak
         signal: vbf,ggh
         report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct29_tightPassLepVeto_PUDNNTrain1Oct29_JERStrat4_JetIDVars_LumiSplit_HPO200_Nov01_2026_Syst_DNN2024Ray200_DY105_ScoreDump_jj_both_central_NoSyst/binning_comparison.txt
+  ? Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal
+  : jj_both_central:
+      n_bins: 22
+      edges: [0.01237, 0.088192, 0.13874, 0.189288, 0.26511, 0.315658, 0.416754, 0.517849, 0.720041, 0.821137, 0.871685, 0.896959,
+        0.922233, 0.998055, 1.149698, 1.276068, 1.427712, 1.47826, 1.528808, 1.554082, 1.579356, 1.60463, 1.755725]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T12:20:11'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 1.705725
+        best_nbins_from_scan: 67
+        max_nbins_scanned: 70
+        total_asimov_Z: 0.6246
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.01237
+        score_max: 1.705725
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_central_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_central_NoSyst/binning_comparison.txt
+    jj_one_fwd25_one_central:
+      n_bins: 23
+      edges: [0.000579, 0.048067, 0.143042, 0.285505, 0.332993, 0.475456, 0.617919, 0.807869, 0.855357, 0.902845, 0.99782,
+        1.140283, 1.377721, 1.472696, 1.615159, 1.710134, 1.80511, 1.900085, 1.947573, 1.99506, 2.042548, 2.090036, 2.232498,
+        2.85235]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T12:31:12'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.80235
+        best_nbins_from_scan: 59
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.4899
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.000579
+        score_max: 2.80235
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_one_fwd25_one_central_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_one_fwd25_one_central_NoSyst/binning_comparison.txt
+    jj_both_fwd25:
+      n_bins: 32
+      edges: [0.0, 0.166581, 0.374806, 0.458097, 0.541387, 0.707968, 0.791258, 0.874548, 0.999484, 1.082774, 1.124419, 1.207709,
+        1.249354, 1.291, 1.332645, 1.499225, 1.540871, 1.582516, 1.624161, 1.665806, 1.707451, 1.749096, 1.790741, 1.832387,
+        1.874032, 1.915677, 1.957322, 1.998967, 2.040612, 2.082257, 2.123903, 2.207193, 2.840225]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T12:41:44'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.790225
+        best_nbins_from_scan: 67
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.3967
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 2.790225
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_fwd25_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_fwd25_NoSyst/binning_comparison.txt
+    njets1:
+      n_bins: 19
+      edges: [0.0, 0.084194, 0.168388, 0.252583, 0.336777, 0.505165, 0.58936, 0.673554, 0.841942, 0.926137, 1.178719, 1.262914,
+        1.515496, 1.599691, 1.768079, 1.852273, 2.020662, 2.104856, 2.357439, 3.838741]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T12:53:15'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 3.788741
+        best_nbins_from_scan: 45
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.3677
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 3.788741
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets1_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets1_NoSyst/binning_comparison.txt
+    njets0:
+      n_bins: 18
+      edges: [0.000525, 0.133876, 0.311678, 0.445029, 0.53393, 0.622831, 0.756182, 0.800633, 0.889533, 0.978434, 1.067335,
+        1.200686, 1.245137, 1.289587, 1.334038, 1.378488, 1.422938, 1.511839, 3.073153]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T13:14:04'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 3.023153
+        best_nbins_from_scan: 68
+        max_nbins_scanned: 70
+        total_asimov_Z: 0.1037
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.000525
+        score_max: 3.023153
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets0_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets0_NoSyst/binning_comparison.txt
+  ? Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal
+  : jj_both_central:
+      n_bins: 18
+      edges: [0.000309, 0.033682, 0.067054, 0.100426, 0.133799, 0.167171, 0.200544, 0.233916, 0.334033, 0.43415, 0.56764,
+        0.734502, 1.168343, 1.568812, 1.702302, 1.802419, 1.902536, 2.002653, 2.186143]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T12:59:21'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.136143
+        best_nbins_from_scan: 64
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.1232
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.000309
+        score_max: 2.136143
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_central_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_central_NoSyst/binning_comparison.txt
+    jj_one_fwd25_one_central:
+      n_bins: 22
+      edges: [0.000916, 0.037673, 0.07443, 0.111187, 0.184701, 0.258215, 0.368486, 0.478758, 0.552272, 0.662543, 0.772815,
+        0.9566, 1.177143, 1.471199, 1.728499, 1.802013, 1.912285, 1.985799, 2.022556, 2.09607, 2.132827, 2.169584, 2.513641]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T13:10:46'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.463641
+        best_nbins_from_scan: 67
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.5815
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.000916
+        score_max: 2.463641
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_one_fwd25_one_central_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_one_fwd25_one_central_NoSyst/binning_comparison.txt
+    jj_both_fwd25:
+      n_bins: 13
+      edges: [0.00126, 0.132018, 0.262777, 0.393536, 0.524294, 0.655053, 0.785812, 0.916571, 1.047329, 1.178088, 1.308847,
+        1.439605, 1.570364, 6.981471]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T13:21:26'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 6.931471
+        best_nbins_from_scan: 53
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.2283
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.00126
+        score_max: 6.931471
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_fwd25_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_jj_both_fwd25_NoSyst/binning_comparison.txt
+    njets0:
+      n_bins: 17
+      edges: [0.0, 0.079068, 0.158137, 0.237205, 0.316273, 0.395342, 0.47441, 0.553479, 0.632547, 0.711615, 0.790684, 1.027889,
+        1.106957, 1.186026, 1.423231, 1.502299, 1.581367, 5.268512]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T13:32:07'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 5.218512
+        best_nbins_from_scan: 66
+        max_nbins_scanned: 70
+        total_asimov_Z: 0.8808
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 5.218512
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets0_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets0_NoSyst/binning_comparison.txt
+    njets1:
+      n_bins: 21
+      edges: [0.000858, 0.073196, 0.109364, 0.145533, 0.181701, 0.21787, 0.254038, 0.326375, 0.398712, 0.507218, 0.651892,
+        0.868903, 1.302925, 1.519937, 1.664611, 1.736948, 1.773116, 1.809285, 1.845453, 1.881622, 1.91779, 2.365644]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-11T13:43:51'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.315644
+        best_nbins_from_scan: 64
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.8729
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.000858
+        score_max: 2.315644
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets1_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p8SlimNominal_Nov11_2026_TransfTag_ScoreDump_njets1_NoSyst/binning_comparison.txt
+  ? Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_NewMuVars
+  : jj_one_fwd25_one_central:
+      n_bins: 21
+      edges: [0.004104, 0.220227, 0.281977, 0.343726, 0.405475, 0.498099, 0.621598, 0.683348, 0.775972, 0.806846, 0.96122,
+        1.115593, 1.269967, 1.393466, 1.42434, 1.455215, 1.516964, 1.609588, 1.671338, 1.733087, 1.763962, 2.091834]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-12T02:59:00'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.041834
+        best_nbins_from_scan: 66
+        max_nbins_scanned: 70
+        total_asimov_Z: 1.3944
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.004104
+        score_max: 2.041834
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_NewMuVars/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_NewMuVars_Nov12_2026_NewMuVars_ScoreDump_jj_one_fwd25_one_central_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_NewMuVars_Nov12_2026_NewMuVars_ScoreDump_jj_one_fwd25_one_central_NoSyst/binning_comparison.txt
+    jj_both_fwd25:
+      n_bins: 27
+      edges: [0.0, 0.215683, 0.431367, 0.560777, 0.64705, 0.733323, 0.819597, 0.992143, 1.03528, 1.121553, 1.16469, 1.207827,
+        1.2941, 1.380373, 1.466646, 1.596056, 1.68233, 1.725466, 1.768603, 1.81174, 1.854876, 1.898013, 1.984286, 2.027423,
+        2.07056, 2.113696, 2.156833, 2.551926]
+      metadata:
+        generated_by: MVA_training/VBF_run3/scan_bins_for_dnn.py
+        generated_at: '2026-11-12T03:09:36'
+        score: dnn_vbf_score_atanh
+        last_edge_overhead: 0.05
+        last_edge_before_overhead: 2.501926
+        best_nbins_from_scan: 58
+        max_nbins_scanned: 70
+        total_asimov_Z: 2.1592
+        frac_tol: 0.01
+        min_total_events_per_bin: 15
+        min_signal_per_bin: 0.05
+        min_background_per_bin: 0.05
+        enforce_min_per_year: false
+        score_min: 0.0
+        score_max: 2.501926
+        stage2_scores: /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_NewMuVars/stage2_histograms/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_NewMuVars_Nov12_2026_NewMuVars_ScoreDump_jj_both_fwd25_NoSyst
+        years: [2022preEE, 2022postEE, '2023', 2023BPix, '2024', '2025', '2026']
+        region: h-peak
+        signal: vbf,ggh
+        report: validation/dnn_binning_scan/score_Run3_nanoAODv15_FilterEvents_Oct23_tightPassLepVeto_OfficialRecomendation_IPAdditionalLepVeto_LumiSplit_TransfVBF0p2SlimNominal_NewMuVars_Nov12_2026_NewMuVars_ScoreDump_jj_both_fwd25_NoSyst/binning_comparison.txt
