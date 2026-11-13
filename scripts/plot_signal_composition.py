@@ -76,6 +76,7 @@ def parse_args():
     p.add_argument("--bin-groups", default="",
                    help='1-based DNN-bin groups, e.g. "1-6,7-8,9" (all regions) or per region '
                         '"both_central:1-8,9;both_fwd25:1-9,10" (unlisted regions: one row per bin)')
+    p.add_argument("--formats", default="pdf,png", help="comma list of image formats, e.g. pdf,png,svg")
     p.add_argument("--tag", default="", help="output file tag (default derived from --bin-groups)")
     p.add_argument("--lumi-text", default="(13.6 TeV)")
     p.add_argument("--cms-text", default="#it{Simulation Preliminary}")
@@ -221,8 +222,6 @@ def draw(rows, order, args, outbase):
         # tick length is a fraction of pad width here; keep it the same in pixels for all pads
         wfrac = pad.GetAbsWNDC() * (1 - pad.GetLeftMargin() - pad.GetRightMargin())
         h = ROOT.TH2F(name, "", 1, 0, xmax, n, 0, n)
-        for i, r in enumerate(rows):
-            h.GetYaxis().SetBinLabel(n - i, r["label"] if labels else "")
         h.GetXaxis().SetTitle(xtitle)
         for ax in (h.GetXaxis(), h.GetYaxis()):
             ax.SetLabelFont(43)
@@ -233,10 +232,21 @@ def draw(rows, order, args, outbase):
         h.GetXaxis().SetNdivisions(505)
         h.GetXaxis().SetTickLength(0.012 * height / (1500.0 * wfrac) if wfrac > 0 else 0.03)
         h.GetXaxis().CenterTitle()
-        if not labels:
-            h.GetYaxis().SetLabelSize(0)
+        h.GetYaxis().SetLabelSize(0)
+        h.GetYaxis().SetNdivisions(0)
         h.GetYaxis().SetTickLength(0)
         h.Draw("AXIS")
+        if labels:
+            # left-aligned row labels: right-aligned text shifts in SVG viewers whose fonts differ from ROOT's
+            y0, y1 = pad.GetBottomMargin(), 1 - pad.GetTopMargin()
+            for i, r in enumerate(rows):
+                t = ROOT.TLatex(0.015, y0 + (n - i - 0.5) / n * (y1 - y0), r["label"])
+                t.SetNDC()
+                t.SetTextAlign(12)
+                t.SetTextFont(43)
+                t.SetTextSize(px)
+                t.Draw()
+                keep.append(t)
         # dashed separators between jj regions
         for i in range(1, n):
             if rows[i]["region"] != rows[i - 1]["region"]:
@@ -309,7 +319,7 @@ def draw(rows, order, args, outbase):
     lat.SetTextSize(px + 3)
     lat.DrawLatex(0.98, 1.0 - 32.0 / height, args.lumi_text)
 
-    for ext in ("pdf", "png"):
+    for ext in [e.strip() for e in args.formats.split(",") if e.strip()]:
         c.SaveAs(f"{outbase}.{ext}")
     return sob, ssb
 
@@ -341,7 +351,7 @@ def main():
     for r, a, b in zip(rows, sob, ssb):
         print(f"{r['label']:34s} {r['S']:8.3f} {r['B']:10.2f} {a:9.3f} {b:8.4f}")
     print(f"Quadrature sum of S/sqrt(B) over categories: {comb:.3f}")
-    print(f"Wrote {outbase}.{{pdf,png,csv}}")
+    print(f"Wrote {outbase}.{{{args.formats},csv}}")
 
 
 if __name__ == "__main__":

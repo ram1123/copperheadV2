@@ -56,10 +56,11 @@ def load_lumis(dataset_yaml, years):
 
 def per_file_metadata(fnames, sample_name, n_workers):
     fn = _minnlo_genweight_metadata_for_file if "MiNNLO" in sample_name else _runs_tree_metadata_for_file
-    worker_args = [(fname, UPROOT_OPTIONS) for fname in fnames]
+    # negGenWgtFrac is a full-sample fraction, carried over unchanged by deepcopy: no Events re-read
+    worker_args = [(fname, UPROOT_OPTIONS, False) for fname in fnames]
     results = {}
     with multiprocessing.Pool(processes=min(len(fnames), n_workers)) as pool:
-        for fname, (sum_gen_wgts, n_gen_evts, pdf_wgts) in zip(
+        for fname, (sum_gen_wgts, n_gen_evts, pdf_wgts, _) in zip(
             fnames, pool.imap(fn, worker_args)
         ):
             results[fname] = (sum_gen_wgts, n_gen_evts, pdf_wgts)
