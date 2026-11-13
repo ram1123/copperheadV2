@@ -45,7 +45,6 @@ SAMPLES = {
 }
 
 VARIABLES = [
-    "mu1_iso", "mu2_iso",
     "mu1_pt_over_mu2_pt", "mu1_eta_over_mu2_eta",
     "mu1_pt_roch", "mu1_pt_fsr", "mu2_pt_roch", "mu2_pt_fsr",
     "nmuons",
@@ -85,8 +84,8 @@ VARIABLES = [
     "mu12_pt_sum", "mu12_pt_diff", "mu12_pt_absdiff",
     "mu12_pt_prod", "mu12_pt_ratio12", "mu12_pt_ratio21",
     "mu12_pt_min", "mu12_pt_max", "mu12_pt_asym",
-    "mu12_eta_sum", "mu12_eta_diff", "mu12_eta_absdiff", "mu12_eta_prod",
-    "mu12_absEta_sum", "mu12_absEta_diff", "mu12_absEta_min", "mu12_absEta_max",
+    "mu12_eta_sum", "mu12_eta_diff", "mu12_eta_prod",
+    "mu12_absEta_sum", "mu12_absEta_diff", "mu12_absEta_min", "mu_max_abs_eta",
     "mu12_iso04_sum", "mu12_iso04_diff", "mu12_iso04_absdiff", "mu12_iso04_prod",
     "mu12_iso04_min", "mu12_iso04_max", "mu12_iso04_asym",
     "mu12_dxy_sum", "mu12_dxy_diff", "mu12_dxy_absdiff",

@@ -28,8 +28,8 @@ mu2_pt_over_mass:       [50, 0,  2.0,      "Sub-leading #mu p_{T}/m_{#mu#mu}",  
 mu1_charge:             [4,  -2,  2,       "Leading Muon charge",                     0.9,  1.1]
 mu2_charge:             [4,  -2,  2,       "Sub-leading Muon charge",                 0.9,  1.1]
 
-mu1_iso:                [50, 0,  0.5,      "Leading Muon isolation",                  0.9,  1.1]
-mu2_iso:                [50, 0,  0.5,      "Sub-leading Muon isolation",              0.9,  1.1]
+mu1_pfRelIso04_all:     [50, 0,  0.5,      "Leading Muon isolation",                  0.9,  1.1]
+mu2_pfRelIso04_all:     [50, 0,  0.5,      "Sub-leading Muon isolation",              0.9,  1.1]
 
 nmuons:                 [6,  0,  6,        "N_{muons}",                               0.9,  1.1]
 
