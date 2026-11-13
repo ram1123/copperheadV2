@@ -45,9 +45,16 @@ from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize
 dask.config.set({'logging.distributed': 'error'})
 
 
-def _count_events_for_file(fname):
-    with uproot.open(f"{fname}:Events") as tree:
-        return tree.num_entries
+def _count_events_for_file(fname, n_tries=3):
+    # Retry transient XRootD drops per file so one flaky read doesn't fail the whole sample.
+    for i in range(n_tries):
+        try:
+            with uproot.open(f"{fname}:Events") as tree:
+                return tree.num_entries
+        except Exception as e:
+            if i == n_tries - 1 or not any(frag in str(e) for frag in AAA_ERROR_FRAGMENTS):
+                raise
+            time.sleep(5 * (i + 1))
 
 
 def _minnlo_genweight_metadata_for_file(args):
