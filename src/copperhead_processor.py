@@ -47,6 +47,7 @@ from src.corrections.jet import (
     applyUpDown,
     btag_jet_selection,
     custom_jet_id,
+    fatjet_tight_id_correctionlib,
     do_jec_scale,
     do_jer_smear,
     fill_softjets_HIG19006,
@@ -1651,9 +1652,11 @@ class EventProcessor(processor.ProcessorABC):
             )
             if hasattr(fatJets, "jetId"):
                 fatjet_selection = fatjet_selection & (fatJets.jetId >= 2)
+            elif is_run3(year):  # NanoAODv15 has no FatJet_jetId: JME correctionlib AK8PUPPI Tight
+                fatjet_selection = fatjet_selection & fatjet_tight_id_correctionlib(fatJets, self.config)
             else:
                 logger.warning("FatJets have no jetId field!")
-                tight_id, _ = custom_jet_id(fatJets)
+                tight_id, _ = custom_jet_id(fatJets, year)
                 fatjet_selection = fatjet_selection & tight_id
 
             fatJets = fatJets[fatjet_selection]

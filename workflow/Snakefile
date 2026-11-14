@@ -260,6 +260,7 @@ def plot_base_for_year(year: str) -> str:
 
 USE_GW = bool(config.get("use_gateway", False))
 CLIDX  = str(config.get("cluster_index", 0))
+COMPACT_GW_UNITS = int(config.get("compact_gateway_units", 1))
 
 # Optional standalone switches yaml (see run_stage1.py --switches-yaml /
 # src/lib/get_parameters.py) for stage-1 only -- e.g.
@@ -467,8 +468,11 @@ rule stage1Compact:
             f"{label_for_year(wc.year)}/stage1_output/{wc.year}"
         ),
         cleanup_f1_0="1" if CLEANUP_F1_0_AFTER_COMPACT else "0",
+    # compact is heavy: never two at once (launch with --resources compact=1); compact_gateway_units=2 with
+    # --resources gateway=2 also keeps stage-1 off the cluster while a compact runs.
     resources:
-        gateway=1,
+        gateway=COMPACT_GW_UNITS,
+        compact=1,
     shell:
         r"""
         set -euo pipefail

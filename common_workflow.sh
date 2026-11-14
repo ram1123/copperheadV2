@@ -149,11 +149,12 @@ setup_logging() {
     mkdir -p "${log_dir}"
     shopt -s nullglob
     for f in log_*.txt; do
-        mv "${f}" "${log_dir}/"
+        # parallel jobs (snakemake gateway=2) race on the same files: a vanished one is not an error
+        mv "${f}" "${log_dir}/" 2>/dev/null || true
     done
     shopt -u nullglob
 
-    log_file="log_$(date +%Y%m%d_%H%M%S).txt"
+    log_file="log_$(date +%Y%m%d_%H%M%S)_$$.txt"
     export COLUMNS="${COLUMNS:-$(tput cols 2>/dev/null || echo 200)}"
     exec > >(tee -a "${log_file}") 2>&1
     # `exec > >(...)`'s process substitution is a detached background job --

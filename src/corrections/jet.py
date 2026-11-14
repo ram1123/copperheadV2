@@ -16,6 +16,19 @@ def printCorrObjInputs(corr_obj):
     input_names = [inp.name for inp in corr_obj.inputs]
     logger.debug(f"printCorrObjInputs names: \n {input_names}")
 
+def fatjet_tight_id_correctionlib(fatjets, config):
+    """Run-3 AK8PUPPI Tight jet ID from the JME jetid.json (config["jet_id_json_files"]), for
+    NanoAOD without FatJet_jetId (v15)."""
+    corr = get_corrset(config["jet_id_json_files"])["AK8PUPPI_Tight"]
+    inputs = {
+        "eta": fatjets.eta, "chHEF": fatjets.chHEF, "neHEF": fatjets.neHEF,
+        "chEmEF": fatjets.chEmEF, "neEmEF": fatjets.neEmEF, "muEF": fatjets.muEF,
+        "chMultiplicity": fatjets.chMultiplicity, "neMultiplicity": fatjets.neMultiplicity,
+        "multiplicity": fatjets.chMultiplicity + fatjets.neMultiplicity,
+    }
+    return corr.evaluate(*[inputs[i.name] for i in corr.inputs]) == 1
+
+
 def custom_jet_id(jets, year, jet_type="AK4PUPPI"):
     """
     https://twiki.cern.ch/twiki/bin/view/CMS/JetID13TeVUL#Preliminary_Recommendations_for

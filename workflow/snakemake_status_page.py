@@ -474,6 +474,11 @@ def build_run(path, proc, now, served):
         if old is None or rank.get(j["status"], 0) < rank.get(old, 0):
             table[cell] = j["status"]
 
+    if run_tag:
+        for marker in (REPO / "state" / run_tag).glob("*.done"):
+            key, year, region = classify(marker.name)
+            if key in year_keys and year:
+                year_cells.setdefault(f"{year}|{key}", "done")
     # rows/columns of the grids: what the run config plans, plus whatever already ran (so the grids
     # are complete from the start instead of growing as jobs start)
     cfg_years = [str(y) for y in cfg.get("years") or []]
@@ -501,6 +506,8 @@ def build_run(path, proc, now, served):
     started = utc_from_logname(path)
     stage1 = [s for s in (stage1_details(j, j["status"] in ("running", "restarting"))
                           for j in {j["log"]: j for j in jobs if j["rule"] == "stage1" and j["log"]}.values()) if s]
+    if cfg and ({"stage1", "stage1Compact"} & set(rules)):
+        stage1 += stage1_other_years(cfg, run_tag, {s["year"] for s in stage1}, jobs)
     # a stage-1 job's log only shows progress bars: say which chunks it is on, from its ledger
     by_log = {s["log"]: s for s in stage1}
     for row in job_rows:
@@ -569,7 +576,20 @@ def stage1_details(job, alive):
         save = f"{flag(cmd, '--save_path')}/stage1_output/{flag(cmd, '-y')}"
     if not save:
         return None
-    sdir, t0 = Path(save) / "_status", job["start"].timestamp()
+    skipped = set()  # samples run_stage1.py skips (configs/skip_stage1_run.py), never "pending"
+    try:
+        with open(REPO / job["log"], errors="replace") as f:
+            for ln in f:
+                if "Skipping year=" in ln and (m := S1_SKIP_RE.search(ANSI_RE.sub("", ln))):
+                    skipped.add(m.group(1).rstrip(","))
+    except OSError:
+        pass
+    return stage1_from_ledger(Path(save) / "_status", flag(cmd, "-y"), flag(cmd, "--NanoAODv"), flag(cmd, "--prestage-tag"),
+                              job["start"].timestamp(), alive, job["log"], skipped)
+
+
+def stage1_from_ledger(sdir, year, nano, tag, t0, alive, log="", skipped=()):
+    """Chunk table of one stage-1 year from its ledger + prestage JSON (also used for years with no job in this run)."""
     chunks = {}
     try:
         with open(sdir / "job_status.jsonl", errors="replace") as f:
@@ -585,7 +605,6 @@ def stage1_details(job, alive):
                 c["rec"] = rec
     except OSError:
         pass
-    year, nano, tag = flag(cmd, "-y"), flag(cmd, "--NanoAODv"), flag(cmd, "--prestage-tag")
     samples, sample_events = [], {}
     if year and nano:
         try:
@@ -596,14 +615,6 @@ def stage1_details(job, alive):
                 sample_events[s] = num(md.get("nGenEvts")) or num(md.get("data_entries"))
         except (OSError, ValueError, AttributeError):
             pass
-    skipped = set()  # samples run_stage1.py skips (configs/skip_stage1_run.py), never "pending"
-    try:
-        with open(REPO / job["log"], errors="replace") as f:
-            for ln in f:
-                if "Skipping year=" in ln and (m := S1_SKIP_RE.search(ANSI_RE.sub("", ln))):
-                    skipped.add(m.group(1).rstrip(","))
-    except OSError:
-        pass
     now, rows = time.time(), []
     try:
         ledger_age = now - os.path.getmtime(sdir / "job_status.jsonl")
@@ -645,8 +656,41 @@ def stage1_details(job, alive):
     events = {"processed": sum(r["processed"] or 0 for r in rows if r["status"] == "done"),
               "total": sum(r["processed"] or 0 for r in rows if r["status"] == "done") + ev_left}
     return {"year": year or "", "dir": str(sdir), "n_samples": len(samples), "counts": counts, "chunks": rows,
-            "eta": eta, "events": events, "alive": alive, "log": job["log"], "ledger_age_s": ledger_age,
+            "eta": eta, "events": events, "alive": alive, "log": log, "ledger_age_s": ledger_age, "origin": "this run",
             "summary": (sdir / "stage1_summary.log").exists() and et(datetime.fromtimestamp((sdir / "stage1_summary.log").stat().st_mtime, timezone.utc))}
+
+
+NANO_FOR_YEAR = {"2016preVFP": "15", "2016postVFP": "15", "2017": "15", "2018": "15", "2022preEE": "12", "2022postEE": "12",
+                 "2023": "12", "2023BPix": "12", "2024": "15", "2025": "15", "2026": "15"}  # = Snakefile YEAR_META
+
+
+def stage1_other_years(cfg, run_tag, have, jobs):
+    """Stage-1 rows for config years without a parsable stage1 job in this snakemake log: finished or
+    interrupted in an earlier run into the same label (state/<run_tag>/ marker + ledger), queued, or
+    restarting (a job that died before run_stage1.py printed its command)."""
+    out, pt = [], cfg.get("prestage_tag") or ""
+    user = os.environ.get("USER") or os.environ.get("NB_USER") or ""
+    for year in [str(y) for y in cfg.get("years") or []]:
+        if year in have or year not in NANO_FOR_YEAR:
+            continue
+        nano = NANO_FOR_YEAR[year]
+        label = cfg.get("stage1_label") or f"{'Run2' if year.startswith(('2016', '2017', '2018')) else 'Run3'}_nanoAODv{nano}_{run_tag}"
+        sdir = Path(cfg.get("hmm_base") or "/work/projects/hmm") / user / "hmm_ntuples" / "copperheadV1clean" / label / "stage1_output" / year / "_status"
+        tag = pt.get(year, "") if isinstance(pt, dict) else pt
+        job = next((j for j in reversed(jobs) if j["rule"] == "stage1" and re.search(rf"stage1_{re.escape(year)}_rep\d+\.done", j["output"])), None)
+        done = bool(run_tag) and any((REPO / "state" / run_tag).glob(f"stage1_{year}_rep*.done"))
+        s = stage1_from_ledger(sdir, year, nano, tag, time.time(), False, job["log"] if job else "")
+        if job:
+            s["origin"] = job["status"]  # restarting / failed / killed: queued by snakemake, no ledger progress yet
+        elif done:
+            s["origin"] = "done (earlier run)"
+        elif any(c["status"] != "pending" and c["status"] != "skipped" for c in s["chunks"]):
+            s["origin"] = "partial (earlier run)"
+        else:
+            s["origin"] = "queued"
+        s["marker_done"] = done
+        out.append(s)
+    return out
 
 
 def log_header(path):
@@ -786,12 +830,41 @@ def collect(max_runs, days):
         if run:
             runs.append(run)
     runs.sort(key=lambda r: (r["state"] != "running", -r["started_ts"]))
+    add_time_across_runs(runs)
     if FILES_DIR.exists():  # drop plot copies no run on the page refers to any more
         for f in FILES_DIR.rglob("*"):
             if f.is_file() and f not in served:
                 f.unlink(missing_ok=True)
     return {"generated": et(now), "generated_ts": now.timestamp(), "n_running": len(procs), "runs": runs,
             "proxy": proxy_status()}
+
+
+def add_time_across_runs(runs):
+    """Wall time of a job summed over every snakemake run (on the page) with the same run_tag that
+    started no later than this one: restarts/relaunches reuse the label, so a job's real cost spans runs."""
+    by_tag = {}
+    for r in runs:
+        if r.get("run_tag"):
+            by_tag.setdefault(r["run_tag"], []).append(r)
+    for r in runs:
+        earlier = [o for o in by_tag.get(r.get("run_tag"), []) if o is not r and o["started_ts"] <= r["started_ts"]]
+        hist = {}  # job name -> [(run start, wall_s, status)] from earlier runs
+        for o in sorted(earlier, key=lambda o: o["started_ts"]):
+            for j in o["jobs"]:
+                if j["wall_s"]:
+                    hist.setdefault(j["name"], []).append({"run": o["started"], "wall_s": j["wall_s"], "wall": dur(j["wall_s"]), "status": j["status"]})
+        for j in r["jobs"]:
+            prev = hist.get(j["name"], [])
+            j["prev_runs"] = prev
+            j["wall_total_s"] = j["wall_s"] + sum(x["wall_s"] for x in prev)
+            j["wall_total"] = dur(j["wall_total_s"])
+        names_here = {j["name"] for j in r["jobs"]}
+        for st in r.get("stage1", []):  # years with no job in this run: their time from the earlier runs
+            name = f"stage1_{st['year']}_rep1.done"
+            if name not in names_here and hist.get(name):
+                st["prev_runs"] = hist[name]
+                st["wall_total_s"] = sum(x["wall_s"] for x in hist[name])
+                st["wall_total"] = dur(st["wall_total_s"])
 
 
 def write_atomic(path, text):

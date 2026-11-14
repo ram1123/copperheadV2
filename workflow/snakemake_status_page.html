@@ -247,7 +247,7 @@ function render() {
 
   // pipeline order: stage-1 -> per-year steps -> DNN -> stage-2/3 grid -> combined-year steps; stats + jobs below
   const s1list = [...(r.stage1 || [])].sort((a, b) => ((YEAR_ORDER.indexOf(a.year) + 99) % 99) - ((YEAR_ORDER.indexOf(b.year) + 99) % 99));
-  h += stage1Overview(s1list, r.rules, (r.config || {}).years || [], r.jobs) + s1list.map(stage1Card).join("");
+  h += stage1Overview(s1list, r.rules, (r.config || {}).years || [], r.jobs, r.year_steps) + s1list.map(stage1Card).join("");
   h += dnnCard(r.dnn || []);
   const nRule = (...ks) => r.rules.filter(x => ks.includes(x.rule)).reduce((a, x) => a + x.total, 0);
   const ys = r.year_steps, ch = r.chain, gl = r.global;
@@ -295,7 +295,7 @@ function render() {
     <span class="muted">click a row for the log tail</span></div>
     <table class="wide"><tr><th>status</th><th>rule</th><th>output</th><th>try</th><th>started (this try)</th><th title="summed over all tries; hover for each">wall (all tries)</th><th>last log line / progress</th></tr>` +
     shown.map(j => `<tr class="job" data-j="${j.jobid}"><td><span class="badge b-${j.status}">${j.status}</span></td><td>${esc(j.rule)}</td>
-      <td>${esc(j.name)}</td><td class="num">${j.attempt}</td><td>${esc(j.start)}</td><td class="num" title="${esc(attemptTip(j))}">${esc(j.wall)}${j.attempt > 1 ? ` <span class="muted">(${j.attempt} tries)</span>` : ""}</td><td class="last">${esc(j.last)}</td></tr>` +
+      <td>${esc(j.name)}</td><td class="num">${j.attempt}</td><td>${esc(j.start)}</td><td class="num" title="${esc((j.prev_runs || []).map(x => `earlier run ${x.run}: ${x.wall} (${x.status})`).concat([attemptTip(j)]).filter(Boolean).join("\n"))}">${esc(j.wall)}${j.attempt > 1 ? ` <span class="muted">(${j.attempt} tries)</span>` : ""}${(j.prev_runs || []).length ? ` <span class="muted">· ${esc(j.wall_total)} over ${j.prev_runs.length + 1} runs</span>` : ""}</td><td class="last">${esc(j.last)}</td></tr>` +
       (openJobs.has(j.jobid) ? `<tr><td colspan="7"><div class="muted">log: <code>${esc(j.log)}</code>${j.wildcards ? " · " + esc(j.wildcards) : ""}</div>
         <pre>${j.tail.length ? esc(j.tail.join("\n")) : "(log tail is kept only for jobs that are not done)"}</pre></td></tr>` : "")).join("") +
     (shown.length ? "" : '<tr><td colspan="7" class="muted">no jobs match</td></tr>') + "</table></div>";
@@ -323,31 +323,48 @@ const fmtN = n => n == null ? "" : n.toLocaleString("en-US");
 const fmtEv = n => n == null ? "" : n >= 1e9 ? (n / 1e9).toFixed(2) + " G" : n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : fmtN(n);
 const s1Filter = {}, s1Search = {};  // per status dir; openS1 = year tables the user expanded
 
-function stage1Overview(list, rules, cfgYears, jobs = []) {
+function stage1Overview(list, rules, cfgYears, jobs = [], ysteps = { steps: [], cells: {} }) {
   if (!list.length) return "";
   const yk = y => (YEAR_ORDER.indexOf(y) + 99) % 99;
   const rows = [...list].sort((a, b) => yk(a.year) - yk(b.year));
-  const s1 = rules.find(x => x.rule === "stage1");
-  const notStarted = s1 ? s1.pending : 0;
-  const seen = new Set(list.map(s => s.year)), waiting = cfgYears.filter(y => !seen.has(y));
+  const seen = new Set(list.map(s => s.year));
+  const waiting = [...rows.filter(s => ["queued", "restarting"].includes(s.origin) || (s.origin || "").startsWith("partial")).map(s => s.year), ...cfgYears.filter(y => !seen.has(y))];
+  const notStarted = waiting.length;
   const etas = rows.filter(s => s.eta).map(s => s.eta.ts);
-  return `<div class="card"><h2>Stage-1 overview</h2><table><tr><th>year</th><th>chunks</th><th>done</th><th>running</th><th>failed</th>
+  const oc = { "this run": "b-running", "done (earlier run)": "b-finished", queued: "b-pending", restarting: "b-running" };
+  const origin = s => `<span class="badge ${oc[s.origin] || ((s.origin || "").startsWith("partial") ? "b-stopped" : "b-failed")}" title="${s.origin === "this run"
+    ? "stage-1 job running in this snakemake run" : "no running stage-1 job for this year in this run; counts read from its _status ledger"}">${esc(s.origin === "this run" ? (s.alive ? "running" : "ended") : s.origin || "")}</span>`;
+  const per = ys => [["stage1", "stage1"], ["compact", "compact"], ...ys.steps.filter(([k]) => k.startsWith("plots_"))];
+  return `<div class="card"><h2>Stage-1 overview — ${rows.filter(s => s.counts.done === s.chunks.length - (s.counts.skipped || 0) && s.chunks.length).length}/${rows.length} years complete</h2><table><tr><th>year</th><th>state</th><th>steps</th><th>chunks</th><th>done</th><th>running</th><th>failed</th>
     <th>interrupted</th><th>not started</th><th>skipped</th><th>events processed / total</th><th title="this year's stage1 job: start → end (or now)">run time</th><th title="from this job's event throughput so far; rough">ETA (ET)</th></tr>` +
     rows.map(s => {
       const c = s.counts, tot = s.chunks.length - (c.skipped || 0), done = c.done === tot && tot > 0;
       const eta = done ? `<span class="muted">done${s.summary ? " " + esc(s.summary) : ""}</span>` : s.eta ? `<b>${esc(s.eta.at)}</b> <span class="muted">(${esc(s.eta.left)} left)</span>`
         : `<span class="muted">${s.alive ? "after a few chunks finish" : "job not running"}</span>`;
-      return `<tr><td><a href="#s1-${esc(s.year)}" class="s1jump" data-d="${esc(s.dir)}">${esc(s.year)}</a></td>
+      return `<tr><td><a href="#s1-${esc(s.year)}" class="s1jump" data-d="${esc(s.dir)}">${esc(s.year)}</a></td><td>${origin(s)}</td>
+        <td><span class="cell">${per(ysteps).map(([k, d]) => sq(ysteps.cells[`${s.year}|${k}`], d)).join("")}</span></td>
         <td class="barcell">${bar([[c.done, COLORS.done], [c.running, COLORS.running], [c.failed + c.killed, COLORS.failed]], tot)}</td>
         <td class="num">${c.done}/${tot}</td><td class="num">${c.running}</td>
         <td class="num">${c.failed ? `<span class="stale">${c.failed}</span>` : 0}</td><td class="num">${c.killed}</td>
         <td class="num">${c.pending}</td><td class="num">${c.skipped || 0}</td>
         <td class="num">${fmtEv(s.events.processed)} / ${fmtEv(s.events.total)}</td>
-        <td class="num">${(j => j ? `<span title="${esc(attemptTip(j))}">${j.end_ts == null ? "running " : ""}${fmtDur(j.wall_s)}${j.attempt > 1 ? ` (${j.attempt} tries)` : ""}</span>` : "–")(jobs.find(j => j.log === s.log))}</td><td>${eta}</td></tr>`;
+        <td class="num">${runTime(s, jobs.find(j => j.log === s.log && s.log))}</td><td>${eta}</td></tr>`;
     }).join("") + "</table>" +
-    `<div class="legend"><span>${notStarted ? `not started yet: <b>${esc(waiting.join(", ") || notStarted + " job(s)")}</b> (no ETA until they start)` : "all stage-1 jobs started"}</span>` +
+    `<div class="legend"><span>${notStarted ? `still to run: <b>${esc(waiting.join(", "))}</b> (no ETA until they start)` : "all stage-1 jobs started"}</span>` +
+    `<span>steps: ${["stage1", "compact", ...per(ysteps).slice(2).map(x => x[1])].join(" → ")} (${legend().replace(/<\/?div[^>]*>/g, "")})</span>` +
     (etas.length && !notStarted ? `<span>last running year done ≈ <b>${new Date(Math.max(...etas) * 1000).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short" })}</b></span>` : "") +
     `<span>click a year for its chunk table</span></div>${failureSummary(rows)}</div>`;
+}
+
+// Stage-1 run time of a year: this run's job plus every earlier snakemake run of the same label.
+function runTime(s, j) {
+  const prev = (j ? j.prev_runs : s.prev_runs) || [];
+  const tip = prev.map(x => `earlier run ${x.run}: ${x.wall} (${x.status})`).join("\n") + (j ? `${prev.length ? "\n" : ""}this run: ${attemptTip(j)}` : "");
+  if (!j && !prev.length) return "–";
+  const total = j ? (j.wall_total_s ?? j.wall_s) : s.wall_total_s;
+  const now = j ? `${j.end_ts == null ? "running " : ""}${fmtDur(j.wall_s)}${j.attempt > 1 ? ` (${j.attempt} tries)` : ""}` : "";
+  const tot = `<b>${fmtDur(total)}</b> total over ${prev.length + (j ? 1 : 0)} run${prev.length + (j ? 1 : 0) > 1 ? "s" : ""}`;
+  return `<span title="${esc(tip)}">${j && !prev.length ? now : j ? `${now} · ${tot}` : tot}</span>`;
 }
 
 // Failed / interrupted chunks of all years, grouped by error type (the generator classifies the full error).
