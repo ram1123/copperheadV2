@@ -183,18 +183,34 @@ def muon_sfs_stat_syst_correctionlib(mu1, mu2, config):
     """
     info = config["muSFFileList"]
     corrset = get_corrset(info["json_file"])
-    corrs = {"muID": corrset[info["id"]], "muIso": corrset[info["iso"]], "muTrig": corrset[info["trig"]]}
+    keys = {"muID": "id", "muIso": "iso", "muTrig": "trig"}
+    corrs = {name: corrset[info[k]] for name, k in keys.items()}
     mus = (mu1, mu2)
     # muon_sel_corrected_kinematics (Round-1): SFs at the ScaRe+FSR pT/eta the selection cut on, else raw
     pt_f, eta_f = ("pt", "eta") if config["switches"]["muon_sel_corrected_kinematics"] else ("pt_raw", "eta_raw")
 
-    def per_muon(corr, eta, pt):
-        nom = corr.evaluate(eta, pt, "nominal")
-        return nom, corr.evaluate(eta, pt, "stat"), corr.evaluate(eta, pt, "syst")
+    # muon_id_pt_split > 0: muons below it passed Tight ID/iso, so they take the *_lowpt SFs
+    pt_split = float(config.get("muon_id_pt_split", 0.0) or 0.0)
+    corrs_low, mu_low = None, (None, None)
+    if pt_split > 0:
+        missing = [f"{k}_lowpt" for k in keys.values() if not info.get(f"{k}_lowpt")]
+        if missing:
+            raise ValueError(f"muon_id_pt_split={pt_split} needs {missing} in muSFFileList ({info['json_file']})")
+        corrs_low = {name: corrset[info[f"{k}_lowpt"]] for name, k in keys.items()}
+        mu_low = tuple(m[pt_f] < pt_split for m in mus)
+
+    def eval_cat(name, eta, pt, cat, low):
+        val = corrs[name].evaluate(eta, pt, cat)
+        if low is None:
+            return val
+        return ak.where(low, corrs_low[name].evaluate(eta, pt, cat), val)
+
+    def per_muon(name, eta, pt, low):
+        return tuple(eval_cat(name, eta, pt, cat, low) for cat in ("nominal", "stat", "syst"))
 
     out = {}
     for name in ("muID", "muIso"):
-        (n1, st1, sy1), (n2, st2, sy2) = (per_muon(corrs[name], m[eta_f], m[pt_f]) for m in mus)
+        (n1, st1, sy1), (n2, st2, sy2) = (per_muon(name, m[eta_f], m[pt_f], low) for m, low in zip(mus, mu_low))
         out[name] = {
             "nom": n1 * n2,
             "stat": ((n1 + st1) * (n2 + st2), (n1 - st1) * (n2 - st2)),
@@ -202,20 +218,20 @@ def muon_sfs_stat_syst_correctionlib(mu1, mu2, config):
         }
 
     # Trigger: clip inputs into the SF validity window; out-of-window muons cannot fire the HLT
-    trig = corrs["muTrig"]
     eta_max, pt_min = config["muon_eta_cut"], config["muon_leading_pt"]
-    has_mc_eff = _has_category(trig, "nominal_MCeff")
+    has_mc_eff = _has_category(corrs["muTrig"], "nominal_MCeff") and (
+        corrs_low is None or _has_category(corrs_low["muTrig"], "nominal_MCeff"))
     in_win, eff, sf, st, sy = [], [], [], [], []
-    for m in mus:
+    for m, low in zip(mus, mu_low):
         in_win.append((m[pt_f] > pt_min) & (abs(m[eta_f]) < eta_max))
         pt_safe = ak.where(m[pt_f] > pt_min, m[pt_f], pt_min + 0.01)
         eta_safe = ak.where(abs(m[eta_f]) < eta_max, m[eta_f], 0.0)
-        n, s_st, s_sy = per_muon(trig, eta_safe, pt_safe)
+        n, s_st, s_sy = per_muon("muTrig", eta_safe, pt_safe, low)
         sf.append(n)
         st.append(s_st)
         sy.append(s_sy)
         if has_mc_eff:
-            eff.append(ak.where(in_win[-1], trig.evaluate(eta_safe, pt_safe, "nominal_MCeff"), 0.0))
+            eff.append(ak.where(in_win[-1], eval_cat("muTrig", eta_safe, pt_safe, "nominal_MCeff", low), 0.0))
 
     if has_mc_eff:
         p_mc = 1.0 - (1.0 - eff[0]) * (1.0 - eff[1])

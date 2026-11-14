@@ -36,13 +36,13 @@ btag_jet_pt_cut:
     2016_RERECO: 25.0
     "2017_RERECO": 25.0
     "2018_RERECO": 25.0
-    "2022preEE": 25.0
-    "2022postEE": 25.0
-    "2023": 25.0
-    "2023BPix": 25.0
-    "2024": 25.0
-    "2025": 25.0
-    "2026": 25.0
+    "2022preEE": 20.0 # Run 3: common VBF baseline (Pier, Nov 2026), b-tag counting jets pT > 20
+    "2022postEE": 20.0
+    "2023": 20.0
+    "2023BPix": 20.0
+    "2024": 20.0
+    "2025": 20.0
+    "2026": 20.0
 btag_jet_eta_cut:
     2016preVFP: 2.4
     2016postVFP: 2.4
