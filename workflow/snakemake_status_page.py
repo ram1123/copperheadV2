@@ -390,7 +390,58 @@ def parse_log(path):
             "ended": ended, "failed_exit": failed_exit, "mtime": os.path.getmtime(path)}
 
 
-def build_run(path, proc, now, served):
+JOBS_LOG = REPO / "logs" / "detached" / "jobs.log"
+JOBS_LOG_RE = re.compile(r"^\[(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\] (START|EXIT) (\S+) run=(\S+)(?: pid=(\d+) pgid=(\d+) cmd: (.*)| rc=(\d+)(.*))?")
+
+
+def detached_launches():
+    """[{name, run, start, pid, pgid, cmd, exit_rc, exit_at, exit_note}] from detach_job.sh's jobs.log (UTC)."""
+    runs = {}
+    try:
+        for ln in open(JOBS_LOG, errors="replace"):
+            m = JOBS_LOG_RE.match(ln.rstrip("\n"))
+            if not m:
+                continue
+            t = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            if m.group(2) == "START":
+                runs[m.group(4)] = {"name": m.group(3), "run": m.group(4), "start": t, "pid": num(m.group(5)), "pgid": num(m.group(6)),
+                                    "cmd": m.group(7) or "", "exit_rc": None, "exit_at": None, "exit_note": ""}
+            elif m.group(4) in runs:
+                runs[m.group(4)].update(exit_rc=num(m.group(8)), exit_at=t, exit_note=(m.group(9) or "").strip(" ()"))
+    except OSError:
+        pass
+    return list(runs.values())
+
+
+def launch_for(started, launches):
+    """The detach_job.sh launch whose snakemake wrote the log started at `started` (log name time, within 3 min)."""
+    if not started:
+        return None
+    hits = [x for x in launches if "snakemake" in x["cmd"] and 0 <= (started - x["start"]).total_seconds() <= 180]
+    return max(hits, key=lambda x: x["start"]) if hits else None
+
+
+def death_info(state, launch, died_at, jobs):
+    """Why a run that is not running any more stopped: snakemake's own failure, or how its process went away."""
+    if state in ("running", "finished"):
+        return None
+    cut = [os.path.basename(j["output"].split(",")[0].strip()) for j in jobs if j["status"] == "killed"]
+    failed = [os.path.basename(j["output"].split(",")[0].strip()) for j in jobs if j["status"] == "failed"]
+    if state == "failed":
+        how = "snakemake gave up after failed job(s)"
+    elif launch is None:
+        how = "not launched with detach_job.sh: cause unknown (terminal closed, or killed)"
+    elif launch["exit_rc"] is None:
+        how = "killed without an exit record (SIGKILL / OOM, or the pod went away): no EXIT line in logs/detached/jobs.log"
+    elif launch["exit_rc"] == 143:
+        how = "stopped with SIGTERM (kill -TERM)"
+    else:
+        how = f"snakemake exited rc={launch['exit_rc']}"
+    return {"at": et(died_at), "ts": died_at.timestamp(), "how": how, "interrupted": cut, "failed": failed,
+            "no_error": state == "stopped" and not failed}
+
+
+def build_run(path, proc, now, served, next_start=None, launches=()):
     p = parse_log(path)
     if p is None:
         return None
@@ -403,12 +454,26 @@ def build_run(path, proc, now, served):
         state = "finished"
     else:
         state = "stopped"  # killed, or pod restarted
+    log_end = datetime.fromtimestamp(p["mtime"], timezone.utc)
+    died_at = log_end
+
+    def rule_log_mtime(j):
+        """Last write of a job's rule log, if it belongs to this run (rule logs are reused by later runs of the run_tag)."""
+        try:
+            t = datetime.fromtimestamp(os.path.getmtime(REPO / j["log"]), timezone.utc) if j["log"] else None
+        except OSError:
+            return None
+        return t if t and t >= j["start"] and (next_start is None or t <= next_start) else None
+
     if not proc:  # nothing can still be running in a dead snakemake
         for j in jobs:
             if j["status"] in ("running", "restarting"):
                 j["status"] = "killed" if state != "finished" else "done"
-                # it died with snakemake: count it until the log's last write, not until now
-                j["end"] = j["end"] or datetime.fromtimestamp(p["mtime"], timezone.utc)
+                # it died with snakemake: count it until its own log's last write (it outlives the snakemake log), not until now
+                la = max((t for t in (rule_log_mtime(j), ledger_last(j, j["start"], next_start)) if t), default=None)
+                j["end"] = j["end"] or max(log_end, la or log_end)
+                died_at = max(died_at, j["end"])
+    launch = launch_for(utc_from_logname(path), launches)
 
     run_tag = next((m.group(1) for j in jobs if (m := re.match(r"state/([^/]+)/", j["output"]))), "")
     cmd = proc["cmd"] if proc else ""
@@ -443,6 +508,9 @@ def build_run(path, proc, now, served):
         # summed over every attempt of this job (earlier ones end where Snakemake restarted it)
         wall_s = sum((a["end"] - a["start"]).total_seconds() for a in j["attempts"]) + (end - j["start"]).total_seconds()
         lines = tail(REPO / j["log"]) if j["log"] and j["status"] != "done" else []
+        if lines and not proc and next_start and rule_log_mtime(j) is None:
+            # a later run of this run_tag rewrote the log: its tail says nothing about this run
+            lines = ["(rule log since overwritten by a later run of this run_tag)"]
         info = [ln for ln in lines if not PROGRESS_RE.match(ln)]  # skip bare progress-bar redraws ("0%|")
         try:
             log_age = (now.timestamp() - os.path.getmtime(REPO / j["log"])) if j["log"] and j["status"] in ("running", "restarting") else None
@@ -522,7 +590,9 @@ def build_run(path, proc, now, served):
         "id": Path(path).name, "log": os.path.relpath(path, REPO), "state": state, "pid": proc["pid"] if proc else None,
         "cmd": cmd, "run_tag": run_tag, "started": et(started), "started_ts": started.timestamp() if started else 0,
         "updated": et(datetime.fromtimestamp(p["mtime"], timezone.utc)),
-        "elapsed": dur(((now if proc else datetime.fromtimestamp(p["mtime"], timezone.utc)) - started).total_seconds()) if started else "",
+        "elapsed": dur(((now if proc else died_at) - started).total_seconds()) if started else "",
+        "death": death_info(state, launch, died_at, jobs),
+        "launch": {"name": launch["name"], "run": launch["run"], "pgid": launch["pgid"]} if launch else None,
         "steps_done": done, "steps_total": total, "pct": pct if total else 0,
         "rules": list(rules.values()), "jobs": job_rows[::-1], "events": events,
         "chain": {"years": axis(chain, 0, year_key, cfg_years if "stage2" in rules else ()),
@@ -555,25 +625,50 @@ def num(v):
         return None
 
 
-def stage1_details(job, alive):
-    """Per-sample chunk progress of one stage1 rule job, from its _status/job_status.jsonl ledger
-    (cumulative over runs into the same label: chunks finished before this job are flagged `earlier`)."""
+def stage1_save_dir(job):
+    """(stage-1 output dir, run_stage1.py command) of a stage1 rule job, from its rule log."""
     save, cmd = None, ""
     try:
         with open(REPO / job["log"], errors="replace") as f:
             for _, ln in zip(range(300), f):
                 ln = ANSI_RE.sub("", ln)
                 cmd = cmd or (m.group(1) if (m := S1_CMD_RE.match(ln.strip())) else "")
-                # the rich logger wraps the long path onto the next lines, leaving "run_stage1.py:NNN" here
                 if (m := SAVE_PATH_RE.search(ln)) and m.group(1).startswith("/"):
                     save = m.group(1)
                 if cmd:
                     break
     except OSError:
-        return None
-    # run_stage1.py: start_save_path = <--save_path>/stage1_output/<year>
+        return None, ""
     if cmd and flag(cmd, "--save_path") and flag(cmd, "-y"):
         save = f"{flag(cmd, '--save_path')}/stage1_output/{flag(cmd, '-y')}"
+    return save, cmd
+
+
+def ledger_last(job, lo, hi):
+    """Last stage-1 ledger write of a stage1 job within [lo, hi]: when it really stopped working.
+    Survives a later run rewriting the rule log (same label -> same ledger, records are timestamped)."""
+    save, _ = stage1_save_dir(job) if job["rule"] == "stage1" and job["log"] else (None, "")
+    if not save:
+        return None
+    last = None
+    try:
+        for ln in open(Path(save) / "_status" / "job_status.jsonl", errors="replace"):
+            try:
+                ts = json.loads(ln)["ts"]
+            except (ValueError, KeyError, TypeError):
+                continue
+            if lo.timestamp() <= ts <= (hi.timestamp() if hi else float("inf")):
+                last = max(last or 0, ts)
+    except OSError:
+        return None
+    return datetime.fromtimestamp(last, timezone.utc) if last else None
+
+
+def stage1_details(job, alive):
+    """Per-sample chunk progress of one stage1 rule job, from its _status/job_status.jsonl ledger
+    (cumulative over runs into the same label: chunks finished before this job are flagged `earlier`)."""
+    # run_stage1.py: start_save_path = <--save_path>/stage1_output/<year> (rich wraps the logged path, so prefer the command)
+    save, cmd = stage1_save_dir(job)
     if not save:
         return None
     skipped = set()  # samples run_stage1.py skips (configs/skip_stage1_run.py), never "pending"
@@ -819,17 +914,30 @@ def collect(max_runs, days):
     recent = sorted(LOG_DIR.glob("*.snakemake.log"), key=os.path.getmtime, reverse=True)
     recent = [str(p) for p in recent if now.timestamp() - os.path.getmtime(p) < days * 86400]
     paths = list(dict.fromkeys(list(procs) + recent))
+    # start of every real run (not dry-run/--summary/--unlock): bounds which rule-log writes belong to a run
+    starts = []
+    for p in sorted(LOG_DIR.glob("*.snakemake.log")):
+        t = utc_from_logname(p)
+        try:
+            if t and now.timestamp() - os.path.getmtime(p) < (days + 2) * 86400 and "Job stats:" in p.read_text(errors="replace"):
+                starts.append(t)
+        except OSError:
+            continue
+    launches = detached_launches()
     runs, served = [], set()
     for path in paths:
         if len(runs) >= max_runs and path not in procs:
             continue
+        t0 = utc_from_logname(path)
+        nxt = min((t for t in starts if t0 and t > t0), default=None)
         try:
-            run = build_run(path, procs.get(path), now, served)
+            run = build_run(path, procs.get(path), now, served, nxt, launches)
         except (OSError, ValueError):
             continue
         if run:
             runs.append(run)
     runs.sort(key=lambda r: (r["state"] != "running", -r["started_ts"]))
+    link_resumes(runs)
     add_time_across_runs(runs)
     if FILES_DIR.exists():  # drop plot copies no run on the page refers to any more
         for f in FILES_DIR.rglob("*"):
@@ -837,6 +945,21 @@ def collect(max_runs, days):
                 f.unlink(missing_ok=True)
     return {"generated": et(now), "generated_ts": now.timestamp(), "n_running": len(procs), "runs": runs,
             "proxy": proxy_status()}
+
+
+def link_resumes(runs):
+    """Chain runs of one run_tag: each run names the attempt it resumes and the one that resumed it."""
+    by_tag = {}
+    for r in runs:
+        if r.get("run_tag"):
+            by_tag.setdefault(r["run_tag"], []).append(r)
+    for chain in by_tag.values():
+        chain.sort(key=lambda r: r["started_ts"])
+        for prev, cur in zip(chain, chain[1:]):
+            d = prev.get("death") or {}
+            cur["resumes"] = {"id": prev["id"], "state": prev["state"], "started": prev["started"], "died": d.get("at", prev["updated"]),
+                              "how": d.get("how", ""), "interrupted": d.get("interrupted", [])}
+            prev["resumed_by"] = {"id": cur["id"], "state": cur["state"], "started": cur["started"]}
 
 
 def add_time_across_runs(runs):

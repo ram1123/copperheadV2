@@ -1,3 +1,15 @@
+"""Stage-1 Data/MC validation plots (stacked bkg, signal lines, blinded h-peak) from
+compacted stage-1 parquet; sample groups come from configs/samples/samples.yaml.
+
+How to run (repo root):
+    ./run_in_pixi.sh default python plotter/validation_plotter_unified.py -y <year> \
+        --load <stage1>/<year>/f1_0 --save_path <out> --use-compacted compacted -cat <cat>
+Example:
+    ./run_in_pixi.sh default python plotter/validation_plotter_unified.py -y 2024 \
+        --load /work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/<label>/stage1_output/2024/f1_0 \
+        --save_path validation/figs/<label> --use-compacted compacted -cat vbf --njets 2 \
+        --region h-sidebands z-peak
+"""
 import argparse
 import copy
 import glob
@@ -34,7 +46,7 @@ from modules.utils import logger
 from src.lib.histogram.plotting import plotDataMC_compare
 from modules.classify_year import is_run2, is_run3
 from modules.coffea_parquet_utils import patch_parquet_nullable_ints
-from modules.sample_config import get_bkg_sig_dicts, get_data_processes
+from modules.sample_config import get_bkg_sig_dicts, get_data_processes, get_sample_dict
 from configs.variables.variable_lists import get_all_vars, unique_preserve_order, VAR_SETS
 from scripts.compact_parquet_data import ensure_compacted
 
@@ -65,30 +77,34 @@ bkg_MC_order = ["VV", "EWK",  "TOP", "DY", "DYVBF"]
 # DY/DYVBF/EWK/TOP/VV/ggH/VBF/DATA process lists all live in
 # configs/samples/samples.yaml (read via get_bkg_sig_dicts/get_data_processes in
 # build_group_dict_for_year below).
-# Group names used throughout this script -> group names as defined in samples.yaml
-# (identity mapping unless listed here).
-YAML_GROUP_ALIASES = {"TOP": "TT", "ggH": "GGH"}
+# Group names used throughout this script -> list of samples.yaml groups merged into it
+# (identity mapping unless listed here). TOP = TT+ST and VV = VV+VVV, as in stage-3.
+YAML_GROUP_ALIASES = {"TOP": ["TT", "ST"], "VV": ["VV", "VVV"], "ggH": ["GGH"]}
+
+# Drawn as unstacked lines; VH+ttH comes from samples.yaml's plot_only section.
+SIGNAL_GROUP_NAMES = ("ggH", "VBF", "VH+ttH")
 
 # Fixed group-name list, independent of year -- used both for the Hist
 # category axis (which must be static) and to drive build_group_dict_for_year.
-ALL_GROUP_NAMES = ["DATA", "DY", "DYVBF", "EWK", "TOP", "VV", "ggH", "VBF"]
+ALL_GROUP_NAMES = ["DATA", "DY", "DYVBF", "EWK", "TOP", "VV", "ggH", "VBF", "VH+ttH"]
 
 
 def build_group_dict_for_year(year: str, sample_config_path: str) -> dict:
     """
     Resolve the process-group -> [process names] mapping for one year, reading
-    everything from samples.yaml: DATA via get_data_processes, and DY/DYVBF/EWK/
+    everything from samples.yaml: DATA via get_data_processes, DY/DYVBF/EWK/
     TOP/VV/ggH/VBF via get_bkg_sig_dicts (the same helper scripts/get_yields.py
-    uses).
+    uses), and VH+ttH from the plotter-only plot_only section.
     """
     resolved = {"DATA": get_data_processes(sample_config_path, year)}
     _, _, combined = get_bkg_sig_dicts(sample_config_path, year)
+    combined = {**combined, **get_sample_dict(sample_config_path, "plot_only", year)}
     for name in ALL_GROUP_NAMES:
         if name == "DATA":
             continue
-        yaml_name = YAML_GROUP_ALIASES.get(name, name)
-        if yaml_name in combined:
-            resolved[name] = combined[yaml_name]
+        yaml_names = [n for n in YAML_GROUP_ALIASES.get(name, [name]) if n in combined]
+        if yaml_names:
+            resolved[name] = [p for n in yaml_names for p in combined[n]]
     return resolved
 
 
@@ -593,7 +609,7 @@ def generate_combo_plots(
                 data_dict = hist_dict
             else:  # keep data blinded
                 data_dict = {key: np.zeros_like(value) for key, value in hist_dict.items()}
-        elif group_name in ("ggH", "VBF"):  # signal
+        elif group_name in SIGNAL_GROUP_NAMES:  # signal
             sig_MC_dict[group_name] = hist_dict
         else:  # bkg MC
             bkg_MC_dict[group_name] = hist_dict
@@ -1138,6 +1154,8 @@ def run_bulk_validation(
 
 if __name__ == "__main__":
     parser = build_common_parser()
+    # Plotter-only default (shared parser default stays VBF ggH for stage-2).
+    parser.set_defaults(sig_samples=list(SIGNAL_GROUP_NAMES))
     parser.add_argument(
         "-bkgorder",
         "--background_order",

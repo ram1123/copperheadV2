@@ -62,26 +62,8 @@ background:
                 - st_tw_antitop
                 - st_t_top
                 - st_t_antitop
-            processes_per_year:
-                2022preEE: {}
-                2022postEE: {}
-                2023: {}
-                2023BPix: {}
-                2024: {}
-                2025: {}
-                2026: {}
-                # Run-3 t/s-channel entries exist in the dataset YAMLs but are not validated yet; keep them
-                # out of the fit (2025/2026 otherwise fall back to the default list above). To enable, add:
-                #   - st_t_top
-                #   - st_t_antitop
-                #   - st_s_top
-                #   - st_s_antitop
-                # 2025:
-                #     - st_tw_top
-                #     - st_tw_antitop
-                # 2026:
-                #     - st_tw_top
-                #     - st_tw_antitop
+            # Run-3 st_tw_* are 2L2Nu only (Run-2 = NoFullyHadronic); st_tw_*_lnu2q (skip_sample) and st_s_* not added yet.
+            processes_per_year: {}
 
         EWK:
             processes:
@@ -152,16 +134,7 @@ background:
                 - wwz
                 - wzz
                 - zzz
-            processes_per_year:
-                2022preEE: {}
-                2022postEE: {}
-                2023: {}
-                2023BPix: {}
-                # Run-3 www/wwz/wzz/zzz entries exist in the dataset YAMLs but are not validated yet; to
-                # enable a year, delete its {} line below (and the ones above) so it uses the default list.
-                2024: {}
-                2025: {}
-                2026: {}
+            processes_per_year: {}
 
 # --------------------------------------------------
 
@@ -227,3 +200,21 @@ signal:
         #         2024:
         #             - vbf_powheg
         #             - ggh_powhegPS
+
+# --------------------------------------------------
+
+# Read only by plotter/validation_plotter_unified.py (overlay lines); stage-2/3 never see this section.
+plot_only:
+    groups:
+        VH+ttH:
+            processes:
+                - wph_powheg
+                - wmh_powheg
+                - zh_powheg
+                - tth_powheg
+            processes_per_year:
+                # No Run-2 VH/ttH samples in the dataset YAMLs.
+                2016preVFP: []
+                2016postVFP: []
+                2017: []
+                2018: []

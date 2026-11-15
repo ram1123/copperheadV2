@@ -42,6 +42,10 @@ details.older > summary { cursor: pointer; color: var(--muted); font-size: 13px;
 .attn.ok { border-left-color: var(--ok); }
 .attn ul { margin: 4px 0 0; padding-left: 18px; }
 .attn li { margin: 2px 0; }
+.death { border-left: 4px solid var(--fail); background: var(--bg); border-radius: 6px; padding: 6px 10px; margin: 6px 0; font-size: 13px; }
+.death.resumed { border-left-color: var(--warn); }
+.lineage { border-left: 4px solid var(--run); background: var(--bg); border-radius: 6px; padding: 6px 10px; margin: 6px 0; font-size: 13px; }
+a.runlink { cursor: pointer; text-decoration: underline; }
 .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; color: #fff; font-weight: 600; }
 .b-running, .b-restarting { background: var(--run); } .b-finished, .b-done { background: var(--ok); }
 .b-failed, .b-killed { background: var(--fail); } .b-stopped { background: var(--warn); } .b-pending { background: var(--pend); }
@@ -125,7 +129,7 @@ function renderTabs() {
   const short = shortTags(data.runs);
   const tab = r => `<button class="tab ${r.id === selected ? "sel" : ""}" data-id="${esc(r.id)}" title="${esc(r.run_tag || r.id)}">
       <span class="badge b-${r.state}">${r.state}</span> <span class="short">${esc(short[r.id])}</span>
-      <small>${esc(r.started)} · ${r.steps_done}/${r.steps_total} steps</small></button>`;
+      <small>${esc(r.started)}${r.death ? " → died " + esc(r.death.at) : ""} · ${r.steps_done}/${r.steps_total} steps</small></button>`;
   // running + the 2 newest others up front; empty stopped attempts and the rest folded away
   const empty = r => r.state === "stopped" && !r.steps_done;
   const front = data.runs.filter((r, i) => r.state === "running" || r.id === selected || (i < 3 && !empty(r)));
@@ -189,13 +193,16 @@ function attention(r, px, age) {
   if (age > 120) items.push(`page generator stopped ${Math.round(age / 60)} min ago: rerun <code>workflow/snakemake_status_page.py --ensure</code>`);
   if (!px) items.push("VOMS proxy: voms-proxy-info failed");
   else if (px.left_s < 48 * 3600) items.push(`VOMS proxy expires in <b>${esc(px.left)}</b> (${esc(px.expires)}); score dump needs ≥ 12 h`);
+  if (r.death && !r.resumed_by) items.push(`snakemake <b>died at ${esc(r.death.at)}</b> — ${esc(r.death.how)}; not resumed yet: relaunch the same command (finished outputs are skipped)`);
+  if (r.death && r.resumed_by) items.push(`this run died at ${esc(r.death.at)}; it was resumed by the run started ${esc(r.resumed_by.started)} (${esc(r.resumed_by.state)}) — see that tab`);
   for (const j of r.jobs) {
+    if (r.resumed_by && j.status === "killed") continue;
     if (j.status === "failed" || j.status === "killed") items.push(`job <b>${esc(j.name)}</b> ${j.status} (try ${j.attempt}): <code>${esc(j.last)}</code>`);
     else if ((j.status === "running" || j.status === "restarting") && j.log_age_s > STALL_S)
       items.push(`job <b>${esc(j.name)}</b> running but its log has not changed for ${Math.round(j.log_age_s / 60)} min`);
   }
   const badChunks = (r.stage1 || []).reduce((a, s) => a + s.counts.failed + s.counts.killed, 0);
-  if (badChunks) items.push(`${badChunks} stage-1 chunk(s) failed or interrupted — see "Failed / interrupted chunks by error type" below`);
+  if (badChunks && !r.resumed_by) items.push(`${badChunks} stage-1 chunk(s) failed or interrupted — see "Failed / interrupted chunks by error type" below`);
   for (const d of r.dnn || []) {
     if (d.status && d.status.state === "FAIL") items.push(`DNN <b>${esc(d.region)}</b> FAILED — move hpo_optuna/&lt;HPO label&gt; aside before rerunning`);
     if (d.fail) items.push(`DNN <b>${esc(d.region)}</b>: ${d.fail} HPO trial(s) failed`);
@@ -237,9 +244,10 @@ function render() {
   const nTot = totals.done + totals.running + totals.failed + totals.pending;
   let h = attention(r, px, age) + `<div class="card big">
     <h2><span class="badge b-${r.state}">${r.state}</span> ${esc(r.run_tag || r.id)}</h2>
+    ${deathBlock(r)}${lineageBlock(r)}
     ${phaseBar(r)}
     <div class="muted" style="margin-bottom:4px"><b>⏱ ${esc(r.elapsed)}</b> total · ${r.steps_done}/${r.steps_total} jobs (${r.pct}%) · ${totals.running} running · ${totals.failed} failed · ${totals.pending} not started</div>
-    <div class="muted">started ${esc(r.started)} · elapsed ${esc(r.elapsed)} · log updated ${esc(r.updated)}${r.pid ? " · pid " + r.pid : ""}</div>
+    <div class="muted">started ${esc(r.started)} · elapsed ${esc(r.elapsed)} · log updated ${esc(r.updated)}${r.pid ? " · pid " + r.pid : ""}${r.launch ? ` · detached as <code>${esc(r.launch.name)}</code> (stop: <code>kill -TERM -- -${r.launch.pgid}</code>)` : ""}</div>
     <div class="muted">log: <code>${esc(r.log)}</code></div>
     ${configBlock(r.config)}
     ${r.cmd ? `<details><summary class="muted">command</summary><pre>${esc(r.cmd)}</pre></details>` : ""}
@@ -276,6 +284,7 @@ function render() {
   el.innerHTML = h;
   el.querySelectorAll("details.s1card").forEach(d => d.ontoggle = () => { d.open ? openS1.add(d.dataset.d) : openS1.delete(d.dataset.d); });
   el.querySelectorAll(".s1jump").forEach(a => a.onclick = () => { openS1.add(a.dataset.d); render(); });
+  el.querySelectorAll("a.runlink").forEach(a => a.onclick = () => { selected = a.dataset.run; showOlder = true; render(); });
   el.querySelectorAll(".s1card .filters button").forEach(b => b.onclick = () => { s1Filter[b.dataset.d] = b.dataset.f; render(); });
   el.querySelectorAll(".s1search").forEach(i => i.oninput = () => { s1Search[i.dataset.d] = i.value; render(); });
   if (actId) { const i = document.getElementById(actId); if (i) { i.focus(); i.setSelectionRange(actCaret, actCaret); } }
@@ -380,6 +389,26 @@ function failureSummary(list) {
 }
 
 // The run's effective config (generator merges workflow/config.yaml, --configfile, --config).
+const runLink = (id, txt) => `<a class="runlink" data-run="${esc(id)}">${esc(txt)}</a>`;
+function deathBlock(r) {
+  const d = r.death;
+  if (!d) return "";
+  const list = xs => xs.map(x => `<code>${esc(x)}</code>`).join(", ");
+  return `<div class="death ${r.resumed_by ? "resumed" : ""}"><b>Died ${esc(d.at)}</b> — ${esc(d.how)}.
+    ${d.interrupted.length ? `<br>Interrupted (cut off mid-work${d.no_error ? ", no error in their logs" : ""}): ${list(d.interrupted)}.` : ""}
+    ${d.failed.length ? `<br>Failed: ${list(d.failed)}.` : ""}
+    <br>${r.resumed_by ? `Resumed by the run started ${runLink(r.resumed_by.id, r.resumed_by.started)} (${esc(r.resumed_by.state)}).`
+      : "Not resumed yet: relaunch the same command; jobs with a <code>state/*.done</code> marker are skipped."}</div>`;
+}
+function lineageBlock(r) {
+  const p = r.resumes;
+  if (!p) return "";
+  const prior = (r.stage1 || []).filter(s => (s.origin || "").includes("earlier run")).map(s => s.year);
+  return `<div class="lineage">Resumes the run started ${runLink(p.id, p.started)} (${esc(p.state)}${p.died ? ", died " + esc(p.died) : ""}).
+    ${p.interrupted.length ? `Rerunning what it cut off: ${p.interrupted.map(x => `<code>${esc(x)}</code>`).join(", ")}.` : ""}
+    ${prior.length ? `<br>Stage-1 already done in earlier runs: ${prior.map(esc).join(", ")}.` : ""}</div>`;
+}
+
 function configBlock(c) {
   if (!c) return "";
   const veto = c.lepton_ip_veto == null ? "?" : c.lepton_ip_veto === "ON" ? '<b class="warnt">ON</b>' : c.lepton_ip_veto === "off" ? "<b>off</b> (official)" : esc(c.lepton_ip_veto);
