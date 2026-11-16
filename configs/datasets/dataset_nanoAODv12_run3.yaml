@@ -2,7 +2,7 @@ years:
     "2022preEE":
         Data:
             total_lumi_pb: 7990.0
-            golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
             data_C:
                 skip_sample: False
                 datasets:
@@ -863,7 +863,7 @@ years:
     "2022postEE":
         Data:
             total_lumi_pb: 26680.0
-            golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
             data_E:
                 skip_sample: False
                 datasets:
@@ -882,7 +882,7 @@ years:
                 das_request:
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
-                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                    golden_json_official: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
             data_G:
                 skip_sample: False
                 datasets:
@@ -891,7 +891,7 @@ years:
                 das_request:
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
-                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                    golden_json_official: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
         DY:
             dy_VBF_filter:
                 skip_sample: False
@@ -1729,7 +1729,7 @@ years:
     "2023":
         Data:
             total_lumi_pb: 17960.0
-            golden_json: data/lumimasks/Cert_Collisions2023_366442_370790_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions23/2026-05-28/Cert_Collisions2023_366442_370790_Golden.json
             data_C:
                 skip_sample: False
                 datasets:
@@ -2586,7 +2586,7 @@ years:
     "2023BPix":
         Data:
             total_lumi_pb: 9680.0
-            golden_json: data/lumimasks/Cert_Collisions2023_366442_370790_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions23/2026-05-28/Cert_Collisions2023_366442_370790_Golden.json
             data_D:
                 skip_sample: False
                 datasets:
@@ -2598,7 +2598,7 @@ years:
                 das_request:
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
-                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                    golden_json_official: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
 
         DY:
             dy_VBF_filter:

@@ -6,15 +6,15 @@ roccor_file:
   2016_RERECO: data/roch_corr/RoccoR2016.txt
   '2017_RERECO': data/roch_corr/RoccoR2017.txt
   '2018_RERECO': data/roch_corr/RoccoR2018.txt
-  2022preEE: data/roch_corr/2022_Summer22.json
-  2022postEE: data/roch_corr/2022_Summer22EE.json
-  "2023": data/roch_corr/2023_Summer23.json
-  2023BPix: data/roch_corr/2023_Summer23BPix.json
+  2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
+  2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
+  "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
+  2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
   # 2024-2026: official MUO VXBS payloads (scale/smearing for beam-spot-constrained pT, which do_beamConstraint uses)
   "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-06-18/muon_scalesmearing_VXBS.json.gz
-  "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing_VXBS.json.gz
+  "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-10-27/muon_scalesmearing_VXBS.json.gz
   # PLACEHOLDER: MUO/Run3-26Prompt-Summer24-NanoAODv15/ is empty on cvmfs; reusing 2025 pending a 2026 payload.
-  "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing_VXBS.json.gz
+  "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-10-27/muon_scalesmearing_VXBS.json.gz
 # Regular (non-VXBS) ScaRe for muons that keep NanoAOD pT (bsConstrainedChi2 >= 30, or no beam constraint);
 # roccor_file (VXBS) is used for beam-spot-constrained pT. Same file as roccor_file = no split (HMuMu Round-1 sync).
 roccor_file_nonBS:
@@ -25,14 +25,14 @@ roccor_file_nonBS:
   2016_RERECO: data/roch_corr/RoccoR2016.txt
   '2017_RERECO': data/roch_corr/RoccoR2017.txt
   '2018_RERECO': data/roch_corr/RoccoR2018.txt
-  2022preEE: data/roch_corr/2022_Summer22.json
-  2022postEE: data/roch_corr/2022_Summer22EE.json
-  "2023": data/roch_corr/2023_Summer23.json
-  2023BPix: data/roch_corr/2023_Summer23BPix.json
+  2022preEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
+  2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
+  "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
+  2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2026-06-18/muon_scalesmearing.json.gz
   "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-06-18/muon_scalesmearing.json.gz
-  "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz
+  "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-10-27/muon_scalesmearing.json.gz
   # PLACEHOLDER: as roccor_file 2026
-  "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz
+  "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-10-27/muon_scalesmearing.json.gz
 BS_res_calib_path:
   2016preVFP:
     MC: data/res_calib/res_calib_BS_correction_2016preVFP_nanoAODv12_MC.json

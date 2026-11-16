@@ -1,5 +1,5 @@
-# Official path: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-22CDSep23-Summer22-NanoAODv12/2024-01-31/puWeights.json.gz
-# corresponding local path: data/cat/metadata/LUM/Run3-22CDSep23-Summer22-NanoAODv12/2024-01-31/puWeights.json.gz
+# Run-3 (2022preEE-2026) payloads are read directly from /cvmfs/cms-griddata.cern.ch/cat/metadata/ (newest dated dirs);
+# list and update procedure: docs/run3_official_corrections.md. Run-2 entries still use the local data/ copies.
 
 nnlops_file:
     2016preVFP: data/NNLOPS_reweight.root
@@ -21,7 +21,7 @@ btag_sf_json:
     "2022preEE": /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-22CDSep23-Summer22-NanoAODv12/2025-08-20/btagging.json.gz
     2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-08-20/btagging.json.gz
     "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-23CSep23-Summer23-NanoAODv12/2025-08-20/btagging.json.gz
-    2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-08-20/btagging.json.gz
+    2023BPix: /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-23DSep23-Summer23BPix-NanoAODv12/2026-11-05/btagging.json.gz
     "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-10-20/btagging.json.gz
     "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/2026-10-14/btagging.json.gz
     "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/BTV/Run3-25Prompt-Summer24-NanoAODv15/2026-10-14/btagging.json.gz # PLACEHOLDER: no BTV/*2026* payload exists on cvmfs yet, reusing 2025 pending real 2026 b-tag SFs
@@ -145,7 +145,7 @@ muSFFileList:
         iso_lowpt: NUM_TightPFIso_DEN_TightID
         trig_lowpt: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2025":
-        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_Z.json.gz
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-10-27/muon_Z.json.gz
         id: NUM_MediumID_DEN_TrackerMuons
         iso: NUM_LoosePFIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
@@ -154,7 +154,7 @@ muSFFileList:
         iso_lowpt: NUM_TightPFIso_DEN_TightID
         trig_lowpt: NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight
     "2026": # PLACEHOLDER: MUO/Run3-26Prompt-Summer24-NanoAODv15/ exists on cvmfs but is empty, reusing 2025 muon SFs pending real 2026 payload
-        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_Z.json.gz
+        json_file: /cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-10-27/muon_Z.json.gz
         id: NUM_MediumID_DEN_TrackerMuons
         iso: NUM_LoosePFIso_DEN_MediumID
         trig: NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium
@@ -233,11 +233,11 @@ jetpuid_sf_file: # old method as of Dec 16 2024,
     2016postVFP: data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
     "2017": data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
     "2018": data/PUID_106XTraining_ULRun2_EffSFandUncties_v1.root
-    "2022preEE": data/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2025-09-23/jetid.json.gz
-    2022postEE: data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-10-07/jetid.json.gz
-    "2023": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2025-10-07/jetid.json.gz
-    "2023BPix": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-10-07/jetid.json.gz
-    "2024": data/POG/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-12-02/jetid.json.gz
+    "2022preEE": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/2026-06-05/jetid.json.gz
+    2022postEE: /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/2026-06-05/jetid.json.gz
+    "2023": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/2026-07-15/jetid.json.gz
+    "2023BPix": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/2026-07-15/jetid.json.gz
+    "2024": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-07-16/jetid.json.gz
     "2025": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-25Prompt-Summer24-NanoAODv15/2026-07-16/jetid.json.gz
     "2026": /cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-26Prompt-Summer24-NanoAODv15/2026-07-15/jetid.json.gz
 jmar_sf_file:
