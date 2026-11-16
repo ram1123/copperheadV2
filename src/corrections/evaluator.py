@@ -562,6 +562,69 @@ def lhe_weights(events, dataset, year):
     return lhe_ren, lhe_fac
 
 
+# PS ISR/FSR SF------------------------------------------------------------------
+
+# Whole-sample mean of PSWeight[i] (Runs/PSSumw), filled by scripts/add_ps_sumw_to_prestage.py.
+PS_SUMW_METADATA_KEY = "psSumwRatio"
+PS_N_WEIGHTS = 4
+# NanoAOD PSWeight layout: [0] isr x2, [1] fsr x2, [2] isr x0.5, [3] fsr x0.5
+PS_COLUMN_INDEX = {"ps_isr_up": 0, "ps_fsr_up": 1, "ps_isr_down": 2, "ps_fsr_down": 3}
+
+
+def ps_weights(events, dataset, year):
+    """Per-event Pythia ISR/FSR variation ratios (w_var / w_nominal), each divided by its
+    whole-sample mean so the inclusive yield is unchanged (acceptance + shape only, as for
+    the Run-2 signal PS uncertainty, AN-19-124 Sec. 7.5).
+
+    Samples whose PSWeight is absent or the 1-entry dummy (e.g. Herwig7) get unity ratios.
+    Raises ValueError for any other entry count, or when the prestage metadata lacks the
+    whole-sample means, which cannot be rebuilt per chunk.
+    """
+    ones = ak.values_astype(ak.ones_like(events.genWeight), np.float64)
+    unity = {col: ones for col in PS_COLUMN_INDEX}
+    if "PSWeight" not in events.fields:
+        logger.info(f"{dataset} ({year}): no PSWeight branch, PS ratios set to unity")
+        return unity
+
+    n_entries = np.unique(ak.to_numpy(ak.num(events.PSWeight, axis=1))).tolist()
+    if n_entries in ([], [1]):  # empty chunk, or the dummy 1.0 weight
+        if n_entries == [1]:
+            logger.info(f"{dataset} ({year}): dummy PSWeight, PS ratios set to unity")
+        return unity
+    if n_entries != [PS_N_WEIGHTS]:
+        raise ValueError(
+            f"ps_weights: '{dataset}' ({year}) has PSWeight entry counts {n_entries}, "
+            f"expected [{PS_N_WEIGHTS}] (isr/fsr x2, x0.5) or the 1-entry dummy."
+        )
+
+    # Guard the hard-coded index map against a different 4-entry layout (title is in __doc__).
+    layout, title = events.PSWeight.layout, None
+    while layout is not None and title is None:
+        title = layout.parameters.get("__doc__")
+        layout = getattr(layout, "content", None)
+    expected = [r"\[0\]\s*isr\S*=2", r"\[1\]\s*fsr\S*=2", r"\[2\]\s*isr\S*=0\.5", r"\[3\]\s*fsr\S*=0\.5"]
+    if not all(re.search(p, title or "") for p in expected):
+        raise ValueError(
+            f"ps_weights: '{dataset}' ({year}) PSWeight title {title!r} does not match the "
+            f"assumed layout [0] isr x2, [1] fsr x2, [2] isr x0.5, [3] fsr x0.5."
+        )
+
+    metadata = getattr(events, "metadata", None) or {}
+    ratio = metadata.get(PS_SUMW_METADATA_KEY)
+    if ratio is None or len(ratio) != PS_N_WEIGHTS:
+        raise ValueError(
+            f"ps_weights: '{dataset}' ({year}) has a {PS_N_WEIGHTS}-entry PSWeight but "
+            f"'{PS_SUMW_METADATA_KEY}' in its dataset metadata is {ratio!r}. Add it to the "
+            f"prestage JSON with scripts/add_ps_sumw_to_prestage.py."
+        )
+    ratio = np.asarray(ratio, dtype=np.float64)
+    if not np.all(np.isfinite(ratio)) or np.any(ratio <= 0):
+        raise ValueError(f"ps_weights: '{dataset}' ({year}) has invalid {PS_SUMW_METADATA_KEY} {ratio}")
+
+    ps = ak.values_astype(events.PSWeight, np.float64)
+    return {col: ps[:, i] / ratio[i] for col, i in PS_COLUMN_INDEX.items()}
+
+
 # THU SF-------------------------------------------------------------------------
 # STXS   TOT,  PTH200,  Mjj60 , Mjj120 , Mjj350 ,
 # Mjj700, Mjj1000, Mjj1500,  25, JET01

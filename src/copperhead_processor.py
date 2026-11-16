@@ -38,6 +38,7 @@ from src.corrections.evaluator import (
     get_pdf_lha_id_range,
     lhe_weights,
     nnlops_weights,
+    ps_weights,
     pu_evaluator,
     qgl_weights_V2,
 )
@@ -1752,6 +1753,7 @@ class EventProcessor(processor.ProcessorABC):
         pdf_alpha_s_ratios = None
         pdf_central_weight = None
         write_pdf_members = False
+        ps_ratios = None  # set by the do_ps_wgt block below
         if is_mc:
             gen_weight_ones = ak.ones_like(events.genWeight)
             if "MiNNLO" in dataset: # We have spurious gen weight issue. ref: https://cms-talk.web.cern.ch/t/huge-event-weights-in-dy-powhegminnlo/8718/9
@@ -1911,6 +1913,11 @@ class EventProcessor(processor.ProcessorABC):
                     # A unit ratio contributes exactly zero to F^(k) - F^(0).
                     logger.debug("skip pdf! member ratios set to unity")
                     write_pdf_members = True
+
+            # PS ISR/FSR ratios: plain columns (no wgt_ prefix), so stage-2/3 do not turn
+            # them into nuisances for every process; Run-2 applied PS to signal only.
+            if self.config["switches"].get("do_ps_wgt", False):
+                ps_ratios = ps_weights(events, dataset, year)
         t15 = time.perf_counter()
         logger.debug(f"[timing] some GEN event weights for syst time: {t15 - t14:.2f} seconds")
 
@@ -2520,6 +2527,8 @@ class EventProcessor(processor.ProcessorABC):
         logger.debug(f"[timing] Weights partials time: {t21 - t20:.2f} seconds")
 
         _add_block(out_dict, weight_dict)
+        if ps_ratios is not None:
+            _add_block(out_dict, ps_ratios)
 
         # ------------------------------------------------------------#
         # Cutflow
