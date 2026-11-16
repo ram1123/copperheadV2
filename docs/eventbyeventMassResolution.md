@@ -286,3 +286,48 @@ This method ensures:
    - Pure Double Crystal Ball
    - Higgs natural width is negligible compared to detector resolution
 
+
+---
+
+## TO-DO: Learned Per-Event Resolution with a Mixture Density Network
+
+*Status: open idea (added 2026-11-11), not started. Research suggestion, not a CMS recommendation.*
+
+**Motivation.** `dimuon_ebe_mass_res` (and `dimuon_ebe_mass_res_rel`) is propagated analytically from
+the muon pT errors in `src/copperhead_processor.py`, then scaled by the factors above. It is an input to
+the VBF DNN (`configs/dnn_run3_vbf*.yaml`) and the ggH BDT. A single σ cannot describe the
+non-Gaussian tails (FSR, badly measured muons) that these models might use.
+
+**Idea.** Train a Mixture Density Network (MDN; C. M. Bishop, *Mixture Density Networks*,
+NCRG/94/004, Aston University, 1994) on MC to predict the full per-event density
+p(m_reco/m_true | muon pT, η, φ, FSR, …) as a mixture of K Gaussians. Use σ_core (and possibly the
+tail fraction) as MVA inputs.
+
+**Why an MDN rather than a normalizing flow.**
+
+| | MDN | Conditional normalizing flow |
+|---|---|---|
+| Target | 1D target, which is ours | Advantage only with several targets at once |
+| Per-event σ | σ_core is read off directly as a drop-in replacement | Needs a quantile width per event (sampling or inversion) |
+| Data calibration | Per-bin σ scaling, same as the current method | No single width to scale |
+| Interpretability | Components read as core vs tail / FSR | Black box |
+
+Switch to a flow only if the MDN's tails fail closure.
+
+**Plan.**
+
+1. **Baseline:** quantile regression (16/50/84 %) of m_reco/m_true gives a σ to beat.
+2. **MDN with K = 2–3:** predict log σ with a floor, clip gradients, start from a k-means initialisation
+   (avoids σ collapse, NaNs, and one component taking over).
+3. **Flow fallback:** only if the probability-integral-transform (PIT) histograms are not flat, or the
+   Z-peak data closure fails outside the core.
+
+**Acceptance criteria.**
+
+- Pulls (m_reco − m_true)/σ have unit width in every η/pT bin (same binning as the closure test above).
+- Z-peak data/MC closure is at least as good as the current calibration. The MDN is trained on MC, so
+  data calibration is still needed: the calibration problem moves, it does not disappear.
+- The VBF DNN's binned significance improves when the new σ replaces `dimuon_ebe_mass_res`, not just
+  a resolution metric.
+
+Replacing the DNN input changes an analysis input. It needs a physics review and a DNN retrain.

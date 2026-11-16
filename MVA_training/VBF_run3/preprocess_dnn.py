@@ -27,6 +27,8 @@ import glob as _glob
 import json
 import os
 import pickle
+import time
+from concurrent.futures import CancelledError
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -38,6 +40,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import yaml
+from distributed.comm.core import CommClosedError
 from modules.dask_utils import close_dask_client, get_dask_client
 from modules.git_utils import get_git_commit, get_git_state
 from modules.selection import applyRegionCatCuts
@@ -48,6 +51,7 @@ from modules.systematics import (
     canonical_variation_name,
     resolve_variation_columns,
     select_variations,
+    split_variation,
     stage2_shape_variations,
     variation_column_name,
 )
@@ -235,6 +239,69 @@ class VariationPlan:
     nominal_of: Dict[str, str]
 
 
+_LOGGED_NOMINAL_ONLY: set = set()
+
+
+def _log_nominal_only_summary(
+    physical_features: List[str], variations: List[str], resolved: Dict[str, Dict[str, str]]
+) -> None:
+    """Log once per distinct pattern which features stay nominal under each variation source.
+
+    Replaces Stage-2's per-feature fallback warnings (which repeat for every sample).
+    Expected: JES/JER leave the dimuon features nominal and muon sources leave jet
+    features nominal; a feature stage-1 never stores shifted (CS angles, the mixed
+    muon+jet features under mu_scale/mu_resol) also lands here, as in Stage-2.
+    """
+    by_source: Dict[str, Tuple[str, ...]] = {}
+    for variation in variations:
+        source, _ = split_variation(variation)
+        by_source[source] = tuple(
+            f for f in physical_features if f not in resolved[variation]
+        )
+    groups: Dict[Tuple[str, ...], List[str]] = {}
+    for source, feats in by_source.items():
+        groups.setdefault(feats, []).append(source)
+    for feats, sources in groups.items():
+        key = (tuple(sorted(sources)), feats)
+        if key in _LOGGED_NOMINAL_ONLY:
+            continue
+        _LOGGED_NOMINAL_ONLY.add(key)
+        logger.info(
+            "[variations] %d source(s) %s keep %d feature(s) at nominal: %s",
+            len(sources), sorted(sources), len(feats), list(feats),
+        )
+
+
+# Connection drops to a Dask Gateway scheduler (via its proxy) seen in stage-1 and preprocessing.
+_TRANSIENT_DASK_ERRORS = (CancelledError, CommClosedError, TimeoutError)
+_RECONNECT = None  # set by main(): re-creates the Dask client after a dropped connection
+
+
+def _compute_with_retry(coll, what: str, tries: int = 4, wait_s: float = 60.0):
+    """coll.compute(), retried after a dropped scheduler connection (one chunk, not the run, is lost)."""
+    for attempt in range(1, tries + 1):
+        try:
+            return coll.compute()
+        except _TRANSIENT_DASK_ERRORS as exc:
+            if attempt == tries:
+                raise
+            logger.warning(
+                "[dask] %s: %s: %s -- retry %d/%d in %.0f s",
+                what, type(exc).__name__, str(exc).splitlines()[0][:200], attempt, tries - 1, wait_s,
+            )
+            time.sleep(wait_s)
+            if _RECONNECT is not None:
+                try:
+                    from distributed import get_client
+
+                    alive = get_client().status == "running"
+                except ValueError:
+                    alive = False
+                if not alive:
+                    _RECONNECT()
+    raise AssertionError("unreachable")
+
+
 def plan_variations(
     example_file: str,
     physical_features: List[str],
@@ -256,6 +323,7 @@ def plan_variations(
     assert_matches_stage2(physical_features, variations, fields)
 
     resolved = resolve_variation_columns(physical_features, variations, fields)
+    _log_nominal_only_summary(physical_features, variations, resolved)
 
     load_columns: List[str] = []
     rename: Dict[str, str] = {}
@@ -469,7 +537,7 @@ def events_to_dataframe(
         jj_eta_region=cfg.jj_eta_region,
     )
 
-    arr = events.compute()
+    arr = _compute_with_retry(events, f"{year} {process}")
     arr = arr[~ak.is_none(arr)]
 
     present_cols = [c for c in keep_cols if c in arr.fields]
@@ -589,6 +657,13 @@ def preprocess_output_is_complete(out_dir: str, n_folds: int) -> bool:
             if not (out / f"data_df_{split}_{i}.parquet").exists():
                 return False
     return True
+
+
+def _has_variation_set(out_dir: str, variation_set: str) -> bool:
+    """True if out_dir's manifest says it already holds `variation_set`'s variation columns."""
+    with open(Path(out_dir) / "preprocess_manifest.json") as f:
+        block = json.load(f).get("systematic_variations") or {}
+    return bool(block.get("enabled")) and block.get("variation_set") == variation_set
 
 
 def save_feature_list(save_dir: str, features: List[str]) -> None:
@@ -1318,15 +1393,15 @@ def main() -> None:
         cfg.category, cfg.region, cfg.jj_eta_region, args.years,
     )
 
-    # If the exact preprocess output already exists and is complete -- unless
-    # --include-systematic-variations is requested, whose own (pre-existing) guard
-    # right below handles that combination by refusing rather than skipping (mixing
-    # nominal-only and variation-augmented output under one tag is a different,
-    # more consequential failure mode than "nothing to do").
+    # Skip when the output is already complete. With --include-systematic-variations only if it
+    # already holds that variation set; nominal-only parquets there hit the refusal below instead.
     if (
         not args.force
-        and not args.include_systematic_variations
         and preprocess_output_is_complete(out_dir, cfg.n_folds)
+        and (
+            not args.include_systematic_variations
+            or _has_variation_set(out_dir, args.variation_set)
+        )
     ):
         logger.info(
             "[main] Complete output already found in %s (preprocess_manifest.json + "
@@ -1338,6 +1413,8 @@ def main() -> None:
         return
 
     client = get_dask_client(args.use_dask_gateway, cluster_index=args.cluster_index)
+    global _RECONNECT
+    _RECONNECT = lambda: get_dask_client(args.use_dask_gateway, cluster_index=args.cluster_index)  # noqa: E731
 
     if args.include_systematic_variations:
         existing = sorted(Path(out_dir).glob("data_df_train_*.parquet"))

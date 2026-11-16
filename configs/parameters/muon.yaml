@@ -58,6 +58,51 @@ muon_id:
     "2024": mediumId
     "2025": mediumId
     "2026": mediumId
+muon_id_pt_split: # corrected pT [GeV] below which muon_id_lowpt / muon_iso_cut_lowpt apply; 0 = off (2024-26: Tight below 30)
+    2016preVFP: 0.0
+    2016postVFP: 0.0
+    "2017": 0.0
+    "2018": 0.0
+    2016_RERECO: 0.0
+    "2017_RERECO": 0.0
+    "2018_RERECO": 0.0
+    2022preEE: 30.0
+    2022postEE: 30.0
+    "2023": 30.0
+    "2023BPix": 30.0
+    "2024": 30.0
+    "2025": 30.0
+    "2026": 30.0
+muon_id_lowpt: # muon ID for pT < muon_id_pt_split
+    2016preVFP: mediumId
+    2016postVFP: mediumId
+    "2017": mediumId
+    "2018": mediumId
+    2016_RERECO: mediumId
+    "2017_RERECO": mediumId
+    "2018_RERECO": mediumId
+    2022preEE: tightId
+    2022postEE: tightId
+    "2023": tightId
+    "2023BPix": tightId
+    "2024": tightId
+    "2025": tightId
+    "2026": tightId
+muon_iso_cut_lowpt: # pfRelIso04_all (after FSR) cut for pT < muon_id_pt_split; 0.15 = Muon POG tight PFIso04
+    2016preVFP: 0.25
+    2016postVFP: 0.25
+    "2017": 0.25
+    "2018": 0.25
+    2016_RERECO: 0.25
+    "2017_RERECO": 0.25
+    "2018_RERECO": 0.25
+    2022preEE: 0.15
+    2022postEE: 0.15
+    "2023": 0.15
+    "2023BPix": 0.15
+    "2024": 0.15
+    "2025": 0.15
+    "2026": 0.15
 muon_flags:
     2016preVFP: []
     2016postVFP: []
@@ -111,13 +156,13 @@ muon_trigmatch_dr:
     2016_RERECO: 0.4 # 0.1
     "2017_RERECO": 0.4 # 0.1
     "2018_RERECO": 0.4 # 0.1
-    2022preEE: 0.4 # 0.1
-    2022postEE: 0.4 # 0.1
-    "2023": 0.4 # 0.1
-    "2023BPix": 0.4 # 0.1
-    "2024": 0.4 # 0.1
-    "2025": 0.4 # 0.1
-    "2026": 0.4 # 0.1
+    2022preEE: 0.1 # Run 3: common VBF baseline (Pier, Nov 2026), dR < 0.1
+    2022postEE: 0.1
+    "2023": 0.1
+    "2023BPix": 0.1
+    "2024": 0.1
+    "2025": 0.1
+    "2026": 0.1
 muon_trigmatch_pt:
     2016preVFP: 24.0
     2016postVFP: 24.0

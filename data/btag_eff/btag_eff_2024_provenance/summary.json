@@ -1,0 +1,61 @@
+{
+  "year": "2024",
+  "nanoaod": 15,
+  "tagger": "UParTAK4",
+  "score_field": "btagUParTAK4B",
+  "wp_cuts": {
+    "L": 0.0246,
+    "M": 0.1272
+  },
+  "n_files": 400,
+  "failed_files": [],
+  "max_files": 20,
+  "max_events": 500000,
+  "weighting": "unit",
+  "samples": [
+    "dyTo2Mu_M-105To160",
+    "dyTo2Mu_M-50_aMCatNLO",
+    "dyTo2Mu_MLL_10To50",
+    "dyTo2Mu_MLL_120To200",
+    "dyTo2Mu_MLL_50To120",
+    "dy_VBF_filter",
+    "ewk_mmjj_mll_105_160",
+    "ewk_mmjj_mll_105_160_mjj120",
+    "ggh_powhegPS",
+    "ttjets_dl",
+    "ttjets_sl",
+    "vbf_aMCatNLO",
+    "vbf_powheg",
+    "ww_2l2nu",
+    "wz_1l1nu2q",
+    "wz_2l2q",
+    "wz_3lnu",
+    "zz_2l2nu",
+    "zz_2l2q",
+    "zz_4l"
+  ],
+  "raw_jets_per_flavour": {
+    "0": 10590147.0,
+    "4": 1364460.0,
+    "5": 1431800.0
+  },
+  "git": {
+    "commit": "720e323b5c47cdfd7cff180d359741575a1364b2",
+    "dirty": true,
+    "diff_hash": "09280bd05a9f0bcc18253c98dfb475a60ac359a9",
+    "diff_file": "git_diff.patch"
+  },
+  "argv": [
+    "scripts/derive_btag_efficiencies.py",
+    "--year",
+    "2024",
+    "--nanoaod",
+    "15",
+    "--max-files",
+    "20",
+    "--max-events",
+    "500000",
+    "--workers",
+    "32"
+  ]
+}

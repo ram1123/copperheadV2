@@ -6,7 +6,7 @@ import uproot
 from coffea.lookup_tools import dense_lookup
 from omegaconf import OmegaConf
 
-from modules.classify_year import is_run2
+from modules.classify_year import is_run2, run3_btag_score
 from modules.correctionlib_file_cache import get_corrset
 from modules.utils import logger
 
@@ -560,6 +560,69 @@ def lhe_weights(events, dataset, year):
     lhe_ren = {"up": lhe_ren_up, "down": lhe_ren_down}
     lhe_fac = {"up": lhe_fac_up, "down": lhe_fac_down}
     return lhe_ren, lhe_fac
+
+
+# PS ISR/FSR SF------------------------------------------------------------------
+
+# Whole-sample mean of PSWeight[i] (Runs/PSSumw), filled by scripts/add_ps_sumw_to_prestage.py.
+PS_SUMW_METADATA_KEY = "psSumwRatio"
+PS_N_WEIGHTS = 4
+# NanoAOD PSWeight layout: [0] isr x2, [1] fsr x2, [2] isr x0.5, [3] fsr x0.5
+PS_COLUMN_INDEX = {"ps_isr_up": 0, "ps_fsr_up": 1, "ps_isr_down": 2, "ps_fsr_down": 3}
+
+
+def ps_weights(events, dataset, year):
+    """Per-event Pythia ISR/FSR variation ratios (w_var / w_nominal), each divided by its
+    whole-sample mean so the inclusive yield is unchanged (acceptance + shape only, as for
+    the Run-2 signal PS uncertainty, AN-19-124 Sec. 7.5).
+
+    Samples whose PSWeight is absent or the 1-entry dummy (e.g. Herwig7) get unity ratios.
+    Raises ValueError for any other entry count, or when the prestage metadata lacks the
+    whole-sample means, which cannot be rebuilt per chunk.
+    """
+    ones = ak.values_astype(ak.ones_like(events.genWeight), np.float64)
+    unity = {col: ones for col in PS_COLUMN_INDEX}
+    if "PSWeight" not in events.fields:
+        logger.info(f"{dataset} ({year}): no PSWeight branch, PS ratios set to unity")
+        return unity
+
+    n_entries = np.unique(ak.to_numpy(ak.num(events.PSWeight, axis=1))).tolist()
+    if n_entries in ([], [1]):  # empty chunk, or the dummy 1.0 weight
+        if n_entries == [1]:
+            logger.info(f"{dataset} ({year}): dummy PSWeight, PS ratios set to unity")
+        return unity
+    if n_entries != [PS_N_WEIGHTS]:
+        raise ValueError(
+            f"ps_weights: '{dataset}' ({year}) has PSWeight entry counts {n_entries}, "
+            f"expected [{PS_N_WEIGHTS}] (isr/fsr x2, x0.5) or the 1-entry dummy."
+        )
+
+    # Guard the hard-coded index map against a different 4-entry layout (title is in __doc__).
+    layout, title = events.PSWeight.layout, None
+    while layout is not None and title is None:
+        title = layout.parameters.get("__doc__")
+        layout = getattr(layout, "content", None)
+    expected = [r"\[0\]\s*isr\S*=2", r"\[1\]\s*fsr\S*=2", r"\[2\]\s*isr\S*=0\.5", r"\[3\]\s*fsr\S*=0\.5"]
+    if not all(re.search(p, title or "") for p in expected):
+        raise ValueError(
+            f"ps_weights: '{dataset}' ({year}) PSWeight title {title!r} does not match the "
+            f"assumed layout [0] isr x2, [1] fsr x2, [2] isr x0.5, [3] fsr x0.5."
+        )
+
+    metadata = getattr(events, "metadata", None) or {}
+    ratio = metadata.get(PS_SUMW_METADATA_KEY)
+    if ratio is None or len(ratio) != PS_N_WEIGHTS:
+        raise ValueError(
+            f"ps_weights: '{dataset}' ({year}) has a {PS_N_WEIGHTS}-entry PSWeight but "
+            f"'{PS_SUMW_METADATA_KEY}' in its dataset metadata is {ratio!r}. Add it to the "
+            f"prestage JSON with scripts/add_ps_sumw_to_prestage.py."
+        )
+    ratio = np.asarray(ratio, dtype=np.float64)
+    if not np.all(np.isfinite(ratio)) or np.any(ratio <= 0):
+        raise ValueError(f"ps_weights: '{dataset}' ({year}) has invalid {PS_SUMW_METADATA_KEY} {ratio}")
+
+    ps = ak.values_astype(events.PSWeight, np.float64)
+    return {col: ps[:, i] / ratio[i] for col, i in PS_COLUMN_INDEX.items()}
 
 
 # THU SF-------------------------------------------------------------------------
@@ -1437,6 +1500,79 @@ def btag_weights_jsonKeepDim(processor, systs, jets, btag_eta_val, weights, bjet
         btag_syst[sys]["up"] = btag_syst[sys]["up"] * normalization
         btag_syst[sys]["down"] = btag_syst[sys]["down"] * normalization
     return btag_wgt, btag_syst
+
+BTAG_FIXEDWP_SYSTS = {
+    # name: (BTV systematic suffix, varied flavours); BTV multi-era scheme
+    "hf_corr": ("correlated", (4, 5)),
+    "hf_uncorr": ("uncorrelated", (4, 5)),
+    "lf_corr": ("correlated", (0,)),
+    "lf_uncorr": ("uncorrelated", (0,)),
+}
+
+
+def btag_fixedwp_tagger(year):
+    """(BTV payload prefix, NanoAOD score branch, jet.yaml WP suffix) used for the Run3 b-veto of `year`
+    (modules.classify_year.run3_btag_score: ParticleNet for 2022-23, UParT for 2024-26)."""
+    if run3_btag_score(year) == "btagPNetB":
+        return "particleNet", "btagPNetB", "ParticleNet"
+    return "UParTAK4", "btagUParTAK4B", "UParT"
+
+
+def btag_fixedwp_weights(jets, config, year):
+    """
+    BTV fixedWP event weight for the two working points the b-veto uses (L and M), method 1a:
+        w = prod_jets P_data / P_MC, with per-jet tag category
+            pass M:          P_MC = eM,       P_data = sM eM
+            pass L, fail M:  P_MC = eL - eM,  P_data = sL eL - sM eM
+            fail L:          P_MC = 1 - eL,   P_data = 1 - sL eL
+    SFs: <tagger>_comb (b, c) and <tagger>_light (udsg); e: MC tagging efficiencies from
+    config["btag_eff_json"] (scripts/derive_btag_efficiencies.py). `jets` must be the jets the
+    veto counts (btag_jet_selection). Returns (nominal, {syst: (up, down)}), absolute weights.
+    """
+    tagger, score_field, wp_suffix = btag_fixedwp_tagger(year)
+    sf_set = get_corrset(config["btag_sf_json"])
+    eff_corr = get_corrset(config["btag_eff_json"])["btag_eff"]
+    sf_heavy, sf_light = sf_set[f"{tagger}_comb"], sf_set[f"{tagger}_light"]
+
+    flav = ak.values_astype(abs(jets.hadronFlavour), np.int32)
+    is_heavy = (flav == 4) | (flav == 5)
+    abseta = np.minimum(abs(jets.eta), 2.4999) # SF/eff binning ends at |eta| = 2.5, pT in [20, 1000)
+    pt = np.minimum(np.maximum(jets.pt, 20.0), 999.9) # ufuncs: np.clip is not jagged-safe
+    heavy_flav = ak.where(is_heavy, flav, 5) # each payload only accepts its own flavours
+    light_flav = ak.zeros_like(flav)
+    score = getattr(jets, score_field)
+    pass_m = score > config[f"btag_medium_wp_{wp_suffix}"]
+    pass_l = score > config[f"btag_loose_wp_{wp_suffix}"]
+
+    eff = {wp: np.minimum(np.maximum(eff_corr.evaluate(wp, flav, abseta, pt), 1e-6), 1.0 - 1e-6) for wp in ("L", "M")}
+
+    def sf(wp, syst_heavy, syst_light):
+        return ak.where(
+            is_heavy,
+            sf_heavy.evaluate(syst_heavy, wp, heavy_flav, abseta, pt),
+            sf_light.evaluate(syst_light, wp, light_flav, abseta, pt),
+        )
+
+    p_mc = ak.where(pass_m, eff["M"], ak.where(pass_l, eff["L"] - eff["M"], 1.0 - eff["L"]))
+    p_mc = ak.where(p_mc > 0, p_mc, 1e-6)
+
+    def event_weight(syst_heavy="central", syst_light="central"):
+        s_l, s_m = sf("L", syst_heavy, syst_light), sf("M", syst_heavy, syst_light)
+        d_m, d_l = s_m * eff["M"], np.minimum(s_l * eff["L"], 1.0)
+        p_data = ak.where(pass_m, d_m, ak.where(pass_l, d_l - d_m, 1.0 - d_l))
+        # BTV: a non-positive L-not-M numerator (SF_M > SF_L in a bin) -> that jet's factor is 1
+        ratio = ak.where(pass_l & ~pass_m & (p_data <= 0), 1.0, p_data / p_mc)
+        return ak.prod(ratio, axis=1) # empty events -> 1
+
+    nominal = event_weight()
+    variations = {}
+    for name, (suffix, flavours) in BTAG_FIXEDWP_SYSTS.items():
+        heavy = flavours != (0,)
+        up = event_weight(f"up_{suffix}" if heavy else "central", "central" if heavy else f"up_{suffix}")
+        down = event_weight(f"down_{suffix}" if heavy else "central", "central" if heavy else f"down_{suffix}")
+        variations[name] = (up, down)
+    return nominal, variations
+
 
 def btag_weights_json(processor, systs, jets, weights, bjet_sel_mask, btag_file):
     """

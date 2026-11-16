@@ -1,3 +1,11 @@
+"""Bulk stage-1 Data/MC validation plots (years x categories x njets) via
+plotter/validation_plotter_unified.run_bulk_validation; edit the "User config" block below.
+
+How to run (repo root; flags: --dry-run, --force, --debug):
+    ./run_in_pixi.sh default python run_plotter.py [--dry-run] [--force]
+Example:
+    ./run_in_pixi.sh default python run_plotter.py --dry-run
+"""
 import logging
 import sys
 from pathlib import Path
@@ -86,7 +94,7 @@ njets_options = ["inclusive", "0", "1", "2"]
 # background/signal/data shorthand lists match validation_plotter_unified.py's
 # own CLI defaults -- run_plotter.py never overrode these via subprocess flags.
 BACKGROUND_SAMPLES = ["EWK", "VV", "TOP", "DY"]
-SIG_SAMPLES = ["VBF", "ggH"]
+SIG_SAMPLES = ["VBF", "ggH", "VH+ttH"]
 DATA_SAMPLES = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
 STATUS = "Preliminary"

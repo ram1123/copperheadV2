@@ -20,6 +20,8 @@ Keep the whole thing under ~200 words. Do not restate CLAUDE.md content, my memo
 
 
 ```bash
+time(bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml -v 15 -l test -y "2024,2025,2026" -m 0 -k)
+time(bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv12_run3.yaml -v 12 -l test -y "2022preEE,2022postEE,2023,2023BPix" -m 0 -k)
 time bash run_analysis_pipeline.sh -y 2025 -k -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation_Cutflow -m 1 -k -z -v 15
 
 bash run_analysis_pipeline.sh -c configs/datasets/dataset_nanoAODv15_run3.yaml          -v 15 -l Run3_nanoAODv15_FilterEvents_Aug30_tightPassLepVeto_OfficialRecomendation          -y "2022preEE,2022postEE,2023,2023BPix,2024,2025,2026" -m dnn_hpo 

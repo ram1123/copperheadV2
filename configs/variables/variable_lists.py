@@ -199,12 +199,12 @@ mu12_pt_comb_vars = [
 mu12_eta_comb_vars = [
     "mu12_eta_sum",
     "mu12_eta_diff",
-    "mu12_eta_absdiff",
+    "dimuon_dEta",
     "mu12_eta_prod",
     "mu12_absEta_sum",
     "mu12_absEta_diff",
     "mu12_absEta_min",
-    "mu12_absEta_max",
+    "mu_max_abs_eta",
 ]
 
 mu12_iso_comb_vars = [

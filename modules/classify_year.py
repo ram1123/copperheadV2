@@ -34,3 +34,19 @@ def is_run2(year) -> bool:
 def is_run3(year) -> bool:
     """ if not run2, then run3 """
     return not is_run2(year)
+
+
+# Run-3 AK4 b-tagger (b-veto, b-tag SFs, b-score DNN inputs): ParticleNet for 2022-23, UParT for 2024-26
+PNET_BTAG_YEARS = ("2022preEE", "2022postEE", "2023", "2023BPix")
+UPART_BTAG_YEARS = ("2024", "2025", "2026")
+
+
+def run3_btag_score(year) -> str:
+    """NanoAOD b-score branch for a Run-3 year: 'btagUParTAK4B' (2024-26) or 'btagPNetB' (2022-23).
+    Unknown strings (pseudo-years like '2025_2026', typos) raise instead of silently picking a tagger."""
+    year = str(year)
+    if year in UPART_BTAG_YEARS:
+        return "btagUParTAK4B"
+    if year in PNET_BTAG_YEARS:
+        return "btagPNetB"
+    raise ValueError(f"run3_btag_score: no b-tagger defined for year {year!r}")

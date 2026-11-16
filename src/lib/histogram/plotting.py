@@ -379,6 +379,7 @@ def plotDataMC_compare(
     # save figure, we assume that the directory exists
     hep.cms.label(data=True, loc=0, text=status, com=CenterOfMass, lumi=lumi, ax=ax_main)
     plt.savefig(save_full_path)
+    plt.savefig(save_full_path.replace(".pdf",".png"))
     plt.close(fig)
 
     # Save the raw event number/yield for each MC and data to the text file, along
@@ -861,7 +862,6 @@ def plotDataMC_compare_eager(
         # add relative uncertainty of data and bkg_mc by adding by quadrature
         rel_unc_ratio = np.sqrt((bkg_mc_err/bkg_mc_sum)**2 + (data_hist_err/data_hist)**2)
         ratio_err = rel_unc_ratio*ratio_hist
-        # print(f"plotDataMC_compare ratio_err: {ratio_err}")
 
 
         hep.histplot(ratio_hist, 

@@ -35,6 +35,8 @@ def pre_scaling_clean(df):
     # ---- Dijet system ----
     df["jj_mass_nominal"] = np.where(njet >= 2, df["jj_mass_nominal"], 0.0)
     df["jj_dEta_nominal"] = np.where(njet >= 2, df["jj_dEta_nominal"], 0.0)
+    if "jj_mass_log_nominal" in df.columns:  # null for njets<2 (0/1-jet regions)
+        df["jj_mass_log_nominal"] = np.where(njet >= 2, df["jj_mass_log_nominal"], 0.0)
 
     # ---- Soft activity ----
     df["nsoftjets5_nominal"] = np.where(

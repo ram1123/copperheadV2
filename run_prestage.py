@@ -1,3 +1,17 @@
+"""
+Prestage: resolve a dataset YAML into processor_samples_<year>_NanoAODv<N>.json (file list, chunk steps,
+and per-sample metadata: nGenEvts, sumGenWgts, sumLHEPdfWgts, negGenWgtFrac for MC; data_entries for data).
+negGenWgtFrac = fraction of events with genWeight < 0, counted from Events/genWeight over all files.
+
+How to run (normally via run_analysis_pipeline.sh -m 0, which builds this command):
+    python run_prestage.py -y <year> --yaml <dataset.yaml> --NanoAODv <N> \
+        --data <eras> --background <groups> --signal <groups> [--chunksize N]
+
+Example:
+    ./run_in_pixi.sh default python run_prestage.py -y 2024 \
+        --yaml configs/datasets/dataset_nanoAODv15_run3.yaml --NanoAODv 15 \
+        --data C D E F G H I --background DY Top VV EWK VVV --signal Higgs --chunksize 600000
+"""
 import argparse
 import copy
 import glob
@@ -31,15 +45,23 @@ from modules.xrootd_utils import AAA_ERROR_FRAGMENTS, AAA_REDIRECTORS, normalize
 dask.config.set({'logging.distributed': 'error'})
 
 
-def _count_events_for_file(fname):
-    with uproot.open(f"{fname}:Events") as tree:
-        return tree.num_entries
+def _count_events_for_file(fname, n_tries=3):
+    # Retry transient XRootD drops per file so one flaky read doesn't fail the whole sample.
+    for i in range(n_tries):
+        try:
+            with uproot.open(f"{fname}:Events") as tree:
+                return tree.num_entries
+        except Exception as e:
+            if i == n_tries - 1 or not any(frag in str(e) for frag in AAA_ERROR_FRAGMENTS):
+                raise
+            time.sleep(5 * (i + 1))
 
 
 def _minnlo_genweight_metadata_for_file(args):
-    fname, uproot_options = args
+    fname, uproot_options, _ = args
     sum_gen_wgts = 0.0
     n_gen_evts = 0
+    n_neg = 0
     pdf_sumw = None
 
     # Sum PDF members with sign(genWeight) to match the MiNNLO normalisation;
@@ -52,6 +74,7 @@ def _minnlo_genweight_metadata_for_file(args):
             signs = np.sign(ak.to_numpy(batch["genWeight"]).astype(np.float64))
             sum_gen_wgts += float(signs.sum())
             n_gen_evts += len(signs)
+            n_neg += int((signs < 0).sum())
             if has_pdf:
                 members = ak.to_numpy(
                     ak.to_regular(batch["LHEPdfWeight"])
@@ -61,7 +84,7 @@ def _minnlo_genweight_metadata_for_file(args):
                     contribution if pdf_sumw is None else pdf_sumw + contribution
                 )
 
-    return sum_gen_wgts, n_gen_evts, (None if pdf_sumw is None else pdf_sumw.tolist())
+    return sum_gen_wgts, n_gen_evts, (None if pdf_sumw is None else pdf_sumw.tolist()), (n_neg, n_gen_evts)
 
 
 def merge_with_existing_json_dict(filename, updates):
@@ -106,6 +129,14 @@ def _pdf_sumw_for_runs_tree(tree, keys):
             f"across the runs of one file; it was produced with more than one "
             f"PDF set and cannot be summed."
         )
+    # Some production blocks have the branch but no LHE weights at all (e.g. one
+    # 2022preEE ZZZ file); stage1 gives those events unity PDF members.
+    if n_members == [0]:
+        logger.warning(
+            f"[prestage] {tree.file.file_path} has empty LHEPdfSumw; "
+            f"excluding it from the PDF member sums"
+        )
+        return None
 
     members = ak.to_numpy(ak.to_regular(pdf_sumw)).astype(np.float64)
     weights = ak.to_numpy(tree[gen_key].array()).astype(np.float64)
@@ -127,8 +158,20 @@ def _accumulate_pdf_sumw(total, addition):
     return [a + b for a, b in zip(total, addition)]
 
 
+def _neg_genwgt_count_for_file(fname, uproot_options):
+    """(n_negative, n_events) of Events/genWeight; the Runs tree has no sign info."""
+    n_neg = 0
+    n_evts = 0
+    with uproot.open(f"{fname}:Events", **uproot_options) as tree:
+        for batch in tree.iterate(["genWeight"], step_size="100 MB"):
+            w = ak.to_numpy(batch["genWeight"])
+            n_neg += int((w < 0).sum())
+            n_evts += len(w)
+    return n_neg, n_evts
+
+
 def _runs_tree_metadata_for_file(args):
-    fname, uproot_options = args
+    fname, uproot_options, count_neg = args
     with uproot.open(f"{fname}:Runs", **uproot_options) as tree:
         keys = tree.keys()
         if "genEventSumw" in keys:
@@ -137,7 +180,9 @@ def _runs_tree_metadata_for_file(args):
         else:  # nanoAODv6
             sum_gen_wgts = float(ak.sum(tree["genEventSumw_"].array()))
             n_gen_evts = int(ak.sum(tree["genEventCount_"].array()))
-        return sum_gen_wgts, n_gen_evts, _pdf_sumw_for_runs_tree(tree, keys)
+        pdf_sumw = _pdf_sumw_for_runs_tree(tree, keys)
+    neg = _neg_genwgt_count_for_file(fname, uproot_options) if count_neg else (0, 0)
+    return sum_gen_wgts, n_gen_evts, pdf_sumw, neg
 
 
 def _with_redirector_retries(sample_name: str, kind: str, fn):
@@ -164,7 +209,7 @@ def _with_redirector_retries(sample_name: str, kind: str, fn):
             raise
 
 
-def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_options):
+def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_options, count_neg=True):
     """
     Read per-file genEventSumw/genEventCount (or the nanoAODv6 genEventSumw_/
     genEventCount_ names) directly with uproot and sum across files.
@@ -176,6 +221,7 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
     sum_gen_wgts = 0.0
     n_gen_evts = 0
     sum_pdf_wgts = None
+    n_neg, n_neg_den = 0, 0
 
     normalized_fnames = normalize_paths(fnames, host_prefix)
     if len(normalized_fnames) == 0:
@@ -184,6 +230,7 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
             "sumGenWgts": sum_gen_wgts,
             "nGenEvts": n_gen_evts,
             "sumLHEPdfWgts": sum_pdf_wgts,
+            "negGenWgtFrac": None,
         }
 
     max_n_workers = 20  # NOTE added as a soft cap for stability. Increase if higher throughput is needed.
@@ -192,15 +239,17 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
     logger.info(
         f"[prestage] Runs-tree attempt {attempt} reading genEventSumw/genEventCount with {n_workers} workers"
     )
-    worker_args = [(fname, uproot_options) for fname in normalized_fnames]
+    worker_args = [(fname, uproot_options, count_neg) for fname in normalized_fnames]
     with multiprocessing.Pool(processes=n_workers) as pool:
-        for file_sum_gen_wgts, file_n_gen_evts, file_pdf_wgts in pool.imap_unordered(
+        for file_sum_gen_wgts, file_n_gen_evts, file_pdf_wgts, (file_neg, file_den) in pool.imap_unordered(
             _runs_tree_metadata_for_file,
             worker_args,
         ):
             sum_gen_wgts += file_sum_gen_wgts
             n_gen_evts += file_n_gen_evts
             sum_pdf_wgts = _accumulate_pdf_sumw(sum_pdf_wgts, file_pdf_wgts)
+            n_neg += file_neg
+            n_neg_den += file_den
 
     logger.info(
         f"[prestage] Runs-tree attempt {attempt} succeeded to read metadata with {host_prefix}"
@@ -209,10 +258,11 @@ def runs_tree_metadata_with_redirector(fnames, host_prefix, attempt, uproot_opti
         "sumGenWgts": sum_gen_wgts,
         "nGenEvts": n_gen_evts,
         "sumLHEPdfWgts": sum_pdf_wgts,
+        "negGenWgtFrac": n_neg / n_neg_den if n_neg_den else None,
     }
 
 
-def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, uproot_options):
+def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, uproot_options, count_neg=True):
     """
     Read MiNNLO genWeight metadata directly with uproot.
 
@@ -222,6 +272,7 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
     sum_gen_wgts = 0.0
     n_gen_evts = 0
     sum_pdf_wgts = None
+    n_neg, n_neg_den = 0, 0
 
     logger.info(f"[prestage] MiNNLO attempt {attempt} using redirector {host_prefix}")
     normalized_fnames = normalize_paths(fnames, host_prefix)
@@ -231,6 +282,7 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
             "sumGenWgts": sum_gen_wgts,
             "nGenEvts": n_gen_evts,
             "sumLHEPdfWgts": sum_pdf_wgts,
+            "negGenWgtFrac": None,
         }
 
     max_n_workers = 20  # NOTE added as a soft cap for stability. Increase if higher throughput is needed.
@@ -239,15 +291,17 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
     logger.info(
         f"[prestage] MiNNLO attempt {attempt} reading genWeight with {n_workers} workers"
     )
-    worker_args = [(fname, uproot_options) for fname in normalized_fnames]
+    worker_args = [(fname, uproot_options, count_neg) for fname in normalized_fnames]
     with multiprocessing.Pool(processes=n_workers) as pool:
-        for file_sum_gen_wgts, file_n_gen_evts, file_pdf_wgts in pool.imap_unordered(
+        for file_sum_gen_wgts, file_n_gen_evts, file_pdf_wgts, (file_neg, file_den) in pool.imap_unordered(
             _minnlo_genweight_metadata_for_file,
             worker_args,
         ):
             sum_gen_wgts += file_sum_gen_wgts
             n_gen_evts += file_n_gen_evts
             sum_pdf_wgts = _accumulate_pdf_sumw(sum_pdf_wgts, file_pdf_wgts)
+            n_neg += file_neg
+            n_neg_den += file_den
 
     logger.info(
         f"[prestage] MiNNLO attempt {attempt} succeeded to read genWeight metadata with {host_prefix}"
@@ -256,6 +310,7 @@ def minnlo_genweight_metadata_with_redirector(fnames, host_prefix, attempt, upro
         "sumGenWgts": sum_gen_wgts,
         "nGenEvts": n_gen_evts,
         "sumLHEPdfWgts": sum_pdf_wgts,
+        "negGenWgtFrac": n_neg / n_neg_den if n_neg_den else None,
     }
 
 
@@ -690,6 +745,7 @@ if __name__ == "__main__":
                 "sumLHEPdfWgts" : None,
                 "sumGenWgts" : None,
                 "nGenEvts" : None,
+                "negGenWgtFrac" : None,
                 "data_entries" : None,
                 "das_datasets" : das_datasets_used,
                 "n_files_requested" : n_files_requested,
@@ -731,6 +787,7 @@ if __name__ == "__main__":
                 preprocess_metadata["sumGenWgts"] = mc_metadata["sumGenWgts"]
                 preprocess_metadata["nGenEvts"] = mc_metadata["nGenEvts"]
                 preprocess_metadata["sumLHEPdfWgts"] = mc_metadata["sumLHEPdfWgts"]
+                preprocess_metadata["negGenWgtFrac"] = mc_metadata["negGenWgtFrac"]
                 logger.info(f"[prestage] MC sample {sample_name}: success")
 
                 total_events += preprocess_metadata["nGenEvts"]

@@ -247,3 +247,109 @@ First entries (plain Asimov scan, h-peak, all Run 3 years, model
 (1.649 -> 1.728), `jj_both_fwd25` 18 bins (1.506 -> 1.507, without the fake bin). The scan does
 not yet account for background MC statistics (To-Do.md item 5). The old file's per-bin Run 2 scan
 report is kept in `validation/dnn_binning_scan/default_run2/scan_report_from_config.txt`.
+
+## `/dev/shm` fills with `__KMP_REGISTERED_LIB_*` files and multiprocessing hangs (open, found 2026-10-30)
+
+**Symptom.** `preprocess_dnn.py` (VBF DNN chain, `dnn_region`) logged
+`OSError: [Errno 28] No space left on device` from `multiprocessing.synchronize.SemLock` and then
+hung with no CPU use: the pool workers died at start and the parent waited forever, so the
+Snakemake job never failed.
+
+**Cause.** The AF session's `/dev/shm` is only 64 MB. Intel OpenMP writes one
+`/dev/shm/__KMP_REGISTERED_LIB_<pid>_<uid>` file per process and removes it only on a clean exit;
+killed or terminated workers (multiprocessing pools, plotter/yield jobs, Ray drivers) leave theirs
+behind. About 14.5k had built up in ~31 h, which fills the tmpfs (4 KB per file).
+
+**Workaround.** Check with `df -h /dev/shm`. Remove only the files whose PID is gone
+(`kill -0 <pid>` fails); they hold no data. `logs/plans/run_oct30_sig2024_3way.sh` runs this as a
+background loop every 10 min. If a DNN preprocess hung this way, stop the job, move the empty
+`dnn/trained_models/<label>/<years>_h-peak_vbf_<region>` aside and rerun (Snakemake reruns only that
+region).
+
+## VBF DNN HPO trials with `batch_norm=True` crash on a 1-row last batch (fixed 2026-10-30)
+
+**Symptom.** In the `dnn_region` HPO, every `batch_norm=True` trial failed with
+`ValueError: Expected more than 1 value per channel when training, got input size torch.Size([1, N])`.
+The Ray HPO workers died one after the other (`6 hpo worker(s) failed`, 15/50 trials) and
+`run_dnn_trainings.sh` logged FAIL. Seen for `Run3_nanoAODv15_FilterJets_Oct29_..._PUDNNTrain1Oct29_Syst_LumiSplit`
+2024 `jj_one_fwd25_one_central`; it depends only on the data, when a fold's training size % batch_size == 1.
+
+**Fix.** `InMemoryBatchLoader.__iter__` (`MVA_training/VBF_run3/train_dnn.py`) skips a trailing 1-row
+batch in the shuffled training loader. Validation and evaluation loaders are unchanged, and nothing
+else changes for any other fold. To rerun a failed region, move its `hpo_optuna/<hpo label>` (and
+`trained_best_optuna_<hpo label>`, if present) aside first: otherwise the stored study resumes.
+
+## Parallel `run_analysis_pipeline.sh` calls race on `log_*.txt` (open, found 2026-10-30)
+
+**Symptom.** With several Snakemake runs (different `run_tag`s) on one session, a stage-2/stage2_plot/stage-3
+job sometimes exits with status 1 and no Python traceback; its log is then overwritten by the retry. One
+retry log began with `mv: cannot stat 'log_20261030_125729.txt': No such file or directory`. Seen 6 times
+in the 4 parallel fixed-DNN runs of 2026-10-30; every retry (`--restart-times 3`) passed.
+
+**Cause (likely, not fully proven).** `setup_logging` (`common_workflow.sh`) moves every `log_*.txt` in the
+repo root to `log_old/`, and names its own log with 1 s resolution. Two calls starting together move the same
+file (the loser's `mv` fails under `set -e`), or share one log name.
+
+**Workaround.** Keep `--restart-times 3`. A fix would move only the run's own old logs (or name logs by PID).
+
+## Combine `Significance` with the default minimizer can stop at a wrong minimum (fixed 2026-10-30)
+
+**Symptom.** `vbf_significance_summary_<postfix>.csv` gave 1.666 sigma with systematics but 0.810 stat-only
+(2024, `jj_one_fwd25_one_central`, ntuples `..._FilterEvents_Oct29_..._PUDNNTrain1Oct29_JERStrat4_JetIDVars_LumiSplit`,
+postfix `Oct30_2026_Syst_FixDNNoff_DY105`). No warning in the log; limit and likelihood scan were normal.
+
+**Check.** `combine -d <card dir>/HMuMu_13TeV_<year>.root -M Significance -m 125 --expectSignal=1 -t -1
+--rMin -2 --rMax 5 --cminDefaultMinimizerStrategy 0` (and 2) both gave 0.720. A recheck of 28 cards
+(`validation/lhscan_comparison/2024_PUDNN_FixedDNN_Oct30_DY105/significance_minimizer_check.{sh,txt}`) found
+only this one; all others agree within 0.002. Any significance above its stat-only value is a sign of it.
+**Fix.** `run_vbf_significance` (`common_workflow.sh`) passes `--cminDefaultMinimizerStrategy 0` to both
+Significance calls (with syst and StatOnly), as the impacts did since 2026-09-22; tested on the card above
+(0.719 / 0.810). Outputs made before the fix keep the old values; rerun stats mode 9/11 to refresh them.
+`scripts/produce_significance.sh` (old standalone Run-2 helper, not called by the pipeline) is unchanged.
+
+## hf* jet-input plots were not HF-only, and hfsigma* plots were truncated (fixed 2026-10-30)
+
+**Symptom.** In `validation_plotter_unified.py` data/MC plots, `jet{1,2}_hfEmEF/hfHEF/hfcentralEtaStripSize/
+hfadjacentEtaStripsSize` had as many entries as `jet1_eta` (all jets, e.g. 20.2M vs 3.66M HF leading jets in the
+2024 nocat Z peak), so most entries were non-HF jets. `hfsigmaEtaEta/hfsigmaPhiPhi` used a 0-0.05 range while
+~88 % of HF-jet values are above 0.05 (median ~0.085, max ~0.24), so those plots showed ~12 % of the distribution.
+
+**Cause.** The plotter only dropped `-1`; in these NanoAODv15 ntuples non-HF jets are not always `-1` for the
+hf* fractions/strip sizes. The 0-0.05 binning was in `src/lib/histogram/plot_settings_{gghCat_BDT,vbfCat_MVA}_input.json`.
+
+**Fix.** The fill loop keeps hf* values only where the same jet's `jetN_eta_<variation>` has |eta| >= 3, and the
+hfsigma* binning is now 0-0.25 in 0.01 steps. Plots made before 2026-10-30 ~17:40 UTC have the old behaviour; the
+PU-DNN 2024 comparisons were replotted (old hf* files in
+`validation/pudnn_2024_retrain/run2024_dy_top_ewk_Train1_Oct29_ray/hf_plots_unmasked_20261030.tar`).
+
+## coffea's parquet reader garbles nullable integer columns (fixed in the plotter 2026-10-31)
+
+**Symptom.** In `validation_plotter_unified.py` data/MC plots, `jet{1,2}_hfcentralEtaStripSize/hfadjacentEtaStripsSize`
+had every entry in the 0 bin, and the jet-ID multiplicities (`chMultiplicity`, `neMultiplicity`, `nConstituents`,
+`nElectrons`, `nMuons`) were wrong too, while the parquet (pyarrow/awkward) holds the right values.
+
+**Cause.** `coffea/nanoevents/mapping/parquet.py` (`processor.Runner(format="parquet")`, coffea 2026.5.0; unchanged in
+2026.9.0) takes the form dtype from the arrow type (e.g. int32) but wraps the data with `NumpyArray(pyarrow_array)`,
+which turns an integer column holding nulls into float64/NaN; the int form then reinterprets that buffer (values
+1072693248 / 1073741824 / 2146959360 = high words of 1.0 / 2.0 / NaN, low words 0). In the compacted ntuples all
+jetN_* integer columns are null when the jet is missing. Nullable float columns come back as NaN (fine); nullable
+bool columns (`jetN_hasMatchedGenJet`) make coffea raise. `run_stage2_vbf.py` also uses this reader but reads none of
+these columns; `MVA_training/pileup_symbolic_regression/pysrpu/io.py` was not checked.
+
+**Fix.** `modules/coffea_parquet_utils.py::patch_parquet_nullable_ints()` (called in the plotter's `process()`) fills
+integer nulls with the dtype max so the buffer stays int; the plotter then drops jetN_* integer values where
+`jetN_pt_<variation>` is NaN. Checked on one DY and one data compacted file: all 18 / 14 nullable int columns match
+pyarrow, no other column changes. `hfHEF` binning widened to `[0, 1.05]` (22 edges) so hfHEF = 1.0 (~55 % of HF jets)
+is in range. Plots made before 2026-10-31 have wrong strip-size and jet-ID multiplicity distributions.
+
+## hf strip-size plots show only the 0 bin; hfHEF = 1.0 falls in overflow (fixed 2026-10-31, see entry above)
+
+**Symptom.** `jet{1,2}_hfcentralEtaStripSize` / `hfadjacentEtaStripsSize` data/MC plots from `validation_plotter_unified.py`
+have all entries in the [-0.5, 0.5] bin, and their sum exceeds the event count (2024 nocat Z peak, official 8a, before
+the 2026-10-30 |eta| mask: 45.6M vs 20.2M events), while the stage-1 parquet holds int32 values 0-4 for HF jets
+(~48 % 0, ~44 % 1). Already so before the hf* mask (archived plots), so not caused by it; cause not found yet
+(the awkward -> numpy conversion gives the right 0-4 values). Separately, `hfHEF` is exactly 1.0 for ~55 % of HF jets
+and the `[0, 1]` range (`plot_settings_{gghCat_BDT,vbfCat_MVA}_input.json`) puts those in overflow.
+
+**Workaround.** Do not use those three plots; the PU-DNN decks note it. Fix: debug the strip-size fill/read-back
+path, and widen hfHEF to e.g. [0, 1.05], then replot.

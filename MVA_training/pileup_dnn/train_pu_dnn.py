@@ -12,6 +12,17 @@ efficiency/rejection plots.
 
 Example command:
 --------------------
+# On the AF Ray cluster (64 GB workers, one GPU job per region): MVA_training/pileup_dnn/train_pu_dnn_ray.py,
+# which adds --flatten-per-file (read + flatten file by file, keep only --regions jets; same jets, low memory).
+# 2024 retrain with the applied "Train-1" 19-input set (2026-10-28 stage-1, latest code):
+B=/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv15_FilterJets_Oct28_tightPassLepVeto_DefaultjetPt25GeV_JetIDVars_LumiSplit/stage1_output/2024/compacted
+python MVA_training/pileup_dnn/train_pu_dnn.py \
+  -i "$B/dyTo2Mu_M-50_aMCatNLO/*/*.parquet" "$B/ttjets_*/*/*.parquet" "$B/ewk_*/*/*.parquet" --use-glob \
+  -o validation/pu_dnn/run2024_dy_top_ewk_Train1_Oct29 --regions HEpos HEneg HFpos HFneg \
+  --features minDPhiMetJet maxDPhiMetJet puIdDisc chEmEF chHEF neEmEF neHEF muEF chMultiplicity \
+    neMultiplicity nConstituents nElectrons nMuons hfadjacentEtaStripsSize hfcentralEtaStripSize \
+    hfsigmaEtaEta hfsigmaPhiPhi hfEmEF hfHEF
+
 time python MVA_training/pileup_dnn/train_pu_dnn.py \
   -i \
     "/work/projects/hmm/shar1172/hmm_ntuples/copperheadV1clean/Run3_nanoAODv12_FilterJets_June02_tightPassLepVeto_NoJER/stage1_output/2022postEE/compacted/dyTo2L_M-50_incl/*/*.parquet" \
@@ -368,6 +379,18 @@ def parse_args() -> argparse.Namespace:
         help="Plot file formats.",
     )
     parser.add_argument("--no-plots", action="store_true", help="Skip validation plots.")
+    parser.add_argument(
+        "--features",
+        nargs="+",
+        default=None,
+        help="Model input features (default: MODEL_FEATURES). Lets a variant be trained without editing the list.",
+    )
+    parser.add_argument(
+        "--flatten-per-file",
+        action="store_true",
+        help="Flatten each file on read and keep only jets in --regions (low memory, e.g. 64 GB Ray workers). "
+        "sample_composition.json then covers only those regions.",
+    )
     return parser.parse_args()
 
 
@@ -498,7 +521,26 @@ def _read_one_stage1_file(
     return frame
 
 
+def _read_one_flattened(path: str, args: argparse.Namespace) -> pd.DataFrame | None:
+    """--flatten-per-file: flatten one file and keep only jets in args.regions, so the
+    full event table (>64 GB for 2024) is never held in memory. flatten_jets is per-event."""
+    frame = _read_one_stage1_file(path, args.variation, args.max_jets, args.weight_col, None)
+    if frame is None:
+        return None
+    try:
+        jets = flatten_jets(frame, args)
+    except ValueError:  # no jet in the pT window in this file
+        return None
+    eta = jets["eta"].to_numpy(dtype=np.float32)
+    keep = np.zeros(len(jets), dtype=bool)
+    for region in args.regions:
+        keep |= region_mask_eta(eta, region)
+    return jets[keep]
+
+
 def load_stage1(paths: list[str], args: argparse.Namespace) -> pd.DataFrame:
+    if args.flatten_per_file and args.max_rows is not None:
+        raise ValueError("--flatten-per-file does not support --max-rows.")
     if args.max_rows is not None:
         # Debug/testing path: stop as soon as enough rows are read, so we don't
         # pay to open files we'll never need. Parallelizing here would just read
@@ -524,8 +566,12 @@ def load_stage1(paths: list[str], args: argparse.Namespace) -> pd.DataFrame:
         results: list[pd.DataFrame | None] = [None] * len(paths)
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
             future_to_idx = {
-                pool.submit(
-                    _read_one_stage1_file, path, args.variation, args.max_jets, args.weight_col, None
+                (
+                    pool.submit(_read_one_flattened, path, args)
+                    if args.flatten_per_file
+                    else pool.submit(
+                        _read_one_stage1_file, path, args.variation, args.max_jets, args.weight_col, None
+                    )
                 ): idx
                 for idx, path in enumerate(paths)
             }
@@ -834,9 +880,9 @@ def split_by_event_or_random(df: pd.DataFrame, seed: int) -> tuple[np.ndarray, n
     return train, val, test
 
 
-def selected_features(df: pd.DataFrame, region: str) -> list[str]:
+def selected_features(df: pd.DataFrame, region: str, features: list[str] | None = None) -> list[str]:
     keep = []
-    for feat in MODEL_FEATURES:
+    for feat in features or MODEL_FEATURES:
         if feat not in df.columns:
             continue
         values = pd.to_numeric(df[feat], errors="coerce").to_numpy(dtype=np.float32)
@@ -2093,7 +2139,7 @@ def train_region(jets: pd.DataFrame, region: str, output: Path, args: argparse.N
         print(f"[{region}] Only one class present ({class_counts}); skipping.")
         return None
 
-    features = selected_features(df_region, region)
+    features = selected_features(df_region, region, args.features)
     if not features:
         print(f"[{region}] No usable non-constant features; skipping.")
         return None
@@ -2168,9 +2214,13 @@ def main() -> None:
         )
     )
     print(f"Loading {len(paths)} parquet file(s)")
-    df = load_stage1(paths, args)
-    print(f"Loaded event table: {len(df)} rows, {len(df.columns)} columns")
-    jets = flatten_jets(df, args)
+    if args.flatten_per_file:
+        jets = load_stage1(paths, args)
+        print(f"Flattened per file, kept jets in regions {args.regions}")
+    else:
+        df = load_stage1(paths, args)
+        print(f"Loaded event table: {len(df)} rows, {len(df.columns)} columns")
+        jets = flatten_jets(df, args)
     print(
         f"Flattened jet table: {len(jets)} jets in {args.pt_min} <= pt < {args.pt_max}; "
         f"HS={int(jets['y_hs'].sum())}, PU={int((jets['y_hs'] == 0).sum())}"

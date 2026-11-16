@@ -76,6 +76,19 @@ Env vars:
                 merge01 (reco_012 only: DY_recoMatched01J + DY_recoMatched2J, cards in
                 <-o>_DY01) or separate (DY + DYVBF, cards in <-o>_DYsep). Pass the same
                 suffixed -o to run_stats_pipeline_VBF.sh.
+  SAMPLE_CONFIG Sample-group YAML for stage2 / stage2_plot / stage3 (--sample-config), default
+                configs/samples/samples.yaml; e.g. configs/samples/samples_DY105.yaml for
+                DY = dyTo2Mu_M-105To160. Use a new -o postfix.
+
+  dnn* modes, systematic-aware VBF DNN (docs/vbf_dnn_systematic_aware.md):
+  DNN_SYST_AWARE    1 = preprocess with --include-systematic-variations and train/HPO with the
+                    adversarial loss. Fold parquets + models go to dnn/trained_models/<label>_SystAware/
+                    (stage2/compact -D with DNN_SYST_AWARE=1 load the model from there). Default 0.
+  DNN_VARIATION_SET full (default, every stage-2 shape variation) or sweep (JEC Total [+ mu_roccor])
+  DNN_ADV_LAMBDA    Adversarial weight (required with DNN_SYST_AWARE=1 for dnn/dnn_hpo/dnn_train)
+  DNN_ADV_EXTRA_ARGS Other adversarial flags passed as-is, e.g. "--adversarial-high-score-cut 2.0"
+  RAY_RAM_PER_WORKER_GB  Ray GPU-worker RAM for HPO_BACKEND=ray (default 32; the variation inputs
+                    need more, see the doc)
 
   pu_dnn_train mode (all optional, sensible defaults shown):
   PU_DNN_DY_GLOB       Compacted sample-name glob for the HS-jet proxy (default: dyTo2Mu_M-50_aMCatNLO)

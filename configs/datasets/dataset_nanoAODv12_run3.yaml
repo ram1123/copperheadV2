@@ -2,7 +2,7 @@ years:
     "2022preEE":
         Data:
             total_lumi_pb: 7990.0
-            golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
             data_C:
                 skip_sample: False
                 datasets:
@@ -226,29 +226,61 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 35.99
-                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 36.05
-                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_top_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                    - /TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v2/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
@@ -476,6 +508,107 @@ years:
                 filter_efficiency: 1.0
                 references:
                     - "aMC@NLO"
+
+        TTV:
+            ttz_ll_mll50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5_ext1-v3/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_ll_mll4to50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-4to50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_nunu:
+                skip_sample: True
+                datasets:
+                    - /TTNuNu_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_qq:
+                skip_sample: True
+                datasets:
+                    - /TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_lnu:
+                skip_sample: True
+                datasets:
+                    - /TTLNu-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-mg35x_130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_qq:
+                skip_sample: True
+                datasets:
+                    - /TTW-WtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+        WJets:
+            wjets_lnu:
+                skip_sample: True
+                datasets:
+                    - /WtoLNu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False. Inclusive W->lnu (l=e,mu,tau); no per-flavour samples in Run3Summer22/23."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
 
         EWK:
             ewk_lljj:
@@ -730,7 +863,7 @@ years:
     "2022postEE":
         Data:
             total_lumi_pb: 26680.0
-            golden_json: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
             data_E:
                 skip_sample: False
                 datasets:
@@ -749,7 +882,7 @@ years:
                 das_request:
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
-                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                    golden_json_official: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
             data_G:
                 skip_sample: False
                 datasets:
@@ -758,7 +891,7 @@ years:
                 das_request:
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
-                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                    golden_json_official: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
         DY:
             dy_VBF_filter:
                 skip_sample: False
@@ -960,29 +1093,61 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 35.99
-                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 36.05
-                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_top_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                    - /TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
@@ -1210,6 +1375,107 @@ years:
                 filter_efficiency: 1.0
                 references:
                     - "aMC@NLO"
+
+        TTV:
+            ttz_ll_mll50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_ll_mll4to50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-4to50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_nunu:
+                skip_sample: True
+                datasets:
+                    - /TTNuNu_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_qq:
+                skip_sample: True
+                datasets:
+                    - /TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_lnu:
+                skip_sample: True
+                datasets:
+                    - /TTLNu-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-mg35x_130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_qq:
+                skip_sample: True
+                datasets:
+                    - /TTW-WtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+        WJets:
+            wjets_lnu:
+                skip_sample: True
+                datasets:
+                    - /WtoLNu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False. Inclusive W->lnu (l=e,mu,tau); no per-flavour samples in Run3Summer22/23."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
 
         EWK:
             ewk_lljj:
@@ -1463,7 +1729,7 @@ years:
     "2023":
         Data:
             total_lumi_pb: 17960.0
-            golden_json: data/lumimasks/Cert_Collisions2023_366442_370790_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions23/2026-05-28/Cert_Collisions2023_366442_370790_Golden.json
             data_C:
                 skip_sample: False
                 datasets:
@@ -1679,29 +1945,57 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 35.99
-                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 36.05
-                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_top_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v6/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
@@ -1923,6 +2217,107 @@ years:
                 filter_efficiency: 1.0
                 references:
                     - "aMC@NLO"
+
+        TTV:
+            ttz_ll_mll50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15_ext1-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_ll_mll4to50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-4to50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_nunu:
+                skip_sample: True
+                datasets:
+                    - /TTNuNu_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_qq:
+                skip_sample: True
+                datasets:
+                    - /TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_lnu:
+                skip_sample: True
+                datasets:
+                    - /TTLNu-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-mg35x_130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_qq:
+                skip_sample: True
+                datasets:
+                    - /TTW-WtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+        WJets:
+            wjets_lnu:
+                skip_sample: True
+                datasets:
+                    - /WtoLNu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False. Inclusive W->lnu (l=e,mu,tau); no per-flavour samples in Run3Summer22/23."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
 
         EWK:
             ewk_lljj:
@@ -2191,7 +2586,7 @@ years:
     "2023BPix":
         Data:
             total_lumi_pb: 9680.0
-            golden_json: data/lumimasks/Cert_Collisions2023_366442_370790_Golden.json
+            golden_json: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions23/2026-05-28/Cert_Collisions2023_366442_370790_Golden.json
             data_D:
                 skip_sample: False
                 datasets:
@@ -2203,7 +2598,7 @@ years:
                 das_request:
                 references:
                     ppd_summary_table: https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit?slide=id.g289f499aa6b_2_52#slide=id.g289f499aa6b_2_52
-                    golden_json_official: data/lumimasks/Cert_Collisions2022_355100_362760_Golden.json
+                    golden_json_official: /cvmfs/cms-griddata.cern.ch/cat/metadata/DC/Collisions22/2026-05-28/Cert_Collisions2022_355100_362760_Golden.json
 
         DY:
             dy_VBF_filter:
@@ -2405,29 +2800,57 @@ years:
                     - "POWHEG "
 
             st_tw_top:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 35.99
-                cross_section_source: "XSDB: TWminusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
 
             st_tw_antitop:
-                skip_sample: True
+                skip_sample: False
                 datasets:
-                    - None
-                cross_section_pb: 36.05
-                cross_section_source: "XSDB: TbarWplusto2L2Nu" # https://xsecdb-xsdb-official.app.cern.ch/xsdb/?columns=67108863&currentPage=0&pageSize=10&searchQuery=process_name%20%3D%20TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8
-                notes: NONE
+                    - /TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 4.6651
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times BR(W->lnu)^2 = 0.3258^2 (l=e,mu,tau, gridpack wdecaymode/topdecaymode 11100; same convention as ttjets_dl) = 4.6651"
                 kfactor:
                     value: 1.0
-                    source: NONE
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_top_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tW- = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
+                filter_efficiency: 1.0
+                references:
+                    - "POWHEG"
+
+            st_tw_antitop_lnu2q:
+                skip_sample: True  # not in samples.yaml yet; enable together with ST
+                datasets:
+                    - /TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: 19.3048
+                cross_section_source: https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopNNLORef
+                notes: "LHC Top WG approx. NNLO (NLO+NNLL soft-gluon, Kidonakis), 13.6 TeV, mt=172.5 GeV: sigma(tW, t+tbar) = 87.9 pb, half for tbarW+ = 43.95 pb; times 2*BR(W->lnu)*BR(W->qq) = 2*0.3258*0.6741 (same convention as ttjets_sl) = 19.3048"
+                kfactor:
+                    value: 1.0
+                    source: "LHC Top WG approx. NNLO (NLO+NNLL)"
                 filter_efficiency: 1.0
                 references:
                     - "POWHEG"
@@ -2649,6 +3072,107 @@ years:
                 filter_efficiency: 1.0
                 references:
                     - "aMC@NLO"
+
+        TTV:
+            ttz_ll_mll50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v3/NANOAODSIM
+                    - /TTLL_MLL-50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6_ext1-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_ll_mll4to50:
+                skip_sample: True
+                datasets:
+                    - /TTLL_MLL-4to50_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v3/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_nunu:
+                skip_sample: True
+                datasets:
+                    - /TTNuNu_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO"
+
+            ttz_qq:
+                skip_sample: True
+                datasets:
+                    - /TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_lnu:
+                skip_sample: True
+                datasets:
+                    - /TTLNu-1Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-mg35x_130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+            ttw_qq:
+                skip_sample: True
+                datasets:
+                    - /TTW-WtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
+
+        WJets:
+            wjets_lnu:
+                skip_sample: True
+                datasets:
+                    - /WtoLNu-2Jets_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+                cross_section_pb: null
+                cross_section_source: null
+                notes: "Cross section not yet set: McM generator_parameters hold only placeholders (1/-1) for this request and XSDB needs CERN SSO. Fill cross_section_pb (XSDB or a theory reference) before setting skip_sample: False. Inclusive W->lnu (l=e,mu,tau); no per-flavour samples in Run3Summer22/23."
+                kfactor:
+                    value: 1.0
+                    source: null
+                filter_efficiency: 1.0
+                references:
+                    - "aMC@NLO FxFx"
 
         EWK:
             ewk_lljj:

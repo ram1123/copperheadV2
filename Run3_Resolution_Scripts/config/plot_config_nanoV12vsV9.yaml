@@ -56,8 +56,8 @@ fields_to_load_data:
     - mu2_pt_over_mass
     - mu1_charge
     - mu2_charge
-    - mu1_iso
-    - mu2_iso
+    - mu1_pfRelIso04_all
+    - mu2_pfRelIso04_all
     - nmuons
     - dimuon_mass
     - dimuon_pt_log
@@ -160,8 +160,8 @@ fields_to_load:
     - mu2_pt_over_mass
     - mu1_charge
     - mu2_charge
-    - mu1_iso
-    - mu2_iso
+    - mu1_pfRelIso04_all
+    - mu2_pfRelIso04_all
     - nmuons
     - dimuon_mass
     - dimuon_pt_log
