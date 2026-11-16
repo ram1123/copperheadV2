@@ -2781,6 +2781,11 @@ class EventProcessor(processor.ProcessorABC):
                 "puIdDisc",
             ]
             jets =  get_jet_variation(jets, variation, fields2add)
+            # the JES/JER shift can change the pT order: keep jets pT-sorted (jet1/jet2 = leading, as in nominal);
+            # `clean` (muon cleaning, computed above) is per jet and must follow the same order
+            order = ak.argsort(jets.pt, axis=1, ascending=False)
+            jets = jets[order]
+            clean = clean[order]
 
         # ------------------------------------------------------------#
         # Apply jetID and PUID
@@ -2980,29 +2985,37 @@ class EventProcessor(processor.ProcessorABC):
 
             jet_loop_out_dict[f"vbf_maxmjj_deta25_hasPair_{variation}"] = pair_dict["has_mjj_deta"]
 
-            # Truth for the pair study: outgoing LHE partons (status 1, quark/gluon, pT>0: pT=0 rows have
-            # eta=+-1e11) and, per parton, the selected jet matched to it (dR<0.4), via GenJet and direct.
-            if is_mc and hasattr(events, "LHEPart") and hasattr(events, "GenJet"):
-                lhe = events.LHEPart
-                is_out = (lhe.status == 1) & ((np.abs(lhe.pdgId) <= 5) | (lhe.pdgId == 21)) & (lhe.pt > 0)
-                partons = lhe[is_out]
-                partons = partons[ak.argsort(partons.pt, axis=1, ascending=False)]
+            # Truth for the pair study, two definitions, each with the selected jet matched to every parton (dR<0.4),
+            # via the jet's GenJet and directly:
+            #   lhe : outgoing LHE partons (status 1, quark/gluon, pT>0: pT=0 rows have eta=+-1e11), every generator
+            #   genq: outgoing hard-process quarks after the shower (GenPart fromHardProcess & isLastCopy, pT>0 drops
+            #         the incoming partons); Pythia only - Herwig NanoAOD has no hard-process flags, so it stays empty
+            if is_mc and hasattr(events, "GenJet"):
                 gidx = jets.genJetIdx
                 gjet = events.GenJet[ak.mask(gidx, (gidx >= 0) & (gidx < ak.num(events.GenJet, axis=1)))]
-                match = {}
-                for chain, obj in (("reco", jets), ("gen", gjet)):
-                    cp = ak.cartesian({"q": partons, "j": obj}, axis=1, nested=True)
-                    dr = cp.q.delta_r(cp.j)  # [event][parton][selected jet]; None for jets without GenJet
-                    imin = ak.argmin(dr, axis=2)
-                    match[chain] = ak.fill_none(ak.where(ak.min(dr, axis=2) < 0.4, imin, -1), -1)
-                jet_loop_out_dict["vbf_nlhe_quarks"] = ak.sum(np.abs(partons.pdgId) <= 5, axis=1)
-                padded_q = ak.pad_none(partons, 4, clip=True)
-                padded_m = {k: ak.pad_none(v, 4, clip=True) for k, v in match.items()}
-                for i in range(4):
-                    for f in ("pt", "eta", "phi", "pdgId"):
-                        jet_loop_out_dict[f"vbf_lhe{i + 1}_{f}"] = padded_q[:, i][f]
-                    for chain in ("reco", "gen"):
-                        jet_loop_out_dict[f"vbf_lhe{i + 1}_jetidx_{chain}"] = ak.fill_none(padded_m[chain][:, i], -1)
+                truth = {}
+                if hasattr(events, "LHEPart"):
+                    lhe = events.LHEPart
+                    truth["lhe"] = lhe[(lhe.status == 1) & ((np.abs(lhe.pdgId) <= 5) | (lhe.pdgId == 21)) & (lhe.pt > 0)]
+                if hasattr(events, "GenPart"):
+                    gp = events.GenPart
+                    truth["genq"] = gp[(np.abs(gp.pdgId) <= 5) & gp.hasFlags("fromHardProcess", "isLastCopy") & (gp.pt > 0)]
+                for src, partons in truth.items():
+                    partons = partons[ak.argsort(partons.pt, axis=1, ascending=False)]
+                    match = {}
+                    for chain, obj in (("reco", jets), ("gen", gjet)):
+                        cp = ak.cartesian({"q": partons, "j": obj}, axis=1, nested=True)
+                        dr = cp.q.delta_r(cp.j)  # [event][parton][selected jet]; None for jets without GenJet
+                        imin = ak.argmin(dr, axis=2)
+                        match[chain] = ak.fill_none(ak.where(ak.min(dr, axis=2) < 0.4, imin, -1), -1)
+                    jet_loop_out_dict[f"vbf_n{src}_quarks"] = ak.sum(np.abs(partons.pdgId) <= 5, axis=1)
+                    padded_q = ak.pad_none(partons, 4, clip=True)
+                    padded_m = {k: ak.pad_none(v, 4, clip=True) for k, v in match.items()}
+                    for i in range(4):
+                        for f in ("pt", "eta", "phi", "pdgId"):
+                            jet_loop_out_dict[f"vbf_{src}{i + 1}_{f}"] = padded_q[:, i][f]
+                        for chain in ("reco", "gen"):
+                            jet_loop_out_dict[f"vbf_{src}{i + 1}_jetidx_{chain}"] = ak.fill_none(padded_m[chain][:, i], -1)
 
         dijet = jet1+jet2
 
