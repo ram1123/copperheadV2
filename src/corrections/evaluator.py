@@ -6,7 +6,7 @@ import uproot
 from coffea.lookup_tools import dense_lookup
 from omegaconf import OmegaConf
 
-from modules.classify_year import is_run2
+from modules.classify_year import is_run2, run3_btag_score
 from modules.correctionlib_file_cache import get_corrset
 from modules.utils import logger
 
@@ -1447,14 +1447,15 @@ BTAG_FIXEDWP_SYSTS = {
 }
 
 
-def btag_fixedwp_tagger(NanoAODv):
-    """(BTV payload prefix, NanoAOD score branch, jet.yaml WP suffix) used for the Run3 b-veto."""
-    if NanoAODv == 12:
+def btag_fixedwp_tagger(year):
+    """(BTV payload prefix, NanoAOD score branch, jet.yaml WP suffix) used for the Run3 b-veto of `year`
+    (modules.classify_year.run3_btag_score: ParticleNet for 2022-23, UParT for 2024-26)."""
+    if run3_btag_score(year) == "btagPNetB":
         return "particleNet", "btagPNetB", "ParticleNet"
     return "UParTAK4", "btagUParTAK4B", "UParT"
 
 
-def btag_fixedwp_weights(jets, config, NanoAODv):
+def btag_fixedwp_weights(jets, config, year):
     """
     BTV fixedWP event weight for the two working points the b-veto uses (L and M), method 1a:
         w = prod_jets P_data / P_MC, with per-jet tag category
@@ -1465,7 +1466,7 @@ def btag_fixedwp_weights(jets, config, NanoAODv):
     config["btag_eff_json"] (scripts/derive_btag_efficiencies.py). `jets` must be the jets the
     veto counts (btag_jet_selection). Returns (nominal, {syst: (up, down)}), absolute weights.
     """
-    tagger, score_field, wp_suffix = btag_fixedwp_tagger(NanoAODv)
+    tagger, score_field, wp_suffix = btag_fixedwp_tagger(year)
     sf_set = get_corrset(config["btag_sf_json"])
     eff_corr = get_corrset(config["btag_eff_json"])["btag_eff"]
     sf_heavy, sf_light = sf_set[f"{tagger}_comb"], sf_set[f"{tagger}_light"]

@@ -13,7 +13,7 @@ from coffea.lumi_tools import LumiMask
 from omegaconf import OmegaConf
 
 from modules.awkward_utils import ensure_event_axis
-from modules.classify_year import is_run2, is_run3
+from modules.classify_year import is_run2, is_run3, run3_btag_score
 from modules.correctionlib_file_cache import get_corrset
 from modules.get_sample_info import get_sample_info
 from modules.utils import logger
@@ -31,6 +31,7 @@ from src.corrections.evaluator import (
     PDF_N_EIGENVECTOR_MEMBERS,
     add_pdf_variations,
     add_stxs_variations,
+    btag_fixedwp_tagger,
     btag_fixedwp_weights,
     btag_weights_jsonKeepDim,
     get_jetpuid_weights_eta_dependent,
@@ -610,62 +611,58 @@ def _add_block(out, block):
 
 def pick_vbf_pairs(jets):
     """
-    Returns a dict of jet1/jet2 for different pairing criteria.
+    VBF tag-pair candidates under different criteria (study: docs/vbf_jet_selection.md).
     jets is the already-selected, pt-sorted Array of jets per event.
+    Returns:
+      "lead", "max_mjj", "max_deta", "mjj_deta": (jet1, jet2); "lead" is padded, so jet1 exists in 1-jet events
+      "has_mjj_deta": some pair has dEta > 2.5
+      "pairs_by_method": {method: (jet1, jet2, i1, i2)} with i1 < i2 the jets' indices in `jets` (jet1 = higher pT),
+             None where no pair qualifies (written by the save_alt_vbf_pairs switch)
     """
     # need at least 2 jets to form a pair; combinations() will give empty for <2
     pairs = ak.combinations(jets, 2, fields=["j1", "j2"])
+    ipairs = ak.argcombinations(jets, 2, fields=["i1", "i2"])  # same order as `pairs`, but returns the indeces of jets
 
     # pair metrics
     mjj = (pairs.j1 + pairs.j2).mass
     deta = np.abs(pairs.j1.eta - pairs.j2.eta)
-
-    # indices of best pairs (per event)
-    idx_max_mjj = ak.argmax(mjj, axis=1, keepdims=True)
-    idx_max_deta = ak.argmax(deta, axis=1, keepdims=True)
-
-    # criterion 4: max mjj with deta > 2.5
     deta_cut = 2.5
-    mjj_masked = ak.where(deta > deta_cut, mjj, -np.inf)
-    idx_max_mjj_deta = ak.argmax(mjj_masked, axis=1, keepdims=True)
 
-    # extract pairs (these are still "length-1 lists" per event because keepdims=True)
-    pair_max_mjj = pairs[idx_max_mjj]
-    pair_max_deta = pairs[idx_max_deta]
-    pair_max_mjj_deta = pairs[idx_max_mjj_deta]
+    def best(score, cond=None):
+        """Pair with the highest score among pairs passing cond, as (jet1, jet2, i1, i2)."""
+        idx = ak.argmax(score if cond is None else ak.mask(score, cond), axis=1, keepdims=True)
+        p, ip = pairs[idx], ipairs[idx]
+        return ak.firsts(p.j1), ak.firsts(p.j2), ak.firsts(ip.i1), ak.firsts(ip.i2)
 
-    # fallback for criterion 4 when no pair passes deta>2.5:
-    # detect "all masked" events -> max is -inf
+    pairs_by_method = {
+        "leadpt": best(mjj, (ipairs.i1 == 0) & (ipairs.i2 == 1)),
+        "maxmjj": best(mjj),
+        "maxdeta": best(deta),
+        "maxmjj_opphemi": best(mjj, pairs.j1.eta * pairs.j2.eta < 0),
+        "leadpt_maxmjj": best(mjj, ipairs.i1 == 0),
+        "maxmjj_bothpt30": best(mjj, (pairs.j1.pt > 30) & (pairs.j2.pt > 30)),
+        "maxmjj_bothpt35": best(mjj, (pairs.j1.pt > 35) & (pairs.j2.pt > 35)),
+    }
+    # max mjj with deta > 2.5; falls back to max mjj when no pair passes
     has_pair_deta = ak.any(deta > deta_cut, axis=1)
-    # flatten the chosen pair objects to scalars per event
-    j1_mjj_deta = ak.firsts(pair_max_mjj_deta.j1)
-    j2_mjj_deta = ak.firsts(pair_max_mjj_deta.j2)
+    pairs_by_method["maxmjj_deta25"] = tuple(
+        ak.where(has_pair_deta, a, b) for a, b in zip(best(mjj, deta > deta_cut), pairs_by_method["maxmjj"])
+    )
+    if hasattr(jets, "btagPNetQvG"):
+        qsum = pairs.j1.btagPNetQvG + pairs.j2.btagPNetQvG
+        pairs_by_method["maxqvg"] = best(qsum)
+        pairs_by_method["maxqvg_deta25"] = best(qsum, deta > deta_cut)
 
-    j1_mjj = ak.firsts(pair_max_mjj.j1)
-    j2_mjj = ak.firsts(pair_max_mjj.j2)
-
-    j1_mjj_deta = ak.where(has_pair_deta, j1_mjj_deta, j1_mjj)
-    j2_mjj_deta = ak.where(has_pair_deta, j2_mjj_deta, j2_mjj)
-
-    # criterion 1: leading-pt jets (your current method)
+    # leading-pt jets (the analysis pair)
     padded = ak.pad_none(jets, 2)
-    j1_lead = padded[:, 0]
-    j2_lead = padded[:, 1]
-
-    # criterion 2: max mjj
-    j1_max_mjj = j1_mjj
-    j2_max_mjj = j2_mjj
-
-    # criterion 3: max deta
-    j1_max_deta = ak.firsts(pair_max_deta.j1)
-    j2_max_deta = ak.firsts(pair_max_deta.j2)
 
     return {
-        "lead": (j1_lead, j2_lead),
-        "max_mjj": (j1_max_mjj, j2_max_mjj),
-        "max_deta": (j1_max_deta, j2_max_deta),
-        "mjj_deta": (j1_mjj_deta, j2_mjj_deta),
+        "lead": (padded[:, 0], padded[:, 1]),
+        "max_mjj": pairs_by_method["maxmjj"][:2],
+        "max_deta": pairs_by_method["maxdeta"][:2],
+        "mjj_deta": pairs_by_method["maxmjj_deta25"][:2],
         "has_mjj_deta": has_pair_deta,
+        "pairs_by_method": pairs_by_method,
     }
 
 
@@ -770,13 +767,15 @@ def _fill_sentinel(x, fill=VBF_DNN_DERIVED_SENTINEL):
     return ak.where(np.isfinite(x), x, fill)
 
 
-def build_vbf_dnn_derived_vars(dimuon, mu1, mu2, jet1, jet2, suffix, family):
+def build_vbf_dnn_derived_vars(dimuon, mu1, mu2, jet1, jet2, suffix, family, year):
     """
     VBF-DNN derived features (VBF_DNN_DERIVED_FEATURES) as {name}_{suffix}.
     family: "nominal" (all), "jet" (JES/JER: jet-dependent only) or "mu" (muon pT
     variation: muon-dependent only; pass the shifted mu1/mu2/dimuon and nominal jets).
+    year: picks the b-score for jj_btag_* (Run 3: ParticleNet 2022-23, UParT 2024-26; Run 2: ParticleNet).
     Missing jet / non-finite -> -1; njets_fwd25 and ht_jj -> 0.
     """
+    btag_score = run3_btag_score(year) if (is_run3(year) and "RERECO" not in year) else "btagPNetB"
     names = [n for n, fams in VBF_DNN_DERIVED_FEATURES.items() if family == "nominal" or family in fams]
     # float64 like compute_extra_features (NanoAOD float32 loses precision in cos_theta_star)
     dimuon, mu1, mu2, jet1, jet2 = (ak.values_astype(x, np.float64) for x in (dimuon, mu1, mu2, jet1, jet2))
@@ -830,10 +829,10 @@ def build_vbf_dnn_derived_vars(dimuon, mu1, mu2, jet1, jet2, suffix, family):
             fwd2 = ak.fill_none(np.abs(jet2.eta) > 2.5, False)
             v = ak.values_astype(fwd1, np.float64) + ak.values_astype(fwd2, np.float64)
         elif n.startswith(("jj_qvg", "jj_btag")):
-            tag = "btagPNetQvG" if "qvg" in n else "btagPNetB"
+            tag = "btagPNetQvG" if "qvg" in n else btag_score
             if not (hasattr(jet1, tag) and hasattr(jet2, tag)):
                 continue  # tagger absent in this NanoAOD (e.g. Run 2)
-            # PNet scores are -1 outside the tracker (|eta|>2.5): only valid scores enter max/min
+            # tagger scores are -1 where undefined: only valid scores enter max/min
             t1 = ak.where(jet1[tag] >= 0, jet1[tag], np.nan)
             t2 = ak.where(jet2[tag] >= 0, jet2[tag], np.nan)
             both = np.maximum(t1, t2) if n.endswith("max") else np.minimum(t1, t2)
@@ -2949,14 +2948,13 @@ class EventProcessor(processor.ProcessorABC):
             jet3 = padded_jets[:,2]
             jet4 = padded_jets[:,3]
 
-        save_alt_vbf_pairs = self.config.get("output", {}).get("save_alt_vbf_pairs", False)
+        # switch (switches yaml) or legacy config["output"]; both absent -> off
+        save_alt_vbf_pairs = (
+            self.config["switches"].get("save_alt_vbf_pairs", False)
+            or self.config.get("output", {}).get("save_alt_vbf_pairs", False)
+        )
         if variation == "nominal" and save_alt_vbf_pairs:
-            for tag, (j1, j2) in [
-                ("lead", pair_dict["lead"]),
-                ("maxmjj", pair_dict["max_mjj"]),
-                ("maxdeta", pair_dict["max_deta"]),
-                ("maxmjj_deta25", pair_dict["mjj_deta"]),
-            ]:
+            for tag, (j1, j2, i1, i2) in pair_dict["pairs_by_method"].items():
                 jj = j1 + j2
                 jet_loop_out_dict.update({
                     f"vbf_{tag}_jet1_pt_{variation}":   j1.pt,
@@ -2967,7 +2965,13 @@ class EventProcessor(processor.ProcessorABC):
                     f"vbf_{tag}_jet2_phi_{variation}":  j2.phi,
                     f"vbf_{tag}_mjj_{variation}":       jj.mass,
                     f"vbf_{tag}_deta_{variation}":      np.abs(j1.eta - j2.eta),
+                    # pT-order positions in the selected-jet collection (truth matching, pair identity)
+                    f"vbf_{tag}_jet1_idx_{variation}":  i1,
+                    f"vbf_{tag}_jet2_idx_{variation}":  i2,
                 })
+                if hasattr(jets, "btagPNetQvG"):
+                    jet_loop_out_dict[f"vbf_{tag}_jet1_btagPNetQvG_{variation}"] = j1.btagPNetQvG
+                    jet_loop_out_dict[f"vbf_{tag}_jet2_btagPNetQvG_{variation}"] = j2.btagPNetQvG
                 if is_mc and variation == "nominal":
                     jet_loop_out_dict.update({
                         f"vbf_{tag}_jet1_hasMatchedGenJet_{variation}": j1.genJetIdx != -1,
@@ -2975,6 +2979,30 @@ class EventProcessor(processor.ProcessorABC):
                     })
 
             jet_loop_out_dict[f"vbf_maxmjj_deta25_hasPair_{variation}"] = pair_dict["has_mjj_deta"]
+
+            # Truth for the pair study: outgoing LHE partons (status 1, quark/gluon, pT>0: pT=0 rows have
+            # eta=+-1e11) and, per parton, the selected jet matched to it (dR<0.4), via GenJet and direct.
+            if is_mc and hasattr(events, "LHEPart") and hasattr(events, "GenJet"):
+                lhe = events.LHEPart
+                is_out = (lhe.status == 1) & ((np.abs(lhe.pdgId) <= 5) | (lhe.pdgId == 21)) & (lhe.pt > 0)
+                partons = lhe[is_out]
+                partons = partons[ak.argsort(partons.pt, axis=1, ascending=False)]
+                gidx = jets.genJetIdx
+                gjet = events.GenJet[ak.mask(gidx, (gidx >= 0) & (gidx < ak.num(events.GenJet, axis=1)))]
+                match = {}
+                for chain, obj in (("reco", jets), ("gen", gjet)):
+                    cp = ak.cartesian({"q": partons, "j": obj}, axis=1, nested=True)
+                    dr = cp.q.delta_r(cp.j)  # [event][parton][selected jet]; None for jets without GenJet
+                    imin = ak.argmin(dr, axis=2)
+                    match[chain] = ak.fill_none(ak.where(ak.min(dr, axis=2) < 0.4, imin, -1), -1)
+                jet_loop_out_dict["vbf_nlhe_quarks"] = ak.sum(np.abs(partons.pdgId) <= 5, axis=1)
+                padded_q = ak.pad_none(partons, 4, clip=True)
+                padded_m = {k: ak.pad_none(v, 4, clip=True) for k, v in match.items()}
+                for i in range(4):
+                    for f in ("pt", "eta", "phi", "pdgId"):
+                        jet_loop_out_dict[f"vbf_lhe{i + 1}_{f}"] = padded_q[:, i][f]
+                    for chain in ("reco", "gen"):
+                        jet_loop_out_dict[f"vbf_lhe{i + 1}_jetidx_{chain}"] = ak.fill_none(padded_m[chain][:, i], -1)
 
         dijet = jet1+jet2
 
@@ -3128,7 +3156,7 @@ class EventProcessor(processor.ProcessorABC):
         if self.config["switches"].get("save_vbf_dnn_derived_vars", True):
             family = "nominal" if variation == "nominal" else "jet"
             jet_loop_out_dict.update(
-                build_vbf_dnn_derived_vars(dimuon, mu1, mu2, jet1, jet2, variation, family)
+                build_vbf_dnn_derived_vars(dimuon, mu1, mu2, jet1, jet2, variation, family, year)
             )
             # muon pT variations x nominal jets (same condition as the muon variation block)
             if (variation == "nominal" and is_mc
@@ -3139,7 +3167,7 @@ class EventProcessor(processor.ProcessorABC):
                     mu1_var = ak.with_field(mu1, mu1[field], "pt")
                     mu2_var = ak.with_field(mu2, mu2[field], "pt")
                     jet_loop_out_dict.update(build_vbf_dnn_derived_vars(
-                        mu1_var + mu2_var, mu1_var, mu2_var, jet1, jet2, suffix, "mu"
+                        mu1_var + mu2_var, mu1_var, mu2_var, jet1, jet2, suffix, "mu", year
                     ))
 
         # ------------------------------------------------------------------
@@ -3216,7 +3244,7 @@ class EventProcessor(processor.ProcessorABC):
         if do_btag_wgt and is_run3(year):
             # BTV fixedWP SFs for the L+M working points the b-veto uses (needs MC eff maps)
             logger.debug("doing Run3 fixedWP btag wgt!")
-            btag_wgt, btag_syst = btag_fixedwp_weights(btag_jets, self.config, NanoAODv)
+            btag_wgt, btag_syst = btag_fixedwp_weights(btag_jets, self.config, year)
             weights.add("btag", weight=btag_wgt)
             safe_btag_wgt = ak.where(btag_wgt != 0, btag_wgt, 1.0)
             for name, (up, down) in btag_syst.items():
@@ -3277,16 +3305,20 @@ class EventProcessor(processor.ProcessorABC):
             btagLoose_filter = btag_jets.btagDeepB > self.config["btag_loose_wp_DeepCSV"] # FIXME: check the var name and score
             btagMedium_filter = btag_jets.btagDeepB > self.config["btag_medium_wp_DeepCSV"]
 
-        if is_run3(year) and NanoAODv == 12 and hasattr(btag_jets, "btagPNetB"):
-            logger.debug("Using btagPNetB btag!")
-            btagLoose_filter = btag_jets.btagPNetB > self.config["btag_loose_wp_ParticleNet"]
-            btagMedium_filter = btag_jets.btagPNetB > self.config["btag_medium_wp_ParticleNet"]
-
-        if (is_run3(year) or is_run2(year)) and NanoAODv == 15 and hasattr(btag_jets, "btagUParTAK4B"):
+        if is_run2(year) and NanoAODv == 15 and hasattr(btag_jets, "btagUParTAK4B"):
             logger.debug("Using btagUParTAK4B btag!")
             btagLoose_filter = btag_jets.btagUParTAK4B > self.config["btag_loose_wp_UParT"]
             btagMedium_filter = btag_jets.btagUParTAK4B > self.config["btag_medium_wp_UParT"]
-        logger.debug(f"hasattr(btag_jets, 'btagUParTAK4B'): {hasattr(btag_jets, 'btagUParTAK4B')}")
+
+        if is_run3(year) and "RERECO" not in year:
+            # tagger by year (ParticleNet 2022-23, UParT 2024-26), same as the btag SFs above
+            _, score_field, wp_suffix = btag_fixedwp_tagger(year)
+            logger.debug(f"Using {score_field} btag!")
+            if not hasattr(btag_jets, score_field):
+                # all-False filters would silently disable the b-veto
+                raise KeyError(f"b-veto: jets have no {score_field} for {year}")
+            btagLoose_filter = btag_jets[score_field] > self.config[f"btag_loose_wp_{wp_suffix}"]
+            btagMedium_filter = btag_jets[score_field] > self.config[f"btag_medium_wp_{wp_suffix}"]
 
         btagLoose_filter = ak.fill_none(btagLoose_filter, value=False)
         btagMedium_filter = ak.fill_none(btagMedium_filter, value=False)
